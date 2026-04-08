@@ -31,16 +31,16 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. User can enter IPA text using the on-screen IPA keyboard without switching input methods
   4. User can define phonotactic syllable structure rules and phonological rules (e.g. vowel assimilation), then use the word generator to produce random words that conform to those rules
   5. User can define a romanization mapping so any IPA transcription can be displayed in the project's chosen Latin script
-**Plans**: TBD
+**Plans:** 7 plans in 4 waves
 
 Plans:
-- [ ] 01-01: Project shell — Flutter desktop app with navigation rail, tab structure, empty states, go_router routing
-- [ ] 01-02: Project management — create/open/delete/switch projects, ProjectRegistry, per-project SQLite (drift), Riverpod project scoping
-- [ ] 01-03: Database schema — derivation-aware schema (root_id, rule_ids, computed_form), migrations baseline
-- [ ] 01-04: Phoneme inventory editor — CRUD for consonants/vowels with IPA symbols, manner/place of articulation
-- [ ] 01-05: IPA reference chart — bundled audio assets (Wikipedia-sourced OGG), clickable playback via just_audio
-- [ ] 01-06: IPA keyboard — on-screen input widget for IPA text fields throughout the app
-- [ ] 01-07: Phonotactic and phonological rules — syllable structure constraint editor, sound change rule editor, word generator engine
+- [ ] 01-01-PLAN.md — App shell: Flutter project init, dependencies, window setup, go_router tabs+sidebar navigation
+- [ ] 01-02-PLAN.md — Project management: create/open/delete/switch projects, ProjectRegistry, per-project Drift database with derivation-aware schema
+- [ ] 01-03-PLAN.md — IPA reference chart: bundled OGG audio assets, persistent side panel with clickable playback
+- [ ] 01-04-PLAN.md — IPA keyboard: OverlayPortal popup widget for IPA text input throughout the app
+- [ ] 01-05-PLAN.md — Phoneme inventory editor: CRUD for consonants/vowels, articulation properties, natural class management
+- [ ] 01-06-PLAN.md — Romanization mappings: IPA-to-Latin mapping editor with live preview and conversion function
+- [ ] 01-07-PLAN.md — Phonotactic rules + word generator: petitparser DSL for syllable templates, live word generation preview
 
 ### Phase 2: Morphology Engine
 **Goal**: Users can express any word transformation rule — concatenative, templatic, ablaut, or suppletive — in a readable pattern mini-language, and the engine applies those rules consistently
@@ -126,7 +126,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4. Phases 5 and 6 depend only
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation | 0/7 | Not started | - |
+| 1. Foundation | 0/7 | Planned | - |
 | 2. Morphology Engine | 0/4 | Not started | - |
 | 3. Lexicon | 0/5 | Not started | - |
 | 4. Grammar | 0/3 | Not started | - |
