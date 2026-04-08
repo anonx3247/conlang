@@ -99,41 +99,41 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| PROJ-01 | — | Pending |
-| PROJ-02 | — | Pending |
-| PROJ-03 | — | Pending |
-| PHON-01 | — | Pending |
-| PHON-02 | — | Pending |
-| PHON-03 | — | Pending |
-| PHON-04 | — | Pending |
-| PHON-05 | — | Pending |
-| PHON-06 | — | Pending |
-| PHON-07 | — | Pending |
-| PHON-08 | — | Pending |
-| LEX-01 | — | Pending |
-| LEX-02 | — | Pending |
-| LEX-03 | — | Pending |
-| LEX-04 | — | Pending |
-| LEX-05 | — | Pending |
-| LEX-06 | — | Pending |
-| LEX-07 | — | Pending |
-| MORPH-01 | — | Pending |
-| MORPH-02 | — | Pending |
-| MORPH-03 | — | Pending |
-| MORPH-04 | — | Pending |
-| GRAM-01 | — | Pending |
-| GRAM-02 | — | Pending |
-| GRAM-03 | — | Pending |
-| GRAM-04 | — | Pending |
-| CULT-01 | — | Pending |
-| CULT-02 | — | Pending |
-| REF-01 | — | Pending |
+| PROJ-01 | Phase 1 | Pending |
+| PROJ-02 | Phase 1 | Pending |
+| PROJ-03 | Phase 1 | Pending |
+| PHON-01 | Phase 1 | Pending |
+| PHON-02 | Phase 1 | Pending |
+| PHON-03 | Phase 1 | Pending |
+| PHON-04 | Phase 1 | Pending |
+| PHON-05 | Phase 3 | Pending |
+| PHON-06 | Phase 1 | Pending |
+| PHON-07 | Phase 1 | Pending |
+| PHON-08 | Phase 1 | Pending |
+| LEX-01 | Phase 3 | Pending |
+| LEX-02 | Phase 3 | Pending |
+| LEX-03 | Phase 3 | Pending |
+| LEX-04 | Phase 3 | Pending |
+| LEX-05 | Phase 3 | Pending |
+| LEX-06 | Phase 3 | Pending |
+| LEX-07 | Phase 3 | Pending |
+| MORPH-01 | Phase 2 | Pending |
+| MORPH-02 | Phase 2 | Pending |
+| MORPH-03 | Phase 2 | Pending |
+| MORPH-04 | Phase 2 | Pending |
+| GRAM-01 | Phase 4 | Pending |
+| GRAM-02 | Phase 4 | Pending |
+| GRAM-03 | Phase 4 | Pending |
+| GRAM-04 | Phase 4 | Pending |
+| CULT-01 | Phase 5 | Pending |
+| CULT-02 | Phase 5 | Pending |
+| REF-01 | Phase 6 | Pending |
 
 **Coverage:**
 - v1 requirements: 29 total
-- Mapped to phases: 0
-- Unmapped: 29 ⚠️
+- Mapped to phases: 29
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-04-08*
-*Last updated: 2026-04-08 after initial definition*
+*Last updated: 2026-04-08 after roadmap creation*
