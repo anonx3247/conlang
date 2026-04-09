@@ -46,15 +46,48 @@ final allLexemeListProvider = StreamProvider<List<Lexeme>>((ref) {
 // Filter state providers
 // ---------------------------------------------------------------------------
 
+/// Notifier backing [lexemeSearchQueryProvider].
+///
+/// StateProvider was removed in flutter_riverpod 3.x — use NotifierProvider.
+class _LexemeSearchQuery extends Notifier<String> {
+  @override
+  String build() => '';
+
+  /// Updates the search query.
+  void set(String value) => state = value;
+}
+
 /// The current search query string entered by the user.
 ///
 /// An empty string means "no filter" — all roots are shown.
-final lexemeSearchQueryProvider = StateProvider<String>((ref) => '');
+final lexemeSearchQueryProvider =
+    NotifierProvider<_LexemeSearchQuery, String>(_LexemeSearchQuery.new);
+
+/// Notifier backing [lexemePosFilterProvider].
+class _LexemePosFilter extends Notifier<Set<String>> {
+  @override
+  Set<String> build() => {};
+
+  /// Replaces the current POS filter set.
+  void set(Set<String> value) => state = value;
+
+  /// Toggles a single POS value in the filter.
+  void toggle(String pos) {
+    final current = Set<String>.from(state);
+    if (current.contains(pos)) {
+      current.remove(pos);
+    } else {
+      current.add(pos);
+    }
+    state = current;
+  }
+}
 
 /// The current POS filter set. An empty set means "no POS filter".
 ///
 /// When non-empty, only roots whose [partOfSpeech] is in this set are shown.
-final lexemePosFilterProvider = StateProvider<Set<String>>((ref) => {});
+final lexemePosFilterProvider =
+    NotifierProvider<_LexemePosFilter, Set<String>>(_LexemePosFilter.new);
 
 // ---------------------------------------------------------------------------
 // Filtered lexeme provider (client-side, D-09 decision: <10k words)
