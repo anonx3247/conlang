@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../db/app_database.dart';
 import '../../data/phonotactic_providers.dart';
 import '../../domain/phonotactic_dsl.dart';
+import '../shared/ipa_keyboard/ipa_text_field.dart';
 import 'sound_rules_shared.dart';
 
 /// Widget for managing phonological rewrite rules in SPE-style notation.
@@ -254,7 +255,7 @@ class _RewriteRuleEditDialogState extends State<_RewriteRuleEditDialog> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Rule field with live parse validation
-            TextField(
+            IpaTextField(
               controller: _sourceCtrl,
               decoration: InputDecoration(
                 labelText: 'Rewrite rule',
