@@ -9,12 +9,12 @@ See: .planning/PROJECT.md (updated 2026-04-08)
 
 ## Current Position
 
-Phase: 2 of 6 (Morphology Engine) — IN PROGRESS
-Plan: 4 of 4 in current phase
-Status: Phase 2 Plans 01-03 complete. DSL engine (TDD), schema v4, full rule editor UI. Ready for Plan 04.
-Last activity: 2026-04-09 — Phase 2 Plan 03: Morphology tab, MorphologyShell, RulesPage, RuleEditorDialog, PreviewPanel
+Phase: 2 of 6 (Morphology Engine) — COMPLETE (gap closure pending)
+Plan: 4 of 4 in current phase — ALL DONE
+Status: Phase 2 complete. DSL engine (TDD), schema v4, full rule editor UI, human-verified end-to-end. 9 UX gaps identified for gap closure before/alongside Phase 3.
+Last activity: 2026-04-09 — Phase 2 Plan 04: morphology engine verified end-to-end, all 6 tests approved, 9 UX gaps captured
 
-Progress: [█████░░░░░] 38% (17/44 total plans)
+Progress: [█████░░░░░] 41% (18/44 total plans)
 
 ## Performance Metrics
 
@@ -102,6 +102,8 @@ Recent decisions affecting current work:
 - 02-02: morphology_providers.dart imports app_database.dart directly alongside morphology_dao.dart — required for generated type resolution in StreamProvider type arguments
 - [Phase 02-morphology-engine]: 02-03: db. alias on app_database.dart import resolves MorphologicalRule ambiguity (Drift vs domain DSL class)
 - [Phase 02-morphology-engine]: 02-03: RuleEditorDialog uses local StatefulWidget state for ephemeral in-editor form state; Riverpod only for DAO saves and preview reads
+- [Phase 02-morphology-engine]: 02-04: 9 UX improvement items from UAT deferred as gap closure plans (not inline fixes) — keeps Phase 2 scope boundary clean; highest priority items are rule reordering, POS filtering, and condition pattern redesign
+- [Phase 02-morphology-engine]: 02-04: Condition system will be redesigned around phonological pattern notation [nasal]Vk(l) with multiple conditions per branch — current EndsWithLiteral/StartsWithLiteral types are insufficient for real conlanging workflows
 
 ### Pending Todos
 
@@ -109,6 +111,7 @@ None yet.
 
 ### Blockers/Concerns
 
+- Phase 2 gap closure: 9 UX items identified in UAT must be planned as gap closure plans. Items 3-5 (rule reordering, POS filtering, condition pattern redesign) are highest priority before Phase 3 lexicon authoring. Items 2/6/7 are polish. Items 8/9 are PreviewPanel-only changes.
 - Phase 2 research flag: Pattern mini-language DSL design has no canonical reference — requires design spike before implementation commits (run one-page spec ceiling check)
 - Phase 3: Conlanger's Thesaurus PDF (fiatlingua.org) must be pre-extracted to JSON — verify PDF structure is parseable before Phase 3 planning
 - Phase 1: Verify OGG audio playback on Windows with just_audio before finalizing IPA audio asset format
@@ -117,5 +120,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-04-09
-Stopped at: Completed 02-03-PLAN.md — Morphology tab, MorphologyShell, RulesPage, RuleEditorDialog, PreviewPanel. Phase 2 Plan 3 of 4 complete.
+Stopped at: Completed 02-04-PLAN.md — morphology engine human-verified end-to-end, all 6 tests approved. Phase 2 COMPLETE. 9 UX gaps captured for gap closure plans before/alongside Phase 3.
 Resume file: None
