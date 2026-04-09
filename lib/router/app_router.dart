@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
+import '../features/lexicon/presentation/dictionary/dictionary_page.dart';
+import '../features/lexicon/presentation/lexicon_shell.dart';
+import '../features/lexicon/presentation/swadesh/swadesh_page.dart';
+import '../features/lexicon/presentation/thesaurus/thesaurus_page.dart';
 import '../features/morphology/presentation/morphology_shell.dart';
 import '../features/morphology/presentation/pos/pos_page.dart';
 import '../features/morphology/presentation/rules/rules_page.dart';
@@ -128,12 +132,42 @@ GoRouter appRouter(Ref ref) {
             ],
           ),
 
-          // Branch 2: Lexicon (Phase 3 placeholder)
+          // Branch 2: Lexicon (Phase 3)
           StatefulShellBranch(
             routes: [
               GoRoute(
                 path: '/lexicon',
-                builder: (_, _) => const _ComingSoonPage(section: 'Lexicon'),
+                redirect: (_, __) => '/lexicon/dictionary',
+              ),
+              StatefulShellRoute.indexedStack(
+                builder: (context, state, navigationShell) =>
+                    LexiconShell(navigationShell: navigationShell),
+                branches: [
+                  StatefulShellBranch(
+                    routes: [
+                      GoRoute(
+                        path: '/lexicon/dictionary',
+                        builder: (_, __) => const DictionaryPage(),
+                      ),
+                    ],
+                  ),
+                  StatefulShellBranch(
+                    routes: [
+                      GoRoute(
+                        path: '/lexicon/swadesh',
+                        builder: (_, __) => const SwadeshPage(),
+                      ),
+                    ],
+                  ),
+                  StatefulShellBranch(
+                    routes: [
+                      GoRoute(
+                        path: '/lexicon/thesaurus',
+                        builder: (_, __) => const ThesaurusPage(),
+                      ),
+                    ],
+                  ),
+                ],
               ),
             ],
           ),
