@@ -105,6 +105,8 @@ Recent decisions affecting current work:
 - [Phase 02-morphology-engine]: 02-03: RuleEditorDialog uses local StatefulWidget state for ephemeral in-editor form state; Riverpod only for DAO saves and preview reads
 - [Phase 02-morphology-engine]: 02-04: 9 UX improvement items from UAT deferred as gap closure plans (not inline fixes) — keeps Phase 2 scope boundary clean; highest priority items are rule reordering, POS filtering, and condition pattern redesign
 - [Phase 02-morphology-engine]: 02-04: Condition system will be redesigned around phonological pattern notation [nasal]Vk(l) with multiple conditions per branch — current EndsWithLiteral/StartsWithLiteral types are insufficient for real conlanging workflows
+- [Phase 02-morphology-engine]: 02-05: infix: parser uses pattern('^|:').plus() for affix and pattern('0-9').plus() for position — mirrors redup pattern; placed after redup and before supplete in choice order
+- [Phase 02-morphology-engine]: 02-05: Exception UI (Phase 2 SC4) formally deferred to Phase 3 — schema + DAO complete, UI entry point is word detail page which belongs in Phase 3 Lexicon (plan 03-02)
 - [Phase 02-morphology-engine]: 02-07: swapOrdering uses drift transaction() to atomically exchange ordering values — no temp value needed; Drift handles intermediate state within a transaction
 - [Phase 02-morphology-engine]: 02-07: Disabled arrow buttons shown at 20% Opacity rather than hidden — preserves layout stability and signals affordance at boundaries
 - [Phase 02-morphology-engine]: 02-07: New rules retain ordering=0 default; users can move them down — avoids expanding scope to rule_editor_dialog.dart
