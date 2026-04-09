@@ -317,4 +317,109 @@ class WordGenerator {
     final candidates = _resolveClass(classRef, inventory);
     return candidates.contains(symbol);
   }
+
+  // ---------------------------------------------------------------------------
+  // Rewrite rule application
+  // ---------------------------------------------------------------------------
+
+  /// Applies [rules] to [word], returning the transformed word.
+  ///
+  /// Each rule is applied left-to-right across the token sequence. Rules are
+  /// applied in order; earlier rules' outputs feed into later rules.
+  String applyRewriteRules({
+    required String word,
+    required List<PhonologicalRewriteRule> rules,
+    required PhonemeInventory inventory,
+  }) {
+    if (rules.isEmpty || word.isEmpty) return word;
+
+    var current = word;
+    for (final rule in rules) {
+      current = _applyOneRule(current, rule, inventory);
+    }
+    return current;
+  }
+
+  String _applyOneRule(
+    String word,
+    PhonologicalRewriteRule rule,
+    PhonemeInventory inventory,
+  ) {
+    final tokens = _tokenize(word, inventory);
+    if (tokens.isEmpty || rule.input.isEmpty) return word;
+
+    final inputLen = rule.input.length;
+    final result = StringBuffer();
+    var i = 0;
+
+    while (i < tokens.length) {
+      // Check if input pattern matches at position i.
+      if (i + inputLen <= tokens.length && _slotsMatch(tokens, i, rule.input, inventory)) {
+        // Check left context.
+        if (_contextMatches(tokens, i, rule.leftContext, inventory, isLeft: true) &&
+            _contextMatches(tokens, i + inputLen, rule.rightContext, inventory, isLeft: false)) {
+          // Replace: write output instead of matched tokens.
+          result.write(rule.output);
+          i += inputLen;
+          continue;
+        }
+      }
+      // No match — write original token.
+      result.write(tokens[i].$1);
+      i++;
+    }
+    return result.toString();
+  }
+
+  /// Checks if slots match tokens starting at [start].
+  bool _slotsMatch(
+    List<(String, int)> tokens,
+    int start,
+    List<Slot> slots,
+    PhonemeInventory inventory,
+  ) {
+    for (var j = 0; j < slots.length; j++) {
+      if (!_slotMatches(slots[j], tokens[start + j].$1, inventory)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  /// Checks if context slots match adjacent tokens.
+  ///
+  /// For left context: checks tokens immediately before [anchorIdx].
+  /// For right context: checks tokens starting at [anchorIdx].
+  bool _contextMatches(
+    List<(String, int)> tokens,
+    int anchorIdx,
+    List<Slot> context,
+    PhonemeInventory inventory, {
+    required bool isLeft,
+  }) {
+    if (context.isEmpty) return true; // No context constraint.
+
+    if (isLeft) {
+      // Left context: match tokens ending at anchorIdx - 1.
+      final start = anchorIdx - context.length;
+      if (start < 0) {
+        // Check for word boundary (#) at start.
+        return context.length == 1 &&
+            context[0].isLiteral &&
+            context[0].literalPhoneme == '#' &&
+            anchorIdx == 0;
+      }
+      return _slotsMatch(tokens, start, context, inventory);
+    } else {
+      // Right context: match tokens starting at anchorIdx.
+      if (anchorIdx + context.length > tokens.length) {
+        // Check for word boundary (#) at end.
+        return context.length == 1 &&
+            context[0].isLiteral &&
+            context[0].literalPhoneme == '#' &&
+            anchorIdx == tokens.length;
+      }
+      return _slotsMatch(tokens, anchorIdx, context, inventory);
+    }
+  }
 }

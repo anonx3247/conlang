@@ -44,16 +44,22 @@ class _WordGeneratorPanelState extends ConsumerState<WordGeneratorPanel> {
           loading: () => <ParsedTemplate>[],
           error: (_, e) => <ParsedTemplate>[],
         );
+    final rewriteRules = ref.watch(parsedRewriteRulesProvider);
 
-    // Regenerate words synchronously when any watched input changes.
-    // Uses a simple identity check on the inventory to avoid redundant work.
-    final words = WordGenerator().generateWords(
+    // Generate words, then apply rewrite rules to each.
+    final gen = WordGenerator();
+    final rawWords = gen.generateWords(
       templates: templates,
       inventory: inventory,
       count: 20,
       minSyllables: _minSyllables,
       maxSyllables: _maxSyllables,
     );
+    final words = rawWords.map((w) => gen.applyRewriteRules(
+      word: w,
+      rules: rewriteRules,
+      inventory: inventory,
+    )).toList();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

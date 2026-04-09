@@ -44,6 +44,18 @@ final rewriteRuleListProvider = StreamProvider<List<RewriteRule>>((ref) {
   return dao.watchAll();
 });
 
+/// Parsed rewrite rules (only valid ones) for the word generator to apply.
+final parsedRewriteRulesProvider = Provider<List<PhonologicalRewriteRule>>((ref) {
+  final rulesAsync = ref.watch(rewriteRuleListProvider);
+  final rules = rulesAsync.asData?.value ?? [];
+  final parsed = <PhonologicalRewriteRule>[];
+  for (final r in rules) {
+    final p = parseRewriteRule(r.source);
+    if (p.isValid && p.rule != null) parsed.add(p.rule!);
+  }
+  return parsed;
+});
+
 // ---------------------------------------------------------------------------
 // Template providers
 // ---------------------------------------------------------------------------
