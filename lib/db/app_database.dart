@@ -61,6 +61,8 @@ class PhonotacticConstraints extends Table {
   TextColumn get pattern => text()(); // DSL string
   TextColumn get description => text().nullable()();
   BoolColumn get isActive => boolean().withDefault(const Constant(true))();
+  /// Position constraint: 'anywhere' (default), 'start', 'end'.
+  TextColumn get position => text().withDefault(const Constant('anywhere'))();
 }
 
 /// Maps an IPA symbol to a Latin romanization string.
@@ -217,6 +219,8 @@ class AppDatabase extends _$AppDatabase {
         if (from < 6) {
           // v6: add posIds text column for multi-POS assignment
           await m.addColumn(morphologicalRules, morphologicalRules.posIds);
+          // v6: add position column to phonotactic_constraints
+          await m.addColumn(phonotacticConstraints, phonotacticConstraints.position);
         }
       },
       beforeOpen: (details) async {

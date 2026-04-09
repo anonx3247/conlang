@@ -85,12 +85,16 @@ class ParsedTemplate {
 ///
 /// All constraints are forbidden sequences. Legacy `LHS -> RHS` format is
 /// accepted for backward compatibility but the RHS is stored as description.
+/// Where in the word a constraint applies.
+enum ConstraintPosition { anywhere, start, end }
+
 class ConstraintRule {
   const ConstraintRule({
     required this.pattern,
     required this.description,
     required this.isForbidden,
     required this.source,
+    this.position = ConstraintPosition.anywhere,
   });
 
   /// The segment sequence to match (reuses the same [Slot] type as templates).
@@ -101,6 +105,9 @@ class ConstraintRule {
 
   /// Always true — all constraints are forbidden sequences.
   final bool isForbidden;
+
+  /// Where in the word the pattern is forbidden.
+  final ConstraintPosition position;
 
   /// Original source string, for display/edit round-tripping.
   final String source;

@@ -273,7 +273,7 @@ class WordGenerator {
   }
 
   /// Returns a list of (charStart, charLength) for each location in [phonemes]
-  /// where [constraint]'s pattern matches.
+  /// where [constraint]'s pattern matches, respecting [constraint.position].
   List<(int, int)> _findPatternMatches(
     List<(String, int)> phonemes,
     ConstraintRule constraint,
@@ -285,6 +285,16 @@ class WordGenerator {
     if (pattern.length > phonemes.length) return matches;
 
     for (var i = 0; i <= phonemes.length - pattern.length; i++) {
+      // Skip positions that don't match the constraint's position filter.
+      switch (constraint.position) {
+        case ConstraintPosition.start:
+          if (i != 0) continue; // only check word-initial
+        case ConstraintPosition.end:
+          if (i + pattern.length != phonemes.length) continue; // only check word-final
+        case ConstraintPosition.anywhere:
+          break; // check all positions
+      }
+
       var matchOk = true;
       for (var j = 0; j < pattern.length; j++) {
         final slot = pattern[j];

@@ -52,13 +52,14 @@ class ConstraintEditor extends ConsumerWidget {
       context: context,
       builder: (_) => _ConstraintEditDialog(
         initial: null,
-        onSave: (pattern, description) async {
+        onSave: (pattern, description, position) async {
           final dao = ref.read(phonotacticDaoProvider);
           if (dao == null) return;
           await dao.insertConstraint(
             PhonotacticConstraintsCompanion.insert(
               pattern: pattern,
               description: Value(description.isEmpty ? null : description),
+              position: Value(position),
             ),
           );
         },
@@ -135,6 +136,16 @@ class _ConstraintRow extends ConsumerWidget {
                       color: cs.onSurface.withValues(alpha: 0.55),
                     ),
                   ),
+                if (constraint.position != 'anywhere')
+                  Text(
+                    constraint.position == 'start'
+                        ? 'at word beginning'
+                        : 'at word end',
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: cs.primary.withValues(alpha: 0.7),
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
               ],
             ),
           ),
@@ -172,13 +183,14 @@ class _ConstraintRow extends ConsumerWidget {
       context: context,
       builder: (_) => _ConstraintEditDialog(
         initial: constraint,
-        onSave: (pattern, description) async {
+        onSave: (pattern, description, position) async {
           final dao = ref.read(phonotacticDaoProvider);
           if (dao == null) return;
           await dao.updateConstraint(
             constraint.copyWith(
               pattern: pattern,
               description: Value(description.isEmpty ? null : description),
+              position: position,
             ),
           );
         },
@@ -221,7 +233,7 @@ class _ConstraintEditDialog extends StatefulWidget {
   });
 
   final PhonotacticConstraint? initial;
-  final Future<void> Function(String pattern, String description) onSave;
+  final Future<void> Function(String pattern, String description, String position) onSave;
 
   @override
   State<_ConstraintEditDialog> createState() => _ConstraintEditDialogState();
@@ -230,6 +242,7 @@ class _ConstraintEditDialog extends StatefulWidget {
 class _ConstraintEditDialogState extends State<_ConstraintEditDialog> {
   late final TextEditingController _patternCtrl;
   late final TextEditingController _descCtrl;
+  String _position = 'anywhere';
   ParsedConstraint? _parsed;
   bool _saving = false;
 
@@ -242,6 +255,7 @@ class _ConstraintEditDialogState extends State<_ConstraintEditDialog> {
     _descCtrl = TextEditingController(
       text: widget.initial?.description ?? '',
     );
+    _position = widget.initial?.position ?? 'anywhere';
     _validate(_patternCtrl.text);
   }
 
@@ -262,7 +276,11 @@ class _ConstraintEditDialogState extends State<_ConstraintEditDialog> {
     if (_parsed == null || !_parsed!.isValid) return;
     setState(() => _saving = true);
     try {
-      await widget.onSave(_patternCtrl.text.trim(), _descCtrl.text.trim());
+      await widget.onSave(
+        _patternCtrl.text.trim(),
+        _descCtrl.text.trim(),
+        _position,
+      );
       if (mounted) Navigator.pop(context);
     } finally {
       if (mounted) setState(() => _saving = false);
@@ -316,6 +334,42 @@ class _ConstraintEditDialogState extends State<_ConstraintEditDialog> {
                       ?.copyWith(color: cs.error),
                 ),
               ),
+
+            const SizedBox(height: 12),
+
+            // Position selector
+            Row(
+              children: [
+                Text(
+                  'Position:',
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: cs.onSurface.withValues(alpha: 0.7),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                DropdownButton<String>(
+                  value: _position,
+                  underline: const SizedBox.shrink(),
+                  items: const [
+                    DropdownMenuItem(
+                      value: 'anywhere',
+                      child: Text('anywhere in word'),
+                    ),
+                    DropdownMenuItem(
+                      value: 'start',
+                      child: Text('word beginning'),
+                    ),
+                    DropdownMenuItem(
+                      value: 'end',
+                      child: Text('word end'),
+                    ),
+                  ],
+                  onChanged: (v) {
+                    if (v != null) setState(() => _position = v);
+                  },
+                ),
+              ],
+            ),
 
             const SizedBox(height: 12),
 

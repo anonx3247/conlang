@@ -126,9 +126,24 @@ final parsedConstraintsProvider =
     error: (_, e) => const Stream<List<PhonotacticConstraint>>.empty(),
   )) {
     yield list
-        .map((c) => parseConstraintRule(c.pattern))
-        .where((r) => r.isValid)
-        .map((r) => r.rule!)
+        .map((c) {
+          final parsed = parseConstraintRule(c.pattern);
+          if (!parsed.isValid) return null;
+          // Apply DB position to the parsed rule.
+          final pos = switch (c.position) {
+            'start' => ConstraintPosition.start,
+            'end' => ConstraintPosition.end,
+            _ => ConstraintPosition.anywhere,
+          };
+          return ConstraintRule(
+            pattern: parsed.rule!.pattern,
+            description: parsed.rule!.description,
+            isForbidden: parsed.rule!.isForbidden,
+            source: parsed.rule!.source,
+            position: pos,
+          );
+        })
+        .whereType<ConstraintRule>()
         .toList();
   }
 });
