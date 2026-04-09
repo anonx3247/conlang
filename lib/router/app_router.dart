@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../features/morphology/presentation/morphology_shell.dart';
+import '../features/morphology/presentation/pos/pos_page.dart';
 import '../features/morphology/presentation/rules/rules_page.dart';
 import '../features/phonology/presentation/inventory/inventory_page.dart';
 import '../features/phonology/presentation/phonology_shell.dart';
@@ -111,6 +112,14 @@ GoRouter appRouter(Ref ref) {
                       GoRoute(
                         path: '/morphology/rules',
                         builder: (_, _) => const RulesPage(),
+                      ),
+                    ],
+                  ),
+                  StatefulShellBranch(
+                    routes: [
+                      GoRoute(
+                        path: '/morphology/pos',
+                        builder: (_, _) => const PosPage(),
                       ),
                     ],
                   ),

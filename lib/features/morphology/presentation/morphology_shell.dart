@@ -16,6 +16,11 @@ class MorphologyShell extends StatelessWidget {
 
   static const _sidebarItems = [
     _SidebarItem(label: 'Rules', icon: Icons.rule, path: '/morphology/rules'),
+    _SidebarItem(
+      label: 'Parts of Speech',
+      icon: Icons.category,
+      path: '/morphology/pos',
+    ),
   ];
 
   void _onSidebarTap(BuildContext context, int index) {
