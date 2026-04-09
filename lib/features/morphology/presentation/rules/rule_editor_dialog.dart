@@ -26,18 +26,6 @@ enum OpType {
   final String label;
 }
 
-/// Condition types for a branch.
-enum CondType {
-  defaultCond('Default (always)'),
-  endsWithLiteral('Ends with literal'),
-  startsWithLiteral('Starts with literal'),
-  endsWithClass('Ends with class'),
-  startsWithClass('Starts with class');
-
-  const CondType(this.label);
-  final String label;
-}
-
 /// Mutable state for a single operation row in the form.
 class _OpState {
   OpType type;
@@ -99,17 +87,22 @@ class _OpState {
 }
 
 /// Mutable state for a single branch in the form.
+///
+/// Conditions are stored as a list of [TextEditingController]s — one per
+/// pattern. Empty list of non-empty controllers = default branch.
 class _BranchState {
-  CondType condType;
-  final TextEditingController condValueCtrl = TextEditingController();
+  /// One controller per condition pattern. At least one is always present.
+  List<TextEditingController> condPatternCtrls;
   final List<_OpState> ops;
 
   _BranchState({List<_OpState>? ops})
-      : condType = CondType.defaultCond,
+      : condPatternCtrls = [TextEditingController()],
         ops = ops ?? [_OpState()];
 
   void dispose() {
-    condValueCtrl.dispose();
+    for (final ctrl in condPatternCtrls) {
+      ctrl.dispose();
+    }
     for (final op in ops) {
       op.dispose();
     }
@@ -121,20 +114,13 @@ class _BranchState {
         ops.map((o) => o.toOperation()).whereType<MorphOperation>().toList();
     if (operations.isEmpty) return null;
 
-    final val = condValueCtrl.text.trim();
-    final MorphCondition? condition = switch (condType) {
-      CondType.defaultCond => null,
-      CondType.endsWithLiteral =>
-        val.isNotEmpty ? EndsWithLiteralCond(val) : null,
-      CondType.startsWithLiteral =>
-        val.isNotEmpty ? StartsWithLiteralCond(val) : null,
-      CondType.endsWithClass =>
-        val.isNotEmpty ? EndsWithClassCond(val) : null,
-      CondType.startsWithClass =>
-        val.isNotEmpty ? StartsWithClassCond(val) : null,
-    };
+    final conditions = condPatternCtrls
+        .map((c) => c.text.trim())
+        .where((s) => s.isNotEmpty)
+        .map((s) => PatternCond(s) as MorphCondition)
+        .toList();
 
-    return MorphBranch(condition: condition, operations: operations);
+    return MorphBranch(conditions: conditions, operations: operations);
   }
 }
 
@@ -195,24 +181,17 @@ class _RuleEditorDialogState extends ConsumerState<RuleEditorDialog> {
     for (final branch in parsed.rule!.branches) {
       final bs = _BranchState(ops: []);
 
-      // Condition
-      if (branch.condition == null) {
-        bs.condType = CondType.defaultCond;
+      // Conditions: one controller per PatternCond.
+      if (branch.conditions.isEmpty) {
+        bs.condPatternCtrls = [TextEditingController()]; // default branch
       } else {
-        switch (branch.condition!) {
-          case EndsWithLiteralCond(:final suffix):
-            bs.condType = CondType.endsWithLiteral;
-            bs.condValueCtrl.text = suffix;
-          case StartsWithLiteralCond(:final prefix):
-            bs.condType = CondType.startsWithLiteral;
-            bs.condValueCtrl.text = prefix;
-          case EndsWithClassCond(:final classRef):
-            bs.condType = CondType.endsWithClass;
-            bs.condValueCtrl.text = classRef;
-          case StartsWithClassCond(:final classRef):
-            bs.condType = CondType.startsWithClass;
-            bs.condValueCtrl.text = classRef;
-        }
+        bs.condPatternCtrls = branch.conditions.map((cond) {
+          final ctrl = TextEditingController();
+          if (cond case PatternCond(:final pattern)) {
+            ctrl.text = pattern;
+          }
+          return ctrl;
+        }).toList();
       }
 
       // Operations
@@ -539,8 +518,8 @@ class _RuleEditorDialogState extends ConsumerState<RuleEditorDialog> {
 
               const SizedBox(height: 8),
 
-              // Condition row
-              _buildConditionRow(branch, theme, cs),
+              // Condition section (pattern-based)
+              _buildConditionSection(branch, bi, theme, cs),
 
               const SizedBox(height: 10),
 
@@ -574,70 +553,91 @@ class _RuleEditorDialogState extends ConsumerState<RuleEditorDialog> {
   }
 
   // ---------------------------------------------------------------------------
-  // Condition row
+  // Condition section (pattern-based)
   // ---------------------------------------------------------------------------
 
-  Widget _buildConditionRow(
-      _BranchState branch, ThemeData theme, ColorScheme cs) {
-    final needsValue = branch.condType != CondType.defaultCond;
-    final hint = switch (branch.condType) {
-      CondType.endsWithLiteral => '"o", "a"',
-      CondType.startsWithLiteral => '"k", "p"',
-      CondType.endsWithClass => 'stop, C, nasal',
-      CondType.startsWithClass => 'stop, V, liquid',
-      _ => '',
-    };
-
-    return Row(
+  Widget _buildConditionSection(
+      _BranchState branch, int bi, ThemeData theme, ColorScheme cs) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Condition:',
+          'Conditions (phonological patterns):',
           style: theme.textTheme.bodySmall
               ?.copyWith(color: cs.onSurface.withValues(alpha: 0.6)),
         ),
-        const SizedBox(width: 8),
-        DropdownButton<CondType>(
-          value: branch.condType,
-          isDense: true,
-          items: CondType.values
-              .map((c) => DropdownMenuItem(value: c, child: Text(c.label)))
-              .toList(),
-          onChanged: (v) {
-            if (v == null) return;
-            setState(() => branch.condType = v);
-            _updateDsl();
-          },
-        ),
-        if (needsValue) ...[
-          const SizedBox(width: 8),
-          SizedBox(
-            width: 120,
-            child: (branch.condType == CondType.endsWithLiteral ||
-                    branch.condType == CondType.startsWithLiteral)
-                ? IpaTextField(
-                    controller: branch.condValueCtrl,
-                    decoration: InputDecoration(
-                      hintText: hint,
+        const SizedBox(height: 6),
+
+        // One row per condition controller
+        ...List.generate(branch.condPatternCtrls.length, (ci) {
+          final ctrl = branch.condPatternCtrls[ci];
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 6),
+            child: Row(
+              children: [
+                Expanded(
+                  child: IpaTextField(
+                    controller: ctrl,
+                    decoration: const InputDecoration(
+                      hintText: 'e.g. [nasal]V_, _CV, Vk(l)_, _ (default)',
                       isDense: true,
-                      border: const OutlineInputBorder(),
-                      contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 6),
-                    ),
-                    onChanged: (_) => _updateDsl(),
-                  )
-                : TextField(
-                    controller: branch.condValueCtrl,
-                    decoration: InputDecoration(
-                      hintText: hint,
-                      isDense: true,
-                      border: const OutlineInputBorder(),
-                      contentPadding: const EdgeInsets.symmetric(
+                      border: OutlineInputBorder(),
+                      contentPadding: EdgeInsets.symmetric(
                           horizontal: 8, vertical: 6),
                     ),
                     onChanged: (_) => _updateDsl(),
                   ),
+                ),
+                if (branch.condPatternCtrls.length > 1) ...[
+                  const SizedBox(width: 4),
+                  IconButton(
+                    icon: Icon(Icons.close,
+                        size: 14, color: cs.error.withValues(alpha: 0.7)),
+                    tooltip: 'Remove condition',
+                    padding: EdgeInsets.zero,
+                    constraints:
+                        const BoxConstraints(minWidth: 24, minHeight: 24),
+                    onPressed: () {
+                      setState(() {
+                        branch.condPatternCtrls[ci].dispose();
+                        branch.condPatternCtrls.removeAt(ci);
+                      });
+                      _updateDsl();
+                    },
+                  ),
+                ],
+              ],
+            ),
+          );
+        }),
+
+        // Add condition button
+        TextButton.icon(
+          onPressed: () {
+            setState(() {
+              branch.condPatternCtrls.add(TextEditingController());
+            });
+            _updateDsl();
+          },
+          icon: const Icon(Icons.add, size: 14),
+          label: const Text('Add condition (AND)'),
+          style: TextButton.styleFrom(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            visualDensity: VisualDensity.compact,
           ),
-        ],
+        ),
+
+        // Syntax help text
+        Padding(
+          padding: const EdgeInsets.only(top: 2),
+          child: Text(
+            'Syntax: [class]  C  V  literal  (optional)  _=anchor',
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: cs.onSurface.withValues(alpha: 0.45),
+              fontStyle: FontStyle.italic,
+            ),
+          ),
+        ),
       ],
     );
   }
