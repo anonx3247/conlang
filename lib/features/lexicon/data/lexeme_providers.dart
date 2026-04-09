@@ -5,6 +5,8 @@ import '../../morphology/data/morphology_providers.dart';
 import '../../morphology/domain/morphology_dsl.dart';
 import '../../morphology/domain/morphology_engine.dart';
 import '../../phonology/data/phonotactic_providers.dart';
+import 'phonotactic_validation_provider.dart';
+import '../../phonology/domain/word_generator.dart';
 import '../../project/data/project_providers.dart';
 import 'lexeme_dao.dart';
 
@@ -250,4 +252,26 @@ final computedDerivedFormsProvider =
     }
   }
   return results;
+});
+
+// ---------------------------------------------------------------------------
+// Batch phonotactic violation provider (PHON-05)
+// ---------------------------------------------------------------------------
+
+/// Maps lexeme IDs to their phonotactic validation results.
+///
+/// Only includes lexemes that are NOT marked as phonological exceptions.
+/// Only recomputes when lexemes or phonotactic constraints change (Riverpod
+/// caching handles T-03-12 DoS mitigation — O(word_length * constraint_count)
+/// per word, acceptable for <10k words).
+///
+/// Used by word list rendering to show wavy violation underlines without
+/// calling the validator per-widget.
+final lexemeViolationsProvider = Provider<Map<int, ValidationResult>>((ref) {
+  final allLexemes = ref.watch(allLexemeListProvider).asData?.value ?? [];
+  final validate = ref.watch(phonotacticValidatorProvider);
+  return {
+    for (final l in allLexemes)
+      if (!l.isPhonologicalException) l.id: validate(word: l.ipa),
+  };
 });

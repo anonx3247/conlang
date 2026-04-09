@@ -3,7 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../db/app_database.dart';
+import '../../../../shared/widgets/violation_text.dart';
 import '../../../morphology/data/morphology_providers.dart';
+import '../../data/phonotactic_validation_provider.dart';
 import '../../../phonology/data/romanization_providers.dart';
 import '../../../phonology/presentation/shared/ipa_keyboard/ipa_text_field.dart';
 import '../../data/lexeme_providers.dart';
@@ -267,6 +269,11 @@ class _WordDetailPanelState extends ConsumerState<WordDetailPanel> {
     // Build rule name map for exception display
     final ruleNameMap = {for (final r in rules) r.id: r.name};
 
+    // Phonotactic validation for this word's IPA
+    final validate = ref.watch(phonotacticValidatorProvider);
+    final validation = validate(word: lexeme.ipa);
+    final hasViolations = !validation.isValid;
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -291,19 +298,110 @@ class _WordDetailPanelState extends ConsumerState<WordDetailPanel> {
                           fontWeight: FontWeight.w600,
                         ),
                       ),
-                      Text(
-                        lexeme.ipa,
-                        style: theme.textTheme.labelSmall?.copyWith(
-                          fontSize: 12,
-                          color: cs.onSurface.withValues(alpha: 0.65),
+                      // IPA sub-label with violation highlighting (unless exception)
+                      if (lexeme.isPhonologicalException)
+                        Text(
+                          lexeme.ipa,
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            fontSize: 12,
+                            color: cs.onSurface.withValues(alpha: 0.65),
+                          ),
+                        )
+                      else
+                        ViolationText(
+                          text: lexeme.ipa,
+                          violations: validation.violations,
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            fontSize: 12,
+                            color: cs.onSurface.withValues(alpha: 0.65),
+                          ),
                         ),
-                      ),
-                    ] else
-                      Text(
-                        lexeme.ipa,
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
+                    ] else ...[
+                      // IPA as primary heading with violation highlighting (unless exception)
+                      if (lexeme.isPhonologicalException)
+                        Text(
+                          lexeme.ipa,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        )
+                      else
+                        ViolationText(
+                          text: lexeme.ipa,
+                          violations: validation.violations,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                    ],
+                    // ---- Phonotactic exception status row ----------------
+                    if (lexeme.isPhonologicalException)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.warning_amber_outlined,
+                              size: 14,
+                              color: Colors.amber,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              'Phonotactic exception',
+                              style: theme.textTheme.labelSmall?.copyWith(
+                                fontSize: 11,
+                                color: Colors.amber,
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            TextButton(
+                              style: TextButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 4, vertical: 0),
+                                minimumSize: Size.zero,
+                                tapTargetSize:
+                                    MaterialTapTargetSize.shrinkWrap,
+                                textStyle:
+                                    theme.textTheme.labelSmall?.copyWith(
+                                  fontSize: 11,
+                                ),
+                              ),
+                              onPressed: () async {
+                                final dao = ref.read(lexemeDaoProvider);
+                                await dao?.updateLexeme(lexeme.copyWith(
+                                    isPhonologicalException: false));
+                              },
+                              child: const Text('Remove exception'),
+                            ),
+                          ],
+                        ),
+                      )
+                    else if (hasViolations)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: TextButton.icon(
+                          style: TextButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 4, vertical: 0),
+                            minimumSize: Size.zero,
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            textStyle: theme.textTheme.labelSmall?.copyWith(
+                              fontSize: 11,
+                            ),
+                          ),
+                          icon: Icon(
+                            Icons.warning_amber_outlined,
+                            size: 14,
+                            color: cs.onSurface.withValues(alpha: 0.7),
+                          ),
+                          label: const Text('Mark as exception'),
+                          onPressed: () async {
+                            final dao = ref.read(lexemeDaoProvider);
+                            await dao?.updateLexeme(lexeme.copyWith(
+                                isPhonologicalException: true));
+                          },
                         ),
                       ),
                   ],

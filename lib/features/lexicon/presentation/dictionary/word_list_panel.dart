@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../features/morphology/data/morphology_providers.dart';
+import '../../../../shared/widgets/violation_text.dart';
 import '../../data/lexeme_providers.dart';
 
 /// Left panel of the Dictionary master-detail layout.
@@ -285,6 +286,9 @@ class _WordListPanelState extends ConsumerState<WordListPanel> {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
 
+    // Batch violations for all lexemes — avoids per-item validation calls.
+    final violations = ref.watch(lexemeViolationsProvider);
+
     return ListView.builder(
       itemCount: lexemes.length,
       itemBuilder: (context, index) {
@@ -304,6 +308,10 @@ class _WordListPanelState extends ConsumerState<WordListPanel> {
             .where((id) =>
                 allLexemes.any((l) => l.id == id && l.rootId == rootIdStr))
             .length;
+
+        // Violations for this specific lexeme (null if it's an exception).
+        final lexemeViolation = violations[lexeme.id];
+        final itemViolations = lexemeViolation?.violations ?? [];
 
         return Material(
           color: isSelected ? cs.primaryContainer : Colors.transparent,
@@ -330,16 +338,15 @@ class _WordListPanelState extends ConsumerState<WordListPanel> {
                         Row(
                           children: [
                             Expanded(
-                              child: Text(
-                                lexeme.ipa,
+                              child: ViolationText(
+                                text: lexeme.ipa,
+                                violations: itemViolations,
                                 style: theme.textTheme.bodyMedium?.copyWith(
                                   fontSize: 13,
                                   fontWeight: isSelected
                                       ? FontWeight.w600
                                       : FontWeight.normal,
                                 ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
                               ),
                             ),
                             if (derivedMatchCount > 0)
@@ -409,6 +416,9 @@ class _WordListPanelState extends ConsumerState<WordListPanel> {
   Widget _buildTableView(BuildContext context, List<dynamic> lexemes) {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
+
+    // Batch violations for table view IPA cells.
+    final violations = ref.watch(lexemeViolationsProvider);
 
     // Sort lexemes based on current sort state
     final sorted = List.of(lexemes);
@@ -488,13 +498,16 @@ class _WordListPanelState extends ConsumerState<WordListPanel> {
         ],
         rows: sorted.map((lexeme) {
           final isSelected = widget.selectedLexemeId == lexeme.id;
+          final lexemeViolation = violations[lexeme.id];
+          final itemViolations = lexemeViolation?.violations ?? [];
           return DataRow(
             selected: isSelected,
             onSelectChanged: (_) => widget.onWordSelected(lexeme.id),
             cells: [
               DataCell(
-                Text(
-                  lexeme.ipa,
+                ViolationText(
+                  text: lexeme.ipa,
+                  violations: itemViolations,
                   style: theme.textTheme.bodySmall?.copyWith(fontSize: 13),
                 ),
               ),
