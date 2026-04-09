@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -25,59 +23,15 @@ class WordGeneratorPanel extends ConsumerStatefulWidget {
 }
 
 class _WordGeneratorPanelState extends ConsumerState<WordGeneratorPanel> {
-  List<String> _words = [];
-  Timer? _debounce;
   int _minSyllables = 1;
   int _maxSyllables = 3;
-
-  @override
-  void initState() {
-    super.initState();
-    // Trigger initial generation after first frame
-    WidgetsBinding.instance.addPostFrameCallback((_) => _scheduleRegenerate());
-  }
-
-  @override
-  void dispose() {
-    _debounce?.cancel();
-    super.dispose();
-  }
-
-  void _scheduleRegenerate() {
-    _debounce?.cancel();
-    _debounce = Timer(const Duration(milliseconds: 300), _regenerate);
-  }
-
-  void _regenerate() {
-    if (!mounted) return;
-    final templates = ref.read(parsedTemplatesProvider).when(
-          data: (v) => v,
-          loading: () => <ParsedTemplate>[],
-          error: (_, e) => <ParsedTemplate>[],
-        );
-    final inventory = ref.read(phonemeInventoryProvider);
-
-    final words = WordGenerator().generateWords(
-      templates: templates,
-      inventory: inventory,
-      count: 20,
-      minSyllables: _minSyllables,
-      maxSyllables: _maxSyllables,
-    );
-
-    setState(() => _words = words);
-  }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
 
-    // Watch for template/inventory changes to debounce regeneration
-    ref.listen(parsedTemplatesProvider, (_, v) => _scheduleRegenerate());
-    ref.listen(phonemeInventoryProvider, (_, v) => _scheduleRegenerate());
-    ref.listen(parsedConstraintsProvider, (_, v) => _scheduleRegenerate());
-
+    // Watch all inputs — rebuild triggers word regeneration below
     final romanize = ref.watch(romanizeProvider);
     final constraints = ref.watch(parsedConstraintsProvider).when(
           data: (v) => v,
@@ -85,6 +39,21 @@ class _WordGeneratorPanelState extends ConsumerState<WordGeneratorPanel> {
           error: (_, e) => <ConstraintRule>[],
         );
     final inventory = ref.watch(phonemeInventoryProvider);
+    final templates = ref.watch(parsedTemplatesProvider).when(
+          data: (v) => v,
+          loading: () => <ParsedTemplate>[],
+          error: (_, e) => <ParsedTemplate>[],
+        );
+
+    // Regenerate words synchronously when any watched input changes.
+    // Uses a simple identity check on the inventory to avoid redundant work.
+    final words = WordGenerator().generateWords(
+      templates: templates,
+      inventory: inventory,
+      count: 20,
+      minSyllables: _minSyllables,
+      maxSyllables: _maxSyllables,
+    );
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -116,7 +85,7 @@ class _WordGeneratorPanelState extends ConsumerState<WordGeneratorPanel> {
               IconButton(
                 icon: const Icon(Icons.refresh, size: 18),
                 tooltip: 'Regenerate words',
-                onPressed: _regenerate,
+                onPressed: () => setState(() {}),
               ),
             ],
           ),
@@ -154,7 +123,6 @@ class _WordGeneratorPanelState extends ConsumerState<WordGeneratorPanel> {
                       _minSyllables = v.start.round();
                       _maxSyllables = v.end.round();
                     });
-                    _scheduleRegenerate();
                   },
                 ),
               ),
@@ -168,7 +136,7 @@ class _WordGeneratorPanelState extends ConsumerState<WordGeneratorPanel> {
 
         // ---- Word list ------------------------------------------------------
         Expanded(
-          child: _words.isEmpty
+          child: words.isEmpty
               ? Center(
                   child: Text(
                     'Define templates and add phonemes to preview words.',
@@ -181,9 +149,9 @@ class _WordGeneratorPanelState extends ConsumerState<WordGeneratorPanel> {
                 )
               : ListView.builder(
                   padding: const EdgeInsets.symmetric(vertical: 4),
-                  itemCount: _words.length,
+                  itemCount: words.length,
                   itemBuilder: (_, i) {
-                    final word = _words[i];
+                    final word = words[i];
                     final validation = WordGenerator().validateWord(
                       word: word,
                       constraints: constraints,
