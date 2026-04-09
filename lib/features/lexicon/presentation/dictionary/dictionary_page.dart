@@ -1,10 +1,10 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:file_selector_platform_interface/file_selector_platform_interface.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:path_provider/path_provider.dart';
 
 import '../../data/anki_exporter.dart';
 import '../../data/lexeme_providers.dart';
@@ -174,21 +174,34 @@ class _DictionaryPageState extends ConsumerState<DictionaryPage> {
       final apkgBytes =
           AnkiExporter().buildApkg(deckName: deckName, entries: entries);
 
-      // Save to Downloads or Documents folder
-      final dir = await _getExportDirectory();
+      // Use native save dialog — required for macOS sandbox and consistent
+      // cross-platform UX. The user picks the save location.
       final timestamp = DateTime.now().millisecondsSinceEpoch;
       final filename = 'conlang_export_$timestamp.apkg';
-      final filePath = '${dir.path}/$filename';
-      await File(filePath).writeAsBytes(apkgBytes);
+
+      final saveLocation = await FileSelectorPlatform.instance.getSaveLocation(
+        acceptedTypeGroups: [
+          const XTypeGroup(
+            label: 'Anki Package',
+            extensions: ['apkg'],
+          ),
+        ],
+        options: SaveDialogOptions(suggestedName: filename),
+      );
+
+      if (saveLocation == null) return; // User cancelled
+
+      await File(saveLocation.path).writeAsBytes(apkgBytes);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content:
-                Text('Exported ${entries.length} words to $filename'),
+            content: Text('Exported ${entries.length} words to ${saveLocation.path.split('/').last}'),
             action: SnackBarAction(
               label: 'Open folder',
-              onPressed: () => _revealInFinder(dir.path),
+              onPressed: () => _revealInFinder(
+                File(saveLocation.path).parent.path,
+              ),
             ),
           ),
         );
@@ -202,32 +215,6 @@ class _DictionaryPageState extends ConsumerState<DictionaryPage> {
           ),
         );
       }
-    }
-  }
-
-  /// Returns the best directory for saving the export file.
-  /// Prefers Downloads (macOS/Linux/Windows) or falls back to Documents/temp.
-  Future<Directory> _getExportDirectory() async {
-    // Try the Downloads folder first
-    if (Platform.isMacOS || Platform.isLinux) {
-      final home = Platform.environment['HOME'];
-      if (home != null) {
-        final downloads = Directory('$home/Downloads');
-        if (await downloads.exists()) return downloads;
-      }
-    } else if (Platform.isWindows) {
-      final userProfile = Platform.environment['USERPROFILE'];
-      if (userProfile != null) {
-        final downloads = Directory('$userProfile\\Downloads');
-        if (await downloads.exists()) return downloads;
-      }
-    }
-
-    // Fall back to documents directory
-    try {
-      return await getApplicationDocumentsDirectory();
-    } catch (_) {
-      return Directory.systemTemp;
     }
   }
 
