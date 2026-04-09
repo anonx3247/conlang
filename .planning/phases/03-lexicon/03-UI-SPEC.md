@@ -5,6 +5,7 @@ status: draft
 shadcn_initialized: false
 preset: none
 created: 2026-04-09
+revised: 2026-04-09
 ---
 
 # Phase 3 — UI Design Contract
@@ -43,10 +44,11 @@ Declared values (multiples of 4):
 
 Exceptions:
 - Tab/sidebar nav item height: 40px (established: app_shell.dart line 283)
-- List item vertical rhythm: 3px vertical padding per row (established: morphology_preview_panel.dart line 227 — `vertical: 3`)
-- Coverage progress bar: 6px height (compact inline indicator)
+- Coverage progress bar height: 8px (compact inline indicator — nearest multiple of 4 above 6px)
 
-Source: `lib/shared/widgets/app_shell.dart` (verified); `lib/features/morphology/presentation/rules/morphology_preview_panel.dart` (verified)
+Note: The `3px` vertical padding found at `morphology_preview_panel.dart` line 227 is a legacy carry-over for the morphology feature only. It is NOT part of the Phase 3 lexicon spacing contract and MUST NOT be replicated in any new Phase 3 widgets.
+
+Source: `lib/shared/widgets/app_shell.dart` (verified); `lib/features/morphology/presentation/rules/morphology_preview_panel.dart` (legacy — excluded from Phase 3 contract)
 
 ---
 
@@ -119,6 +121,8 @@ New widgets required for this phase, following established patterns:
 
 ### Dictionary page (master-detail — D-01)
 
+Primary focal point: the `WordDetailPanel` on the right is the visual anchor of the Dictionary screen. It occupies the dominant surface area, renders at full contrast, and receives focus immediately on word selection. The `WordListPanel` on the left is deliberately lower contrast (`surfaceContainer` background) to direct the eye toward the detail area.
+
 ```
 ┌──────────────────────────────────────────────────────────────┐
 │  AppShell top bar (height: 48px)                             │
@@ -143,7 +147,10 @@ New widgets required for this phase, following established patterns:
 
 1. Search bar — `TextField` with search icon prefix, `md` (16px) horizontal padding, 40px height
 2. POS filter — horizontal `SingleChildScrollView` of `FilterChip` widgets, `sm` (8px) gap between chips, `md` (16px) horizontal padding
-3. View toggle — list icon / table icon `IconButton` pair, aligned to right edge of panel header
+3. View toggle — list icon / table icon `IconButton` pair, aligned to right edge of panel header. Each button MUST declare:
+   - `tooltip: 'List view'` on the list-icon button (`Icons.list`)
+   - `tooltip: 'Table view'` on the table-icon button (`Icons.table_rows`)
+   - `semanticsLabel` matching the tooltip text for screen reader support
 4. List items (list mode): root word IPA, romanization sub-label (12px, 55% opacity), meaning truncated to 1 line
 5. List items (table mode): sortable columns — Word | IPA | POS | Meaning — column headers at 11px caption weight, sortable via header tap
 
@@ -192,13 +199,13 @@ New widgets required for this phase, following established patterns:
 ### Swadesh list (D-13)
 
 - Covered concepts: `Icons.check_circle` in `colorScheme.primary`, concept text in `colorScheme.onSurface`, linked word shown as a tappable `colorScheme.primary` text label
-- Uncovered concepts: `Icons.radio_button_unchecked` in `colorScheme.onSurface` at 40% opacity, "Create" action as `TextButton` with accent color
-- Coverage progress: inline linear progress indicator (height: 6px) above the list, `colorScheme.primary` fill, right-aligned "N/207 — X%" caption text
+- Uncovered concepts: `Icons.radio_button_unchecked` in `colorScheme.onSurface` at 40% opacity, "Add word" action as `TextButton` with accent color (see Copywriting Contract)
+- Coverage progress: inline linear progress indicator (height: 8px) above the list, `colorScheme.primary` fill, right-aligned "N/207 — X%" caption text
 
 ### Thesaurus (D-14, D-15)
 
 - Tree node with children: `Icons.expand_more` / `Icons.chevron_right` toggle
-- Leaf node with no word: `Icons.add_circle_outline` "Create" action in `colorScheme.primary`
+- Leaf node with no word: `Icons.add_circle_outline` "Name this concept" action in `colorScheme.primary` (see Copywriting Contract)
 - Leaf node with word: `Icons.check` in `colorScheme.primary`, word form shown in 12px label
 - Search bar filters visible nodes; non-matching nodes are hidden entirely (not greyed out)
 
@@ -232,8 +239,12 @@ New widgets required for this phase, following established patterns:
 | Stale exception warning | "Rule was edited after this exception was set. Review or re-save." |
 | Coverage progress label | "[N]/207 — [X]%" |
 | Derived form count badge | "[N] derived form" / "[N] derived forms" |
+| Swadesh uncovered concept CTA | "Add word" (TextButton replacing bare "Create") |
+| Thesaurus leaf-node gap CTA | "Name this concept" (TextButton replacing bare "Create") |
+| View toggle tooltip (list) | "List view" |
+| View toggle tooltip (table) | "Table view" |
 
-Source: Claude's discretion (upstream artifacts did not specify copy); consistent with existing error message tone in `project_menu.dart` and `project_selector_dialog.dart` (verified — no em-dashes, plain direct phrasing)
+Source: Claude's discretion (upstream artifacts did not specify copy); consistent with existing error message tone in `project_menu.dart` and `project_selector_dialog.dart` (verified — no em-dashes, plain direct phrasing). "Add word" and "Name this concept" replace the bare "Create" label to provide verb+noun clarity.
 
 ---
 
@@ -268,3 +279,4 @@ No third-party UI registries. All widgets are built from Flutter Material 3 prim
 | RESEARCH.md | 8 (standard stack, architecture patterns, component file paths, Anki approach) |
 | Codebase scan (`lib/app.dart`, `app_shell.dart`, preview panel) | 6 (typography scale, spacing values, color system, violation styling, font family, weights) |
 | User input this session | 0 (all questions answered by upstream artifacts) |
+| UI checker revision (2026-04-09) | 4 fixes applied (spacing 3px→excluded, 6px→8px; "Create"→"Add word"/"Name this concept"; focal point statement; view-toggle tooltips) |
