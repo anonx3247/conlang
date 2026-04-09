@@ -13,7 +13,9 @@ import '../../data/lexeme_providers.dart';
 ///   - POS filter chips (filters via [lexemePosFilterProvider])
 ///   - List/table view toggle
 ///   - The filtered word list (list or table mode)
-///   - Selection checkboxes for Anki export (D-18)
+///   - Selection mode for Anki export (D-06, D-07):
+///     - Default: "Export to Anki" toolbar button
+///     - Selection mode: checkboxes per row, select-all, bottom bar with confirm/cancel
 ///
 /// Background: [ColorScheme.surfaceContainer] per UI-SPEC.
 class WordListPanel extends ConsumerStatefulWidget {
@@ -22,16 +24,22 @@ class WordListPanel extends ConsumerStatefulWidget {
     required this.onWordSelected,
     required this.onAddRoot,
     this.selectedLexemeId,
+    this.isSelectionMode = false,
     this.selectedForExport = const {},
     this.onToggleExport,
     this.onSelectAll,
     this.onDeselectAll,
     this.onExport,
+    this.onEnterSelectionMode,
+    this.onExitSelectionMode,
   });
 
   final ValueChanged<int> onWordSelected;
   final VoidCallback onAddRoot;
   final int? selectedLexemeId;
+
+  /// Whether selection mode is currently active (D-06, D-07).
+  final bool isSelectionMode;
 
   /// The set of lexeme IDs currently selected for Anki export.
   final Set<int> selectedForExport;
@@ -45,8 +53,14 @@ class WordListPanel extends ConsumerStatefulWidget {
   /// Called when the user taps the select-all checkbox to deselect all.
   final VoidCallback? onDeselectAll;
 
-  /// Called when the user taps "Export to Anki".
+  /// Called when the user taps the confirm export button.
   final VoidCallback? onExport;
+
+  /// Called when the user taps "Export to Anki" in default mode to enter selection mode.
+  final VoidCallback? onEnterSelectionMode;
+
+  /// Called when the user taps "Cancel selection" to exit selection mode.
+  final VoidCallback? onExitSelectionMode;
 
   @override
   ConsumerState<WordListPanel> createState() => _WordListPanelState();
@@ -161,27 +175,46 @@ class _WordListPanelState extends ConsumerState<WordListPanel> {
               ),
             ),
 
-          // ---- View toggle + count row + select-all checkbox ------------
+          // ---- View toggle + count row + toolbar action -----------------
           Padding(
             padding: const EdgeInsets.fromLTRB(8, 0, 8, 4),
             child: Row(
               children: [
-                // Select-all checkbox (D-18)
-                Tooltip(
-                  message: allSelected ? 'Deselect all' : 'Select all',
-                  child: Checkbox(
-                    value: allSelected ? true : (someSelected ? null : false),
-                    tristate: true,
-                    onChanged: filteredLexemes.isEmpty
-                        ? null
-                        : (_) {
-                            if (allSelected) {
-                              widget.onDeselectAll?.call();
-                            } else {
-                              widget.onSelectAll?.call();
-                            }
-                          },
-                  ),
+                // Toolbar left: "Export to Anki" button (default) or select-all checkbox (selection mode)
+                AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 150),
+                  child: widget.isSelectionMode
+                      ? Tooltip(
+                          key: const ValueKey('select-all'),
+                          message: allSelected ? 'Deselect all' : 'Select all',
+                          child: Checkbox(
+                            value: allSelected ? true : (someSelected ? null : false),
+                            tristate: true,
+                            onChanged: filteredLexemes.isEmpty
+                                ? null
+                                : (_) {
+                                    if (allSelected) {
+                                      widget.onDeselectAll?.call();
+                                    } else {
+                                      widget.onSelectAll?.call();
+                                    }
+                                  },
+                          ),
+                        )
+                      : SizedBox(
+                          key: const ValueKey('export-btn'),
+                          height: 44,
+                          child: OutlinedButton.icon(
+                            onPressed: filteredLexemes.isEmpty
+                                ? null
+                                : widget.onEnterSelectionMode,
+                            icon: Opacity(
+                              opacity: filteredLexemes.isEmpty ? 0.38 : 1.0,
+                              child: const Icon(Icons.file_download_outlined, size: 16),
+                            ),
+                            label: const Text('Export to Anki', style: TextStyle(fontSize: 12)),
+                          ),
+                        ),
                 ),
                 Text(
                   '${filteredLexemes.length} word${filteredLexemes.length == 1 ? '' : 's'}',
@@ -228,17 +261,22 @@ class _WordListPanelState extends ConsumerState<WordListPanel> {
                     : _buildListView(context, filteredLexemes, derivedMatches),
           ),
 
-          // ---- Export footer (visible when 1+ words selected) -----------
-          if (widget.selectedForExport.isNotEmpty)
-            _buildExportFooter(context, cs),
+          // ---- Selection mode bottom bar --------------------------------
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 150),
+            child: widget.isSelectionMode
+                ? _buildSelectionBottomBar(context, cs)
+                : const SizedBox.shrink(key: ValueKey('no-bar')),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildExportFooter(BuildContext context, ColorScheme cs) {
+  Widget _buildSelectionBottomBar(BuildContext context, ColorScheme cs) {
     final count = widget.selectedForExport.length;
     return Container(
+      key: const ValueKey('selection-bar'),
       padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
         color: cs.surfaceContainerHighest,
@@ -246,14 +284,23 @@ class _WordListPanelState extends ConsumerState<WordListPanel> {
           top: BorderSide(color: cs.outlineVariant, width: 1),
         ),
       ),
-      child: FilledButton.icon(
-        onPressed: widget.onExport,
-        icon: const Icon(Icons.download, size: 18),
-        label: Text('Export $count to Anki'),
-        style: FilledButton.styleFrom(
-          backgroundColor: cs.primary,
-          foregroundColor: cs.onPrimary,
-        ),
+      child: Row(
+        children: [
+          FilledButton.icon(
+            onPressed: count > 0 ? widget.onExport : null,
+            icon: const Icon(Icons.download, size: 18),
+            label: Text('Export $count to Anki'),
+            style: FilledButton.styleFrom(
+              backgroundColor: cs.primary,
+              foregroundColor: cs.onPrimary,
+            ),
+          ),
+          const Spacer(),
+          TextButton(
+            onPressed: widget.onExitSelectionMode,
+            child: const Text('Cancel selection'),
+          ),
+        ],
       ),
     );
   }
@@ -322,15 +369,17 @@ class _WordListPanelState extends ConsumerState<WordListPanel> {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  // Export selection checkbox (D-18)
-                  Checkbox(
-                    value: isCheckedForExport,
-                    onChanged: (_) =>
-                        widget.onToggleExport?.call(lexeme.id),
-                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    visualDensity: VisualDensity.compact,
-                  ),
-                  const SizedBox(width: 4),
+                  // Export selection checkbox — only visible in selection mode (D-06)
+                  if (widget.isSelectionMode) ...[
+                    Checkbox(
+                      value: isCheckedForExport,
+                      onChanged: (_) =>
+                          widget.onToggleExport?.call(lexeme.id),
+                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      visualDensity: VisualDensity.compact,
+                    ),
+                    const SizedBox(width: 4),
+                  ],
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,

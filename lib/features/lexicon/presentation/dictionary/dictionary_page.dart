@@ -45,6 +45,9 @@ class _DictionaryPageState extends ConsumerState<DictionaryPage> {
   /// IDs of lexemes currently selected for Anki export (D-18).
   Set<int> _selectedForExport = {};
 
+  /// Whether selection mode is active (D-06, D-07).
+  bool _isSelectionMode = false;
+
   @override
   void initState() {
     super.initState();
@@ -111,6 +114,20 @@ class _DictionaryPageState extends ConsumerState<DictionaryPage> {
 
   void _onDeselectAll() {
     setState(() {
+      _selectedForExport = {};
+    });
+  }
+
+  void _enterSelectionMode() {
+    setState(() {
+      _isSelectionMode = true;
+      _selectedForExport = {};
+    });
+  }
+
+  void _exitSelectionMode() {
+    setState(() {
+      _isSelectionMode = false;
       _selectedForExport = {};
     });
   }
@@ -194,6 +211,7 @@ class _DictionaryPageState extends ConsumerState<DictionaryPage> {
       await File(saveLocation.path).writeAsBytes(apkgBytes);
 
       if (mounted) {
+        _exitSelectionMode();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Exported ${entries.length} words to ${saveLocation.path.split('/').last}'),
@@ -296,11 +314,14 @@ class _DictionaryPageState extends ConsumerState<DictionaryPage> {
             selectedLexemeId: _selectedLexemeId,
             onWordSelected: _onWordSelected,
             onAddRoot: _onAddRoot,
+            isSelectionMode: _isSelectionMode,
             selectedForExport: _selectedForExport,
             onToggleExport: _onToggleExport,
             onSelectAll: _onSelectAll,
             onDeselectAll: _onDeselectAll,
             onExport: _onExport,
+            onEnterSelectionMode: _enterSelectionMode,
+            onExitSelectionMode: _exitSelectionMode,
           ),
         ),
         VerticalDivider(
