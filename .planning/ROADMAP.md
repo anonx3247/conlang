@@ -12,7 +12,7 @@ Conlang Workbench is built from the inside out: the morphology engine — the ar
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Foundation** - Flutter app shell, project management, phonology tools, and derivation-aware database schema (UAT gap closure in progress)
+- [x] **Phase 1: Foundation** - Flutter app shell, project management, phonology tools, and derivation-aware database schema
 - [ ] **Phase 2: Morphology Engine** - Pattern mini-language, plugin architecture, and rule editor — the centrepiece differentiator
 - [ ] **Phase 3: Lexicon** - Root and derived-word dictionary, search, semantic references, Anki export, phonotactic highlighting
 - [ ] **Phase 4: Grammar** - Parts of speech, declension/conjugation rules, paradigm chart generation, typology settings
@@ -128,7 +128,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4. Phases 5 and 6 depend only
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation | 7/9 | UAT gap closure | - |
+| 1. Foundation | 9/9 | ✓ Complete | 2026-04-08 |
 | 2. Morphology Engine | 0/4 | Not started | - |
 | 3. Lexicon | 0/5 | Not started | - |
 | 4. Grammar | 0/3 | Not started | - |
