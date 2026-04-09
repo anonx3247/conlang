@@ -1883,6 +1883,21 @@ class $LexemesTable extends Lexemes with TableInfo<$LexemesTable, Lexeme> {
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _isPhonologicalExceptionMeta =
+      const VerificationMeta('isPhonologicalException');
+  @override
+  late final GeneratedColumn<bool> isPhonologicalException =
+      GeneratedColumn<bool>(
+        'is_phonological_exception',
+        aliasedName,
+        false,
+        type: DriftSqlType.bool,
+        requiredDuringInsert: false,
+        defaultConstraints: GeneratedColumn.constraintIsAlways(
+          'CHECK ("is_phonological_exception" IN (0, 1))',
+        ),
+        defaultValue: const Constant(false),
+      );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -1893,6 +1908,7 @@ class $LexemesTable extends Lexemes with TableInfo<$LexemesTable, Lexeme> {
     romanization,
     meaning,
     partOfSpeech,
+    isPhonologicalException,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -1962,6 +1978,15 @@ class $LexemesTable extends Lexemes with TableInfo<$LexemesTable, Lexeme> {
         ),
       );
     }
+    if (data.containsKey('is_phonological_exception')) {
+      context.handle(
+        _isPhonologicalExceptionMeta,
+        isPhonologicalException.isAcceptableOrUnknown(
+          data['is_phonological_exception']!,
+          _isPhonologicalExceptionMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -2003,6 +2028,10 @@ class $LexemesTable extends Lexemes with TableInfo<$LexemesTable, Lexeme> {
         DriftSqlType.string,
         data['${effectivePrefix}part_of_speech'],
       ),
+      isPhonologicalException: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_phonological_exception'],
+      )!,
     );
   }
 
@@ -2021,6 +2050,10 @@ class Lexeme extends DataClass implements Insertable<Lexeme> {
   final String? romanization;
   final String? meaning;
   final String? partOfSpeech;
+
+  /// Marks this word as exempt from phonotactic violation highlighting.
+  /// Defaults to false. Added in schema v7.
+  final bool isPhonologicalException;
   const Lexeme({
     required this.id,
     required this.ipa,
@@ -2030,6 +2063,7 @@ class Lexeme extends DataClass implements Insertable<Lexeme> {
     this.romanization,
     this.meaning,
     this.partOfSpeech,
+    required this.isPhonologicalException,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -2054,6 +2088,7 @@ class Lexeme extends DataClass implements Insertable<Lexeme> {
     if (!nullToAbsent || partOfSpeech != null) {
       map['part_of_speech'] = Variable<String>(partOfSpeech);
     }
+    map['is_phonological_exception'] = Variable<bool>(isPhonologicalException);
     return map;
   }
 
@@ -2079,6 +2114,7 @@ class Lexeme extends DataClass implements Insertable<Lexeme> {
       partOfSpeech: partOfSpeech == null && nullToAbsent
           ? const Value.absent()
           : Value(partOfSpeech),
+      isPhonologicalException: Value(isPhonologicalException),
     );
   }
 
@@ -2096,6 +2132,9 @@ class Lexeme extends DataClass implements Insertable<Lexeme> {
       romanization: serializer.fromJson<String?>(json['romanization']),
       meaning: serializer.fromJson<String?>(json['meaning']),
       partOfSpeech: serializer.fromJson<String?>(json['partOfSpeech']),
+      isPhonologicalException: serializer.fromJson<bool>(
+        json['isPhonologicalException'],
+      ),
     );
   }
   @override
@@ -2110,6 +2149,9 @@ class Lexeme extends DataClass implements Insertable<Lexeme> {
       'romanization': serializer.toJson<String?>(romanization),
       'meaning': serializer.toJson<String?>(meaning),
       'partOfSpeech': serializer.toJson<String?>(partOfSpeech),
+      'isPhonologicalException': serializer.toJson<bool>(
+        isPhonologicalException,
+      ),
     };
   }
 
@@ -2122,6 +2164,7 @@ class Lexeme extends DataClass implements Insertable<Lexeme> {
     Value<String?> romanization = const Value.absent(),
     Value<String?> meaning = const Value.absent(),
     Value<String?> partOfSpeech = const Value.absent(),
+    bool? isPhonologicalException,
   }) => Lexeme(
     id: id ?? this.id,
     ipa: ipa ?? this.ipa,
@@ -2131,6 +2174,8 @@ class Lexeme extends DataClass implements Insertable<Lexeme> {
     romanization: romanization.present ? romanization.value : this.romanization,
     meaning: meaning.present ? meaning.value : this.meaning,
     partOfSpeech: partOfSpeech.present ? partOfSpeech.value : this.partOfSpeech,
+    isPhonologicalException:
+        isPhonologicalException ?? this.isPhonologicalException,
   );
   Lexeme copyWithCompanion(LexemesCompanion data) {
     return Lexeme(
@@ -2148,6 +2193,9 @@ class Lexeme extends DataClass implements Insertable<Lexeme> {
       partOfSpeech: data.partOfSpeech.present
           ? data.partOfSpeech.value
           : this.partOfSpeech,
+      isPhonologicalException: data.isPhonologicalException.present
+          ? data.isPhonologicalException.value
+          : this.isPhonologicalException,
     );
   }
 
@@ -2161,7 +2209,8 @@ class Lexeme extends DataClass implements Insertable<Lexeme> {
           ..write('computedForm: $computedForm, ')
           ..write('romanization: $romanization, ')
           ..write('meaning: $meaning, ')
-          ..write('partOfSpeech: $partOfSpeech')
+          ..write('partOfSpeech: $partOfSpeech, ')
+          ..write('isPhonologicalException: $isPhonologicalException')
           ..write(')'))
         .toString();
   }
@@ -2176,6 +2225,7 @@ class Lexeme extends DataClass implements Insertable<Lexeme> {
     romanization,
     meaning,
     partOfSpeech,
+    isPhonologicalException,
   );
   @override
   bool operator ==(Object other) =>
@@ -2188,7 +2238,8 @@ class Lexeme extends DataClass implements Insertable<Lexeme> {
           other.computedForm == this.computedForm &&
           other.romanization == this.romanization &&
           other.meaning == this.meaning &&
-          other.partOfSpeech == this.partOfSpeech);
+          other.partOfSpeech == this.partOfSpeech &&
+          other.isPhonologicalException == this.isPhonologicalException);
 }
 
 class LexemesCompanion extends UpdateCompanion<Lexeme> {
@@ -2200,6 +2251,7 @@ class LexemesCompanion extends UpdateCompanion<Lexeme> {
   final Value<String?> romanization;
   final Value<String?> meaning;
   final Value<String?> partOfSpeech;
+  final Value<bool> isPhonologicalException;
   const LexemesCompanion({
     this.id = const Value.absent(),
     this.ipa = const Value.absent(),
@@ -2209,6 +2261,7 @@ class LexemesCompanion extends UpdateCompanion<Lexeme> {
     this.romanization = const Value.absent(),
     this.meaning = const Value.absent(),
     this.partOfSpeech = const Value.absent(),
+    this.isPhonologicalException = const Value.absent(),
   });
   LexemesCompanion.insert({
     this.id = const Value.absent(),
@@ -2219,6 +2272,7 @@ class LexemesCompanion extends UpdateCompanion<Lexeme> {
     this.romanization = const Value.absent(),
     this.meaning = const Value.absent(),
     this.partOfSpeech = const Value.absent(),
+    this.isPhonologicalException = const Value.absent(),
   }) : ipa = Value(ipa);
   static Insertable<Lexeme> custom({
     Expression<int>? id,
@@ -2229,6 +2283,7 @@ class LexemesCompanion extends UpdateCompanion<Lexeme> {
     Expression<String>? romanization,
     Expression<String>? meaning,
     Expression<String>? partOfSpeech,
+    Expression<bool>? isPhonologicalException,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -2239,6 +2294,8 @@ class LexemesCompanion extends UpdateCompanion<Lexeme> {
       if (romanization != null) 'romanization': romanization,
       if (meaning != null) 'meaning': meaning,
       if (partOfSpeech != null) 'part_of_speech': partOfSpeech,
+      if (isPhonologicalException != null)
+        'is_phonological_exception': isPhonologicalException,
     });
   }
 
@@ -2251,6 +2308,7 @@ class LexemesCompanion extends UpdateCompanion<Lexeme> {
     Value<String?>? romanization,
     Value<String?>? meaning,
     Value<String?>? partOfSpeech,
+    Value<bool>? isPhonologicalException,
   }) {
     return LexemesCompanion(
       id: id ?? this.id,
@@ -2261,6 +2319,8 @@ class LexemesCompanion extends UpdateCompanion<Lexeme> {
       romanization: romanization ?? this.romanization,
       meaning: meaning ?? this.meaning,
       partOfSpeech: partOfSpeech ?? this.partOfSpeech,
+      isPhonologicalException:
+          isPhonologicalException ?? this.isPhonologicalException,
     );
   }
 
@@ -2291,6 +2351,11 @@ class LexemesCompanion extends UpdateCompanion<Lexeme> {
     if (partOfSpeech.present) {
       map['part_of_speech'] = Variable<String>(partOfSpeech.value);
     }
+    if (isPhonologicalException.present) {
+      map['is_phonological_exception'] = Variable<bool>(
+        isPhonologicalException.value,
+      );
+    }
     return map;
   }
 
@@ -2304,7 +2369,8 @@ class LexemesCompanion extends UpdateCompanion<Lexeme> {
           ..write('computedForm: $computedForm, ')
           ..write('romanization: $romanization, ')
           ..write('meaning: $meaning, ')
-          ..write('partOfSpeech: $partOfSpeech')
+          ..write('partOfSpeech: $partOfSpeech, ')
+          ..write('isPhonologicalException: $isPhonologicalException')
           ..write(')'))
         .toString();
   }
@@ -3913,6 +3979,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     this as AppDatabase,
   );
   late final MorphologyDao morphologyDao = MorphologyDao(this as AppDatabase);
+  late final LexemeDao lexemeDao = LexemeDao(this as AppDatabase);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -4973,6 +5040,7 @@ typedef $$LexemesTableCreateCompanionBuilder =
       Value<String?> romanization,
       Value<String?> meaning,
       Value<String?> partOfSpeech,
+      Value<bool> isPhonologicalException,
     });
 typedef $$LexemesTableUpdateCompanionBuilder =
     LexemesCompanion Function({
@@ -4984,6 +5052,7 @@ typedef $$LexemesTableUpdateCompanionBuilder =
       Value<String?> romanization,
       Value<String?> meaning,
       Value<String?> partOfSpeech,
+      Value<bool> isPhonologicalException,
     });
 
 class $$LexemesTableFilterComposer
@@ -5032,6 +5101,11 @@ class $$LexemesTableFilterComposer
 
   ColumnFilters<String> get partOfSpeech => $composableBuilder(
     column: $table.partOfSpeech,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isPhonologicalException => $composableBuilder(
+    column: $table.isPhonologicalException,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -5084,6 +5158,11 @@ class $$LexemesTableOrderingComposer
     column: $table.partOfSpeech,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<bool> get isPhonologicalException => $composableBuilder(
+    column: $table.isPhonologicalException,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$LexemesTableAnnotationComposer
@@ -5124,6 +5203,11 @@ class $$LexemesTableAnnotationComposer
     column: $table.partOfSpeech,
     builder: (column) => column,
   );
+
+  GeneratedColumn<bool> get isPhonologicalException => $composableBuilder(
+    column: $table.isPhonologicalException,
+    builder: (column) => column,
+  );
 }
 
 class $$LexemesTableTableManager
@@ -5162,6 +5246,7 @@ class $$LexemesTableTableManager
                 Value<String?> romanization = const Value.absent(),
                 Value<String?> meaning = const Value.absent(),
                 Value<String?> partOfSpeech = const Value.absent(),
+                Value<bool> isPhonologicalException = const Value.absent(),
               }) => LexemesCompanion(
                 id: id,
                 ipa: ipa,
@@ -5171,6 +5256,7 @@ class $$LexemesTableTableManager
                 romanization: romanization,
                 meaning: meaning,
                 partOfSpeech: partOfSpeech,
+                isPhonologicalException: isPhonologicalException,
               ),
           createCompanionCallback:
               ({
@@ -5182,6 +5268,7 @@ class $$LexemesTableTableManager
                 Value<String?> romanization = const Value.absent(),
                 Value<String?> meaning = const Value.absent(),
                 Value<String?> partOfSpeech = const Value.absent(),
+                Value<bool> isPhonologicalException = const Value.absent(),
               }) => LexemesCompanion.insert(
                 id: id,
                 ipa: ipa,
@@ -5191,6 +5278,7 @@ class $$LexemesTableTableManager
                 romanization: romanization,
                 meaning: meaning,
                 partOfSpeech: partOfSpeech,
+                isPhonologicalException: isPhonologicalException,
               ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))

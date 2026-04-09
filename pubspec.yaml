@@ -57,3 +57,5 @@ flutter:
   assets:
     - assets/ipa_audio/
     - assets/AUDIO_CREDITS.md
+    - assets/swadesh_list.json
+    - assets/conlangers_thesaurus.json
