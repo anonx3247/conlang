@@ -10,28 +10,28 @@ See: .planning/PROJECT.md (updated 2026-04-08)
 ## Current Position
 
 Phase: 1 of 6 (Foundation)
-Plan: 4 of 7 in current phase
+Plan: 7 of 7 in current phase
 Status: In progress
-Last activity: 2026-04-09 — Plan 03 complete (IPA reference chart panel + 89 OGG audio recordings)
+Last activity: 2026-04-08 — Plan 06 complete (romanization mapping editor, DAO, live preview UI)
 
-Progress: [█░░░░░░░░░] 7% (3/42 total plans)
+Progress: [██░░░░░░░░] 14% (6/42 total plans)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 3
-- Average duration: 5 min
-- Total execution time: 0.2 hours
+- Total plans completed: 6
+- Average duration: 6 min
+- Total execution time: 0.6 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 01-foundation | 3 | 15 min | 5 min |
+| 01-foundation | 6 | 36 min | 6 min |
 
 **Recent Trend:**
-- Last 5 plans: 7 min, 2 min, 6 min
-- Trend: —
+- Last 5 plans: 7 min, 2 min, 6 min, 14 min, 7 min
+- Trend: stable
 
 *Updated after each plan completion*
 
@@ -56,6 +56,8 @@ Recent decisions affecting current work:
 - 01-04: IPA symbol data defined locally in keyboard widget — keyboard layout and chart layout serve different purposes; integrate with ipa_data.dart (Plan 03) later if needed
 - 01-04: Popup trigger is focus-based + suffix icon toggle — auto-shows on focus (convenience), manual toggle (control)
 - 01-04: TapRegion for outside-tap dismissal — cleaner than GestureDetector, correctly excludes popup from "outside" boundary
+- [Phase 01-06]: 01-06: romanize uses longest-match-first sort (IPA symbol length desc) to correctly handle multi-char sequences like t͡s before t
+- [Phase 01-06]: 01-06: Plain flutter_riverpod providers (not @riverpod codegen) for Drift-referenced types — avoids riverpod_generator InvalidTypeException from build ordering
 
 ### Pending Todos
 
@@ -70,6 +72,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-09
-Stopped at: Completed 01-foundation/01-03-PLAN.md (IPA chart panel, audio playback, 89 OGG assets)
+Last session: 2026-04-08
+Stopped at: Completed 01-foundation/01-06-PLAN.md (romanization mapping editor and live preview UI)
 Resume file: None
