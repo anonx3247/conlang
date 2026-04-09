@@ -64,12 +64,12 @@ Plans:
 - [x] 02-02-PLAN.md — Drift schema extension (MorphologicalRules + Exceptions tables, v4 migration), MorphologyDao, Riverpod providers
 - [x] 02-03-PLAN.md — Morphology tab + router, rule editor UI with hybrid authoring (structured form + live DSL + preview panel)
 - [x] 02-04-PLAN.md — Checkpoint: end-to-end verification of all typological strategies + UI fixes
-- [ ] 02-05-PLAN.md — Gap closure: InfixOp DSL parser fix (TDD) + exception UI deferral to Phase 3
-- [ ] 02-06-PLAN.md — Gap closure: Jargon clarity, IPA keyboards in morphology, preview polish (font + regen)
-- [ ] 02-07-PLAN.md — Gap closure: Rule reordering with up/down buttons and DAO swap
-- [ ] 02-08-PLAN.md — Gap closure: Parts of Speech definitions + POS-based rule filtering
-- [ ] 02-09-PLAN.md — Gap closure: Condition pattern redesign (phonological notation replacing fixed types)
-- [ ] 02-10-PLAN.md — Gap closure: Preview enhancements (phonotactic violation highlighting + multi-rule stacking)
+- [x] 02-05-PLAN.md — Gap closure: InfixOp DSL parser fix (TDD) + exception UI deferral to Phase 3
+- [x] 02-06-PLAN.md — Gap closure: Jargon clarity, IPA keyboards in morphology, preview polish (font + regen)
+- [x] 02-07-PLAN.md — Gap closure: Rule reordering with up/down buttons and DAO swap
+- [x] 02-08-PLAN.md — Gap closure: Parts of Speech definitions + POS-based rule filtering
+- [x] 02-09-PLAN.md — Gap closure: Condition pattern redesign (position dropdown + phonological notation)
+- [x] 02-10-PLAN.md — Gap closure: Preview enhancements (phonotactic violation highlighting + multi-rule stacking)
 
 ### Phase 3: Lexicon
 **Goal**: Users can build and navigate a root-and-derived-word dictionary with full search, semantic coverage guidance, flashcard export, and inline phonotactic validation throughout the interface

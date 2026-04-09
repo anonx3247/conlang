@@ -11,8 +11,8 @@ See: .planning/PROJECT.md (updated 2026-04-08)
 
 Phase: 2 of 6 (Morphology Engine) — VERIFIED COMPLETE
 Plan: 10/10 complete (4 core + 6 gap closure)
-Status: Phase 2 verified — 11/11 must-haves pass, 24 tests green, no regressions. All 9 UAT gaps closed. Exception UI formally deferred to Phase 3.
-Last activity: 2026-04-09 — Phase 2 verified complete, all gap closure plans executed and verified
+Status: Phase 2 COMPLETE — all 10 plans done, 31 tests green, verified. Post-verification UAT fixes applied: condition position dropdowns, ablaut direction/count, multi-POS chips, phonotactic-valid preview words, branch auto-sort, forbidden sequence position constraints. Exception UI deferred to Phase 3.
+Last activity: 2026-04-09 — Phase 2 fully complete with all UAT feedback incorporated
 
 Progress: [██████░░░░] 55% (24/44 total plans)
 
@@ -133,5 +133,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-04-09
-Stopped at: Phase 2 (Morphology Engine) VERIFIED COMPLETE. 10/10 plans, 11/11 must-haves, 24 tests green. Ready for Phase 3 (Lexicon).
+Stopped at: Phase 2 FULLY COMPLETE — 10/10 plans, 31 tests, all UAT feedback incorporated. Ready for Phase 3 (Lexicon).
 Resume file: None
