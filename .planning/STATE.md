@@ -10,27 +10,27 @@ See: .planning/PROJECT.md (updated 2026-04-08)
 ## Current Position
 
 Phase: 1 of 6 (Foundation)
-Plan: 0 of 7 in current phase
-Status: Ready to plan
-Last activity: 2026-04-08 — Roadmap created, phases derived from requirements
+Plan: 1 of 7 in current phase
+Status: In progress
+Last activity: 2026-04-09 — Plan 01 complete (app shell + navigation)
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [█░░░░░░░░░] 2% (1/42 total plans)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 0
-- Average duration: —
-- Total execution time: 0 hours
+- Total plans completed: 1
+- Average duration: 7 min
+- Total execution time: 0.1 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| - | - | - | - |
+| 01-foundation | 1 | 7 min | 7 min |
 
 **Recent Trend:**
-- Last 5 plans: —
+- Last 5 plans: 7 min
 - Trend: —
 
 *Updated after each plan completion*
@@ -45,6 +45,9 @@ Recent decisions affecting current work:
 - Roadmap: Morphology engine built in Phase 2 before lexicon/grammar — centrepiece must be stable before dependent layers
 - Roadmap: Database schema designed in Phase 1 with derivation-aware structure (root_id + rule_ids + computed_form cache) — cannot be deferred without forcing a rewrite
 - Roadmap: IPA audio assets bundled at build time (Wikipedia-sourced) — not fetched at runtime
+- 01-01: Used riverpod_generator 3.0.3 (not 4.x) — transitive test_api conflict with flutter_test in Dart 3.10.4 ecosystem
+- 01-01: Used drift 2.31.0 + drift_flutter 0.2.8 (not 2.32.x) — drift_dev 2.32.x requires analyzer >=10.0.0, incompatible with riverpod_generator 3.x's analyzer <9.0.0
+- 01-01: Dark theme as default for professional desktop tool feel
 
 ### Pending Todos
 
@@ -55,9 +58,10 @@ None yet.
 - Phase 2 research flag: Pattern mini-language DSL design has no canonical reference — requires design spike before implementation commits (run one-page spec ceiling check)
 - Phase 3: Conlanger's Thesaurus PDF (fiatlingua.org) must be pre-extracted to JSON — verify PDF structure is parseable before Phase 3 planning
 - Phase 1: Verify OGG audio playback on Windows with just_audio before finalizing IPA audio asset format
+- Phase 1: riverpod_lint custom_lint plugin cannot be used as IDE analyzer plugin in Dart 3.10.4 (AOT snapshot build hook incompatibility); use `dart run custom_lint` CLI instead
 
 ## Session Continuity
 
-Last session: 2026-04-08
-Stopped at: Roadmap and STATE.md created; REQUIREMENTS.md traceability updated
+Last session: 2026-04-09
+Stopped at: Completed 01-foundation/01-01-PLAN.md (app shell, navigation, all dependencies)
 Resume file: None
