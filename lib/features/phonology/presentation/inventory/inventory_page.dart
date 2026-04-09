@@ -478,7 +478,6 @@ class _PhonemeCell extends ConsumerWidget {
                   context: context,
                   builder: (_) => PhonemeEditDialog(phoneme: p),
                 ),
-                onLongPress: () => confirmDeletePhoneme(context, ref, p),
               ),
             )
             .toList(),
@@ -491,19 +490,16 @@ class _PhonemeChip extends StatelessWidget {
   const _PhonemeChip({
     required this.phoneme,
     required this.onTap,
-    required this.onLongPress,
   });
 
   final Phoneme phoneme;
   final VoidCallback onTap;
-  final VoidCallback onLongPress;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return GestureDetector(
       onTap: onTap,
-      onLongPress: onLongPress,
       child: Tooltip(
         message: _tooltip(),
         child: Container(
@@ -613,7 +609,7 @@ class _NaturalClassesSection extends ConsumerWidget {
             }
             return asyncAll.when(
               loading: () => const SizedBox.shrink(),
-              error: (_, __) => const SizedBox.shrink(),
+              error: (err, stack) => const SizedBox.shrink(),
               data: (allPhonemes) {
                 final phonemeMap = {for (final p in allPhonemes) p.id: p};
                 return Wrap(

@@ -3,8 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../db/app_database.dart';
+import '../../data/ipa_data.dart';
 import '../../data/phoneme_providers.dart';
-import '../shared/ipa_keyboard/ipa_text_field.dart';
+import '../../data/romanization_providers.dart';
 
 // ---------------------------------------------------------------------------
 // Consonant articulation options
@@ -56,6 +57,116 @@ const _heightOptions = [
 
 const _backnessOptions = ['front', 'near-front', 'central', 'near-back', 'back'];
 
+// ---------------------------------------------------------------------------
+// IPA symbol derivation from features
+// ---------------------------------------------------------------------------
+
+/// Maps manner string to [Manner] enum.
+final _mannerMap = {
+  'plosive': Manner.plosive,
+  'nasal': Manner.nasal,
+  'trill': Manner.trill,
+  'tap/flap': Manner.tapOrFlap,
+  'fricative': Manner.fricative,
+  'lateral fricative': Manner.lateralFricative,
+  'approximant': Manner.approximant,
+  'lateral approximant': Manner.lateralApproximant,
+  'click': Manner.click,
+  'implosive': Manner.implosive,
+  'ejective': Manner.ejective,
+};
+
+/// Maps place string to [Place] enum.
+final _placeMap = {
+  'bilabial': Place.bilabial,
+  'labiodental': Place.labiodental,
+  'dental': Place.dental,
+  'alveolar': Place.alveolar,
+  'postalveolar': Place.postalveolar,
+  'retroflex': Place.retroflex,
+  'palatal': Place.palatal,
+  'velar': Place.velar,
+  'uvular': Place.uvular,
+  'pharyngeal': Place.pharyngeal,
+  'glottal': Place.glottal,
+};
+
+/// Maps height string to [VowelHeight] enum.
+final _heightMap = {
+  'close': VowelHeight.close,
+  'near-close': VowelHeight.nearClose,
+  'close-mid': VowelHeight.closeMid,
+  'mid': VowelHeight.mid,
+  'open-mid': VowelHeight.openMid,
+  'near-open': VowelHeight.nearOpen,
+  'open': VowelHeight.open,
+};
+
+/// Maps backness string to [VowelBackness] enum.
+final _backnessMap = {
+  'front': VowelBackness.front,
+  'near-front': VowelBackness.nearFront,
+  'central': VowelBackness.central,
+  'near-back': VowelBackness.nearBack,
+  'back': VowelBackness.back,
+};
+
+/// Derives the IPA symbol from selected consonant features.
+///
+/// Returns null if the combination doesn't match any known IPA sound.
+String? _deriveConsonantSymbol({
+  required String? manner,
+  required String? place,
+  required String? voicing,
+}) {
+  if (manner == null || place == null || voicing == null) return null;
+
+  final m = _mannerMap[manner];
+  final p = _placeMap[place];
+  final voiced = voicing == 'voiced';
+
+  if (m == null || p == null) return null;
+
+  final allConsonants = [
+    ...IpaSound.pulmonicConsonants,
+    ...IpaSound.nonPulmonicConsonants,
+  ];
+
+  for (final sound in allConsonants) {
+    if (sound.manner == m && sound.place == p && sound.voiced == voiced) {
+      return sound.symbol;
+    }
+  }
+  return null;
+}
+
+/// Derives the IPA symbol from selected vowel features.
+///
+/// Returns null if the combination doesn't match any known IPA sound.
+String? _deriveVowelSymbol({
+  required String? height,
+  required String? backness,
+  required bool rounded,
+}) {
+  if (height == null || backness == null) return null;
+
+  final h = _heightMap[height];
+  final b = _backnessMap[backness];
+
+  if (h == null || b == null) return null;
+
+  for (final sound in IpaSound.vowels) {
+    if (sound.height == h && sound.backness == b && sound.rounded == rounded) {
+      return sound.symbol;
+    }
+  }
+  return null;
+}
+
+// ---------------------------------------------------------------------------
+// Dialog widget
+// ---------------------------------------------------------------------------
+
 /// Dialog for creating or editing a phoneme.
 ///
 /// Pass [phoneme] to open in edit mode; leave null to open in create mode.
@@ -72,6 +183,9 @@ class PhonemeEditDialog extends ConsumerStatefulWidget {
 class _PhonemeEditDialogState extends ConsumerState<PhonemeEditDialog> {
   final _formKey = GlobalKey<FormState>();
   late TextEditingController _symbolController;
+
+  // Custom symbol controller (shown when derived symbol is null)
+  late TextEditingController _customSymbolController;
 
   String _type = 'consonant';
 
@@ -92,6 +206,7 @@ class _PhonemeEditDialogState extends ConsumerState<PhonemeEditDialog> {
     super.initState();
     final p = widget.phoneme;
     _symbolController = TextEditingController(text: p?.symbol ?? '');
+    _customSymbolController = TextEditingController();
     if (p != null) {
       _type = p.type;
       _manner = p.manner;
@@ -100,29 +215,61 @@ class _PhonemeEditDialogState extends ConsumerState<PhonemeEditDialog> {
       _height = p.height;
       _backness = p.backness;
       _rounded = p.rounded ?? false;
+
+      // If editing, pre-fill the custom symbol field in case derived fails.
+      _customSymbolController.text = p.symbol;
     }
   }
 
   @override
   void dispose() {
     _symbolController.dispose();
+    _customSymbolController.dispose();
     super.dispose();
   }
 
   bool get _isEditing => widget.phoneme != null;
 
+  /// Returns the derived IPA symbol based on current feature selections.
+  String? get _derivedSymbol {
+    if (_type == 'consonant') {
+      return _deriveConsonantSymbol(
+        manner: _manner,
+        place: _place,
+        voicing: _voicing,
+      );
+    } else {
+      return _deriveVowelSymbol(
+        height: _height,
+        backness: _backness,
+        rounded: _rounded,
+      );
+    }
+  }
+
+  /// The effective IPA symbol to save: derived (if known) or custom.
+  String get _effectiveSymbol {
+    final derived = _derivedSymbol;
+    if (derived != null) return derived;
+    return _customSymbolController.text.trim();
+  }
+
   Future<void> _save() async {
-    if (_symbolController.text.trim().isEmpty) return;
+    final symbol = _effectiveSymbol;
+    if (symbol.isEmpty) return;
     if (!_formKey.currentState!.validate()) return;
     final dao = ref.read(phonemeDaoProvider);
     if (dao == null) return;
+
+    // Sync the internal symbol controller with effective symbol.
+    _symbolController.text = symbol;
 
     setState(() => _saving = true);
 
     try {
       if (_isEditing) {
         final updated = widget.phoneme!.copyWith(
-          symbol: _symbolController.text.trim(),
+          symbol: symbol,
           type: _type,
           manner: Value(_type == 'consonant' ? _manner : null),
           place: Value(_type == 'consonant' ? _place : null),
@@ -134,7 +281,7 @@ class _PhonemeEditDialogState extends ConsumerState<PhonemeEditDialog> {
         await dao.updatePhoneme(updated);
       } else {
         final companion = PhonemesCompanion.insert(
-          symbol: _symbolController.text.trim(),
+          symbol: symbol,
           type: _type,
           manner: Value(_type == 'consonant' ? _manner : null),
           place: Value(_type == 'consonant' ? _place : null),
@@ -151,8 +298,19 @@ class _PhonemeEditDialogState extends ConsumerState<PhonemeEditDialog> {
     }
   }
 
+  Future<void> _confirmAndDelete(BuildContext context) async {
+    if (widget.phoneme == null) return;
+    final navigator = Navigator.of(context);
+    await confirmDeletePhoneme(context, ref, widget.phoneme!);
+    if (mounted) navigator.pop();
+  }
+
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final derived = _derivedSymbol;
+
     return AlertDialog(
       title: Text(_isEditing ? 'Edit Phoneme' : 'Add Phoneme'),
       content: SizedBox(
@@ -163,16 +321,6 @@ class _PhonemeEditDialogState extends ConsumerState<PhonemeEditDialog> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // IPA symbol field
-              IpaTextField(
-                controller: _symbolController,
-                decoration: const InputDecoration(
-                  labelText: 'IPA Symbol',
-                  hintText: 'e.g. p, b, ɸ, ʃ',
-                ),
-              ),
-              const SizedBox(height: 16),
-
               // Type selector
               DropdownButtonFormField<String>(
                 value: _type,
@@ -272,11 +420,86 @@ class _PhonemeEditDialogState extends ConsumerState<PhonemeEditDialog> {
                   contentPadding: EdgeInsets.zero,
                 ),
               ],
+
+              const SizedBox(height: 16),
+
+              // Derived IPA symbol display
+              Container(
+                padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                decoration: BoxDecoration(
+                  color: colorScheme.surfaceContainerHighest,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Column(
+                  children: [
+                    Text(
+                      'IPA Symbol',
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: colorScheme.onSurface.withValues(alpha: 0.6),
+                        letterSpacing: 0.8,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      derived ?? (derived == null && _featuresComplete ? '?' : '—'),
+                      style: theme.textTheme.headlineMedium?.copyWith(
+                        fontFamily: 'monospace',
+                        color: derived != null
+                            ? colorScheme.primary
+                            : colorScheme.onSurface.withValues(alpha: 0.3),
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    if (derived == null && _featuresComplete)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Text(
+                          'Unknown combination',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: colorScheme.onSurface.withValues(alpha: 0.5),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+
+              // Custom symbol field — shown only when features are complete but
+              // the combination isn't in the standard IPA set.
+              if (derived == null && _featuresComplete) ...[
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _customSymbolController,
+                  decoration: const InputDecoration(
+                    labelText: 'Custom IPA symbol',
+                    hintText: 'Enter symbol manually',
+                  ),
+                  onChanged: (_) => setState(() {}),
+                ),
+              ],
+
+              const SizedBox(height: 16),
+
+              // Romanization info (read-only)
+              _RomanizationInfo(
+                phonemeSymbol: _effectiveSymbol.isNotEmpty
+                    ? _effectiveSymbol
+                    : (widget.phoneme?.symbol),
+              ),
             ],
           ),
         ),
       ),
       actions: [
+        if (_isEditing)
+          TextButton(
+            onPressed: _saving ? null : () => _confirmAndDelete(context),
+            style: TextButton.styleFrom(
+              foregroundColor: colorScheme.error,
+            ),
+            child: const Text('Delete'),
+          ),
+        if (_isEditing) const Spacer(),
         TextButton(
           onPressed: _saving ? null : () => Navigator.of(context).pop(),
           child: const Text('Cancel'),
@@ -294,7 +517,90 @@ class _PhonemeEditDialogState extends ConsumerState<PhonemeEditDialog> {
       ],
     );
   }
+
+  /// True when all required feature dropdowns have been selected.
+  bool get _featuresComplete {
+    if (_type == 'consonant') {
+      return _manner != null && _place != null && _voicing != null;
+    } else {
+      return _height != null && _backness != null;
+    }
+  }
 }
+
+// ---------------------------------------------------------------------------
+// Romanization info widget
+// ---------------------------------------------------------------------------
+
+/// Shows the existing romanization mapping for a phoneme symbol (read-only).
+class _RomanizationInfo extends ConsumerWidget {
+  const _RomanizationInfo({required this.phonemeSymbol});
+
+  final String? phonemeSymbol;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final symbol = phonemeSymbol;
+
+    if (symbol == null || symbol.isEmpty) return const SizedBox.shrink();
+
+    final mappingsAsync = ref.watch(romanizationMappingsProvider);
+
+    return mappingsAsync.when(
+      loading: () => const SizedBox.shrink(),
+      error: (err, stack) => const SizedBox.shrink(),
+      data: (mappings) {
+        final match = mappings.where((m) => m.ipaSymbol == symbol).firstOrNull;
+
+        return Container(
+          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+          decoration: BoxDecoration(
+            color: colorScheme.surfaceContainerLow,
+            borderRadius: BorderRadius.circular(6),
+          ),
+          child: Row(
+            children: [
+              Icon(
+                Icons.translate_rounded,
+                size: 14,
+                color: colorScheme.onSurface.withValues(alpha: 0.5),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'Romanization: ',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: colorScheme.onSurface.withValues(alpha: 0.6),
+                ),
+              ),
+              if (match != null)
+                Text(
+                  match.latinMapping,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: colorScheme.primary,
+                  ),
+                )
+              else
+                Text(
+                  'No romanization defined',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: colorScheme.onSurface.withValues(alpha: 0.4),
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Confirm delete helper
+// ---------------------------------------------------------------------------
 
 /// Confirms deletion of a phoneme and deletes it from the DAO.
 Future<void> confirmDeletePhoneme(
