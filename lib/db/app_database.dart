@@ -273,9 +273,19 @@ class AppDatabase extends _$AppDatabase {
             'ALTER TABLE morphological_rules ADD COLUMN '
             '"pos_id" INTEGER REFERENCES parts_of_speech(id)',
           );
-        } catch (_) {
-          // Column already exists — safe to ignore.
-        }
+        } catch (_) {}
+        try {
+          await customStatement(
+            'ALTER TABLE morphological_rules ADD COLUMN '
+            '"pos_ids" TEXT NOT NULL DEFAULT \'\'',
+          );
+        } catch (_) {}
+        try {
+          await customStatement(
+            'ALTER TABLE phonotactic_constraints ADD COLUMN '
+            '"position" TEXT NOT NULL DEFAULT \'anywhere\'',
+          );
+        } catch (_) {}
       },
     );
   }
