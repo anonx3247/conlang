@@ -116,6 +116,46 @@ class RulesPage extends ConsumerWidget {
                         ),
                       ),
 
+                      // Reorder up button
+                      Opacity(
+                        opacity: i == 0 ? 0.2 : 1.0,
+                        child: IconButton(
+                          icon: const Icon(Icons.arrow_upward, size: 18),
+                          tooltip: 'Move up',
+                          visualDensity: VisualDensity.compact,
+                          constraints: const BoxConstraints(
+                            minWidth: 28,
+                            minHeight: 28,
+                          ),
+                          onPressed: i == 0
+                              ? null
+                              : () => dao.swapOrdering(
+                                    rules[i].id,
+                                    rules[i - 1].id,
+                                  ),
+                        ),
+                      ),
+
+                      // Reorder down button
+                      Opacity(
+                        opacity: i == rules.length - 1 ? 0.2 : 1.0,
+                        child: IconButton(
+                          icon: const Icon(Icons.arrow_downward, size: 18),
+                          tooltip: 'Move down',
+                          visualDensity: VisualDensity.compact,
+                          constraints: const BoxConstraints(
+                            minWidth: 28,
+                            minHeight: 28,
+                          ),
+                          onPressed: i == rules.length - 1
+                              ? null
+                              : () => dao.swapOrdering(
+                                    rules[i].id,
+                                    rules[i + 1].id,
+                                  ),
+                        ),
+                      ),
+
                       // Active toggle
                       Switch(
                         value: rule.isActive,
