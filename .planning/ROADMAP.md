@@ -56,7 +56,7 @@ Plans:
   1. User can write a morphological rule in the pattern mini-language (e.g. a suffix, an infix, a triconsonantal CaCCaaC template) and have it applied to a root word to produce the correct derived form
   2. The engine produces correct outputs for at least four typological strategies: concatenative (affix), Semitic root-and-pattern (template), vowel ablaut, and analytic (particle/aux verb, defined as a no-transform passthrough)
   3. User can define word derivation rules (e.g. denominalizer, agentive) that chain with root definitions to produce derived words
-  4. User can mark any individual word as an exception to any morphological rule and supply the irregular form directly
+  4. ~~User can mark any individual word as an exception to any morphological rule and supply the irregular form directly~~ — **Infrastructure complete (schema + DAO); UI deferred to Phase 3** where word detail pages provide the natural entry point for per-word exception management (per CONTEXT.md: "Exceptions entered from the word")
 **Plans:** 10 plans in 5 waves (4 core + 6 gap closure)
 
 Plans:
