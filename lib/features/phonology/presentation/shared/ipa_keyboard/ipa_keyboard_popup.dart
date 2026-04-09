@@ -294,7 +294,11 @@ class _SymbolButton extends StatelessWidget {
         splashColor: splashColor,
         borderRadius: BorderRadius.circular(4),
         child: Container(
-          constraints: const BoxConstraints(minWidth: 30, minHeight: 30),
+          constraints: const BoxConstraints(
+            minWidth: 30,
+            maxWidth: 48,
+            minHeight: 30,
+          ),
           padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
           decoration: BoxDecoration(
             color: backgroundColor,
