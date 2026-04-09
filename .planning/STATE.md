@@ -12,7 +12,7 @@ See: .planning/PROJECT.md (updated 2026-04-08)
 Phase: 1 of 6 (Foundation)
 Plan: 4 of 7 in current phase
 Status: In progress
-Last activity: 2026-04-09 — Plan 02 complete (per-project SQLite + project lifecycle UI)
+Last activity: 2026-04-09 — Plan 03 complete (IPA reference chart panel + 89 OGG audio recordings)
 
 Progress: [█░░░░░░░░░] 7% (3/42 total plans)
 
@@ -51,6 +51,8 @@ Recent decisions affecting current work:
 - 01-02: DriftNativeOptions.databasePath callback used (not name: param) — enables per-project SQLite file at arbitrary absolute path
 - 01-02: projectDatabase family provider is sync using ref.read().value peek — avoids AsyncValue wrapping throughout app; LazyDatabase defers actual file open
 - 01-02: Empty state rendered inside AppShell (not via GoRouter redirect) — keeps router clean, avoids redirect loop complexity
+- 01-03: Wikimedia Commons canonical OGG filenames discovered via Help:IPA article API (action=parse) — direct name guessing fails for ~70% of files; 6 sounds have no available recording (set to null audioAssetPath)
+- 01-03: IpaAudioPlayer as plain Dart class in @riverpod factory — simpler than StateNotifier since no state notification needed; stop-before-play prevents audio overlap
 - 01-04: IPA symbol data defined locally in keyboard widget — keyboard layout and chart layout serve different purposes; integrate with ipa_data.dart (Plan 03) later if needed
 - 01-04: Popup trigger is focus-based + suffix icon toggle — auto-shows on focus (convenience), manual toggle (control)
 - 01-04: TapRegion for outside-tap dismissal — cleaner than GestureDetector, correctly excludes popup from "outside" boundary
@@ -69,5 +71,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-04-09
-Stopped at: Completed 01-foundation/01-02-PLAN.md (per-project SQLite, project lifecycle UI, AppShell empty state)
+Stopped at: Completed 01-foundation/01-03-PLAN.md (IPA chart panel, audio playback, 89 OGG assets)
 Resume file: None
