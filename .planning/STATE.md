@@ -5,14 +5,14 @@
 See: .planning/PROJECT.md (updated 2026-04-08)
 
 **Core value:** A powerful, flexible morphology engine that handles the full spectrum of language types through a readable pattern mini-language
-**Current focus:** Phase 1 complete — ready for Phase 2 (Morphology Engine)
+**Current focus:** Phase 1 gap closure — fixing UAT bugs before Phase 2
 
 ## Current Position
 
 Phase: 1 of 6 (Foundation)
-Plan: 7 of 7 in current phase — COMPLETE
-Status: Phase 1 complete, ready for Phase 2
-Last activity: 2026-04-08 — Plan 07 complete (phonotactic DSL parser, word generator, sound rules page)
+Plan: 8 of 9 in current phase (gap closure plans 08-09 added after UAT)
+Status: Plan 08 complete — IPA keyboard, template editor, IPA chart, constraint docs fixed
+Last activity: 2026-04-08 — Plan 08 complete (IPA keyboard TapRegion fix, template editor TextField fix, IPA chart overflow fix, constraint DSL docs)
 
 Progress: [██░░░░░░░░] 17% (7/42 total plans)
 
@@ -39,6 +39,7 @@ Progress: [██░░░░░░░░] 17% (7/42 total plans)
 | Plan | Duration | Tasks | Files |
 |------|----------|-------|-------|
 | Phase 01-foundation P07 | 35 min | 2 tasks | 13 files |
+| Phase 01-foundation P08 | 18 min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -70,6 +71,10 @@ Recent decisions affecting current work:
 - 01-07: flatten() in petitparser 7.x uses named param {String? message} not positional — breaking change from earlier versions
 - 01-07: Private Dart classes cannot be imported across files — extract shared helpers to a public file when multiple widgets need them
 - 01-07: WordGeneratorPanel uses ref.listen() + Timer debounce for live preview — prevents rebuild storms on every keystroke
+- 01-08: TapRegion groupId (Object()) shared between TextField and overlay popup — clicks inside popup no longer trigger focus loss that collapses the popup before the symbol button onTap fires
+- 01-08: IpaTextField.build() preserves caller's suffixIcon via Row when showIpaKeyboard=true — validation icons (check/error) are no longer overwritten by the keyboard toggle
+- 01-08: Template editor pattern field switched to plain TextField — DSL uses C/V/[]/() not IPA symbols; removes unwanted keyboard, reveals validation icon, eliminates stale-error visual from popup overlap
+- 01-08: _IpaSymbolButton minWidth reduced from 12 to 9 and horizontal padding zeroed — 11-column pulmonic grid fits within 280px panel without RIGHT OVERFLOWED BY 4px errors
 
 ### Pending Todos
 
@@ -85,5 +90,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-04-08
-Stopped at: Completed 01-foundation/01-07-PLAN.md (phonotactic DSL parser, word generator, sound rules page) — Phase 1 COMPLETE
+Stopped at: Completed 01-foundation/01-08-PLAN.md (IPA keyboard TapRegion fix, template editor TextField fix, IPA chart overflow fix, constraint DSL docs) — Plan 09 is next
 Resume file: None
