@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../shared/widgets/violation_text.dart';
 import '../../data/phonotactic_providers.dart';
 import '../../data/romanization_providers.dart';
 import '../../domain/phonotactic_dsl.dart';
@@ -203,16 +204,9 @@ class _WordRow extends StatelessWidget {
       child: Row(
         children: [
           // IPA word (with violation underline if any)
-          Tooltip(
-            message: hasViolations
-                ? violations.map((v) => v.ruleDescription).join('; ')
-                : '',
-            child: hasViolations
-                ? _ViolationText(word: word, violations: violations)
-                : Text(
-                    word,
-                    style: theme.textTheme.bodyMedium,
-                  ),
+          ViolationText(
+            text: word,
+            violations: violations,
           ),
 
           // Romanized form
@@ -242,67 +236,3 @@ class _WordRow extends StatelessWidget {
   }
 }
 
-/// Renders a word with red wavy underline on violating character ranges.
-class _ViolationText extends StatelessWidget {
-  const _ViolationText({
-    required this.word,
-    required this.violations,
-  });
-
-  final String word;
-  final List<Violation> violations;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final cs = theme.colorScheme;
-
-    // Build a set of character indices that are in violation ranges.
-    final violatedIndices = <int>{};
-    for (final v in violations) {
-      for (var i = v.position; i < v.position + v.length && i < word.length; i++) {
-        violatedIndices.add(i);
-      }
-    }
-
-    if (violatedIndices.isEmpty) {
-      return Text(word, style: theme.textTheme.bodyMedium);
-    }
-
-    // Build TextSpans: normal runs and violated runs.
-    final spans = <TextSpan>[];
-    var i = 0;
-    while (i < word.length) {
-      if (violatedIndices.contains(i)) {
-        // Start of a violation run
-        var j = i;
-        while (j < word.length && violatedIndices.contains(j)) {
-          j++;
-        }
-        spans.add(TextSpan(
-          text: word.substring(i, j),
-          style: theme.textTheme.bodyMedium?.copyWith(
-            decoration: TextDecoration.underline,
-            decorationColor: cs.error,
-            decorationStyle: TextDecorationStyle.wavy,
-            color: cs.error,
-          ),
-        ));
-        i = j;
-      } else {
-        // Normal run
-        var j = i;
-        while (j < word.length && !violatedIndices.contains(j)) {
-          j++;
-        }
-        spans.add(TextSpan(
-          text: word.substring(i, j),
-          style: theme.textTheme.bodyMedium,
-        ));
-        i = j;
-      }
-    }
-
-    return RichText(text: TextSpan(children: spans));
-  }
-}

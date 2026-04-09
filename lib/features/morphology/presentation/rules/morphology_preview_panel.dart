@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../shared/widgets/violation_text.dart';
 import '../../../phonology/data/phonotactic_providers.dart';
 import '../../../phonology/data/romanization_providers.dart';
 import '../../../phonology/domain/phonotactic_dsl.dart';
@@ -258,22 +259,9 @@ class _MorphWordRow extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Tooltip(
-                    message: hasViolations
-                        ? violations
-                            .map((v) => v.ruleDescription)
-                            .join('; ')
-                        : '',
-                    child: hasViolations
-                        ? Text(
-                            derived!,
-                            style: theme.textTheme.bodyMedium?.copyWith(
-                              decoration: TextDecoration.underline,
-                              decorationColor: cs.error,
-                              decorationStyle: TextDecorationStyle.wavy,
-                            ),
-                          )
-                        : Text(derived!, style: theme.textTheme.bodyMedium),
+                  ViolationText(
+                    text: derived!,
+                    violations: violations,
                   ),
                   if (showRomanizedDerived)
                     Text(
