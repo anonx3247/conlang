@@ -12,25 +12,25 @@ See: .planning/PROJECT.md (updated 2026-04-08)
 Phase: 1 of 6 (Foundation)
 Plan: 4 of 7 in current phase
 Status: In progress
-Last activity: 2026-04-09 — Plan 04 complete (IPA keyboard popup + IpaTextField)
+Last activity: 2026-04-09 — Plan 02 complete (per-project SQLite + project lifecycle UI)
 
-Progress: [█░░░░░░░░░] 5% (2/42 total plans)
+Progress: [█░░░░░░░░░] 7% (3/42 total plans)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 2
+- Total plans completed: 3
 - Average duration: 5 min
-- Total execution time: 0.15 hours
+- Total execution time: 0.2 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 01-foundation | 2 | 9 min | 5 min |
+| 01-foundation | 3 | 15 min | 5 min |
 
 **Recent Trend:**
-- Last 5 plans: 7 min, 2 min
+- Last 5 plans: 7 min, 2 min, 6 min
 - Trend: —
 
 *Updated after each plan completion*
@@ -48,6 +48,9 @@ Recent decisions affecting current work:
 - 01-01: Used riverpod_generator 3.0.3 (not 4.x) — transitive test_api conflict with flutter_test in Dart 3.10.4 ecosystem
 - 01-01: Used drift 2.31.0 + drift_flutter 0.2.8 (not 2.32.x) — drift_dev 2.32.x requires analyzer >=10.0.0, incompatible with riverpod_generator 3.x's analyzer <9.0.0
 - 01-01: Dark theme as default for professional desktop tool feel
+- 01-02: DriftNativeOptions.databasePath callback used (not name: param) — enables per-project SQLite file at arbitrary absolute path
+- 01-02: projectDatabase family provider is sync using ref.read().value peek — avoids AsyncValue wrapping throughout app; LazyDatabase defers actual file open
+- 01-02: Empty state rendered inside AppShell (not via GoRouter redirect) — keeps router clean, avoids redirect loop complexity
 - 01-04: IPA symbol data defined locally in keyboard widget — keyboard layout and chart layout serve different purposes; integrate with ipa_data.dart (Plan 03) later if needed
 - 01-04: Popup trigger is focus-based + suffix icon toggle — auto-shows on focus (convenience), manual toggle (control)
 - 01-04: TapRegion for outside-tap dismissal — cleaner than GestureDetector, correctly excludes popup from "outside" boundary
@@ -66,5 +69,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-04-09
-Stopped at: Completed 01-foundation/01-04-PLAN.md (IPA keyboard popup + IpaTextField widget)
+Stopped at: Completed 01-foundation/01-02-PLAN.md (per-project SQLite, project lifecycle UI, AppShell empty state)
 Resume file: None
