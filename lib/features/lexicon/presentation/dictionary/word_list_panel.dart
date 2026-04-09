@@ -12,6 +12,7 @@ import '../../data/lexeme_providers.dart';
 ///   - POS filter chips (filters via [lexemePosFilterProvider])
 ///   - List/table view toggle
 ///   - The filtered word list (list or table mode)
+///   - Selection checkboxes for Anki export (D-18)
 ///
 /// Background: [ColorScheme.surfaceContainer] per UI-SPEC.
 class WordListPanel extends ConsumerStatefulWidget {
@@ -20,11 +21,31 @@ class WordListPanel extends ConsumerStatefulWidget {
     required this.onWordSelected,
     required this.onAddRoot,
     this.selectedLexemeId,
+    this.selectedForExport = const {},
+    this.onToggleExport,
+    this.onSelectAll,
+    this.onDeselectAll,
+    this.onExport,
   });
 
   final ValueChanged<int> onWordSelected;
   final VoidCallback onAddRoot;
   final int? selectedLexemeId;
+
+  /// The set of lexeme IDs currently selected for Anki export.
+  final Set<int> selectedForExport;
+
+  /// Called when the user toggles the export checkbox for a single word.
+  final ValueChanged<int>? onToggleExport;
+
+  /// Called when the user taps "Select all".
+  final VoidCallback? onSelectAll;
+
+  /// Called when the user taps the select-all checkbox to deselect all.
+  final VoidCallback? onDeselectAll;
+
+  /// Called when the user taps "Export to Anki".
+  final VoidCallback? onExport;
 
   @override
   ConsumerState<WordListPanel> createState() => _WordListPanelState();
@@ -56,6 +77,13 @@ class _WordListPanelState extends ConsumerState<WordListPanel> {
     final searchQuery = ref.watch(lexemeSearchQueryProvider);
     final derivedMatches = ref.watch(derivedSearchMatchesProvider);
 
+    // Determine select-all checkbox state
+    final allIds = filteredLexemes.map((l) => l.id).toSet();
+    final allSelected =
+        allIds.isNotEmpty && allIds.every(widget.selectedForExport.contains);
+    final someSelected = !allSelected &&
+        allIds.any(widget.selectedForExport.contains);
+
     return ColoredBox(
       color: cs.surfaceContainer,
       child: Column(
@@ -85,7 +113,7 @@ class _WordListPanelState extends ConsumerState<WordListPanel> {
                   contentPadding: EdgeInsets.symmetric(vertical: 10),
                 ),
                 onChanged: (value) {
-                  ref.read(lexemeSearchQueryProvider.notifier).state = value;
+                  ref.read(lexemeSearchQueryProvider.notifier).set(value);
                 },
               ),
             ),
@@ -105,7 +133,7 @@ class _WordListPanelState extends ConsumerState<WordListPanel> {
                       label: const Text('All'),
                       selected: posFilter.isEmpty,
                       onSelected: (_) {
-                        ref.read(lexemePosFilterProvider.notifier).state = {};
+                        ref.read(lexemePosFilterProvider.notifier).set({});
                       },
                     ),
                   ),
@@ -123,8 +151,7 @@ class _WordListPanelState extends ConsumerState<WordListPanel> {
                           } else {
                             current.remove(pos.name);
                           }
-                          ref.read(lexemePosFilterProvider.notifier).state =
-                              current;
+                          ref.read(lexemePosFilterProvider.notifier).set(current);
                         },
                       ),
                     );
@@ -133,11 +160,28 @@ class _WordListPanelState extends ConsumerState<WordListPanel> {
               ),
             ),
 
-          // ---- View toggle + count row -----------------------------------
+          // ---- View toggle + count row + select-all checkbox ------------
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 8, 4),
+            padding: const EdgeInsets.fromLTRB(8, 0, 8, 4),
             child: Row(
               children: [
+                // Select-all checkbox (D-18)
+                Tooltip(
+                  message: allSelected ? 'Deselect all' : 'Select all',
+                  child: Checkbox(
+                    value: allSelected ? true : (someSelected ? null : false),
+                    tristate: true,
+                    onChanged: filteredLexemes.isEmpty
+                        ? null
+                        : (_) {
+                            if (allSelected) {
+                              widget.onDeselectAll?.call();
+                            } else {
+                              widget.onSelectAll?.call();
+                            }
+                          },
+                  ),
+                ),
                 Text(
                   '${filteredLexemes.length} word${filteredLexemes.length == 1 ? '' : 's'}',
                   style: theme.textTheme.labelSmall?.copyWith(
@@ -182,7 +226,33 @@ class _WordListPanelState extends ConsumerState<WordListPanel> {
                     ? _buildTableView(context, filteredLexemes)
                     : _buildListView(context, filteredLexemes, derivedMatches),
           ),
+
+          // ---- Export footer (visible when 1+ words selected) -----------
+          if (widget.selectedForExport.isNotEmpty)
+            _buildExportFooter(context, cs),
         ],
+      ),
+    );
+  }
+
+  Widget _buildExportFooter(BuildContext context, ColorScheme cs) {
+    final count = widget.selectedForExport.length;
+    return Container(
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: cs.surfaceContainerHighest,
+        border: Border(
+          top: BorderSide(color: cs.outlineVariant, width: 1),
+        ),
+      ),
+      child: FilledButton.icon(
+        onPressed: widget.onExport,
+        icon: const Icon(Icons.download, size: 18),
+        label: Text('Export $count to Anki'),
+        style: FilledButton.styleFrom(
+          backgroundColor: cs.primary,
+          foregroundColor: cs.onPrimary,
+        ),
       ),
     );
   }
@@ -220,6 +290,7 @@ class _WordListPanelState extends ConsumerState<WordListPanel> {
       itemBuilder: (context, index) {
         final lexeme = lexemes[index];
         final isSelected = widget.selectedLexemeId == lexeme.id;
+        final isCheckedForExport = widget.selectedForExport.contains(lexeme.id);
 
         // Count derived matches that belong to this root
         final rootIdStr = lexeme.id.toString();
@@ -239,77 +310,93 @@ class _WordListPanelState extends ConsumerState<WordListPanel> {
           child: InkWell(
             onTap: () => widget.onWordSelected(lexeme.id),
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          lexeme.ipa,
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            fontSize: 13,
-                            fontWeight: isSelected
-                                ? FontWeight.w600
-                                : FontWeight.normal,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                  // Export selection checkbox (D-18)
+                  Checkbox(
+                    value: isCheckedForExport,
+                    onChanged: (_) =>
+                        widget.onToggleExport?.call(lexeme.id),
+                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    visualDensity: VisualDensity.compact,
+                  ),
+                  const SizedBox(width: 4),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                lexeme.ipa,
+                                style: theme.textTheme.bodyMedium?.copyWith(
+                                  fontSize: 13,
+                                  fontWeight: isSelected
+                                      ? FontWeight.w600
+                                      : FontWeight.normal,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            if (derivedMatchCount > 0)
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: cs.primary.withValues(alpha: 0.15),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: Text(
+                                  '$derivedMatchCount derived match${derivedMatchCount == 1 ? '' : 'es'}',
+                                  style: theme.textTheme.labelSmall?.copyWith(
+                                    fontSize: 10,
+                                    color: cs.primary,
+                                  ),
+                                ),
+                              ),
+                          ],
                         ),
-                      ),
-                      if (derivedMatchCount > 0)
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: cs.primary.withValues(alpha: 0.15),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: Text(
-                            '$derivedMatchCount derived match${derivedMatchCount == 1 ? '' : 'es'}',
+                        if (lexeme.romanization != null &&
+                            lexeme.romanization!.isNotEmpty)
+                          Text(
+                            lexeme.romanization!,
                             style: theme.textTheme.labelSmall?.copyWith(
-                              fontSize: 10,
-                              color: cs.primary,
+                              fontSize: 12,
+                              color: cs.onSurface.withValues(alpha: 0.55),
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        if (lexeme.meaning != null && lexeme.meaning!.isNotEmpty)
+                          Text(
+                            lexeme.meaning!,
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              fontSize: 12,
+                              color: cs.onSurface.withValues(alpha: 0.7),
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        if (lexeme.partOfSpeech != null &&
+                            lexeme.partOfSpeech!.isNotEmpty)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 2),
+                            child: Text(
+                              lexeme.partOfSpeech!,
+                              style: theme.textTheme.labelSmall?.copyWith(
+                                fontSize: 11,
+                                color: cs.onSurface.withValues(alpha: 0.5),
+                                letterSpacing: 0.5,
+                              ),
                             ),
                           ),
-                        ),
-                    ],
+                      ],
+                    ),
                   ),
-                  if (lexeme.romanization != null &&
-                      lexeme.romanization!.isNotEmpty)
-                    Text(
-                      lexeme.romanization!,
-                      style: theme.textTheme.labelSmall?.copyWith(
-                        fontSize: 12,
-                        color: cs.onSurface.withValues(alpha: 0.55),
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  if (lexeme.meaning != null && lexeme.meaning!.isNotEmpty)
-                    Text(
-                      lexeme.meaning!,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        fontSize: 12,
-                        color: cs.onSurface.withValues(alpha: 0.7),
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  if (lexeme.partOfSpeech != null &&
-                      lexeme.partOfSpeech!.isNotEmpty)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 2),
-                      child: Text(
-                        lexeme.partOfSpeech!,
-                        style: theme.textTheme.labelSmall?.copyWith(
-                          fontSize: 11,
-                          color: cs.onSurface.withValues(alpha: 0.5),
-                          letterSpacing: 0.5,
-                        ),
-                      ),
-                    ),
                 ],
               ),
             ),

@@ -1,7 +1,14 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:path_provider/path_provider.dart';
 
+import '../../data/anki_exporter.dart';
+import '../../data/lexeme_providers.dart';
+import '../../../morphology/data/morphology_providers.dart';
 import 'word_creation_form.dart';
 import 'word_detail_panel.dart';
 import 'word_list_panel.dart';
@@ -34,6 +41,9 @@ class _DictionaryPageState extends ConsumerState<DictionaryPage> {
   int? _selectedLexemeId;
   bool _isCreating = false;
   String? _prefillMeaning;
+
+  /// IDs of lexemes currently selected for Anki export (D-18).
+  Set<int> _selectedForExport = {};
 
   @override
   void initState() {
@@ -80,6 +90,160 @@ class _DictionaryPageState extends ConsumerState<DictionaryPage> {
       _isCreating = false;
       _prefillMeaning = null;
     });
+  }
+
+  void _onToggleExport(int id) {
+    setState(() {
+      if (_selectedForExport.contains(id)) {
+        _selectedForExport = Set.from(_selectedForExport)..remove(id);
+      } else {
+        _selectedForExport = Set.from(_selectedForExport)..add(id);
+      }
+    });
+  }
+
+  void _onSelectAll() {
+    final filteredLexemes = ref.read(filteredLexemeListProvider);
+    setState(() {
+      _selectedForExport = filteredLexemes.map((l) => l.id).toSet();
+    });
+  }
+
+  void _onDeselectAll() {
+    setState(() {
+      _selectedForExport = {};
+    });
+  }
+
+  /// Builds the Anki export and saves it to the Downloads folder (or temp dir),
+  /// then shows a confirmation snackbar with the filename.
+  Future<void> _onExport() async {
+    final selectedIds = Set<int>.from(_selectedForExport);
+    if (selectedIds.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Select at least one word to export.'),
+        ),
+      );
+      return;
+    }
+
+    // Gather all lexemes that are selected
+    final allLexemes = ref.read(allLexemeListProvider).asData?.value ?? [];
+    final selectedLexemes =
+        allLexemes.where((l) => selectedIds.contains(l.id)).toList();
+
+    // Build morphological context strings using rule names
+    final morphRules =
+        ref.read(morphologicalRuleListProvider).asData?.value ?? [];
+    final ruleMap = {for (final r in morphRules) r.id: r.name};
+
+    final entries = selectedLexemes.map((lexeme) {
+      String? morphContext;
+      if (lexeme.rootId != null && lexeme.ruleIds != null) {
+        try {
+          final root = allLexemes
+              .where((l) => l.id.toString() == lexeme.rootId)
+              .firstOrNull;
+          final ruleIdList = (jsonDecode(lexeme.ruleIds!) as List)
+              .map((e) => e as int)
+              .toList();
+          final ruleNames =
+              ruleIdList.map((id) => ruleMap[id] ?? 'rule #$id').join(', ');
+          if (root != null) {
+            morphContext = 'Derived from [${root.ipa}] via [$ruleNames]';
+          }
+        } catch (_) {
+          // Malformed ruleIds JSON — skip morphological context
+        }
+      }
+
+      return AnkiExportEntry(
+        ipa: lexeme.ipa,
+        romanization: lexeme.romanization,
+        meaning: lexeme.meaning,
+        partOfSpeech: lexeme.partOfSpeech,
+        morphologicalContext: morphContext,
+      );
+    }).toList();
+
+    // Determine deck name from project context (use app name as fallback)
+    const deckName = 'Conlang Workbench';
+
+    try {
+      final apkgBytes =
+          AnkiExporter().buildApkg(deckName: deckName, entries: entries);
+
+      // Save to Downloads or Documents folder
+      final dir = await _getExportDirectory();
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      final filename = 'conlang_export_$timestamp.apkg';
+      final filePath = '${dir.path}/$filename';
+      await File(filePath).writeAsBytes(apkgBytes);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content:
+                Text('Exported ${entries.length} words to $filename'),
+            action: SnackBarAction(
+              label: 'Open folder',
+              onPressed: () => _revealInFinder(dir.path),
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Export failed: $e'),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
+      }
+    }
+  }
+
+  /// Returns the best directory for saving the export file.
+  /// Prefers Downloads (macOS/Linux/Windows) or falls back to Documents/temp.
+  Future<Directory> _getExportDirectory() async {
+    // Try the Downloads folder first
+    if (Platform.isMacOS || Platform.isLinux) {
+      final home = Platform.environment['HOME'];
+      if (home != null) {
+        final downloads = Directory('$home/Downloads');
+        if (await downloads.exists()) return downloads;
+      }
+    } else if (Platform.isWindows) {
+      final userProfile = Platform.environment['USERPROFILE'];
+      if (userProfile != null) {
+        final downloads = Directory('$userProfile\\Downloads');
+        if (await downloads.exists()) return downloads;
+      }
+    }
+
+    // Fall back to documents directory
+    try {
+      return await getApplicationDocumentsDirectory();
+    } catch (_) {
+      return Directory.systemTemp;
+    }
+  }
+
+  /// Opens the folder in Finder/Explorer/Nautilus (best effort).
+  void _revealInFinder(String dirPath) {
+    try {
+      if (Platform.isMacOS) {
+        Process.run('open', [dirPath]);
+      } else if (Platform.isLinux) {
+        Process.run('xdg-open', [dirPath]);
+      } else if (Platform.isWindows) {
+        Process.run('explorer', [dirPath]);
+      }
+    } catch (_) {
+      // Non-fatal — folder reveal is a convenience feature
+    }
   }
 
   @override
@@ -145,6 +309,11 @@ class _DictionaryPageState extends ConsumerState<DictionaryPage> {
             selectedLexemeId: _selectedLexemeId,
             onWordSelected: _onWordSelected,
             onAddRoot: _onAddRoot,
+            selectedForExport: _selectedForExport,
+            onToggleExport: _onToggleExport,
+            onSelectAll: _onSelectAll,
+            onDeselectAll: _onDeselectAll,
+            onExport: _onExport,
           ),
         ),
         VerticalDivider(
