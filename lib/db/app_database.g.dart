@@ -2277,6 +2277,9 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final RomanizationDao romanizationDao = RomanizationDao(
     this as AppDatabase,
   );
+  late final PhonotacticDao phonotacticDao = PhonotacticDao(
+    this as AppDatabase,
+  );
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
