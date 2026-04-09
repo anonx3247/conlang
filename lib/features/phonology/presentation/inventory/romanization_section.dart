@@ -1,7 +1,10 @@
+import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../db/app_database.dart';
+import '../../data/ipa_data.dart';
+import '../../data/phoneme_providers.dart';
 import '../../data/romanization_dao.dart';
 import '../../data/romanization_providers.dart';
 import '../shared/ipa_keyboard/ipa_text_field.dart';
@@ -87,6 +90,9 @@ class _RomanizationSectionState extends ConsumerState<RomanizationSection> {
           latinMapping: latin,
         ),
       );
+
+      // Auto-create the phoneme if not already in inventory.
+      await _autoCreatePhoneme(ipa);
     } else {
       // Update existing mapping.
       await dao.updateMapping(
@@ -96,6 +102,123 @@ class _RomanizationSectionState extends ConsumerState<RomanizationSection> {
 
     _cancelEdit();
   }
+
+  /// Auto-creates a phoneme for [ipaSymbol] if not already in the inventory.
+  ///
+  /// Looks up [IpaSound] static data for feature pre-filling. Shows a SnackBar
+  /// to inform the user when a phoneme is created.
+  Future<void> _autoCreatePhoneme(String ipaSymbol) async {
+    // Check if phoneme already exists.
+    final existingPhonemes = ref.read(allPhonemesProvider).asData?.value ?? [];
+    if (existingPhonemes.any((p) => p.symbol == ipaSymbol)) return;
+
+    final phonemeDao = ref.read(phonemeDaoProvider);
+    if (phonemeDao == null) return;
+
+    // Look up IPA sound data to pre-fill features.
+    final allConsonants = [
+      ...IpaSound.pulmonicConsonants,
+      ...IpaSound.nonPulmonicConsonants,
+    ];
+
+    final consonantMatch =
+        allConsonants.where((s) => s.symbol == ipaSymbol).firstOrNull;
+    final vowelMatch =
+        IpaSound.vowels.where((s) => s.symbol == ipaSymbol).firstOrNull;
+
+    PhonemesCompanion companion;
+
+    if (consonantMatch != null) {
+      final s = consonantMatch;
+      final manner = _mannerToString(s.manner);
+      final place = _placeToString(s.place);
+      final voicing = s.voiced == true
+          ? 'voiced'
+          : (s.voiced == false ? 'voiceless' : null);
+      companion = PhonemesCompanion.insert(
+        symbol: ipaSymbol,
+        type: 'consonant',
+        manner: Value(manner),
+        place: Value(place),
+        voicing: Value(voicing),
+      );
+    } else if (vowelMatch != null) {
+      final s = vowelMatch;
+      companion = PhonemesCompanion.insert(
+        symbol: ipaSymbol,
+        type: 'vowel',
+        height: Value(_heightToString(s.height)),
+        backness: Value(_backnessToString(s.backness)),
+        rounded: Value(s.rounded),
+      );
+    } else {
+      // Unknown symbol: create with consonant type, null features.
+      companion = PhonemesCompanion.insert(
+        symbol: ipaSymbol,
+        type: 'consonant',
+      );
+    }
+
+    await phonemeDao.insertPhoneme(companion);
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Phoneme /$ipaSymbol/ added to inventory')),
+      );
+    }
+  }
+
+  static String? _mannerToString(Manner? manner) => switch (manner) {
+        Manner.plosive => 'plosive',
+        Manner.nasal => 'nasal',
+        Manner.trill => 'trill',
+        Manner.tapOrFlap => 'tap/flap',
+        Manner.fricative => 'fricative',
+        Manner.lateralFricative => 'lateral fricative',
+        Manner.approximant => 'approximant',
+        Manner.lateralApproximant => 'lateral approximant',
+        Manner.click => 'click',
+        Manner.implosive => 'implosive',
+        Manner.ejective => 'ejective',
+        null => null,
+      };
+
+  static String? _placeToString(Place? place) => switch (place) {
+        Place.bilabial => 'bilabial',
+        Place.labiodental => 'labiodental',
+        Place.dental => 'dental',
+        Place.alveolar => 'alveolar',
+        Place.postalveolar => 'postalveolar',
+        Place.retroflex => 'retroflex',
+        Place.palatal => 'palatal',
+        Place.velar => 'velar',
+        Place.uvular => 'uvular',
+        Place.pharyngeal => 'pharyngeal',
+        Place.glottal => 'glottal',
+        Place.palatoalveolar => 'postalveolar',
+        Place.alveolarlateral => 'alveolar',
+        null => null,
+      };
+
+  static String? _heightToString(VowelHeight? height) => switch (height) {
+        VowelHeight.close => 'close',
+        VowelHeight.nearClose => 'near-close',
+        VowelHeight.closeMid => 'close-mid',
+        VowelHeight.mid => 'mid',
+        VowelHeight.openMid => 'open-mid',
+        VowelHeight.nearOpen => 'near-open',
+        VowelHeight.open => 'open',
+        null => null,
+      };
+
+  static String? _backnessToString(VowelBackness? backness) => switch (backness) {
+        VowelBackness.front => 'front',
+        VowelBackness.nearFront => 'near-front',
+        VowelBackness.central => 'central',
+        VowelBackness.nearBack => 'near-back',
+        VowelBackness.back => 'back',
+        null => null,
+      };
 
   Future<void> _deleteMapping(int id) async {
     await _dao?.deleteMapping(id);

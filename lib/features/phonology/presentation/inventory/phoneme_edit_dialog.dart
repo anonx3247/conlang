@@ -342,11 +342,75 @@ class _PhonemeEditDialogState extends ConsumerState<PhonemeEditDialog> {
           rounded: Value(_type == 'vowel' ? _rounded : null),
         );
         await dao.insertPhoneme(companion);
+
+        // Prompt for romanization for new phonemes only.
+        if (mounted) {
+          await _promptRomanization(symbol);
+        }
       }
       if (mounted) Navigator.of(context).pop();
     } finally {
       if (mounted) setState(() => _saving = false);
     }
+  }
+
+  /// Shows a dialog prompting the user to add a romanization for [symbol].
+  ///
+  /// Only shown when romanization is enabled and no mapping yet exists for the
+  /// symbol. The user can skip or enter a Latin mapping and tap Add.
+  Future<void> _promptRomanization(String symbol) async {
+    // Check romanization enabled.
+    final enabled = ref.read(romanizationEnabledProvider).asData?.value ?? true;
+    if (!enabled) return;
+
+    // Check if mapping already exists.
+    final romanizationDao = ref.read(romanizationDaoProvider);
+    if (romanizationDao == null) return;
+    final existing = await romanizationDao.getAllMappings();
+    if (existing.any((m) => m.ipaSymbol == symbol)) return;
+
+    if (!mounted) return;
+
+    final latinController = TextEditingController();
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('Add romanization for /$symbol/?'),
+        content: TextField(
+          controller: latinController,
+          autofocus: true,
+          decoration: const InputDecoration(
+            labelText: 'Latin representation',
+            hintText: 'e.g. sh, zh, ng',
+          ),
+          onSubmitted: (_) => Navigator.of(ctx).pop(true),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Skip'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Add'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      final latin = latinController.text.trim();
+      if (latin.isNotEmpty) {
+        await romanizationDao.insertMapping(
+          RomanizationMappingsCompanion.insert(
+            ipaSymbol: symbol,
+            latinMapping: latin,
+          ),
+        );
+      }
+    }
+
+    latinController.dispose();
   }
 
   Future<void> _confirmAndDelete(BuildContext context) async {
