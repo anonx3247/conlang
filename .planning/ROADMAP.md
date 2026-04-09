@@ -84,12 +84,12 @@ Plans:
 **Plans:** 6 plans in 3 waves
 
 Plans:
-- [ ] 03-01-PLAN.md — Data layer: LexemeDao, schema v7 migration, providers, client-side filter, bundled Swadesh + Thesaurus JSON assets
-- [ ] 03-02-PLAN.md — Dictionary UI: master-detail layout, word list panel, word detail panel, creation form, derivation tree (on-the-fly engine), inspiration panel, exception UI, query param handling for D-16
-- [ ] 03-03-PLAN.md — Semantic references: Swadesh list checklist with coverage progress, Thesaurus hierarchical tree browser with search
-- [ ] 03-04-PLAN.md — Anki export: .apkg builder with sqlite3 + archive, selection checkboxes, export flow with snackbar confirmation
-- [ ] 03-05-PLAN.md — Phonotactic highlighting infrastructure: shared ViolationText widget extraction, validation provider
-- [ ] 03-06-PLAN.md — Phonotactic highlighting wiring: ViolationText into lexicon detail/list, per-word exception toggle, batch validation provider
+- [x] 03-01-PLAN.md — Data layer: LexemeDao, schema v7 migration, providers, client-side filter, bundled Swadesh + Thesaurus JSON assets
+- [x] 03-02-PLAN.md — Dictionary UI: master-detail layout, word list panel, word detail panel, creation form, derivation tree (on-the-fly engine), inspiration panel, exception UI, query param handling for D-16
+- [x] 03-03-PLAN.md — Semantic references: Swadesh list checklist with coverage progress, Thesaurus hierarchical tree browser with search
+- [x] 03-04-PLAN.md — Anki export: .apkg builder with sqlite3 + archive, selection checkboxes, export flow with snackbar confirmation
+- [x] 03-05-PLAN.md — Phonotactic highlighting infrastructure: shared ViolationText widget extraction, validation provider
+- [x] 03-06-PLAN.md — Phonotactic highlighting wiring: ViolationText into lexicon detail/list, per-word exception toggle, batch validation provider
 
 ### Phase 4: Grammar
 **Goal**: Users can define the grammatical structure of their language — parts of speech, inflection rules, and typological choices — and generate complete paradigm charts for any word
