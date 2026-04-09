@@ -234,6 +234,16 @@ Parser<MorphOperation> _buildOperationParser() {
           RedupOp(scope: values[1] as String, position: values[3] as String)
               as MorphOperation);
 
+  // infix:affix:position -> InfixOp
+  // e.g. 'infix:um:1' means insert 'um' after the 1st consonant
+  final infix = (string('infix:') &
+          pattern('^ |:').plus().flatten() &
+          char(':') &
+          pattern('0-9').plus().flatten())
+      .map((values) =>
+          InfixOp(affix: values[1] as String, position: int.parse(values[3] as String))
+              as MorphOperation);
+
   // ="form" -> SuppleteOp
   final supplete = (string('="') & pattern('^"').plus().flatten() & char('"'))
       .map((values) => SuppleteOp(values[1] as String) as MorphOperation);
@@ -248,7 +258,8 @@ Parser<MorphOperation> _buildOperationParser() {
 
   // Order matters: try longer/more-specific patterns first.
   // removeSuffixQuoted before removeSuffixBare (quoted is more specific).
-  return (ablaut | redup | supplete | removeSuffixQuoted | removeSuffixBare | suffix | template | prefix)
+  // infix placed after redup and before supplete (all use colon-prefixed tokens).
+  return (ablaut | redup | infix | supplete | removeSuffixQuoted | removeSuffixBare | suffix | template | prefix)
       .cast<MorphOperation>();
 }
 

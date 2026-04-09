@@ -289,4 +289,29 @@ void main() {
     expect(parsed.isValid, isTrue, reason: 'Parse should succeed: ${parsed.error}');
     expect(parsed.rule!.branches.length, equals(3));
   });
+
+  // -------------------------------------------------------------------------
+  // 16. InfixOp DSL round-trip
+  // -------------------------------------------------------------------------
+  group('InfixOp DSL round-trip', () {
+    test('InfixOp serializes to infix:um:1 and parses back losslessly', () {
+      final rule = simpleRule(
+        [const InfixOp(affix: 'um', position: 1)],
+        source: 'infix:um:1',
+      );
+
+      // Verify serialization
+      final serialized = serializeMorphRule(rule);
+      expect(serialized, equals('infix:um:1'));
+
+      // Verify parse round-trip
+      final parsed = parseMorphDsl(serialized);
+      expect(parsed.isValid, isTrue, reason: 'Parse should succeed: ${parsed.error}');
+
+      final op = parsed.rule!.branches.first.operations.first;
+      expect(op, isA<InfixOp>());
+      expect((op as InfixOp).affix, equals('um'));
+      expect(op.position, equals(1));
+    });
+  });
 }
