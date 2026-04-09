@@ -2752,6 +2752,261 @@ class ProjectSettingsCompanion extends UpdateCompanion<ProjectSetting> {
   }
 }
 
+class $PartsOfSpeechTable extends PartsOfSpeech
+    with TableInfo<$PartsOfSpeechTable, PartsOfSpeechData> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $PartsOfSpeechTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _nameMeta = const VerificationMeta('name');
+  @override
+  late final GeneratedColumn<String> name = GeneratedColumn<String>(
+    'name',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _abbreviationMeta = const VerificationMeta(
+    'abbreviation',
+  );
+  @override
+  late final GeneratedColumn<String> abbreviation = GeneratedColumn<String>(
+    'abbreviation',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [id, name, abbreviation];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'parts_of_speech';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<PartsOfSpeechData> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('name')) {
+      context.handle(
+        _nameMeta,
+        name.isAcceptableOrUnknown(data['name']!, _nameMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_nameMeta);
+    }
+    if (data.containsKey('abbreviation')) {
+      context.handle(
+        _abbreviationMeta,
+        abbreviation.isAcceptableOrUnknown(
+          data['abbreviation']!,
+          _abbreviationMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_abbreviationMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  PartsOfSpeechData map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return PartsOfSpeechData(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      name: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}name'],
+      )!,
+      abbreviation: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}abbreviation'],
+      )!,
+    );
+  }
+
+  @override
+  $PartsOfSpeechTable createAlias(String alias) {
+    return $PartsOfSpeechTable(attachedDatabase, alias);
+  }
+}
+
+class PartsOfSpeechData extends DataClass
+    implements Insertable<PartsOfSpeechData> {
+  final int id;
+  final String name;
+  final String abbreviation;
+  const PartsOfSpeechData({
+    required this.id,
+    required this.name,
+    required this.abbreviation,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['name'] = Variable<String>(name);
+    map['abbreviation'] = Variable<String>(abbreviation);
+    return map;
+  }
+
+  PartsOfSpeechCompanion toCompanion(bool nullToAbsent) {
+    return PartsOfSpeechCompanion(
+      id: Value(id),
+      name: Value(name),
+      abbreviation: Value(abbreviation),
+    );
+  }
+
+  factory PartsOfSpeechData.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return PartsOfSpeechData(
+      id: serializer.fromJson<int>(json['id']),
+      name: serializer.fromJson<String>(json['name']),
+      abbreviation: serializer.fromJson<String>(json['abbreviation']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'name': serializer.toJson<String>(name),
+      'abbreviation': serializer.toJson<String>(abbreviation),
+    };
+  }
+
+  PartsOfSpeechData copyWith({int? id, String? name, String? abbreviation}) =>
+      PartsOfSpeechData(
+        id: id ?? this.id,
+        name: name ?? this.name,
+        abbreviation: abbreviation ?? this.abbreviation,
+      );
+  PartsOfSpeechData copyWithCompanion(PartsOfSpeechCompanion data) {
+    return PartsOfSpeechData(
+      id: data.id.present ? data.id.value : this.id,
+      name: data.name.present ? data.name.value : this.name,
+      abbreviation: data.abbreviation.present
+          ? data.abbreviation.value
+          : this.abbreviation,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('PartsOfSpeechData(')
+          ..write('id: $id, ')
+          ..write('name: $name, ')
+          ..write('abbreviation: $abbreviation')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, name, abbreviation);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is PartsOfSpeechData &&
+          other.id == this.id &&
+          other.name == this.name &&
+          other.abbreviation == this.abbreviation);
+}
+
+class PartsOfSpeechCompanion extends UpdateCompanion<PartsOfSpeechData> {
+  final Value<int> id;
+  final Value<String> name;
+  final Value<String> abbreviation;
+  const PartsOfSpeechCompanion({
+    this.id = const Value.absent(),
+    this.name = const Value.absent(),
+    this.abbreviation = const Value.absent(),
+  });
+  PartsOfSpeechCompanion.insert({
+    this.id = const Value.absent(),
+    required String name,
+    required String abbreviation,
+  }) : name = Value(name),
+       abbreviation = Value(abbreviation);
+  static Insertable<PartsOfSpeechData> custom({
+    Expression<int>? id,
+    Expression<String>? name,
+    Expression<String>? abbreviation,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (name != null) 'name': name,
+      if (abbreviation != null) 'abbreviation': abbreviation,
+    });
+  }
+
+  PartsOfSpeechCompanion copyWith({
+    Value<int>? id,
+    Value<String>? name,
+    Value<String>? abbreviation,
+  }) {
+    return PartsOfSpeechCompanion(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      abbreviation: abbreviation ?? this.abbreviation,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (name.present) {
+      map['name'] = Variable<String>(name.value);
+    }
+    if (abbreviation.present) {
+      map['abbreviation'] = Variable<String>(abbreviation.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('PartsOfSpeechCompanion(')
+          ..write('id: $id, ')
+          ..write('name: $name, ')
+          ..write('abbreviation: $abbreviation')
+          ..write(')'))
+        .toString();
+  }
+}
+
 class $MorphologicalRulesTable extends MorphologicalRules
     with TableInfo<$MorphologicalRulesTable, MorphologicalRule> {
   @override
@@ -2816,8 +3071,27 @@ class $MorphologicalRulesTable extends MorphologicalRules
     ),
     defaultValue: const Constant(true),
   );
+  static const VerificationMeta _posIdMeta = const VerificationMeta('posId');
   @override
-  List<GeneratedColumn> get $columns => [id, name, source, ordering, isActive];
+  late final GeneratedColumn<int> posId = GeneratedColumn<int>(
+    'pos_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES parts_of_speech (id)',
+    ),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    name,
+    source,
+    ordering,
+    isActive,
+    posId,
+  ];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -2861,6 +3135,12 @@ class $MorphologicalRulesTable extends MorphologicalRules
         isActive.isAcceptableOrUnknown(data['is_active']!, _isActiveMeta),
       );
     }
+    if (data.containsKey('pos_id')) {
+      context.handle(
+        _posIdMeta,
+        posId.isAcceptableOrUnknown(data['pos_id']!, _posIdMeta),
+      );
+    }
     return context;
   }
 
@@ -2890,6 +3170,10 @@ class $MorphologicalRulesTable extends MorphologicalRules
         DriftSqlType.bool,
         data['${effectivePrefix}is_active'],
       )!,
+      posId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}pos_id'],
+      ),
     );
   }
 
@@ -2906,12 +3190,14 @@ class MorphologicalRule extends DataClass
   final String source;
   final int ordering;
   final bool isActive;
+  final int? posId;
   const MorphologicalRule({
     required this.id,
     required this.name,
     required this.source,
     required this.ordering,
     required this.isActive,
+    this.posId,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -2921,6 +3207,9 @@ class MorphologicalRule extends DataClass
     map['source'] = Variable<String>(source);
     map['ordering'] = Variable<int>(ordering);
     map['is_active'] = Variable<bool>(isActive);
+    if (!nullToAbsent || posId != null) {
+      map['pos_id'] = Variable<int>(posId);
+    }
     return map;
   }
 
@@ -2931,6 +3220,9 @@ class MorphologicalRule extends DataClass
       source: Value(source),
       ordering: Value(ordering),
       isActive: Value(isActive),
+      posId: posId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(posId),
     );
   }
 
@@ -2945,6 +3237,7 @@ class MorphologicalRule extends DataClass
       source: serializer.fromJson<String>(json['source']),
       ordering: serializer.fromJson<int>(json['ordering']),
       isActive: serializer.fromJson<bool>(json['isActive']),
+      posId: serializer.fromJson<int?>(json['posId']),
     );
   }
   @override
@@ -2956,6 +3249,7 @@ class MorphologicalRule extends DataClass
       'source': serializer.toJson<String>(source),
       'ordering': serializer.toJson<int>(ordering),
       'isActive': serializer.toJson<bool>(isActive),
+      'posId': serializer.toJson<int?>(posId),
     };
   }
 
@@ -2965,12 +3259,14 @@ class MorphologicalRule extends DataClass
     String? source,
     int? ordering,
     bool? isActive,
+    Value<int?> posId = const Value.absent(),
   }) => MorphologicalRule(
     id: id ?? this.id,
     name: name ?? this.name,
     source: source ?? this.source,
     ordering: ordering ?? this.ordering,
     isActive: isActive ?? this.isActive,
+    posId: posId.present ? posId.value : this.posId,
   );
   MorphologicalRule copyWithCompanion(MorphologicalRulesCompanion data) {
     return MorphologicalRule(
@@ -2979,6 +3275,7 @@ class MorphologicalRule extends DataClass
       source: data.source.present ? data.source.value : this.source,
       ordering: data.ordering.present ? data.ordering.value : this.ordering,
       isActive: data.isActive.present ? data.isActive.value : this.isActive,
+      posId: data.posId.present ? data.posId.value : this.posId,
     );
   }
 
@@ -2989,13 +3286,14 @@ class MorphologicalRule extends DataClass
           ..write('name: $name, ')
           ..write('source: $source, ')
           ..write('ordering: $ordering, ')
-          ..write('isActive: $isActive')
+          ..write('isActive: $isActive, ')
+          ..write('posId: $posId')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(id, name, source, ordering, isActive);
+  int get hashCode => Object.hash(id, name, source, ordering, isActive, posId);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -3004,7 +3302,8 @@ class MorphologicalRule extends DataClass
           other.name == this.name &&
           other.source == this.source &&
           other.ordering == this.ordering &&
-          other.isActive == this.isActive);
+          other.isActive == this.isActive &&
+          other.posId == this.posId);
 }
 
 class MorphologicalRulesCompanion extends UpdateCompanion<MorphologicalRule> {
@@ -3013,12 +3312,14 @@ class MorphologicalRulesCompanion extends UpdateCompanion<MorphologicalRule> {
   final Value<String> source;
   final Value<int> ordering;
   final Value<bool> isActive;
+  final Value<int?> posId;
   const MorphologicalRulesCompanion({
     this.id = const Value.absent(),
     this.name = const Value.absent(),
     this.source = const Value.absent(),
     this.ordering = const Value.absent(),
     this.isActive = const Value.absent(),
+    this.posId = const Value.absent(),
   });
   MorphologicalRulesCompanion.insert({
     this.id = const Value.absent(),
@@ -3026,6 +3327,7 @@ class MorphologicalRulesCompanion extends UpdateCompanion<MorphologicalRule> {
     required String source,
     this.ordering = const Value.absent(),
     this.isActive = const Value.absent(),
+    this.posId = const Value.absent(),
   }) : name = Value(name),
        source = Value(source);
   static Insertable<MorphologicalRule> custom({
@@ -3034,6 +3336,7 @@ class MorphologicalRulesCompanion extends UpdateCompanion<MorphologicalRule> {
     Expression<String>? source,
     Expression<int>? ordering,
     Expression<bool>? isActive,
+    Expression<int>? posId,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -3041,6 +3344,7 @@ class MorphologicalRulesCompanion extends UpdateCompanion<MorphologicalRule> {
       if (source != null) 'source': source,
       if (ordering != null) 'ordering': ordering,
       if (isActive != null) 'is_active': isActive,
+      if (posId != null) 'pos_id': posId,
     });
   }
 
@@ -3050,6 +3354,7 @@ class MorphologicalRulesCompanion extends UpdateCompanion<MorphologicalRule> {
     Value<String>? source,
     Value<int>? ordering,
     Value<bool>? isActive,
+    Value<int?>? posId,
   }) {
     return MorphologicalRulesCompanion(
       id: id ?? this.id,
@@ -3057,6 +3362,7 @@ class MorphologicalRulesCompanion extends UpdateCompanion<MorphologicalRule> {
       source: source ?? this.source,
       ordering: ordering ?? this.ordering,
       isActive: isActive ?? this.isActive,
+      posId: posId ?? this.posId,
     );
   }
 
@@ -3078,6 +3384,9 @@ class MorphologicalRulesCompanion extends UpdateCompanion<MorphologicalRule> {
     if (isActive.present) {
       map['is_active'] = Variable<bool>(isActive.value);
     }
+    if (posId.present) {
+      map['pos_id'] = Variable<int>(posId.value);
+    }
     return map;
   }
 
@@ -3088,7 +3397,8 @@ class MorphologicalRulesCompanion extends UpdateCompanion<MorphologicalRule> {
           ..write('name: $name, ')
           ..write('source: $source, ')
           ..write('ordering: $ordering, ')
-          ..write('isActive: $isActive')
+          ..write('isActive: $isActive, ')
+          ..write('posId: $posId')
           ..write(')'))
         .toString();
   }
@@ -3485,6 +3795,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $ProjectSettingsTable projectSettings = $ProjectSettingsTable(
     this,
   );
+  late final $PartsOfSpeechTable partsOfSpeech = $PartsOfSpeechTable(this);
   late final $MorphologicalRulesTable morphologicalRules =
       $MorphologicalRulesTable(this);
   late final $MorphologicalRuleExceptionsTable morphologicalRuleExceptions =
@@ -3516,6 +3827,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     lexemes,
     rewriteRules,
     projectSettings,
+    partsOfSpeech,
     morphologicalRules,
     morphologicalRuleExceptions,
   ];
@@ -5098,6 +5410,279 @@ typedef $$ProjectSettingsTableProcessedTableManager =
       ProjectSetting,
       PrefetchHooks Function()
     >;
+typedef $$PartsOfSpeechTableCreateCompanionBuilder =
+    PartsOfSpeechCompanion Function({
+      Value<int> id,
+      required String name,
+      required String abbreviation,
+    });
+typedef $$PartsOfSpeechTableUpdateCompanionBuilder =
+    PartsOfSpeechCompanion Function({
+      Value<int> id,
+      Value<String> name,
+      Value<String> abbreviation,
+    });
+
+final class $$PartsOfSpeechTableReferences
+    extends
+        BaseReferences<_$AppDatabase, $PartsOfSpeechTable, PartsOfSpeechData> {
+  $$PartsOfSpeechTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static MultiTypedResultKey<$MorphologicalRulesTable, List<MorphologicalRule>>
+  _morphologicalRulesRefsTable(_$AppDatabase db) =>
+      MultiTypedResultKey.fromTable(
+        db.morphologicalRules,
+        aliasName: $_aliasNameGenerator(
+          db.partsOfSpeech.id,
+          db.morphologicalRules.posId,
+        ),
+      );
+
+  $$MorphologicalRulesTableProcessedTableManager get morphologicalRulesRefs {
+    final manager = $$MorphologicalRulesTableTableManager(
+      $_db,
+      $_db.morphologicalRules,
+    ).filter((f) => f.posId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _morphologicalRulesRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+}
+
+class $$PartsOfSpeechTableFilterComposer
+    extends Composer<_$AppDatabase, $PartsOfSpeechTable> {
+  $$PartsOfSpeechTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get abbreviation => $composableBuilder(
+    column: $table.abbreviation,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  Expression<bool> morphologicalRulesRefs(
+    Expression<bool> Function($$MorphologicalRulesTableFilterComposer f) f,
+  ) {
+    final $$MorphologicalRulesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.morphologicalRules,
+      getReferencedColumn: (t) => t.posId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$MorphologicalRulesTableFilterComposer(
+            $db: $db,
+            $table: $db.morphologicalRules,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+}
+
+class $$PartsOfSpeechTableOrderingComposer
+    extends Composer<_$AppDatabase, $PartsOfSpeechTable> {
+  $$PartsOfSpeechTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get abbreviation => $composableBuilder(
+    column: $table.abbreviation,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$PartsOfSpeechTableAnnotationComposer
+    extends Composer<_$AppDatabase, $PartsOfSpeechTable> {
+  $$PartsOfSpeechTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumn<String> get abbreviation => $composableBuilder(
+    column: $table.abbreviation,
+    builder: (column) => column,
+  );
+
+  Expression<T> morphologicalRulesRefs<T extends Object>(
+    Expression<T> Function($$MorphologicalRulesTableAnnotationComposer a) f,
+  ) {
+    final $$MorphologicalRulesTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.morphologicalRules,
+          getReferencedColumn: (t) => t.posId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$MorphologicalRulesTableAnnotationComposer(
+                $db: $db,
+                $table: $db.morphologicalRules,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
+}
+
+class $$PartsOfSpeechTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $PartsOfSpeechTable,
+          PartsOfSpeechData,
+          $$PartsOfSpeechTableFilterComposer,
+          $$PartsOfSpeechTableOrderingComposer,
+          $$PartsOfSpeechTableAnnotationComposer,
+          $$PartsOfSpeechTableCreateCompanionBuilder,
+          $$PartsOfSpeechTableUpdateCompanionBuilder,
+          (PartsOfSpeechData, $$PartsOfSpeechTableReferences),
+          PartsOfSpeechData,
+          PrefetchHooks Function({bool morphologicalRulesRefs})
+        > {
+  $$PartsOfSpeechTableTableManager(_$AppDatabase db, $PartsOfSpeechTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$PartsOfSpeechTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$PartsOfSpeechTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$PartsOfSpeechTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<String> name = const Value.absent(),
+                Value<String> abbreviation = const Value.absent(),
+              }) => PartsOfSpeechCompanion(
+                id: id,
+                name: name,
+                abbreviation: abbreviation,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required String name,
+                required String abbreviation,
+              }) => PartsOfSpeechCompanion.insert(
+                id: id,
+                name: name,
+                abbreviation: abbreviation,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$PartsOfSpeechTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({morphologicalRulesRefs = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [
+                if (morphologicalRulesRefs) db.morphologicalRules,
+              ],
+              addJoins: null,
+              getPrefetchedDataCallback: (items) async {
+                return [
+                  if (morphologicalRulesRefs)
+                    await $_getPrefetchedData<
+                      PartsOfSpeechData,
+                      $PartsOfSpeechTable,
+                      MorphologicalRule
+                    >(
+                      currentTable: table,
+                      referencedTable: $$PartsOfSpeechTableReferences
+                          ._morphologicalRulesRefsTable(db),
+                      managerFromTypedResult: (p0) =>
+                          $$PartsOfSpeechTableReferences(
+                            db,
+                            table,
+                            p0,
+                          ).morphologicalRulesRefs,
+                      referencedItemsForCurrentItem: (item, referencedItems) =>
+                          referencedItems.where((e) => e.posId == item.id),
+                      typedResults: items,
+                    ),
+                ];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$PartsOfSpeechTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $PartsOfSpeechTable,
+      PartsOfSpeechData,
+      $$PartsOfSpeechTableFilterComposer,
+      $$PartsOfSpeechTableOrderingComposer,
+      $$PartsOfSpeechTableAnnotationComposer,
+      $$PartsOfSpeechTableCreateCompanionBuilder,
+      $$PartsOfSpeechTableUpdateCompanionBuilder,
+      (PartsOfSpeechData, $$PartsOfSpeechTableReferences),
+      PartsOfSpeechData,
+      PrefetchHooks Function({bool morphologicalRulesRefs})
+    >;
 typedef $$MorphologicalRulesTableCreateCompanionBuilder =
     MorphologicalRulesCompanion Function({
       Value<int> id,
@@ -5105,6 +5690,7 @@ typedef $$MorphologicalRulesTableCreateCompanionBuilder =
       required String source,
       Value<int> ordering,
       Value<bool> isActive,
+      Value<int?> posId,
     });
 typedef $$MorphologicalRulesTableUpdateCompanionBuilder =
     MorphologicalRulesCompanion Function({
@@ -5113,7 +5699,41 @@ typedef $$MorphologicalRulesTableUpdateCompanionBuilder =
       Value<String> source,
       Value<int> ordering,
       Value<bool> isActive,
+      Value<int?> posId,
     });
+
+final class $$MorphologicalRulesTableReferences
+    extends
+        BaseReferences<
+          _$AppDatabase,
+          $MorphologicalRulesTable,
+          MorphologicalRule
+        > {
+  $$MorphologicalRulesTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static $PartsOfSpeechTable _posIdTable(_$AppDatabase db) =>
+      db.partsOfSpeech.createAlias(
+        $_aliasNameGenerator(db.morphologicalRules.posId, db.partsOfSpeech.id),
+      );
+
+  $$PartsOfSpeechTableProcessedTableManager? get posId {
+    final $_column = $_itemColumn<int>('pos_id');
+    if ($_column == null) return null;
+    final manager = $$PartsOfSpeechTableTableManager(
+      $_db,
+      $_db.partsOfSpeech,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_posIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
 
 class $$MorphologicalRulesTableFilterComposer
     extends Composer<_$AppDatabase, $MorphologicalRulesTable> {
@@ -5148,6 +5768,29 @@ class $$MorphologicalRulesTableFilterComposer
     column: $table.isActive,
     builder: (column) => ColumnFilters(column),
   );
+
+  $$PartsOfSpeechTableFilterComposer get posId {
+    final $$PartsOfSpeechTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.posId,
+      referencedTable: $db.partsOfSpeech,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$PartsOfSpeechTableFilterComposer(
+            $db: $db,
+            $table: $db.partsOfSpeech,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
 }
 
 class $$MorphologicalRulesTableOrderingComposer
@@ -5183,6 +5826,29 @@ class $$MorphologicalRulesTableOrderingComposer
     column: $table.isActive,
     builder: (column) => ColumnOrderings(column),
   );
+
+  $$PartsOfSpeechTableOrderingComposer get posId {
+    final $$PartsOfSpeechTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.posId,
+      referencedTable: $db.partsOfSpeech,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$PartsOfSpeechTableOrderingComposer(
+            $db: $db,
+            $table: $db.partsOfSpeech,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
 }
 
 class $$MorphologicalRulesTableAnnotationComposer
@@ -5208,6 +5874,29 @@ class $$MorphologicalRulesTableAnnotationComposer
 
   GeneratedColumn<bool> get isActive =>
       $composableBuilder(column: $table.isActive, builder: (column) => column);
+
+  $$PartsOfSpeechTableAnnotationComposer get posId {
+    final $$PartsOfSpeechTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.posId,
+      referencedTable: $db.partsOfSpeech,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$PartsOfSpeechTableAnnotationComposer(
+            $db: $db,
+            $table: $db.partsOfSpeech,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
 }
 
 class $$MorphologicalRulesTableTableManager
@@ -5221,16 +5910,9 @@ class $$MorphologicalRulesTableTableManager
           $$MorphologicalRulesTableAnnotationComposer,
           $$MorphologicalRulesTableCreateCompanionBuilder,
           $$MorphologicalRulesTableUpdateCompanionBuilder,
-          (
-            MorphologicalRule,
-            BaseReferences<
-              _$AppDatabase,
-              $MorphologicalRulesTable,
-              MorphologicalRule
-            >,
-          ),
+          (MorphologicalRule, $$MorphologicalRulesTableReferences),
           MorphologicalRule,
-          PrefetchHooks Function()
+          PrefetchHooks Function({bool posId})
         > {
   $$MorphologicalRulesTableTableManager(
     _$AppDatabase db,
@@ -5255,12 +5937,14 @@ class $$MorphologicalRulesTableTableManager
                 Value<String> source = const Value.absent(),
                 Value<int> ordering = const Value.absent(),
                 Value<bool> isActive = const Value.absent(),
+                Value<int?> posId = const Value.absent(),
               }) => MorphologicalRulesCompanion(
                 id: id,
                 name: name,
                 source: source,
                 ordering: ordering,
                 isActive: isActive,
+                posId: posId,
               ),
           createCompanionCallback:
               ({
@@ -5269,17 +5953,66 @@ class $$MorphologicalRulesTableTableManager
                 required String source,
                 Value<int> ordering = const Value.absent(),
                 Value<bool> isActive = const Value.absent(),
+                Value<int?> posId = const Value.absent(),
               }) => MorphologicalRulesCompanion.insert(
                 id: id,
                 name: name,
                 source: source,
                 ordering: ordering,
                 isActive: isActive,
+                posId: posId,
               ),
           withReferenceMapper: (p0) => p0
-              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$MorphologicalRulesTableReferences(db, table, e),
+                ),
+              )
               .toList(),
-          prefetchHooksCallback: null,
+          prefetchHooksCallback: ({posId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (posId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.posId,
+                                referencedTable:
+                                    $$MorphologicalRulesTableReferences
+                                        ._posIdTable(db),
+                                referencedColumn:
+                                    $$MorphologicalRulesTableReferences
+                                        ._posIdTable(db)
+                                        .id,
+                              )
+                              as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
         ),
       );
 }
@@ -5294,16 +6027,9 @@ typedef $$MorphologicalRulesTableProcessedTableManager =
       $$MorphologicalRulesTableAnnotationComposer,
       $$MorphologicalRulesTableCreateCompanionBuilder,
       $$MorphologicalRulesTableUpdateCompanionBuilder,
-      (
-        MorphologicalRule,
-        BaseReferences<
-          _$AppDatabase,
-          $MorphologicalRulesTable,
-          MorphologicalRule
-        >,
-      ),
+      (MorphologicalRule, $$MorphologicalRulesTableReferences),
       MorphologicalRule,
-      PrefetchHooks Function()
+      PrefetchHooks Function({bool posId})
     >;
 typedef $$MorphologicalRuleExceptionsTableCreateCompanionBuilder =
     MorphologicalRuleExceptionsCompanion Function({
@@ -5545,6 +6271,8 @@ class $AppDatabaseManager {
       $$RewriteRulesTableTableManager(_db, _db.rewriteRules);
   $$ProjectSettingsTableTableManager get projectSettings =>
       $$ProjectSettingsTableTableManager(_db, _db.projectSettings);
+  $$PartsOfSpeechTableTableManager get partsOfSpeech =>
+      $$PartsOfSpeechTableTableManager(_db, _db.partsOfSpeech);
   $$MorphologicalRulesTableTableManager get morphologicalRules =>
       $$MorphologicalRulesTableTableManager(_db, _db.morphologicalRules);
   $$MorphologicalRuleExceptionsTableTableManager

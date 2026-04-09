@@ -4,12 +4,12 @@ import '../../../db/app_database.dart';
 
 part 'morphology_dao.g.dart';
 
-/// Drift DAO for CRUD operations on [MorphologicalRules] and
-/// [MorphologicalRuleExceptions] tables.
+/// Drift DAO for CRUD operations on [MorphologicalRules],
+/// [MorphologicalRuleExceptions], and [PartsOfSpeech] tables.
 ///
 /// Obtain via `currentDatabase.morphologyDao` or the Riverpod
 /// [morphologyDaoProvider] which derives it from the active project database.
-@DriftAccessor(tables: [MorphologicalRules, MorphologicalRuleExceptions])
+@DriftAccessor(tables: [MorphologicalRules, MorphologicalRuleExceptions, PartsOfSpeech])
 class MorphologyDao extends DatabaseAccessor<AppDatabase>
     with _$MorphologyDaoMixin {
   MorphologyDao(super.db);
@@ -92,6 +92,30 @@ class MorphologyDao extends DatabaseAccessor<AppDatabase>
   /// Deletes the morphological rule exception with the given [id].
   Future<int> deleteException(int id) =>
       (delete(morphologicalRuleExceptions)..where((t) => t.id.equals(id))).go();
+
+  // ---------------------------------------------------------------------------
+  // Parts of Speech — reactive queries
+  // ---------------------------------------------------------------------------
+
+  /// Watches all parts of speech, ordered by name ascending.
+  Stream<List<PartsOfSpeechData>> watchAllPos() =>
+      (select(partsOfSpeech)..orderBy([(t) => OrderingTerm.asc(t.name)]))
+          .watch();
+
+  // ---------------------------------------------------------------------------
+  // Parts of Speech — CRUD
+  // ---------------------------------------------------------------------------
+
+  /// Inserts a new part of speech and returns its generated row ID.
+  Future<int> insertPos(PartsOfSpeechCompanion c) =>
+      into(partsOfSpeech).insert(c);
+
+  /// Replaces all fields of an existing part of speech row.
+  Future<bool> updatePos(PartsOfSpeechData p) => update(partsOfSpeech).replace(p);
+
+  /// Deletes the part of speech with the given [id].
+  Future<int> deletePos(int id) =>
+      (delete(partsOfSpeech)..where((t) => t.id.equals(id))).go();
 
   // ---------------------------------------------------------------------------
   // Stale exception detection

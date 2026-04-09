@@ -4,6 +4,7 @@ part of 'morphology_dao.dart';
 
 // ignore_for_file: type=lint
 mixin _$MorphologyDaoMixin on DatabaseAccessor<AppDatabase> {
+  $PartsOfSpeechTable get partsOfSpeech => attachedDatabase.partsOfSpeech;
   $MorphologicalRulesTable get morphologicalRules =>
       attachedDatabase.morphologicalRules;
   $MorphologicalRuleExceptionsTable get morphologicalRuleExceptions =>
@@ -14,6 +15,8 @@ mixin _$MorphologyDaoMixin on DatabaseAccessor<AppDatabase> {
 class MorphologyDaoManager {
   final _$MorphologyDaoMixin _db;
   MorphologyDaoManager(this._db);
+  $$PartsOfSpeechTableTableManager get partsOfSpeech =>
+      $$PartsOfSpeechTableTableManager(_db.attachedDatabase, _db.partsOfSpeech);
   $$MorphologicalRulesTableTableManager get morphologicalRules =>
       $$MorphologicalRulesTableTableManager(
         _db.attachedDatabase,

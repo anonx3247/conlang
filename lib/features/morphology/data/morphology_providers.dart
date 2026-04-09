@@ -36,6 +36,19 @@ final morphologicalRuleListProvider =
 });
 
 // ---------------------------------------------------------------------------
+// Parts of Speech providers
+// ---------------------------------------------------------------------------
+
+/// Streams all parts of speech for the current project, ordered by name.
+///
+/// Emits an empty list when no project is open.
+final posListProvider = StreamProvider<List<PartsOfSpeechData>>((ref) {
+  final dao = ref.watch(morphologyDaoProvider);
+  if (dao == null) return Stream.value([]);
+  return dao.watchAllPos();
+});
+
+// ---------------------------------------------------------------------------
 // Exception providers
 // ---------------------------------------------------------------------------
 
