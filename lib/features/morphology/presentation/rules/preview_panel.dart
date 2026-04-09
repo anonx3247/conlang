@@ -149,12 +149,24 @@ class _PreviewPanelState extends ConsumerState<PreviewPanel> {
       children: [
         Padding(
           padding: const EdgeInsets.only(bottom: 8),
-          child: Text(
-            'Preview',
-            style: theme.textTheme.labelMedium?.copyWith(
-              color: cs.onSurface.withValues(alpha: 0.6),
-              letterSpacing: 0.8,
-            ),
+          child: Row(
+            children: [
+              Text(
+                'Preview',
+                style: theme.textTheme.labelMedium?.copyWith(
+                  color: cs.onSurface.withValues(alpha: 0.6),
+                  letterSpacing: 0.8,
+                ),
+              ),
+              const Spacer(),
+              IconButton(
+                icon: const Icon(Icons.refresh, size: 18),
+                tooltip: 'Regenerate preview',
+                onPressed: _scheduleRefresh,
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+              ),
+            ],
           ),
         ),
         Table(
@@ -210,12 +222,24 @@ class _PreviewPanelState extends ConsumerState<PreviewPanel> {
       children: [
         Padding(
           padding: const EdgeInsets.only(bottom: 8),
-          child: Text(
-            'Preview',
-            style: theme.textTheme.labelMedium?.copyWith(
-              color: cs.onSurface.withValues(alpha: 0.6),
-              letterSpacing: 0.8,
-            ),
+          child: Row(
+            children: [
+              Text(
+                'Preview',
+                style: theme.textTheme.labelMedium?.copyWith(
+                  color: cs.onSurface.withValues(alpha: 0.6),
+                  letterSpacing: 0.8,
+                ),
+              ),
+              const Spacer(),
+              IconButton(
+                icon: const Icon(Icons.refresh, size: 18),
+                tooltip: 'Regenerate preview',
+                onPressed: _scheduleRefresh,
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+              ),
+            ],
           ),
         ),
         Row(
