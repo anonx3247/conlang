@@ -12,7 +12,10 @@ A powerful, flexible morphology engine that handles the full spectrum of languag
 
 ### Validated
 
-(None yet — ship to validate)
+- [x] Phonotactic violation highlighting (red) on words throughout the tool, allowing exceptions (e.g. loanwords) — Validated in Phase 3: Lexicon
+- [x] Lexicon tab: root dictionary + derived word dictionary with meanings and etymology — Validated in Phase 3: Lexicon
+- [x] Integration with Swadesh list and Conlanger's Thesaurus for word creation guidance — Validated in Phase 3: Lexicon
+- [x] Anki card export from lexicon — Validated in Phase 3: Lexicon
 
 ### Active
 
@@ -75,4 +78,4 @@ A powerful, flexible morphology engine that handles the full spectrum of languag
 | AI as tutor + co-creator | Dual role: explain linguistics concepts AND actively help build the language | — Pending |
 
 ---
-*Last updated: 2026-04-08 after initialization*
+*Last updated: 2026-04-09 after Phase 3 (Lexicon) completion*
