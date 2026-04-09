@@ -57,8 +57,6 @@ void main() {
   // 3. Infix
   // -------------------------------------------------------------------------
   test('InfixOp inserts affix after Nth consonant', () {
-    // root 'talis': consonants are t(pos 0), l(pos 2), s(pos 4)
-    // InfixOp(position:1) inserts after 1st consonant (t) -> 'tumalis'
     final rule = simpleRule([const InfixOp(affix: 'um', position: 1)]);
     final result = engine.applyRule(rule, 'talis', testInventory);
     expect(result, isA<MorphSuccess>());
@@ -66,10 +64,9 @@ void main() {
   });
 
   // -------------------------------------------------------------------------
-  // 4. Ablaut
+  // 4. Ablaut (replace all, default)
   // -------------------------------------------------------------------------
   test('AblautOp replaces all occurrences of vowel in root', () {
-    // 'katab': replace 'a' with 'e' -> 'keteb'
     final rule = simpleRule([const AblautOp(from: 'a', to: 'e')]);
     final result = engine.applyRule(rule, 'katab', testInventory);
     expect(result, isA<MorphSuccess>());
@@ -77,10 +74,42 @@ void main() {
   });
 
   // -------------------------------------------------------------------------
+  // 4b. Ablaut with count and direction
+  // -------------------------------------------------------------------------
+  test('AblautOp count=1 fromStart replaces first occurrence only', () {
+    final rule = simpleRule([
+      const AblautOp(from: 'a', to: 'e', count: 1, direction: AblautDirection.fromStart),
+    ]);
+    final result = engine.applyRule(rule, 'banana', testInventory);
+    expect(result, isA<MorphSuccess>());
+    // banana: a at positions 1, 3, 5 — replace first -> benana
+    expect((result as MorphSuccess).form, equals('benana'));
+  });
+
+  test('AblautOp count=1 fromEnd replaces last occurrence only', () {
+    final rule = simpleRule([
+      const AblautOp(from: 'a', to: 'e', count: 1, direction: AblautDirection.fromEnd),
+    ]);
+    final result = engine.applyRule(rule, 'banana', testInventory);
+    expect(result, isA<MorphSuccess>());
+    // banana: a at positions 1, 3, 5 — replace last -> banane
+    expect((result as MorphSuccess).form, equals('banane'));
+  });
+
+  test('AblautOp count=2 fromEnd replaces last two occurrences', () {
+    final rule = simpleRule([
+      const AblautOp(from: 'a', to: 'e', count: 2, direction: AblautDirection.fromEnd),
+    ]);
+    final result = engine.applyRule(rule, 'banana', testInventory);
+    expect(result, isA<MorphSuccess>());
+    // banana: a at 1, 3, 5 — replace last two (3, 5) -> banene
+    expect((result as MorphSuccess).form, equals('banene'));
+  });
+
+  // -------------------------------------------------------------------------
   // 5. Template
   // -------------------------------------------------------------------------
   test('TemplateOp applies Semitic-style consonant pattern', () {
-    // root 'ktb': consonants k,t,b; pattern '1a23aa' -> 'katbaa'
     final rule = simpleRule([const TemplateOp('1a23aa')]);
     final result = engine.applyRule(rule, 'ktb', testInventory);
     expect(result, isA<MorphSuccess>());
@@ -101,7 +130,6 @@ void main() {
   // 7. Reduplication - CV prefix
   // -------------------------------------------------------------------------
   test('RedupOp CV prefix duplicates first C+V sequence as prefix', () {
-    // 'kata': first CV is 'ka' -> 'kakata'
     final rule = simpleRule([const RedupOp(scope: 'CV', position: 'prefix')]);
     final result = engine.applyRule(rule, 'kata', testInventory);
     expect(result, isA<MorphSuccess>());
@@ -119,19 +147,15 @@ void main() {
   });
 
   // -------------------------------------------------------------------------
-  // 9. Branching - PatternCond literal suffix / prefix
+  // 9. Branching - PatternCond endsWith
   // -------------------------------------------------------------------------
-  test('Branching with PatternCond(o_) selects correct branch', () {
-    // Branch 1: ends with 'o' -> remove 'o', add 'in'
-    // Branch 2 (default): add 'in'
-    // 'kamo' should hit branch 1 -> -o -> 'kam' -> +in -> 'kamin'
-    // 'kam' should hit branch 2 -> add 'in' -> 'kamin'
+  test('Branching with PatternCond endsWith selects correct branch', () {
     final rule = MorphologicalRule(
       id: 0,
       name: 'test',
       branches: [
         MorphBranch(
-          conditions: const [PatternCond('o_')],
+          conditions: const [PatternCond('o', position: CondPosition.endsWith)],
           operations: const [RemoveSuffixOp('o'), SuffixOp('in')],
         ),
         MorphBranch(
@@ -151,17 +175,15 @@ void main() {
   });
 
   // -------------------------------------------------------------------------
-  // 10. Branching - PatternCond class (vowel-final)
+  // 10. Branching - PatternCond endsWith class (vowel-final)
   // -------------------------------------------------------------------------
-  test('Branching with PatternCond(V_) selects correct branch', () {
-    // Branch 1: ends with V -> suffix 'n'
-    // Branch 2 (default): suffix 'an'
+  test('Branching with PatternCond endsWith V selects correct branch', () {
     final rule = MorphologicalRule(
       id: 0,
       name: 'test',
       branches: [
         MorphBranch(
-          conditions: const [PatternCond('V_')],
+          conditions: const [PatternCond('V', position: CondPosition.endsWith)],
           operations: const [SuffixOp('n')],
         ),
         MorphBranch(
@@ -172,12 +194,10 @@ void main() {
       source: '',
     );
 
-    // Vowel-final root 'kata' -> ends with 'a' (vowel) -> suffix 'n' -> 'katan'
     final result1 = engine.applyRule(rule, 'kata', testInventory);
     expect(result1, isA<MorphSuccess>());
     expect((result1 as MorphSuccess).form, equals('katan'));
 
-    // Consonant-final root 'kat' -> hits default -> suffix 'an' -> 'katan'
     final result2 = engine.applyRule(rule, 'kat', testInventory);
     expect(result2, isA<MorphSuccess>());
     expect((result2 as MorphSuccess).form, equals('katan'));
@@ -187,7 +207,6 @@ void main() {
   // 11. Chained operations
   // -------------------------------------------------------------------------
   test('Chained operations apply in order', () {
-    // [SuffixOp('a'), SuffixOp('n')] on 'kam' -> 'kama' -> 'kaman'
     final rule = simpleRule([const SuffixOp('a'), const SuffixOp('n')]);
     final result = engine.applyRule(rule, 'kam', testInventory);
     expect(result, isA<MorphSuccess>());
@@ -207,13 +226,12 @@ void main() {
   // 13. No matching branch
   // -------------------------------------------------------------------------
   test('Engine returns MorphNoMatch when no branch condition matches', () {
-    // Rule has only one branch with PatternCond('x_'); root 'kam' does not match
     final rule = MorphologicalRule(
       id: 0,
       name: 'test',
       branches: [
         MorphBranch(
-          conditions: const [PatternCond('x_')],
+          conditions: const [PatternCond('x', position: CondPosition.endsWith)],
           operations: const [SuffixOp('in')],
         ),
       ],
@@ -227,7 +245,6 @@ void main() {
   // 14. DSL round-trip
   // -------------------------------------------------------------------------
   test('DSL round-trip: parse -> serialize -> parse gives same result', () {
-    // A suffix rule with one branch
     const source = '+in';
     final parsed1 = parseMorphDsl(source);
     expect(parsed1.isValid, isTrue, reason: 'First parse should succeed: ${parsed1.error}');
@@ -236,7 +253,6 @@ void main() {
     final parsed2 = parseMorphDsl(serialized);
     expect(parsed2.isValid, isTrue, reason: 'Re-parse should succeed: ${parsed2.error}');
 
-    // Both parses should produce equivalent rules (same branches, same ops)
     expect(parsed2.rule!.branches.length, equals(parsed1.rule!.branches.length));
     final op1 = parsed1.rule!.branches.first.operations.first;
     final op2 = parsed2.rule!.branches.first.operations.first;
@@ -245,13 +261,21 @@ void main() {
   });
 
   // -------------------------------------------------------------------------
-  // 15. DSL parse: multi-branch rule
+  // 15. DSL parse: multi-branch rule with new condition format
   // -------------------------------------------------------------------------
-  test('DSL parse: {C_} +in | {V_} +ain | {o_} -"o" +in produces 3 branches', () {
-    const source = '{C_} +in | {V_} +ain | {o_} -"o" +in';
+  test('DSL parse: new condition format produces correct branches', () {
+    const source = r'^"C" +in | "V"$ +ain | "o"$ -"o" +in';
     final parsed = parseMorphDsl(source);
     expect(parsed.isValid, isTrue, reason: 'Parse should succeed: ${parsed.error}');
     expect(parsed.rule!.branches.length, equals(3));
+
+    final cond0 = parsed.rule!.branches[0].conditions.first as PatternCond;
+    expect(cond0.pattern, equals('C'));
+    expect(cond0.position, equals(CondPosition.startsWith));
+
+    final cond1 = parsed.rule!.branches[1].conditions.first as PatternCond;
+    expect(cond1.pattern, equals('V'));
+    expect(cond1.position, equals(CondPosition.endsWith));
   });
 
   // -------------------------------------------------------------------------
@@ -264,11 +288,9 @@ void main() {
         source: 'infix:um:1',
       );
 
-      // Verify serialization
       final serialized = serializeMorphRule(rule);
       expect(serialized, equals('infix:um:1'));
 
-      // Verify parse round-trip
       final parsed = parseMorphDsl(serialized);
       expect(parsed.isValid, isTrue, reason: 'Parse should succeed: ${parsed.error}');
 
@@ -280,62 +302,114 @@ void main() {
   });
 
   // -------------------------------------------------------------------------
-  // 17. PatternCond: V_ matches vowel-final, not consonant-final
+  // 17. PatternCond endsWith V matches vowel-final word
   // -------------------------------------------------------------------------
-  test('PatternCond V_ matches vowel-final word', () {
-    expect(patternConditionMatches(const PatternCond('V_'), 'taka', testInventory), isTrue);
-    expect(patternConditionMatches(const PatternCond('V_'), 'tak', testInventory), isFalse);
-  });
-
-  // -------------------------------------------------------------------------
-  // 18. PatternCond: _CV matches words starting with consonant+vowel
-  // -------------------------------------------------------------------------
-  test('PatternCond _CV matches word starting with C+V', () {
-    expect(patternConditionMatches(const PatternCond('_CV'), 'taka', testInventory), isTrue);
-    // 'atka' starts with vowel, not consonant -> no match
-    expect(patternConditionMatches(const PatternCond('_CV'), 'atka', testInventory), isFalse);
-  });
-
-  // -------------------------------------------------------------------------
-  // 19. PatternCond: [nasal]V_ matches word ending with nasal+vowel
-  // -------------------------------------------------------------------------
-  test('PatternCond [nasal]V_ matches word ending with nasal+vowel', () {
-    // 'tana': t-a-n-a. Last two: n(nasal)+a(vowel) -> matches [nasal]V_
+  test('PatternCond endsWith V matches vowel-final word', () {
     expect(
-      patternConditionMatches(const PatternCond('[nasal]V_'), 'tana', testInventory),
+      patternConditionMatches(
+        const PatternCond('V', position: CondPosition.endsWith),
+        'taka',
+        testInventory,
+      ),
       isTrue,
     );
-    // 'tanka': ends with n-k-a (consonant-final nasal sequence) -> no match for [nasal]V_
     expect(
-      patternConditionMatches(const PatternCond('[nasal]V_'), 'taka', testInventory),
+      patternConditionMatches(
+        const PatternCond('V', position: CondPosition.endsWith),
+        'tak',
+        testInventory,
+      ),
       isFalse,
     );
   });
 
   // -------------------------------------------------------------------------
-  // 20. PatternCond: Vk(l)_ matches word ending with vowel+k or vowel+k+l
+  // 18. PatternCond startsWith CV
   // -------------------------------------------------------------------------
-  test('PatternCond Vk(l)_ matches Vkl and Vk suffixes', () {
-    // 'takl': t-a-k-l -> ends with a(V)+k+l -> matches Vk(l)_
-    expect(patternConditionMatches(const PatternCond('Vk(l)_'), 'takl', testInventory), isTrue);
-    // 'tak': t-a-k -> ends with a(V)+k -> optional l absent -> still matches Vk(l)_
-    expect(patternConditionMatches(const PatternCond('Vk(l)_'), 'tak', testInventory), isTrue);
-    // 'taka': ends with k+a -> V is in wrong position for Vk_ -> no match
-    expect(patternConditionMatches(const PatternCond('Vk(l)_'), 'taka', testInventory), isFalse);
+  test('PatternCond startsWith CV matches word starting with C+V', () {
+    expect(
+      patternConditionMatches(
+        const PatternCond('CV', position: CondPosition.startsWith),
+        'taka',
+        testInventory,
+      ),
+      isTrue,
+    );
+    expect(
+      patternConditionMatches(
+        const PatternCond('CV', position: CondPosition.startsWith),
+        'atka',
+        testInventory,
+      ),
+      isFalse,
+    );
+  });
+
+  // -------------------------------------------------------------------------
+  // 19. PatternCond endsWith [nasal]V
+  // -------------------------------------------------------------------------
+  test('PatternCond endsWith [nasal]V matches word ending with nasal+vowel', () {
+    expect(
+      patternConditionMatches(
+        const PatternCond('[nasal]V', position: CondPosition.endsWith),
+        'tana',
+        testInventory,
+      ),
+      isTrue,
+    );
+    expect(
+      patternConditionMatches(
+        const PatternCond('[nasal]V', position: CondPosition.endsWith),
+        'taka',
+        testInventory,
+      ),
+      isFalse,
+    );
+  });
+
+  // -------------------------------------------------------------------------
+  // 20. PatternCond endsWith Vk(l)
+  // -------------------------------------------------------------------------
+  test('PatternCond endsWith Vk(l) matches Vkl and Vk suffixes', () {
+    expect(
+      patternConditionMatches(
+        const PatternCond('Vk(l)', position: CondPosition.endsWith),
+        'takl',
+        testInventory,
+      ),
+      isTrue,
+    );
+    expect(
+      patternConditionMatches(
+        const PatternCond('Vk(l)', position: CondPosition.endsWith),
+        'tak',
+        testInventory,
+      ),
+      isTrue,
+    );
+    expect(
+      patternConditionMatches(
+        const PatternCond('Vk(l)', position: CondPosition.endsWith),
+        'taka',
+        testInventory,
+      ),
+      isFalse,
+    );
   });
 
   // -------------------------------------------------------------------------
   // 21. Multiple conditions (AND logic) per branch
   // -------------------------------------------------------------------------
   test('Multiple conditions on a branch require all to match (AND)', () {
-    // Branch: conditions = [PatternCond('_C'), PatternCond('V_')]
-    // Must start with C AND end with V.
     final rule = MorphologicalRule(
       id: 0,
       name: 'test',
       branches: [
         MorphBranch(
-          conditions: const [PatternCond('_C'), PatternCond('V_')],
+          conditions: const [
+            PatternCond('C', position: CondPosition.startsWith),
+            PatternCond('V', position: CondPosition.endsWith),
+          ],
           operations: const [SuffixOp('x')],
         ),
         MorphBranch(
@@ -346,39 +420,37 @@ void main() {
       source: '',
     );
 
-    // 'kata': starts with k(C) AND ends with a(V) -> branch 1 -> 'katax'
     final r1 = engine.applyRule(rule, 'kata', testInventory);
     expect(r1, isA<MorphSuccess>());
     expect((r1 as MorphSuccess).form, equals('katax'));
 
-    // 'akat': starts with a(V) not C -> falls to default -> 'akaty'
     final r2 = engine.applyRule(rule, 'akat', testInventory);
     expect(r2, isA<MorphSuccess>());
     expect((r2 as MorphSuccess).form, equals('akaty'));
 
-    // 'katan': starts with k(C) but ends with n(C) -> falls to default -> 'katany'
     final r3 = engine.applyRule(rule, 'katan', testInventory);
     expect(r3, isA<MorphSuccess>());
     expect((r3 as MorphSuccess).form, equals('katany'));
   });
 
   // -------------------------------------------------------------------------
-  // 22. DSL round-trip for PatternCond branches
+  // 22. DSL round-trip for new condition format
   // -------------------------------------------------------------------------
-  test('DSL round-trip: PatternCond branches serialize and re-parse correctly', () {
-    const source = '{V_} +n | _ +an';
+  test('DSL round-trip: new condition format serialize and re-parse correctly', () {
+    const source = r'"V"$ +n | _ +an';
     final parsed = parseMorphDsl(source);
     expect(parsed.isValid, isTrue, reason: 'Parse should succeed: ${parsed.error}');
     expect(parsed.rule!.branches.length, equals(2));
 
     final branch0 = parsed.rule!.branches[0];
     expect(branch0.conditions.length, equals(1));
-    expect((branch0.conditions[0] as PatternCond).pattern, equals('V_'));
+    final cond = branch0.conditions[0] as PatternCond;
+    expect(cond.pattern, equals('V'));
+    expect(cond.position, equals(CondPosition.endsWith));
 
     final branch1 = parsed.rule!.branches[1];
     expect(branch1.conditions.isEmpty, isTrue);
 
-    // Serialize and re-parse
     final serialized = serializeMorphRule(parsed.rule!);
     final reparsed = parseMorphDsl(serialized);
     expect(reparsed.isValid, isTrue);
@@ -388,23 +460,110 @@ void main() {
   // -------------------------------------------------------------------------
   // 23. Migration: old-style DSL syntax loads via backward-compat parser
   // -------------------------------------------------------------------------
-  test('Migration: old [C_] ends-with-class syntax parses to PatternCond', () {
-    // Old-style: [C_] ends-with-class -> now PatternCond('[C]_')
-    const source = '[C_] +in | _ +an';
+  test('Migration: old {pattern_} syntax parses to PatternCond with endsWith', () {
+    const source = '{C_} +in | _ +an';
     final parsed = parseMorphDsl(source);
+    // Old {C_} should migrate: strip trailing _, C = pattern, endsWith
+    // But {C_} hits the legacy braces parser which does _migratePatternAnchors('C_')
+    // C_ -> hasEnd=true -> PatternCond('C', position: endsWith)
     expect(parsed.isValid, isTrue, reason: 'Parse should succeed: ${parsed.error}');
     expect(parsed.rule!.branches.length, equals(2));
-    final cond = parsed.rule!.branches[0].conditions.first;
-    expect(cond, isA<PatternCond>());
-    expect((cond as PatternCond).pattern, equals('[C]_'));
+    final cond = parsed.rule!.branches[0].conditions.first as PatternCond;
+    expect(cond.pattern, equals('C'));
+    expect(cond.position, equals(CondPosition.endsWith));
   });
 
-  test('Migration: old "lit"_ ends-with-literal syntax parses to PatternCond', () {
-    const source = '"o"_ +in | _ +an';
+  test('Migration: old {V_} syntax parses to endsWith V', () {
+    const source = '{V_} +n';
     final parsed = parseMorphDsl(source);
     expect(parsed.isValid, isTrue, reason: 'Parse should succeed: ${parsed.error}');
-    final cond = parsed.rule!.branches[0].conditions.first;
-    expect(cond, isA<PatternCond>());
-    expect((cond as PatternCond).pattern, equals('o_'));
+    final cond = parsed.rule!.branches[0].conditions.first as PatternCond;
+    expect(cond.pattern, equals('V'));
+    expect(cond.position, equals(CondPosition.endsWith));
+  });
+
+  test('Migration: old {_CV} syntax parses to startsWith CV', () {
+    const source = '{_CV} +n';
+    final parsed = parseMorphDsl(source);
+    expect(parsed.isValid, isTrue, reason: 'Parse should succeed: ${parsed.error}');
+    final cond = parsed.rule!.branches[0].conditions.first as PatternCond;
+    expect(cond.pattern, equals('CV'));
+    expect(cond.position, equals(CondPosition.startsWith));
+  });
+
+  // -------------------------------------------------------------------------
+  // 24. Ablaut DSL round-trip with direction/count flags
+  // -------------------------------------------------------------------------
+  test('Ablaut DSL round-trip with direction and count flags', () {
+    // /a/e/e1 = from end, replace 1
+    const source = '/a/e/e1';
+    final parsed = parseMorphDsl(source);
+    expect(parsed.isValid, isTrue, reason: 'Parse should succeed: ${parsed.error}');
+    final op = parsed.rule!.branches.first.operations.first as AblautOp;
+    expect(op.from, equals('a'));
+    expect(op.to, equals('e'));
+    expect(op.direction, equals(AblautDirection.fromEnd));
+    expect(op.count, equals(1));
+
+    // Serialize and re-parse
+    final serialized = serializeMorphRule(parsed.rule!);
+    expect(serialized, equals('/a/e/e1'));
+    final reparsed = parseMorphDsl(serialized);
+    expect(reparsed.isValid, isTrue);
+    final op2 = reparsed.rule!.branches.first.operations.first as AblautOp;
+    expect(op2.direction, equals(AblautDirection.fromEnd));
+    expect(op2.count, equals(1));
+  });
+
+  test('Ablaut DSL backward compat: /a/e/ has no flags = all from start', () {
+    const source = '/a/e/';
+    final parsed = parseMorphDsl(source);
+    expect(parsed.isValid, isTrue, reason: 'Parse should succeed: ${parsed.error}');
+    final op = parsed.rule!.branches.first.operations.first as AblautOp;
+    expect(op.from, equals('a'));
+    expect(op.to, equals('e'));
+    expect(op.direction, equals(AblautDirection.fromStart));
+    expect(op.count, isNull);
+
+    // Serialize should produce the short form
+    final serialized = serializeMorphRule(parsed.rule!);
+    expect(serialized, equals('/a/e/'));
+  });
+
+  // -------------------------------------------------------------------------
+  // 25. PatternCond contains matches anywhere
+  // -------------------------------------------------------------------------
+  test('PatternCond contains [stop]Vk(l) matches user examples', () {
+    // pakmy: p-a-k-m-y — [stop] matches 'k'? No, 'p' is not in stop class.
+    // Let's use the test inventory where stop = [k, t, b]
+    // pakmy with our inventory: p is not a known phoneme, tokenized as 'p'
+    // Use 'takmu' instead: t(stop) a(V) k -> [stop]Vk matches at start
+    expect(
+      patternConditionMatches(
+        const PatternCond('[stop]Vk', position: CondPosition.startsWith),
+        'takmu',
+        testInventory,
+      ),
+      isTrue,
+    );
+    // mipoklu: contains pokl which has [stop](no, p not stop)
+    // Use 'mitaklu': contains tak -> [stop]Vk at position 2
+    expect(
+      patternConditionMatches(
+        const PatternCond('[stop]Vk', position: CondPosition.contains),
+        'mitaklu',
+        testInventory,
+      ),
+      isTrue,
+    );
+    // mitaklu with startsWith: starts with 'm' which is not [stop]
+    expect(
+      patternConditionMatches(
+        const PatternCond('[stop]Vk', position: CondPosition.startsWith),
+        'mitaklu',
+        testInventory,
+      ),
+      isFalse,
+    );
   });
 }

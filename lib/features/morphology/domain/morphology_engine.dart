@@ -110,21 +110,14 @@ class _OptionalGroup extends _PatternSegment {
   final List<_PatternSegment> segments;
 }
 
-/// Parses a raw pattern string into a list of [_PatternSegment]s plus
-/// anchor flags.
-({
-  bool anchoredStart,
-  bool anchoredEnd,
-  List<_PatternSegment> segments,
-}) _parsePattern(String pattern) {
-  var s = pattern;
-  final anchoredStart = s.startsWith('_');
-  if (anchoredStart) s = s.substring(1);
-  final anchoredEnd = s.endsWith('_');
-  if (anchoredEnd) s = s.substring(0, s.length - 1);
-
+/// Parses a raw pattern string into a list of [_PatternSegment]s.
+///
+/// Anchoring is now handled by [CondPosition] on the [PatternCond], not by
+/// `_` characters in the pattern string.
+List<_PatternSegment> _parsePattern(String pattern) {
   final segments = <_PatternSegment>[];
   var i = 0;
+  final s = pattern;
   while (i < s.length) {
     if (s[i] == '[') {
       // Named class: [className]
@@ -146,8 +139,8 @@ class _OptionalGroup extends _PatternSegment {
       }
       final inner = s.substring(i + 1, close);
       // Parse inner segments recursively (no nesting required for now).
-      final innerParsed = _parsePattern(inner);
-      segments.add(_OptionalGroup(innerParsed.segments));
+      final innerSegments = _parsePattern(inner);
+      segments.add(_OptionalGroup(innerSegments));
       i = close + 1;
     } else if (s[i] == 'C' || s[i] == 'V') {
       // Uppercase shorthand: C = consonants, V = vowels
@@ -169,11 +162,7 @@ class _OptionalGroup extends _PatternSegment {
     }
   }
 
-  return (
-    anchoredStart: anchoredStart,
-    anchoredEnd: anchoredEnd,
-    segments: segments,
-  );
+  return segments;
 }
 
 /// Tries to match [segments] against [tokens] starting at [start].
@@ -216,6 +205,11 @@ int _matchSegments(
 }
 
 /// Returns true if [cond] matches [root] given [inventory].
+///
+/// Uses [cond.position] to determine where the pattern must match:
+/// - [CondPosition.startsWith]: pattern must match at position 0
+/// - [CondPosition.endsWith]: pattern must match ending at the last token
+/// - [CondPosition.contains]: pattern can match anywhere
 bool patternConditionMatches(
   PatternCond cond,
   String root,
@@ -223,37 +217,32 @@ bool patternConditionMatches(
 ) {
   if (root.isEmpty) return false;
 
-  final parsed = _parsePattern(cond.pattern);
+  final segments = _parsePattern(cond.pattern);
   final tokens = tokenizeIpa(root, inventory);
   if (tokens.isEmpty) return false;
-
-  final (:anchoredStart, :anchoredEnd, :segments) = parsed;
 
   if (segments.isEmpty) {
     // Empty pattern = always matches (degenerate).
     return true;
   }
 
-  if (anchoredStart && anchoredEnd) {
-    // Must match entire token list.
-    final end = _matchSegments(segments, tokens, 0, inventory);
-    return end == tokens.length;
-  } else if (anchoredStart) {
-    // Must match from position 0 but may end anywhere.
-    return _matchSegments(segments, tokens, 0, inventory) >= 0;
-  } else if (anchoredEnd) {
-    // Must end at the last token. Try matching at every start position.
-    for (var start = 0; start <= tokens.length; start++) {
-      final end = _matchSegments(segments, tokens, start, inventory);
-      if (end == tokens.length) return true;
-    }
-    return false;
-  } else {
-    // Unanchored: match anywhere.
-    for (var start = 0; start <= tokens.length; start++) {
-      if (_matchSegments(segments, tokens, start, inventory) >= 0) return true;
-    }
-    return false;
+  switch (cond.position) {
+    case CondPosition.startsWith:
+      // Must match from position 0 but may end anywhere.
+      return _matchSegments(segments, tokens, 0, inventory) >= 0;
+    case CondPosition.endsWith:
+      // Must end at the last token. Try matching at every start position.
+      for (var start = 0; start <= tokens.length; start++) {
+        final end = _matchSegments(segments, tokens, start, inventory);
+        if (end == tokens.length) return true;
+      }
+      return false;
+    case CondPosition.contains:
+      // Match anywhere.
+      for (var start = 0; start <= tokens.length; start++) {
+        if (_matchSegments(segments, tokens, start, inventory) >= 0) return true;
+      }
+      return false;
   }
 }
 
@@ -335,15 +324,41 @@ String applyInfix(
   return before + affix + after;
 }
 
-/// Replaces all occurrences of [from] token with [to] in [root].
+/// Replaces occurrences of [from] token with [to] in [root].
+///
+/// [count] controls how many occurrences to replace (null = all).
+/// [direction] controls from which end to start replacing.
 String applyAblaut(
   String root,
   String from,
   String to,
-  PhonemeInventory inventory,
-) {
+  PhonemeInventory inventory, {
+  int? count,
+  AblautDirection direction = AblautDirection.fromStart,
+}) {
   final tokens = tokenizeIpa(root, inventory);
-  return tokens.map((t) => t == from ? to : t).join();
+  if (count == null) {
+    // Replace all
+    return tokens.map((t) => t == from ? to : t).join();
+  }
+
+  // Find all indices matching `from`
+  final matchIndices = <int>[];
+  for (var i = 0; i < tokens.length; i++) {
+    if (tokens[i] == from) matchIndices.add(i);
+  }
+
+  // Select which indices to replace based on direction and count
+  final Set<int> toReplace;
+  if (direction == AblautDirection.fromStart) {
+    toReplace = matchIndices.take(count).toSet();
+  } else {
+    final reversed = matchIndices.reversed.take(count).toSet();
+    toReplace = reversed;
+  }
+
+  return List.generate(tokens.length,
+      (i) => toReplace.contains(i) ? to : tokens[i]).join();
 }
 
 /// Applies a Semitic-style template pattern to [root].
@@ -433,7 +448,8 @@ String _applyOp(MorphOperation op, String form, PhonemeInventory inventory) {
     PrefixOp(:final affix) => applyPrefix(form, affix),
     InfixOp(:final affix, :final position) =>
       applyInfix(form, affix, position, inventory),
-    AblautOp(:final from, :final to) => applyAblaut(form, from, to, inventory),
+    AblautOp(:final from, :final to, :final count, :final direction) =>
+      applyAblaut(form, from, to, inventory, count: count, direction: direction),
     TemplateOp(:final pattern) => applyTemplate(form, pattern, inventory),
     RedupOp(:final scope, :final position) =>
       applyRedup(form, scope, position, inventory),

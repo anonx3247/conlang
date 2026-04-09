@@ -24,10 +24,21 @@ class InfixOp extends MorphOperation {
   final int position; // after Nth consonant (1-based)
 }
 
+enum AblautDirection { fromStart, fromEnd }
+
 class AblautOp extends MorphOperation {
-  const AblautOp({required this.from, required this.to});
+  const AblautOp({
+    required this.from,
+    required this.to,
+    this.count,
+    this.direction = AblautDirection.fromStart,
+  });
   final String from;
   final String to;
+  /// Number of occurrences to replace. Null = replace all.
+  final int? count;
+  /// Which direction to count replacements from.
+  final AblautDirection direction;
 }
 
 class TemplateOp extends MorphOperation {
@@ -66,6 +77,9 @@ sealed class MorphCondition {
   const MorphCondition();
 }
 
+/// Position for condition matching.
+enum CondPosition { startsWith, endsWith, contains }
+
 /// Pattern-based condition using phonological notation.
 ///
 /// Pattern elements:
@@ -73,18 +87,20 @@ sealed class MorphCondition {
 /// - Single uppercase letter: `C` = any consonant, `V` = any vowel
 /// - Lowercase letters: literal phoneme match (e.g. `k`, `na`)
 /// - `(group)` — optional group (matches zero or one occurrence)
-/// - `_` at start = pattern must match word start (anchored prefix)
-/// - `_` at end = pattern must match word end (anchored suffix)
-/// - No anchors = pattern matches anywhere in the word
+///
+/// The [position] field determines where in the word the pattern must match:
+/// - `startsWith` — pattern must match at the beginning of the word
+/// - `endsWith` — pattern must match at the end of the word
+/// - `contains` — pattern can match anywhere in the word
 ///
 /// Examples:
-/// - `[nasal]V_` — ends with nasal + vowel
-/// - `_CV` — starts with consonant + vowel
-/// - `Vk(l)_` — ends with vowel + k + optional l
-/// - `[stop][stop]` — contains two consecutive stops anywhere
+/// - `[nasal]V` with endsWith — ends with nasal + vowel
+/// - `CV` with startsWith — starts with consonant + vowel
+/// - `[stop][stop]` with contains — has two consecutive stops anywhere
 class PatternCond extends MorphCondition {
-  const PatternCond(this.pattern);
-  final String pattern; // Raw pattern string
+  const PatternCond(this.pattern, {this.position = CondPosition.contains});
+  final String pattern; // Raw pattern string (no anchors)
+  final CondPosition position;
 }
 
 // ---------------------------------------------------------------------------
@@ -160,54 +176,105 @@ class ParsedMorphRule {
 /// Parses a single condition token. Returns a [PatternCond] or null for
 /// the bare `_` default marker.
 Parser<MorphCondition?> _buildSingleConditionParser() {
-  // New: {pattern} -> PatternCond
-  final newPattern = (char('{') &
+  // New format: ^"pattern" = startsWith, "pattern"$ = endsWith, ~"pattern" = contains
+  final startsWithNew = (string('^"') &
+          pattern(r'^"').plus().flatten() &
+          char('"'))
+      .map((values) => PatternCond(values[1] as String,
+          position: CondPosition.startsWith) as MorphCondition?);
+
+  final endsWithNew = (char('"') &
+          pattern(r'^"').plus().flatten() &
+          string(r'"$'))
+      .map((values) => PatternCond(values[1] as String,
+          position: CondPosition.endsWith) as MorphCondition?);
+
+  final containsNew = (string('~"') &
+          pattern(r'^"').plus().flatten() &
+          char('"'))
+      .map((values) => PatternCond(values[1] as String,
+          position: CondPosition.contains) as MorphCondition?);
+
+  // Migration: {pattern} -> PatternCond with position inferred from _ anchors
+  final legacyPattern = (char('{') &
           pattern(r'^}').plus().flatten() &
           char('}'))
-      .map((values) => PatternCond(values[1] as String) as MorphCondition?);
+      .map((values) {
+    final raw = values[1] as String;
+    return _migratePatternAnchors(raw) as MorphCondition?;
+  });
 
-  // Migration: [C_] ends-with-class -> PatternCond('[C]_')
+  // Migration: [C_] ends-with-class
   final endsWithClass = (char('[') &
           pattern('a-zA-Z0-9:-').plus().flatten() &
           string('_]'))
-      .map((values) => PatternCond('[${values[1]}]_') as MorphCondition?);
+      .map((values) => PatternCond('[${values[1]}]',
+          position: CondPosition.endsWith) as MorphCondition?);
 
-  // Migration: [_C] starts-with-class -> PatternCond('_[C]')
+  // Migration: [_C] starts-with-class
   final startsWithClass = (string('[_') &
           pattern('a-zA-Z0-9_:-').plus().flatten() &
           char(']'))
-      .map((values) => PatternCond('_[${values[1]}]') as MorphCondition?);
+      .map((values) => PatternCond('[${values[1]}]',
+          position: CondPosition.startsWith) as MorphCondition?);
 
-  // Migration: "lit"_ ends-with-literal -> PatternCond('lit_')
+  // Migration: "lit"_ ends-with-literal
   final endsWithLitUnderscore = (char('"') &
           pattern('^"').plus().flatten() &
           string('"_'))
-      .map((values) => PatternCond('${values[1]}_') as MorphCondition?);
+      .map((values) => PatternCond(values[1] as String,
+          position: CondPosition.endsWith) as MorphCondition?);
 
-  // Migration: _"lit" starts-with-literal -> PatternCond('_lit')
+  // Migration: _"lit" starts-with-literal
   final startsWithLit = (string('_"') &
           pattern('^"').plus().flatten() &
           char('"'))
-      .map((values) => PatternCond('_${values[1]}') as MorphCondition?);
+      .map((values) => PatternCond(values[1] as String,
+          position: CondPosition.startsWith) as MorphCondition?);
 
-  // Migration: "lit" ends-with-literal bare (no trailing _) -> PatternCond('lit_')
+  // Migration: "lit" ends-with-literal bare (no trailing _)
   final endsWithLitBare = (char('"') &
           pattern('^"').plus().flatten() &
           char('"'))
-      .map((values) => PatternCond('${values[1]}_') as MorphCondition?);
+      .map((values) => PatternCond(values[1] as String,
+          position: CondPosition.endsWith) as MorphCondition?);
 
   // _ alone = default branch (null condition)
   final defaultCond = char('_').map((_) => null);
 
-  // New pattern first, then old migration forms, then default.
-  return (newPattern |
+  // New formats first, then legacy, then migration forms, then default.
+  return (startsWithNew |
+          containsNew |
+          legacyPattern |
           endsWithClass |
           startsWithClass |
           endsWithLitUnderscore |
           startsWithLit |
           defaultCond |
+          endsWithNew |
           endsWithLitBare)
       .cast<MorphCondition?>();
+}
+
+/// Migrates old anchor-based pattern strings (with `_`) to [PatternCond]
+/// with explicit [CondPosition].
+PatternCond _migratePatternAnchors(String raw) {
+  final hasStart = raw.startsWith('_');
+  final hasEnd = raw.endsWith('_');
+  var clean = raw;
+  if (hasStart) clean = clean.substring(1);
+  if (hasEnd) clean = clean.substring(0, clean.length - 1);
+
+  if (hasStart && hasEnd) {
+    // Both anchors = treat as contains (whole word match is rare)
+    return PatternCond(clean, position: CondPosition.contains);
+  } else if (hasStart) {
+    return PatternCond(clean, position: CondPosition.startsWith);
+  } else if (hasEnd) {
+    return PatternCond(clean, position: CondPosition.endsWith);
+  } else {
+    return PatternCond(clean, position: CondPosition.contains);
+  }
 }
 
 /// Parses zero or more condition tokens followed by a space.
@@ -253,14 +320,33 @@ Parser<MorphOperation> _buildOperationParser() {
   final removeSuffixBare = (char('-') & pattern('^ |').plus().flatten())
       .map((values) => RemoveSuffixOp(values[1] as String) as MorphOperation);
 
-  // /from/to/ -> AblautOp
+  // /from/to/ or /from/to/flags -> AblautOp
+  // flags: s=fromStart, e=fromEnd; followed by digit=count or A=all
+  // Empty flags or missing = all from start (backward compatible)
   final ablaut = (char('/') &
           pattern('^/').plus().flatten() &
           char('/') &
-          pattern('^/').plus().flatten() &
-          char('/'))
-      .map((values) =>
-          AblautOp(from: values[1] as String, to: values[3] as String) as MorphOperation);
+          pattern('^/').star().flatten() &
+          char('/') &
+          pattern('^ |').star().flatten())
+      .map((values) {
+    final from = values[1] as String;
+    final to = values[3] as String;
+    final flags = values[5] as String;
+    AblautDirection direction = AblautDirection.fromStart;
+    int? count; // null = all
+    if (flags.isNotEmpty) {
+      if (flags.startsWith('e')) {
+        direction = AblautDirection.fromEnd;
+      }
+      final countStr = flags.substring(1);
+      if (countStr.isNotEmpty && countStr != 'A') {
+        count = int.tryParse(countStr);
+      }
+    }
+    return AblautOp(from: from, to: to, count: count, direction: direction)
+        as MorphOperation;
+  });
 
   // redup:scope:position -> RedupOp
   final redup = (string('redup:') &
@@ -397,7 +483,11 @@ String _serializeBranch(MorphBranch branch) {
 
 String _serializeCondition(MorphCondition cond) {
   return switch (cond) {
-    PatternCond(:final pattern) => '{$pattern}',
+    PatternCond(:final pattern, :final position) => switch (position) {
+        CondPosition.startsWith => '^"$pattern"',
+        CondPosition.endsWith => '"$pattern"\$',
+        CondPosition.contains => '~"$pattern"',
+      },
   };
 }
 
@@ -406,7 +496,16 @@ String _serializeOp(MorphOperation op) {
     SuffixOp(:final affix) => '+$affix',
     PrefixOp(:final affix) => '$affix+',
     InfixOp(:final affix, :final position) => 'infix:$affix:$position',
-    AblautOp(:final from, :final to) => '/$from/$to/',
+    AblautOp(:final from, :final to, :final count, :final direction) => () {
+        final dirChar = direction == AblautDirection.fromEnd ? 'e' : 's';
+        final countStr = count == null ? 'A' : '$count';
+        final flags = '$dirChar$countStr';
+        // Omit flags if default (all from start) for backward compat
+        if (direction == AblautDirection.fromStart && count == null) {
+          return '/$from/$to/';
+        }
+        return '/$from/$to/$flags';
+      }(),
     TemplateOp(:final pattern) => pattern,
     RedupOp(:final scope, :final position) => 'redup:$scope:$position',
     SuppleteOp(:final form) => '="$form"',
