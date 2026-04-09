@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-04-08)
 
 **Core value:** A powerful, flexible morphology engine that handles the full spectrum of language types through a readable pattern mini-language
-**Current focus:** Phase 2 (Morphology Engine) — data layer complete, DSL parser next
+**Current focus:** Phase 2 (Morphology Engine) — UI complete, integration tests/derivation next
 
 ## Current Position
 
 Phase: 2 of 6 (Morphology Engine) — IN PROGRESS
-Plan: 3 of 4 in current phase
-Status: Phase 2 Plan 01 complete (TDD). petitparser DSL + engine all 15 tests green. Phase 2 Plan 02 complete. Schema v4. Ready for Plan 03 (UI).
-Last activity: 2026-04-09 — Phase 2 Plan 01: morphology DSL parser, serializer, and engine (TDD)
+Plan: 4 of 4 in current phase
+Status: Phase 2 Plans 01-03 complete. DSL engine (TDD), schema v4, full rule editor UI. Ready for Plan 04.
+Last activity: 2026-04-09 — Phase 2 Plan 03: Morphology tab, MorphologyShell, RulesPage, RuleEditorDialog, PreviewPanel
 
-Progress: [████░░░░░░] 34% (15/44 total plans)
+Progress: [█████░░░░░] 38% (17/44 total plans)
 
 ## Performance Metrics
 
@@ -41,6 +41,7 @@ Progress: [████░░░░░░] 34% (15/44 total plans)
 | Phase 01-foundation P07 | 35 min | 2 tasks | 13 files |
 | Phase 01-foundation P08 | 18 min | 2 tasks | 4 files |
 | Phase 01-foundation P09 | 4 min | 2 tasks | 3 files |
+| Phase 02-morphology-engine P03 | 25 | 2 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -99,6 +100,8 @@ Recent decisions affecting current work:
 - 02-01: tokenizeIpa and resolvePhonemeClass extracted as public top-level functions in morphology_engine.dart — word_generator.dart not modified to avoid coupling
 - 02-02: Drift generates MorphologicalRule and MorphologicalRuleException data class names (not MorphologicalRulesData) — table class name minus trailing 's', no suffix
 - 02-02: morphology_providers.dart imports app_database.dart directly alongside morphology_dao.dart — required for generated type resolution in StreamProvider type arguments
+- [Phase 02-morphology-engine]: 02-03: db. alias on app_database.dart import resolves MorphologicalRule ambiguity (Drift vs domain DSL class)
+- [Phase 02-morphology-engine]: 02-03: RuleEditorDialog uses local StatefulWidget state for ephemeral in-editor form state; Riverpod only for DAO saves and preview reads
 
 ### Pending Todos
 
@@ -114,5 +117,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-04-09
-Stopped at: Completed 02-01-PLAN.md — morphology DSL parser, serializer, and engine (TDD, 15/15 tests). Phase 2 Plan 1 of 4 complete.
+Stopped at: Completed 02-03-PLAN.md — Morphology tab, MorphologyShell, RulesPage, RuleEditorDialog, PreviewPanel. Phase 2 Plan 3 of 4 complete.
 Resume file: None
