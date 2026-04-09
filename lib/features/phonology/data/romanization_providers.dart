@@ -83,14 +83,14 @@ Future<void> setRomanizationEnabled(WidgetRef ref, bool enabled) async {
 /// Returns a String Function(String ipa) that converts an IPA string to its
 /// romanized Latin form using the project's currently defined mappings.
 ///
-/// When no project is open (DAO is null), returns an identity function.
-final romanizeProvider = FutureProvider<String Function(String ipa)>((
-  ref,
-) async {
-  final dao = ref.watch(romanizationDaoProvider);
-  if (dao == null) return (String ipa) => ipa;
-
-  final mappings = await dao.getAllMappings();
+/// Watches the live mappings stream so the function updates whenever mappings
+/// are added, edited, or deleted.
+///
+/// When no project is open, returns an identity function.
+final romanizeProvider = Provider<String Function(String ipa)>((ref) {
+  final mappingsAsync = ref.watch(romanizationMappingsProvider);
+  final mappings = mappingsAsync.asData?.value;
+  if (mappings == null || mappings.isEmpty) return (String ipa) => ipa;
 
   final sorted = List<RomanizationMapping>.from(mappings)
     ..sort((a, b) => b.ipaSymbol.length.compareTo(a.ipaSymbol.length));

@@ -78,7 +78,7 @@ class _WordGeneratorPanelState extends ConsumerState<WordGeneratorPanel> {
     ref.listen(phonemeInventoryProvider, (_, v) => _scheduleRegenerate());
     ref.listen(parsedConstraintsProvider, (_, v) => _scheduleRegenerate());
 
-    final romanizeAsync = ref.watch(romanizeProvider);
+    final romanize = ref.watch(romanizeProvider);
     final constraints = ref.watch(parsedConstraintsProvider).when(
           data: (v) => v,
           loading: () => <ConstraintRule>[],
@@ -189,11 +189,7 @@ class _WordGeneratorPanelState extends ConsumerState<WordGeneratorPanel> {
                       constraints: constraints,
                       inventory: inventory,
                     );
-                    final romanized = romanizeAsync.when(
-                      data: (fn) => fn(word),
-                      loading: () => '',
-                      error: (_, e) => '',
-                    );
+                    final romanized = romanize(word);
                     return _WordRow(
                       word: word,
                       romanized: romanized,
