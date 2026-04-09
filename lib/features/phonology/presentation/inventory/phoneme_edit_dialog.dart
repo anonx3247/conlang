@@ -111,6 +111,57 @@ final _backnessMap = {
   'back': VowelBackness.back,
 };
 
+/// Reverse lookup: IPA symbol string -> (type, features).
+///
+/// Built once at startup from [IpaSound] static data.
+final _symbolToFeatures = <
+    String,
+    ({
+      String type,
+      String? manner,
+      String? place,
+      String? voicing,
+      String? height,
+      String? backness,
+      bool? rounded,
+    })>{
+  for (final s in [
+    ...IpaSound.pulmonicConsonants,
+    ...IpaSound.nonPulmonicConsonants,
+  ])
+    s.symbol: (
+      type: 'consonant',
+      manner: _mannerMap.entries
+          .where((e) => e.value == s.manner)
+          .firstOrNull
+          ?.key,
+      place:
+          _placeMap.entries.where((e) => e.value == s.place).firstOrNull?.key,
+      voicing: s.voiced == true
+          ? 'voiced'
+          : (s.voiced == false ? 'voiceless' : null),
+      height: null,
+      backness: null,
+      rounded: null,
+    ),
+  for (final s in IpaSound.vowels)
+    s.symbol: (
+      type: 'vowel',
+      manner: null,
+      place: null,
+      voicing: null,
+      height: _heightMap.entries
+          .where((e) => e.value == s.height)
+          .firstOrNull
+          ?.key,
+      backness: _backnessMap.entries
+          .where((e) => e.value == s.backness)
+          .firstOrNull
+          ?.key,
+      rounded: s.rounded,
+    ),
+};
+
 /// Derives the IPA symbol from selected consonant features.
 ///
 /// Returns null if the combination doesn't match any known IPA sound.
@@ -321,6 +372,19 @@ class _PhonemeEditDialogState extends ConsumerState<PhonemeEditDialog> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              // IPA symbol input — optional shortcut: typing a known symbol
+              // auto-fills all feature dropdowns via reverse lookup.
+              TextField(
+                controller: _symbolController,
+                decoration: const InputDecoration(
+                  labelText: 'IPA Symbol (optional)',
+                  hintText: 'Type or paste, e.g. b, ʃ, ɑ',
+                  helperText: 'Auto-fills features if recognized',
+                ),
+                onChanged: _onSymbolTyped,
+              ),
+              const SizedBox(height: 16),
+
               // Type selector
               DropdownButtonFormField<String>(
                 value: _type,
@@ -524,6 +588,26 @@ class _PhonemeEditDialogState extends ConsumerState<PhonemeEditDialog> {
       return _manner != null && _place != null && _voicing != null;
     } else {
       return _height != null && _backness != null;
+    }
+  }
+
+  /// Called when the user types/pastes into the IPA symbol input field.
+  ///
+  /// If the trimmed value matches a known IPA sound, auto-fills the feature
+  /// dropdowns via reverse lookup.
+  void _onSymbolTyped(String value) {
+    final trimmed = value.trim();
+    final features = _symbolToFeatures[trimmed];
+    if (features != null) {
+      setState(() {
+        _type = features.type;
+        _manner = features.manner;
+        _place = features.place;
+        _voicing = features.voicing;
+        _height = features.height;
+        _backness = features.backness;
+        _rounded = features.rounded ?? false;
+      });
     }
   }
 }

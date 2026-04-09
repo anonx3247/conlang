@@ -132,22 +132,42 @@ class InventoryPage extends ConsumerWidget {
       );
     }
 
-    return const SingleChildScrollView(
-      padding: EdgeInsets.all(24),
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Romanization mapping editor (IPA -> Latin).
-          RomanizationSection(),
-          SizedBox(height: 32),
+          const RomanizationSection(),
+          const SizedBox(height: 32),
 
-          // Phoneme inventory.
-          _ConsonantSection(),
-          SizedBox(height: 32),
-          _VowelSection(),
-          SizedBox(height: 32),
-          _NaturalClassesSection(),
-          SizedBox(height: 32),
+          // Unified Add Phoneme button + section title.
+          Row(
+            children: [
+              Text(
+                'Phoneme Inventory',
+                style: theme.textTheme.headlineSmall,
+              ),
+              const Spacer(),
+              FilledButton.icon(
+                onPressed: () => showDialog(
+                  context: context,
+                  builder: (_) => const PhonemeEditDialog(),
+                ),
+                icon: const Icon(Icons.add, size: 18),
+                label: const Text('Add Phoneme'),
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
+
+          // Phoneme inventory sections.
+          const _ConsonantSection(),
+          const SizedBox(height: 32),
+          const _VowelSection(),
+          const SizedBox(height: 32),
+          const _NaturalClassesSection(),
+          const SizedBox(height: 32),
         ],
       ),
     );
@@ -169,28 +189,15 @@ class _ConsonantSection extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          children: [
-            Text('Consonants', style: theme.textTheme.titleLarge),
-            const Spacer(),
-            TextButton.icon(
-              onPressed: () => showDialog(
-                context: context,
-                builder: (_) => const PhonemeEditDialog(),
-              ),
-              icon: const Icon(Icons.add, size: 16),
-              label: const Text('Add'),
-            ),
-          ],
-        ),
+        Text('Consonants', style: theme.textTheme.titleLarge),
         const SizedBox(height: 12),
         asyncConsonants.when(
           loading: () => const CircularProgressIndicator(),
           error: (e, _) => Text('Error: $e'),
           data: (consonants) {
             if (consonants.isEmpty) {
-              return _EmptyHint(
-                'No consonants yet. Tap "Add" to define your first consonant.',
+              return const _EmptyHint(
+                'No consonants yet. Tap "Add Phoneme" to define your first consonant.',
               );
             }
             return _ConsonantGrid(consonants: consonants);
@@ -300,28 +307,15 @@ class _VowelSection extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          children: [
-            Text('Vowels', style: theme.textTheme.titleLarge),
-            const Spacer(),
-            TextButton.icon(
-              onPressed: () => showDialog(
-                context: context,
-                builder: (_) => const PhonemeEditDialog(),
-              ),
-              icon: const Icon(Icons.add, size: 16),
-              label: const Text('Add'),
-            ),
-          ],
-        ),
+        Text('Vowels', style: theme.textTheme.titleLarge),
         const SizedBox(height: 12),
         asyncVowels.when(
           loading: () => const CircularProgressIndicator(),
           error: (e, _) => Text('Error: $e'),
           data: (vowels) {
             if (vowels.isEmpty) {
-              return _EmptyHint(
-                'No vowels yet. Tap "Add" to define your first vowel.',
+              return const _EmptyHint(
+                'No vowels yet. Tap "Add Phoneme" to define your first vowel.',
               );
             }
             return _VowelChart(vowels: vowels);
@@ -580,10 +574,10 @@ class _NaturalClassesSection extends ConsumerWidget {
         const SizedBox(height: 12),
 
         // System classes (always shown, read-only)
-        Wrap(
+        const Wrap(
           spacing: 8,
           runSpacing: 8,
-          children: const [
+          children: [
             _SystemClassChip(label: 'C', description: 'all consonants'),
             _SystemClassChip(label: 'V', description: 'all vowels'),
           ],
