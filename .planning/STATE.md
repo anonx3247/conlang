@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-04-08)
 ## Current Position
 
 Phase: 1 of 6 (Foundation)
-Plan: 8 of 9 in current phase (gap closure plans 08-09 added after UAT)
-Status: Plan 08 complete — IPA keyboard, template editor, IPA chart, constraint docs fixed
-Last activity: 2026-04-08 — Plan 08 complete (IPA keyboard TapRegion fix, template editor TextField fix, IPA chart overflow fix, constraint DSL docs)
+Plan: 9 of 9 in current phase — PHASE COMPLETE
+Status: Plan 09 complete — phoneme dialog redesigned (feature-derived IPA, romanization info, delete button); romanization table flipped to Latin-first; preview panel removed
+Last activity: 2026-04-09 — Plan 09 complete (phoneme dialog + romanization section UX improvements)
 
-Progress: [██░░░░░░░░] 17% (7/42 total plans)
+Progress: [██░░░░░░░░] 19% (8/42 total plans)
 
 ## Performance Metrics
 
@@ -40,6 +40,7 @@ Progress: [██░░░░░░░░] 17% (7/42 total plans)
 |------|----------|-------|-------|
 | Phase 01-foundation P07 | 35 min | 2 tasks | 13 files |
 | Phase 01-foundation P08 | 18 min | 2 tasks | 4 files |
+| Phase 01-foundation P09 | 4 min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -75,6 +76,10 @@ Recent decisions affecting current work:
 - 01-08: IpaTextField.build() preserves caller's suffixIcon via Row when showIpaKeyboard=true — validation icons (check/error) are no longer overwritten by the keyboard toggle
 - 01-08: Template editor pattern field switched to plain TextField — DSL uses C/V/[]/() not IPA symbols; removes unwanted keyboard, reveals validation icon, eliminates stale-error visual from popup overlap
 - 01-08: _IpaSymbolButton minWidth reduced from 12 to 9 and horizontal padding zeroed — 11-column pulmonic grid fits within 280px panel without RIGHT OVERFLOWED BY 4px errors
+- 01-09: IPA symbol derived from IpaSound static data by matching manner/place/voiced (consonants) or height/backness/rounded (vowels) — single source of truth covers all 85+ consonants and 28+ vowels
+- 01-09: Custom symbol TextField shown only when all dropdowns selected but combo unknown — avoids clutter in common case while handling non-standard sounds
+- 01-09: Delete button added to phoneme dialog actions — replaces hidden long-press on chip; uses existing confirmDeletePhoneme + pops dialog after deletion
+- 01-09: Romanization table is Latin-first (Latin letter → IPA sound) — matches user mental model; DB columns unchanged
 
 ### Pending Todos
 
@@ -89,6 +94,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-08
-Stopped at: Completed 01-foundation/01-08-PLAN.md (IPA keyboard TapRegion fix, template editor TextField fix, IPA chart overflow fix, constraint DSL docs) — Plan 09 is next
+Last session: 2026-04-09
+Stopped at: Completed 01-foundation/01-09-PLAN.md (phoneme dialog redesign, romanization Latin-first flip) — Phase 1 complete, Phase 2 is next
 Resume file: None
