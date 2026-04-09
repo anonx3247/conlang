@@ -80,6 +80,10 @@ class _IpaTextFieldState extends State<IpaTextField> {
   final _layerLink = LayerLink();
   final _overlayController = OverlayPortalController();
 
+  // Shared tap-region group so that clicks inside the popup are not treated
+  // as "outside" the TextField, preventing premature popup dismissal.
+  final _tapGroupId = Object();
+
   bool _ownController = false;
   bool _ownFocusNode = false;
   bool _popupVisible = false;
@@ -224,19 +228,36 @@ class _IpaTextFieldState extends State<IpaTextField> {
 
   @override
   Widget build(BuildContext context) {
-    // Merge the IPA keyboard icon into the field's suffix
+    // Merge the IPA keyboard icon into the field's suffix, preserving any
+    // suffixIcon the caller already provided (e.g. validation checkmark).
     final baseDecoration = widget.decoration ?? const InputDecoration();
+    final callerSuffixIcon = baseDecoration.suffixIcon;
+
+    final keyboardIcon = IconButton(
+      icon: Icon(
+        _popupVisible ? Icons.keyboard_hide : Icons.keyboard_alt_outlined,
+        size: 18,
+      ),
+      tooltip: _popupVisible ? 'Hide IPA keyboard' : 'Show IPA keyboard',
+      onPressed: _togglePopup,
+    );
+
+    Widget? mergedSuffixIcon;
+    if (widget.showIpaKeyboard) {
+      if (callerSuffixIcon != null) {
+        // Caller has an icon AND we have the keyboard toggle — show both.
+        mergedSuffixIcon = Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [callerSuffixIcon, keyboardIcon],
+        );
+      } else {
+        mergedSuffixIcon = keyboardIcon;
+      }
+    }
+    // If showIpaKeyboard is false, leave suffixIcon as-is from the caller.
+
     final decoration = widget.showIpaKeyboard
-        ? baseDecoration.copyWith(
-            suffixIcon: IconButton(
-              icon: Icon(
-                _popupVisible ? Icons.keyboard_hide : Icons.keyboard_alt_outlined,
-                size: 18,
-              ),
-              tooltip: _popupVisible ? 'Hide IPA keyboard' : 'Show IPA keyboard',
-              onPressed: _togglePopup,
-            ),
-          )
+        ? baseDecoration.copyWith(suffixIcon: mergedSuffixIcon)
         : baseDecoration;
 
     return OverlayPortal(
@@ -244,31 +265,34 @@ class _IpaTextFieldState extends State<IpaTextField> {
       overlayChildBuilder: _buildOverlay,
       child: CompositedTransformTarget(
         link: _layerLink,
-        child: KeyboardListener(
-          focusNode: FocusNode(skipTraversal: true),
-          onKeyEvent: (event) {
-            if (event is KeyDownEvent &&
-                event.logicalKey == LogicalKeyboardKey.escape) {
-              _hidePopup();
-            }
-          },
-          child: TextField(
-            controller: _controller,
-            focusNode: _focusNode,
-            decoration: decoration,
-            style: widget.style,
-            onChanged: widget.onChanged,
-            onSubmitted: widget.onSubmitted,
-            keyboardType: widget.keyboardType,
-            textInputAction: widget.textInputAction,
-            autofocus: widget.autofocus,
-            readOnly: widget.readOnly,
-            maxLines: widget.maxLines,
-            minLines: widget.minLines,
-            expands: widget.expands,
-            enabled: widget.enabled,
-            inputFormatters: widget.inputFormatters,
-            textCapitalization: widget.textCapitalization,
+        child: TapRegion(
+          groupId: _tapGroupId,
+          child: KeyboardListener(
+            focusNode: FocusNode(skipTraversal: true),
+            onKeyEvent: (event) {
+              if (event is KeyDownEvent &&
+                  event.logicalKey == LogicalKeyboardKey.escape) {
+                _hidePopup();
+              }
+            },
+            child: TextField(
+              controller: _controller,
+              focusNode: _focusNode,
+              decoration: decoration,
+              style: widget.style,
+              onChanged: widget.onChanged,
+              onSubmitted: widget.onSubmitted,
+              keyboardType: widget.keyboardType,
+              textInputAction: widget.textInputAction,
+              autofocus: widget.autofocus,
+              readOnly: widget.readOnly,
+              maxLines: widget.maxLines,
+              minLines: widget.minLines,
+              expands: widget.expands,
+              enabled: widget.enabled,
+              inputFormatters: widget.inputFormatters,
+              textCapitalization: widget.textCapitalization,
+            ),
           ),
         ),
       ),
@@ -312,8 +336,10 @@ class _IpaTextFieldState extends State<IpaTextField> {
         followerAnchor: followerAnchor,
         offset: offset,
         child: TapRegion(
-          // Taps inside the popup do not dismiss it.
-          onTapOutside: (_) => _hidePopup(),
+          // Popup is in the same tap group as the TextField so that clicks
+          // inside it are NOT treated as outside taps — preventing dismissal
+          // before the symbol button's onTap fires.
+          groupId: _tapGroupId,
           child: IpaKeyboardPopup(
             onSymbolSelected: _insertSymbol,
             onClose: _hidePopup,

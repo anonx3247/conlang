@@ -5,7 +5,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../db/app_database.dart';
 import '../../data/phonotactic_providers.dart';
 import '../../domain/phonotactic_dsl.dart';
-import '../shared/ipa_keyboard/ipa_text_field.dart';
 import 'sound_rules_shared.dart';
 
 /// Widget for managing syllable structure templates.
@@ -282,8 +281,10 @@ class _TemplateEditDialogState extends State<_TemplateEditDialog> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Pattern field with live parse validation
-            IpaTextField(
+            // Pattern field with live parse validation.
+            // Uses plain TextField — DSL patterns use C/V/[]/() syntax,
+            // not IPA symbols, so the IPA keyboard is not appropriate here.
+            TextField(
               controller: _patternCtrl,
               decoration: InputDecoration(
                 labelText: 'Template pattern',
