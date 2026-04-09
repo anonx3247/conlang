@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import 'shared/ipa_chart/ipa_chart_panel.dart';
+
 /// Phonology sub-shell with a left sidebar for navigation
 /// and a persistent IPA reference chart placeholder on the right.
 class PhonologyShell extends StatelessWidget {
@@ -81,57 +83,8 @@ class PhonologyShell extends StatelessWidget {
           color: colorScheme.outlineVariant,
         ),
 
-        // Right IPA reference chart panel (~280px wide, placeholder for Plan 03)
-        SizedBox(
-          width: 280,
-          child: Material(
-            color: colorScheme.surfaceContainerLow,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-                  child: Text(
-                    'IPA REFERENCE',
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      color: colorScheme.onSurface.withValues(alpha: 0.5),
-                      letterSpacing: 1.2,
-                    ),
-                  ),
-                ),
-                Expanded(
-                  child: Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.table_chart_outlined,
-                          size: 48,
-                          color: colorScheme.onSurface.withValues(alpha: 0.2),
-                        ),
-                        const SizedBox(height: 12),
-                        Text(
-                          'IPA Chart',
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: colorScheme.onSurface.withValues(alpha: 0.3),
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Coming in Plan 03',
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: colorScheme.onSurface.withValues(alpha: 0.25),
-                            fontSize: 10,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
+        // Persistent IPA reference chart (Plan 03)
+        const IpaChartPanel(),
       ],
     );
   }
