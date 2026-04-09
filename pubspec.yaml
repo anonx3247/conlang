@@ -54,6 +54,6 @@ dev_dependencies:
 flutter:
   uses-material-design: true
 
-  # IPA audio assets (to be populated in Plan 03)
-  # assets:
-  #   - assets/ipa_audio/
+  assets:
+    - assets/ipa_audio/
+    - assets/AUDIO_CREDITS.md
