@@ -81,10 +81,18 @@ class _RulesPageState extends ConsumerState<RulesPage> {
               loading: () => const Center(child: CircularProgressIndicator()),
               error: (e, _) => Center(child: Text('Error: $e')),
               data: (rules) {
-                // Apply POS filter
+                // Apply POS filter using posIds text column
                 final filtered = _selectedPosId == null
                     ? rules
-                    : rules.where((r) => r.posId == _selectedPosId).toList();
+                    : rules.where((r) {
+                        if (r.posIds.isEmpty) return true; // applies to all
+                        final ids = r.posIds
+                            .split(',')
+                            .map((s) => int.tryParse(s.trim()))
+                            .whereType<int>()
+                            .toSet();
+                        return ids.contains(_selectedPosId);
+                      }).toList();
 
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,

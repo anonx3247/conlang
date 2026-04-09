@@ -3083,6 +3083,16 @@ class $MorphologicalRulesTable extends MorphologicalRules
       'REFERENCES parts_of_speech (id)',
     ),
   );
+  static const VerificationMeta _posIdsMeta = const VerificationMeta('posIds');
+  @override
+  late final GeneratedColumn<String> posIds = GeneratedColumn<String>(
+    'pos_ids',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -3091,6 +3101,7 @@ class $MorphologicalRulesTable extends MorphologicalRules
     ordering,
     isActive,
     posId,
+    posIds,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -3141,6 +3152,12 @@ class $MorphologicalRulesTable extends MorphologicalRules
         posId.isAcceptableOrUnknown(data['pos_id']!, _posIdMeta),
       );
     }
+    if (data.containsKey('pos_ids')) {
+      context.handle(
+        _posIdsMeta,
+        posIds.isAcceptableOrUnknown(data['pos_ids']!, _posIdsMeta),
+      );
+    }
     return context;
   }
 
@@ -3174,6 +3191,10 @@ class $MorphologicalRulesTable extends MorphologicalRules
         DriftSqlType.int,
         data['${effectivePrefix}pos_id'],
       ),
+      posIds: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}pos_ids'],
+      )!,
     );
   }
 
@@ -3191,6 +3212,10 @@ class MorphologicalRule extends DataClass
   final int ordering;
   final bool isActive;
   final int? posId;
+
+  /// Comma-separated POS IDs (e.g. "1,3,5") for multi-POS assignment.
+  /// Null or empty = applies to all. Supersedes [posId] for filtering.
+  final String posIds;
   const MorphologicalRule({
     required this.id,
     required this.name,
@@ -3198,6 +3223,7 @@ class MorphologicalRule extends DataClass
     required this.ordering,
     required this.isActive,
     this.posId,
+    required this.posIds,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -3210,6 +3236,7 @@ class MorphologicalRule extends DataClass
     if (!nullToAbsent || posId != null) {
       map['pos_id'] = Variable<int>(posId);
     }
+    map['pos_ids'] = Variable<String>(posIds);
     return map;
   }
 
@@ -3223,6 +3250,7 @@ class MorphologicalRule extends DataClass
       posId: posId == null && nullToAbsent
           ? const Value.absent()
           : Value(posId),
+      posIds: Value(posIds),
     );
   }
 
@@ -3238,6 +3266,7 @@ class MorphologicalRule extends DataClass
       ordering: serializer.fromJson<int>(json['ordering']),
       isActive: serializer.fromJson<bool>(json['isActive']),
       posId: serializer.fromJson<int?>(json['posId']),
+      posIds: serializer.fromJson<String>(json['posIds']),
     );
   }
   @override
@@ -3250,6 +3279,7 @@ class MorphologicalRule extends DataClass
       'ordering': serializer.toJson<int>(ordering),
       'isActive': serializer.toJson<bool>(isActive),
       'posId': serializer.toJson<int?>(posId),
+      'posIds': serializer.toJson<String>(posIds),
     };
   }
 
@@ -3260,6 +3290,7 @@ class MorphologicalRule extends DataClass
     int? ordering,
     bool? isActive,
     Value<int?> posId = const Value.absent(),
+    String? posIds,
   }) => MorphologicalRule(
     id: id ?? this.id,
     name: name ?? this.name,
@@ -3267,6 +3298,7 @@ class MorphologicalRule extends DataClass
     ordering: ordering ?? this.ordering,
     isActive: isActive ?? this.isActive,
     posId: posId.present ? posId.value : this.posId,
+    posIds: posIds ?? this.posIds,
   );
   MorphologicalRule copyWithCompanion(MorphologicalRulesCompanion data) {
     return MorphologicalRule(
@@ -3276,6 +3308,7 @@ class MorphologicalRule extends DataClass
       ordering: data.ordering.present ? data.ordering.value : this.ordering,
       isActive: data.isActive.present ? data.isActive.value : this.isActive,
       posId: data.posId.present ? data.posId.value : this.posId,
+      posIds: data.posIds.present ? data.posIds.value : this.posIds,
     );
   }
 
@@ -3287,13 +3320,15 @@ class MorphologicalRule extends DataClass
           ..write('source: $source, ')
           ..write('ordering: $ordering, ')
           ..write('isActive: $isActive, ')
-          ..write('posId: $posId')
+          ..write('posId: $posId, ')
+          ..write('posIds: $posIds')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(id, name, source, ordering, isActive, posId);
+  int get hashCode =>
+      Object.hash(id, name, source, ordering, isActive, posId, posIds);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -3303,7 +3338,8 @@ class MorphologicalRule extends DataClass
           other.source == this.source &&
           other.ordering == this.ordering &&
           other.isActive == this.isActive &&
-          other.posId == this.posId);
+          other.posId == this.posId &&
+          other.posIds == this.posIds);
 }
 
 class MorphologicalRulesCompanion extends UpdateCompanion<MorphologicalRule> {
@@ -3313,6 +3349,7 @@ class MorphologicalRulesCompanion extends UpdateCompanion<MorphologicalRule> {
   final Value<int> ordering;
   final Value<bool> isActive;
   final Value<int?> posId;
+  final Value<String> posIds;
   const MorphologicalRulesCompanion({
     this.id = const Value.absent(),
     this.name = const Value.absent(),
@@ -3320,6 +3357,7 @@ class MorphologicalRulesCompanion extends UpdateCompanion<MorphologicalRule> {
     this.ordering = const Value.absent(),
     this.isActive = const Value.absent(),
     this.posId = const Value.absent(),
+    this.posIds = const Value.absent(),
   });
   MorphologicalRulesCompanion.insert({
     this.id = const Value.absent(),
@@ -3328,6 +3366,7 @@ class MorphologicalRulesCompanion extends UpdateCompanion<MorphologicalRule> {
     this.ordering = const Value.absent(),
     this.isActive = const Value.absent(),
     this.posId = const Value.absent(),
+    this.posIds = const Value.absent(),
   }) : name = Value(name),
        source = Value(source);
   static Insertable<MorphologicalRule> custom({
@@ -3337,6 +3376,7 @@ class MorphologicalRulesCompanion extends UpdateCompanion<MorphologicalRule> {
     Expression<int>? ordering,
     Expression<bool>? isActive,
     Expression<int>? posId,
+    Expression<String>? posIds,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -3345,6 +3385,7 @@ class MorphologicalRulesCompanion extends UpdateCompanion<MorphologicalRule> {
       if (ordering != null) 'ordering': ordering,
       if (isActive != null) 'is_active': isActive,
       if (posId != null) 'pos_id': posId,
+      if (posIds != null) 'pos_ids': posIds,
     });
   }
 
@@ -3355,6 +3396,7 @@ class MorphologicalRulesCompanion extends UpdateCompanion<MorphologicalRule> {
     Value<int>? ordering,
     Value<bool>? isActive,
     Value<int?>? posId,
+    Value<String>? posIds,
   }) {
     return MorphologicalRulesCompanion(
       id: id ?? this.id,
@@ -3363,6 +3405,7 @@ class MorphologicalRulesCompanion extends UpdateCompanion<MorphologicalRule> {
       ordering: ordering ?? this.ordering,
       isActive: isActive ?? this.isActive,
       posId: posId ?? this.posId,
+      posIds: posIds ?? this.posIds,
     );
   }
 
@@ -3387,6 +3430,9 @@ class MorphologicalRulesCompanion extends UpdateCompanion<MorphologicalRule> {
     if (posId.present) {
       map['pos_id'] = Variable<int>(posId.value);
     }
+    if (posIds.present) {
+      map['pos_ids'] = Variable<String>(posIds.value);
+    }
     return map;
   }
 
@@ -3398,7 +3444,8 @@ class MorphologicalRulesCompanion extends UpdateCompanion<MorphologicalRule> {
           ..write('source: $source, ')
           ..write('ordering: $ordering, ')
           ..write('isActive: $isActive, ')
-          ..write('posId: $posId')
+          ..write('posId: $posId, ')
+          ..write('posIds: $posIds')
           ..write(')'))
         .toString();
   }
@@ -5691,6 +5738,7 @@ typedef $$MorphologicalRulesTableCreateCompanionBuilder =
       Value<int> ordering,
       Value<bool> isActive,
       Value<int?> posId,
+      Value<String> posIds,
     });
 typedef $$MorphologicalRulesTableUpdateCompanionBuilder =
     MorphologicalRulesCompanion Function({
@@ -5700,6 +5748,7 @@ typedef $$MorphologicalRulesTableUpdateCompanionBuilder =
       Value<int> ordering,
       Value<bool> isActive,
       Value<int?> posId,
+      Value<String> posIds,
     });
 
 final class $$MorphologicalRulesTableReferences
@@ -5769,6 +5818,11 @@ class $$MorphologicalRulesTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
+  ColumnFilters<String> get posIds => $composableBuilder(
+    column: $table.posIds,
+    builder: (column) => ColumnFilters(column),
+  );
+
   $$PartsOfSpeechTableFilterComposer get posId {
     final $$PartsOfSpeechTableFilterComposer composer = $composerBuilder(
       composer: this,
@@ -5827,6 +5881,11 @@ class $$MorphologicalRulesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get posIds => $composableBuilder(
+    column: $table.posIds,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   $$PartsOfSpeechTableOrderingComposer get posId {
     final $$PartsOfSpeechTableOrderingComposer composer = $composerBuilder(
       composer: this,
@@ -5874,6 +5933,9 @@ class $$MorphologicalRulesTableAnnotationComposer
 
   GeneratedColumn<bool> get isActive =>
       $composableBuilder(column: $table.isActive, builder: (column) => column);
+
+  GeneratedColumn<String> get posIds =>
+      $composableBuilder(column: $table.posIds, builder: (column) => column);
 
   $$PartsOfSpeechTableAnnotationComposer get posId {
     final $$PartsOfSpeechTableAnnotationComposer composer = $composerBuilder(
@@ -5938,6 +6000,7 @@ class $$MorphologicalRulesTableTableManager
                 Value<int> ordering = const Value.absent(),
                 Value<bool> isActive = const Value.absent(),
                 Value<int?> posId = const Value.absent(),
+                Value<String> posIds = const Value.absent(),
               }) => MorphologicalRulesCompanion(
                 id: id,
                 name: name,
@@ -5945,6 +6008,7 @@ class $$MorphologicalRulesTableTableManager
                 ordering: ordering,
                 isActive: isActive,
                 posId: posId,
+                posIds: posIds,
               ),
           createCompanionCallback:
               ({
@@ -5954,6 +6018,7 @@ class $$MorphologicalRulesTableTableManager
                 Value<int> ordering = const Value.absent(),
                 Value<bool> isActive = const Value.absent(),
                 Value<int?> posId = const Value.absent(),
+                Value<String> posIds = const Value.absent(),
               }) => MorphologicalRulesCompanion.insert(
                 id: id,
                 name: name,
@@ -5961,6 +6026,7 @@ class $$MorphologicalRulesTableTableManager
                 ordering: ordering,
                 isActive: isActive,
                 posId: posId,
+                posIds: posIds,
               ),
           withReferenceMapper: (p0) => p0
               .map(

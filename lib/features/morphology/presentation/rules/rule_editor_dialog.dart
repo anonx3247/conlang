@@ -17,7 +17,7 @@ enum OpType {
   prefix('Prefix (add to start)'),
   suffix('Suffix (add to end)'),
   infix('Infix (insert inside)'),
-  ablaut('Vowel change'),
+  ablaut('Replace'),
   template('Root template'),
   reduplication('Reduplication (copy)'),
   suppletive('Whole-word override (irregular)');
@@ -167,7 +167,8 @@ class RuleEditorDialog extends ConsumerStatefulWidget {
 class _RuleEditorDialogState extends ConsumerState<RuleEditorDialog> {
   final _nameCtrl = TextEditingController();
   final List<_BranchState> _branches = [];
-  int? _selectedPosId;
+  /// Selected POS IDs. Empty set = applies to all.
+  Set<int> _selectedPosIds = {};
   String? _validationError;
   bool _saving = false;
 
@@ -185,7 +186,17 @@ class _RuleEditorDialogState extends ConsumerState<RuleEditorDialog> {
   /// Populate form state from a Drift [db.MorphologicalRule] row.
   void _loadFromExisting(db.MorphologicalRule row) {
     _nameCtrl.text = row.name;
-    _selectedPosId = row.posId;
+    // Load multi-POS selection from posIds text column
+    if (row.posIds.isNotEmpty) {
+      _selectedPosIds = row.posIds
+          .split(',')
+          .map((s) => int.tryParse(s.trim()))
+          .whereType<int>()
+          .toSet();
+    } else if (row.posId != null) {
+      // Backward compat: migrate single posId
+      _selectedPosIds = {row.posId!};
+    }
 
     // Parse DSL source into domain model.
     final parsed = parseMorphDsl(row.source, id: row.id, name: row.name);
@@ -268,11 +279,22 @@ class _RuleEditorDialogState extends ConsumerState<RuleEditorDialog> {
 
   /// Build a domain [MorphologicalRule] from current form state.
   /// Returns null if form is incomplete (no valid branches).
+  ///
+  /// Automatically sorts branches: conditional branches first, then default
+  /// (empty conditions) branches last — more specific rules take priority.
   MorphologicalRule? _buildDomainRule({required int id}) {
     final name = _nameCtrl.text.trim();
     final branches =
         _branches.map((b) => b.toBranch()).whereType<MorphBranch>().toList();
     if (branches.isEmpty) return null;
+
+    // Sort: branches with conditions before branches without (default/else).
+    branches.sort((a, b) {
+      final aHasCond = a.conditions.isNotEmpty ? 0 : 1;
+      final bHasCond = b.conditions.isNotEmpty ? 0 : 1;
+      return aHasCond.compareTo(bHasCond);
+    });
+
     final tempRule =
         MorphologicalRule(id: id, name: name, branches: branches, source: '');
     final source = serializeMorphRule(tempRule);
@@ -312,12 +334,16 @@ class _RuleEditorDialogState extends ConsumerState<RuleEditorDialog> {
       _validationError = null;
     });
 
+    final posIdsStr = _selectedPosIds.isEmpty
+        ? ''
+        : _selectedPosIds.toList().join(',');
+
     try {
       if (widget.existing != null) {
         await dao.updateRule(widget.existing!.copyWith(
           name: name,
           source: source,
-          posId: Value(_selectedPosId),
+          posIds: posIdsStr,
         ));
       } else {
         final ordering = await dao.nextOrdering();
@@ -326,7 +352,7 @@ class _RuleEditorDialogState extends ConsumerState<RuleEditorDialog> {
             name: Value(name),
             source: Value(source),
             ordering: Value(ordering),
-            posId: Value(_selectedPosId),
+            posIds: Value(posIdsStr),
           ),
         );
       }
@@ -403,36 +429,44 @@ class _RuleEditorDialogState extends ConsumerState<RuleEditorDialog> {
                           ),
                           const SizedBox(height: 12),
 
-                          // POS selector
-                          Row(
-                            children: [
-                              Text(
-                                'Part of speech:',
-                                style: theme.textTheme.bodyMedium?.copyWith(
-                                  color: cs.onSurface.withValues(alpha: 0.7),
+                          // POS selector (multi-select chips)
+                          if (posList.isNotEmpty) ...[
+                            Text(
+                              'Applies to:',
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: cs.onSurface.withValues(alpha: 0.6),
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Wrap(
+                              spacing: 6,
+                              runSpacing: 4,
+                              children: [
+                                FilterChip(
+                                  label: const Text('All'),
+                                  selected: _selectedPosIds.isEmpty,
+                                  onSelected: (_) =>
+                                      setState(() => _selectedPosIds = {}),
+                                  visualDensity: VisualDensity.compact,
                                 ),
-                              ),
-                              const SizedBox(width: 12),
-                              DropdownButton<int?>(
-                                value: _selectedPosId,
-                                underline: const SizedBox.shrink(),
-                                items: [
-                                  const DropdownMenuItem<int?>(
-                                    value: null,
-                                    child: Text('Applies to all'),
-                                  ),
-                                  ...posList.map(
-                                    (pos) => DropdownMenuItem<int?>(
-                                      value: pos.id,
-                                      child: Text(pos.name),
-                                    ),
-                                  ),
-                                ],
-                                onChanged: (v) =>
-                                    setState(() => _selectedPosId = v),
-                              ),
-                            ],
-                          ),
+                                ...posList.map((pos) => FilterChip(
+                                      label: Text(pos.name),
+                                      selected:
+                                          _selectedPosIds.contains(pos.id),
+                                      onSelected: (selected) {
+                                        setState(() {
+                                          if (selected) {
+                                            _selectedPosIds.add(pos.id);
+                                          } else {
+                                            _selectedPosIds.remove(pos.id);
+                                          }
+                                        });
+                                      },
+                                      visualDensity: VisualDensity.compact,
+                                    )),
+                              ],
+                            ),
+                          ],
                           const SizedBox(height: 16),
 
                           // Branches
@@ -799,7 +833,7 @@ class _RuleEditorDialogState extends ConsumerState<RuleEditorDialog> {
                 Expanded(
                   child: IpaTextField(
                     controller: op.ablautFromCtrl,
-                    decoration: fieldDecoration.copyWith(hintText: 'from (IPA)'),
+                    decoration: fieldDecoration.copyWith(hintText: 'from'),
                     onChanged: (_) => setState(() {}),
                   ),
                 ),
@@ -810,34 +844,18 @@ class _RuleEditorDialogState extends ConsumerState<RuleEditorDialog> {
                 Expanded(
                   child: IpaTextField(
                     controller: op.ablautToCtrl,
-                    decoration: fieldDecoration.copyWith(hintText: 'to (IPA)'),
+                    decoration: fieldDecoration.copyWith(hintText: 'to'),
                     onChanged: (_) => setState(() {}),
                   ),
                 ),
               ],
             ),
             const SizedBox(height: 6),
-            Row(
+            Wrap(
+              spacing: 8,
+              runSpacing: 4,
+              crossAxisAlignment: WrapCrossAlignment.center,
               children: [
-                DropdownButton<AblautDirection>(
-                  value: op.ablautDirection,
-                  isDense: true,
-                  items: const [
-                    DropdownMenuItem(
-                      value: AblautDirection.fromStart,
-                      child: Text('from the beginning'),
-                    ),
-                    DropdownMenuItem(
-                      value: AblautDirection.fromEnd,
-                      child: Text('from the end'),
-                    ),
-                  ],
-                  onChanged: (v) {
-                    if (v == null) return;
-                    setState(() => op.ablautDirection = v);
-                  },
-                ),
-                const SizedBox(width: 12),
                 DropdownButton<int?>(
                   value: op.ablautCount,
                   isDense: true,
@@ -851,14 +869,29 @@ class _RuleEditorDialogState extends ConsumerState<RuleEditorDialog> {
                     setState(() => op.ablautCount = v);
                   },
                 ),
-                Padding(
-                  padding: const EdgeInsets.only(left: 4),
-                  child: Text(
-                    'occurrences',
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: cs.onSurface.withValues(alpha: 0.6),
-                    ),
+                Text(
+                  'occurrences',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: cs.onSurface.withValues(alpha: 0.6),
                   ),
+                ),
+                DropdownButton<AblautDirection>(
+                  value: op.ablautDirection,
+                  isDense: true,
+                  items: const [
+                    DropdownMenuItem(
+                      value: AblautDirection.fromStart,
+                      child: Text('from beginning'),
+                    ),
+                    DropdownMenuItem(
+                      value: AblautDirection.fromEnd,
+                      child: Text('from end'),
+                    ),
+                  ],
+                  onChanged: (v) {
+                    if (v == null) return;
+                    setState(() => op.ablautDirection = v);
+                  },
                 ),
               ],
             ),

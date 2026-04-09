@@ -46,15 +46,26 @@ class _MorphologyPreviewPanelState
     final rulesAsync = ref.watch(morphologicalRuleListProvider);
     final allDbRules = rulesAsync.asData?.value ?? [];
 
+    final rewriteRules = ref.watch(parsedRewriteRulesProvider);
+
     // Generate words locally (fresh on every rebuild, including regenerate)
+    // and apply phonological rewrite rules so they follow phonology rules
+    // before morphological transforms are applied.
     final gen = WordGenerator();
-    final words = gen.generateWords(
+    final rawWords = gen.generateWords(
       templates: templates,
       inventory: inventory,
       count: 20,
       minSyllables: 1,
       maxSyllables: 3,
     );
+    final words = rawWords
+        .map((w) => gen.applyRewriteRules(
+              word: w,
+              rules: rewriteRules,
+              inventory: inventory,
+            ))
+        .toList();
 
     // Parse all active rules into domain models
     final activeRules = <MorphologicalRule>[];

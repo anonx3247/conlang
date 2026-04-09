@@ -117,6 +117,9 @@ class MorphologicalRules extends Table {
   BoolColumn get isActive => boolean().withDefault(const Constant(true))();
   IntColumn get posId =>
       integer().nullable().references(PartsOfSpeech, #id)();
+  /// Comma-separated POS IDs (e.g. "1,3,5") for multi-POS assignment.
+  /// Null or empty = applies to all. Supersedes [posId] for filtering.
+  TextColumn get posIds => text().withDefault(const Constant(''))();
 }
 
 /// Per-lexeme exceptions overriding a morphological rule with an irregular form.
@@ -184,7 +187,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase(super.e);
 
   @override
-  int get schemaVersion => 5;
+  int get schemaVersion => 6;
 
   @override
   MigrationStrategy get migration {
@@ -210,6 +213,10 @@ class AppDatabase extends _$AppDatabase {
           // v5: add parts_of_speech table and posId FK on morphological_rules
           await m.createTable(partsOfSpeech);
           await m.addColumn(morphologicalRules, morphologicalRules.posId);
+        }
+        if (from < 6) {
+          // v6: add posIds text column for multi-POS assignment
+          await m.addColumn(morphologicalRules, morphologicalRules.posIds);
         }
       },
       beforeOpen: (details) async {

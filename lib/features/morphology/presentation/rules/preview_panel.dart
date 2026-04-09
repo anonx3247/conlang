@@ -73,14 +73,24 @@ class _PreviewPanelState extends ConsumerState<PreviewPanel> {
       loading: () => <ParsedTemplate>[],
       error: (_, _) => <ParsedTemplate>[],
     );
+    final rewriteRules = ref.read(parsedRewriteRulesProvider);
     final gen = WordGenerator();
-    final words = gen.generateWords(
+    final rawWords = gen.generateWords(
       templates: templates,
       inventory: inventory,
       count: 8,
       minSyllables: 1,
       maxSyllables: 3,
     );
+    // Apply phonological rewrite rules so generated words already follow
+    // the phonology rules before morphological transforms are applied.
+    final words = rawWords
+        .map((w) => gen.applyRewriteRules(
+              word: w,
+              rules: rewriteRules,
+              inventory: inventory,
+            ))
+        .toList();
 
     if (rule == null) {
       setState(() {
