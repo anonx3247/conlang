@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:drift/drift.dart';
 
 import '../../../db/app_database.dart';
@@ -8,7 +10,7 @@ part 'phoneme_dao.g.dart';
 ///
 /// Obtain an instance via `currentDatabase.phonemeDao` or the Riverpod
 /// [phonemeDaoProvider] which derives it from the active project database.
-@DriftAccessor(tables: [Phonemes])
+@DriftAccessor(tables: [Phonemes, NaturalClasses])
 class PhonemeDao extends DatabaseAccessor<AppDatabase>
     with _$PhonemeDaoMixin {
   PhonemeDao(super.db);
@@ -45,9 +47,27 @@ class PhonemeDao extends DatabaseAccessor<AppDatabase>
   Future<bool> updatePhoneme(Phoneme phoneme) =>
       update(phonemes).replace(phoneme);
 
-  /// Deletes the phoneme with the given [id].
-  Future<int> deletePhoneme(int id) =>
-      (delete(phonemes)..where((t) => t.id.equals(id))).go();
+  /// Deletes the phoneme with the given [id] and removes its ID from all
+  /// natural classes' phonemeIds JSON arrays.
+  Future<int> deletePhoneme(int id) async {
+    // Remove from natural classes first (cascading cleanup).
+    final allClasses = await select(naturalClasses).get();
+    for (final cls in allClasses) {
+      try {
+        final decoded = jsonDecode(cls.phonemeIds);
+        if (decoded is List && decoded.contains(id)) {
+          final updated = decoded.where((e) => e != id).toList();
+          await (update(naturalClasses)
+                ..where((t) => t.id.equals(cls.id)))
+              .write(NaturalClassesCompanion(
+                  phonemeIds: Value(jsonEncode(updated))));
+        }
+      } catch (_) {
+        // Skip malformed JSON
+      }
+    }
+    return (delete(phonemes)..where((t) => t.id.equals(id))).go();
+  }
 
   // ---------------------------------------------------------------------------
   // Lookup

@@ -5,6 +5,7 @@ part of 'phoneme_dao.dart';
 // ignore_for_file: type=lint
 mixin _$PhonemeDaoMixin on DatabaseAccessor<AppDatabase> {
   $PhonemesTable get phonemes => attachedDatabase.phonemes;
+  $NaturalClassesTable get naturalClasses => attachedDatabase.naturalClasses;
   PhonemeDaoManager get managers => PhonemeDaoManager(this);
 }
 
@@ -13,4 +14,9 @@ class PhonemeDaoManager {
   PhonemeDaoManager(this._db);
   $$PhonemesTableTableManager get phonemes =>
       $$PhonemesTableTableManager(_db.attachedDatabase, _db.phonemes);
+  $$NaturalClassesTableTableManager get naturalClasses =>
+      $$NaturalClassesTableTableManager(
+        _db.attachedDatabase,
+        _db.naturalClasses,
+      );
 }
