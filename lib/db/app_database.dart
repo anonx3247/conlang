@@ -161,6 +161,23 @@ class AppDatabase extends _$AppDatabase {
       beforeOpen: (details) async {
         // Enable foreign key enforcement for every connection.
         await customStatement('PRAGMA foreign_keys = ON');
+
+        // Safety net: ensure tables exist even if a prior hot-restart bumped
+        // user_version without completing the migration.
+        await customStatement(
+          'CREATE TABLE IF NOT EXISTS rewrite_rules ('
+          '"id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, '
+          '"source" TEXT NOT NULL, '
+          '"ordering" INTEGER NOT NULL DEFAULT 0'
+          ')',
+        );
+        await customStatement(
+          'CREATE TABLE IF NOT EXISTS project_settings ('
+          '"id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, '
+          '"key" TEXT NOT NULL UNIQUE, '
+          '"value" TEXT NOT NULL'
+          ')',
+        );
       },
     );
   }
