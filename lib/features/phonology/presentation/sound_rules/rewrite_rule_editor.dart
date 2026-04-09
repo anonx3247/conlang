@@ -7,12 +7,10 @@ import '../../domain/phonotactic_dsl.dart';
 import '../shared/ipa_keyboard/ipa_text_field.dart';
 import 'sound_rules_shared.dart';
 
-/// Widget for managing phonological rewrite rules in SPE-style notation.
+/// Widget for managing phonological rewrite rules.
 ///
 /// Displays all rewrite rules with real-time parse validation. Rules use
-/// `A -> B / C_D` notation (e.g. "k -> x / V_V" for velar lenition between
-/// vowels). This is distinct from phonotactic constraints — rewrite rules are
-/// transformational (sound changes), not labeling patterns as allowed/forbidden.
+/// fill-in-the-blank UI: [input] -> [output] / [left]_[right].
 class RewriteRuleEditor extends ConsumerWidget {
   const RewriteRuleEditor({super.key});
 
@@ -26,8 +24,7 @@ class RewriteRuleEditor extends ConsumerWidget {
         SoundRulesSectionHeader(
           title: 'Rewrite Rules',
           helpText:
-              'Sound changes in A \u2192 B / C_D notation '
-              '(e.g. "k -> x / V_V" for velar lenition).',
+              'Sound changes: what becomes what, and in which context.',
           onAdd: () => _showAddDialog(context, ref),
         ),
         rulesAsync.when(
@@ -184,8 +181,53 @@ class _RewriteRuleRow extends ConsumerWidget {
 }
 
 // ---------------------------------------------------------------------------
-// Add / edit dialog
+// Add / edit dialog — fill-in-the-blank UI
 // ---------------------------------------------------------------------------
+
+/// Parses a source string like "k -> x / V_V" into its 4 parts.
+({String input, String output, String left, String right}) _parseParts(
+    String source) {
+  var input = '', output = '', left = '', right = '';
+  final arrowIdx = source.indexOf(' -> ');
+  if (arrowIdx < 0) {
+    input = source.trim();
+    return (input: input, output: output, left: left, right: right);
+  }
+  input = source.substring(0, arrowIdx).trim();
+  final afterArrow = source.substring(arrowIdx + 4).trim();
+
+  final slashIdx = afterArrow.indexOf(' / ');
+  if (slashIdx < 0) {
+    output = afterArrow;
+    return (input: input, output: output, left: left, right: right);
+  }
+  output = afterArrow.substring(0, slashIdx).trim();
+  final context = afterArrow.substring(slashIdx + 3).trim();
+
+  final underIdx = context.indexOf('_');
+  if (underIdx < 0) {
+    left = context;
+  } else {
+    left = context.substring(0, underIdx);
+    right = context.substring(underIdx + 1);
+  }
+  return (input: input, output: output, left: left, right: right);
+}
+
+/// Assembles the 4 parts back into a source string.
+String _buildSource(String input, String output, String left, String right) {
+  final buf = StringBuffer();
+  buf.write(input.trim());
+  buf.write(' -> ');
+  buf.write(output.trim());
+  if (left.trim().isNotEmpty || right.trim().isNotEmpty) {
+    buf.write(' / ');
+    buf.write(left.trim());
+    buf.write('_');
+    buf.write(right.trim());
+  }
+  return buf.toString();
+}
 
 class _RewriteRuleEditDialog extends StatefulWidget {
   const _RewriteRuleEditDialog({
@@ -201,28 +243,48 @@ class _RewriteRuleEditDialog extends StatefulWidget {
 }
 
 class _RewriteRuleEditDialogState extends State<_RewriteRuleEditDialog> {
-  late final TextEditingController _sourceCtrl;
+  late final TextEditingController _inputCtrl;
+  late final TextEditingController _outputCtrl;
+  late final TextEditingController _leftCtrl;
+  late final TextEditingController _rightCtrl;
   ParsedRewriteRule? _parsed;
   bool _saving = false;
 
   @override
   void initState() {
     super.initState();
-    _sourceCtrl = TextEditingController(
-      text: widget.initial?.source ?? '',
-    );
-    _validate(_sourceCtrl.text);
+    final parts = widget.initial != null
+        ? _parseParts(widget.initial!.source)
+        : (input: '', output: '', left: '', right: '');
+    _inputCtrl = TextEditingController(text: parts.input);
+    _outputCtrl = TextEditingController(text: parts.output);
+    _leftCtrl = TextEditingController(text: parts.left);
+    _rightCtrl = TextEditingController(text: parts.right);
+    _validate();
   }
 
   @override
   void dispose() {
-    _sourceCtrl.dispose();
+    _inputCtrl.dispose();
+    _outputCtrl.dispose();
+    _leftCtrl.dispose();
+    _rightCtrl.dispose();
     super.dispose();
   }
 
-  void _validate(String text) {
+  String get _source => _buildSource(
+        _inputCtrl.text,
+        _outputCtrl.text,
+        _leftCtrl.text,
+        _rightCtrl.text,
+      );
+
+  void _validate() {
     setState(() {
-      _parsed = text.isEmpty ? null : parseRewriteRule(text);
+      final src = _source;
+      _parsed = (_inputCtrl.text.trim().isEmpty || _outputCtrl.text.trim().isEmpty)
+          ? null
+          : parseRewriteRule(src);
     });
   }
 
@@ -230,7 +292,7 @@ class _RewriteRuleEditDialogState extends State<_RewriteRuleEditDialog> {
     if (_parsed == null || !_parsed!.isValid) return;
     setState(() => _saving = true);
     try {
-      await widget.onSave(_sourceCtrl.text.trim());
+      await widget.onSave(_source);
       if (mounted) Navigator.pop(context);
     } finally {
       if (mounted) setState(() => _saving = false);
@@ -242,53 +304,118 @@ class _RewriteRuleEditDialogState extends State<_RewriteRuleEditDialog> {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
     final isValid = _parsed?.isValid ?? false;
-    final isEmpty = _sourceCtrl.text.isEmpty;
+    final isEmpty =
+        _inputCtrl.text.trim().isEmpty || _outputCtrl.text.trim().isEmpty;
+
+    final labelStyle = theme.textTheme.labelSmall?.copyWith(
+      color: cs.onSurface.withValues(alpha: 0.55),
+    );
+    final arrowStyle = theme.textTheme.titleLarge?.copyWith(
+      color: cs.onSurface.withValues(alpha: 0.4),
+      fontFamily: 'monospace',
+    );
 
     return AlertDialog(
       title: Text(
         widget.initial == null ? 'Add rewrite rule' : 'Edit rewrite rule',
       ),
       content: SizedBox(
-        width: 480,
+        width: 500,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Rule field with live parse validation
-            IpaTextField(
-              controller: _sourceCtrl,
-              decoration: InputDecoration(
-                labelText: 'Rewrite rule',
-                hintText: 'k -> x / V_V',
-                border: const OutlineInputBorder(),
-                suffixIcon: isEmpty
-                    ? null
-                    : Icon(
-                        isValid
-                            ? Icons.check_circle_outline
-                            : Icons.error_outline,
-                        color: isValid ? Colors.green : cs.error,
-                        size: 18,
-                      ),
-              ),
-              style: const TextStyle(fontFamily: 'monospace'),
-              onChanged: _validate,
+            // Main row: [input] -> [output]
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Expanded(
+                  child: _RuleField(
+                    controller: _inputCtrl,
+                    label: 'Input',
+                    hint: 'k',
+                    onChanged: _validate,
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8, left: 8, right: 8),
+                  child: Text('\u2192', style: arrowStyle),
+                ),
+                Expanded(
+                  child: _RuleField(
+                    controller: _outputCtrl,
+                    label: 'Output',
+                    hint: 'x',
+                    onChanged: _validate,
+                  ),
+                ),
+              ],
             ),
 
-            // Parse error message
-            if (_parsed != null && !_parsed!.isValid)
-              Padding(
-                padding: const EdgeInsets.only(top: 4, left: 4),
-                child: Text(
-                  _parsed!.error!,
-                  style: theme.textTheme.labelSmall
-                      ?.copyWith(color: cs.error),
+            const SizedBox(height: 16),
+
+            // Context row: [left] _ [right]
+            Text('Context (optional)', style: labelStyle),
+            const SizedBox(height: 6),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Expanded(
+                  child: _RuleField(
+                    controller: _leftCtrl,
+                    label: 'Before',
+                    hint: 'V',
+                    onChanged: _validate,
+                  ),
                 ),
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8, left: 8, right: 8),
+                  child: Text('_', style: arrowStyle),
+                ),
+                Expanded(
+                  child: _RuleField(
+                    controller: _rightCtrl,
+                    label: 'After',
+                    hint: 'V',
+                    onChanged: _validate,
+                  ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 12),
+
+            // Validation status
+            if (_parsed != null)
+              Row(
+                children: [
+                  Icon(
+                    isValid
+                        ? Icons.check_circle_outline
+                        : Icons.error_outline,
+                    size: 16,
+                    color: isValid ? Colors.green : cs.error,
+                  ),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      isValid
+                          ? _source
+                          : (_parsed!.error ?? 'Invalid rule'),
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        fontFamily: 'monospace',
+                        color: isValid
+                            ? cs.onSurface.withValues(alpha: 0.6)
+                            : cs.error,
+                      ),
+                    ),
+                  ),
+                ],
               ),
 
             const SizedBox(height: 12),
 
-            // Syntax help section
+            // Help
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(8),
@@ -297,17 +424,11 @@ class _RewriteRuleEditDialogState extends State<_RewriteRuleEditDialog> {
                 borderRadius: BorderRadius.circular(4),
               ),
               child: Text(
-                'Syntax: input -> output / left_right\n\n'
-                'Examples:\n'
-                '  k -> x / V_V        velar lenition between vowels\n'
-                '  a -> e / [stop]_    vowel raising after stops\n'
-                '  t -> \u0294 / _#         glottalization at word end\n'
-                '  V -> [+nasal] / _N  nasalization before nasals\n\n'
-                '_ marks the target position. # marks word boundary.\n'
-                'Left or right context can be omitted: k -> x / V_',
+                'Use IPA symbols, C (consonant), V (vowel), '
+                'or [class] (e.g. [stop]).\n'
+                '# = word boundary. Context is optional.',
                 style: theme.textTheme.labelSmall?.copyWith(
-                  color: cs.onSurface.withValues(alpha: 0.6),
-                  fontFamily: 'monospace',
+                  color: cs.onSurface.withValues(alpha: 0.5),
                 ),
               ),
             ),
@@ -330,6 +451,36 @@ class _RewriteRuleEditDialogState extends State<_RewriteRuleEditDialog> {
               : const Text('Save'),
         ),
       ],
+    );
+  }
+}
+
+/// A single field in the rewrite rule dialog with IPA keyboard support.
+class _RuleField extends StatelessWidget {
+  const _RuleField({
+    required this.controller,
+    required this.label,
+    required this.hint,
+    required this.onChanged,
+  });
+
+  final TextEditingController controller;
+  final String label;
+  final String hint;
+  final VoidCallback onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return IpaTextField(
+      controller: controller,
+      decoration: InputDecoration(
+        labelText: label,
+        hintText: hint,
+        border: const OutlineInputBorder(),
+        isDense: true,
+      ),
+      style: const TextStyle(fontFamily: 'monospace'),
+      onChanged: (_) => onChanged(),
     );
   }
 }
