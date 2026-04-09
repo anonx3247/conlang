@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../data/ipa_data.dart';
+import '../vowel_trapezoid_painter.dart';
 import 'ipa_audio_player.dart';
 
 /// Persistent IPA reference chart panel (~280px wide).
@@ -261,123 +262,109 @@ class _ConsonantCell extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Vowel chart
+// Vowel chart — trapezoid CustomPaint implementation
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _VowelChart extends StatelessWidget {
   const _VowelChart({required this.audioPlayer});
   final IpaAudioPlayer audioPlayer;
 
-  static const _heights = [
-    VowelHeight.close,
-    VowelHeight.nearClose,
-    VowelHeight.closeMid,
-    VowelHeight.mid,
-    VowelHeight.openMid,
-    VowelHeight.nearOpen,
-    VowelHeight.open,
-  ];
-
-  static const _heightLabels = {
-    VowelHeight.close: 'Close',
-    VowelHeight.nearClose: 'N-Close',
-    VowelHeight.closeMid: 'C-Mid',
-    VowelHeight.mid: 'Mid',
-    VowelHeight.openMid: 'O-Mid',
-    VowelHeight.nearOpen: 'N-Open',
-    VowelHeight.open: 'Open',
-  };
-
-  static const _backnesses = [
-    VowelBackness.front,
-    VowelBackness.nearFront,
-    VowelBackness.central,
-    VowelBackness.nearBack,
-    VowelBackness.back,
-  ];
-
-  static const _backnessLabels = {
-    VowelBackness.front: 'Fr',
-    VowelBackness.nearFront: 'NF',
-    VowelBackness.central: 'Ce',
-    VowelBackness.nearBack: 'NB',
-    VowelBackness.back: 'Ba',
-  };
+  // Chart size: fits within 280px panel (264px = 280 - 8px padding each side)
+  static const double _chartWidth = 264.0;
+  static const double _chartHeight = 120.0;
 
   @override
   Widget build(BuildContext context) {
     final byHeightBackness = IpaSound.vowelsByHeightAndBackness;
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
+    final colorScheme = Theme.of(context).colorScheme;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Backness column headers
-        Row(
-          children: [
-            const SizedBox(width: 44),
-            ..._backnesses.map((b) => Expanded(
-                  child: Center(
-                    child: Text(
-                      _backnessLabels[b] ?? '',
-                      style: theme.textTheme.labelSmall?.copyWith(
-                        fontSize: 7,
-                        color: colorScheme.onSurface.withValues(alpha: 0.45),
-                      ),
-                    ),
-                  ),
-                )),
-          ],
-        ),
-        const SizedBox(height: 1),
-        ..._heights.map((height) {
-          final backnessMap = byHeightBackness[height] ?? {};
-          return Padding(
-            padding: const EdgeInsets.symmetric(vertical: 1),
+    // Build the list of positioned vowel buttons
+    final positionedButtons = <Widget>[];
+
+    for (final heightEntry in byHeightBackness.entries) {
+      final height = heightEntry.key;
+      for (final backnessEntry in heightEntry.value.entries) {
+        final backness = backnessEntry.key;
+        final sounds = backnessEntry.value;
+
+        if (sounds.isEmpty) continue;
+
+        final unrounded =
+            sounds.where((s) => s.rounded == false).firstOrNull;
+        final rounded = sounds.where((s) => s.rounded == true).firstOrNull;
+
+        if (unrounded == null && rounded == null) continue;
+
+        // Anchor point in trapezoid coordinates
+        final anchor = vowelPosition(
+          height,
+          backness,
+          const Size(_chartWidth, _chartHeight),
+        );
+
+        // Symbol width per button ~9px, tick 1px, spacing 2px each side
+        // Pair total width: up to ~25px; centre the pair on anchor.
+        final hasBoth = unrounded != null && rounded != null;
+        const btnW = 9.0;
+        const tickW = 1.0;
+        const gap = 2.0;
+        final pairW = hasBoth
+            ? btnW + gap + tickW + gap + btnW
+            : btnW;
+        final pairH = 16.0;
+
+        final left = (anchor.dx - pairW / 2).clamp(0.0, _chartWidth - pairW);
+        final top = (anchor.dy - pairH / 2).clamp(0.0, _chartHeight - pairH);
+
+        positionedButtons.add(
+          Positioned(
+            left: left,
+            top: top,
             child: Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
               children: [
-                SizedBox(
-                  width: 44,
-                  child: Text(
-                    _heightLabels[height] ?? '',
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      fontSize: 7,
-                      color: colorScheme.onSurface.withValues(alpha: 0.45),
-                    ),
-                    overflow: TextOverflow.ellipsis,
+                if (unrounded != null)
+                  _IpaSymbolButton(sound: unrounded, audioPlayer: audioPlayer)
+                else
+                  const SizedBox(width: btnW),
+                if (hasBoth) ...[
+                  const SizedBox(width: gap),
+                  Container(
+                    width: tickW,
+                    height: 8,
+                    color: colorScheme.outline.withValues(alpha: 0.3),
                   ),
-                ),
-                ..._backnesses.map((backness) {
-                  final sounds = backnessMap[backness] ?? [];
-                  if (sounds.isEmpty) {
-                    return const Expanded(child: SizedBox(height: 18));
-                  }
-                  // Show unrounded on left, rounded on right (IPA convention)
-                  final unrounded = sounds.where((s) => s.rounded == false).firstOrNull;
-                  final rounded = sounds.where((s) => s.rounded == true).firstOrNull;
-                  return Expanded(
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        if (unrounded != null)
-                          _IpaSymbolButton(sound: unrounded, audioPlayer: audioPlayer)
-                        else
-                          const SizedBox(width: 9),
-                        if (rounded != null)
-                          _IpaSymbolButton(sound: rounded, audioPlayer: audioPlayer)
-                        else if (unrounded != null)
-                          const SizedBox(width: 9),
-                      ],
-                    ),
-                  );
-                }),
+                  const SizedBox(width: gap),
+                ],
+                if (rounded != null)
+                  _IpaSymbolButton(sound: rounded, audioPlayer: audioPlayer)
+                else if (unrounded != null)
+                  const SizedBox(width: btnW),
               ],
             ),
-          );
-        }),
-      ],
+          ),
+        );
+      }
+    }
+
+    return SizedBox(
+      width: _chartWidth,
+      height: _chartHeight,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          // Trapezoid outline
+          CustomPaint(
+            size: const Size(_chartWidth, _chartHeight),
+            painter: VowelTrapezoidPainter(
+              outlineColor: colorScheme.outline.withValues(alpha: 0.5),
+              guideColor: colorScheme.outline.withValues(alpha: 0.15),
+            ),
+          ),
+          // Tappable IPA symbol buttons at acoustic positions
+          ...positionedButtons,
+        ],
+      ),
     );
   }
 }
