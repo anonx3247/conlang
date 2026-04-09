@@ -11,8 +11,8 @@ See: .planning/PROJECT.md (updated 2026-04-08)
 
 Phase: 1 of 6 (Foundation) — COMPLETE (all gap closure plans executed)
 Plan: 13 of 13 in current phase — PHASE COMPLETE
-Status: Plan 13 complete — phonological rewrite rules (A -> B / C_D) with DSL parser, Drift table, and UI editor
-Last activity: 2026-04-09 — plan 13 executed (rewrite rule editor on Sound Rules page)
+Status: Plan 12 complete — ProjectSettings table, romanization toggle, bidirectional phoneme-romanization sync
+Last activity: 2026-04-09 — plan 12 executed (romanization toggle + bidirectional sync)
 
 Progress: [███░░░░░░░] 29% (13/44 total plans)
 
@@ -89,6 +89,10 @@ Recent decisions affecting current work:
 - 01-13: Domain RewriteRule renamed to PhonologicalRewriteRule to avoid collision with Drift-generated RewriteRule data class from RewriteRules table
 - 01-13: parseRewriteRule() uses ' -> ' (with spaces) as arrow separator; output stored as raw string (applying transformations is Phase 2 work)
 - 01-13: Schema migrated v1->v2 with onUpgrade; existing project.db files gain rewrite_rules table automatically on next open
+- 01-12: romanizationEnabledProvider watches full project_settings stream then filters by key — avoids a dedicated DAO method for a single-row fetch
+- 01-12: asData?.value used for AsyncValue null-safe access (riverpod 3.x has no valueOrNull getter)
+- 01-12: Feature-to-string reverse maps inlined as private static methods in romanization_section — 4 simple switch expressions not worth extracting to shared file
+- 01-12: insertOnConflictUpdate on ProjectSettings.key unique column for upsert; schema bumped to v3 with from < 3 guard in onUpgrade
 
 ### Pending Todos
 
@@ -104,5 +108,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-04-09
-Stopped at: Completed 01-13-PLAN.md — phonological rewrite rules editor. Phase 1 fully complete. Ready for Phase 2.
+Stopped at: Completed 01-12-PLAN.md — romanization toggle and bidirectional phoneme-romanization sync. Phase 1 fully complete. Ready for Phase 2.
 Resume file: None
