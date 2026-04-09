@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-04-08)
 
 **Core value:** A powerful, flexible morphology engine that handles the full spectrum of language types through a readable pattern mini-language
-**Current focus:** Phase 1 gap closure plans in progress (plans 10-13)
+**Current focus:** Phase 1 complete — all gap closure plans executed (10-13)
 
 ## Current Position
 
-Phase: 1 of 6 (Foundation) — gap closure in progress
-Plan: 11 of 13 in current phase (gap closure plans 10-13 added after UAT)
-Status: Plan 11 complete — unified Add Phoneme button + reverse IPA symbol derivation
-Last activity: 2026-04-09 — plan 11 executed (inventory UX + phoneme dialog reverse lookup)
+Phase: 1 of 6 (Foundation) — COMPLETE (all gap closure plans executed)
+Plan: 13 of 13 in current phase — PHASE COMPLETE
+Status: Plan 13 complete — phonological rewrite rules (A -> B / C_D) with DSL parser, Drift table, and UI editor
+Last activity: 2026-04-09 — plan 13 executed (rewrite rule editor on Sound Rules page)
 
-Progress: [██░░░░░░░░] 24% (11/44 total plans)
+Progress: [███░░░░░░░] 29% (13/44 total plans)
 
 ## Performance Metrics
 
@@ -86,6 +86,9 @@ Recent decisions affecting current work:
 - 01-11: _symbolToFeatures built as file-level lazy map from IpaSound static data using collection-for — reverse lookup with zero duplication of forward maps
 - 01-11: IPA symbol field reuses existing _symbolController (pre-filled in edit mode) — no second controller needed
 - 01-11: Reverse lookup is silent for unknown symbols — dropdowns stay unchanged, manual selection always works
+- 01-13: Domain RewriteRule renamed to PhonologicalRewriteRule to avoid collision with Drift-generated RewriteRule data class from RewriteRules table
+- 01-13: parseRewriteRule() uses ' -> ' (with spaces) as arrow separator; output stored as raw string (applying transformations is Phase 2 work)
+- 01-13: Schema migrated v1->v2 with onUpgrade; existing project.db files gain rewrite_rules table automatically on next open
 
 ### Pending Todos
 
@@ -101,5 +104,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-04-09
-Stopped at: Completed 01-11-PLAN.md — unified Add Phoneme button + reverse IPA symbol derivation
+Stopped at: Completed 01-13-PLAN.md — phonological rewrite rules editor. Phase 1 fully complete. Ready for Phase 2.
 Resume file: None
