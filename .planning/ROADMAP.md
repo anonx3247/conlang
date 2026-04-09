@@ -57,13 +57,19 @@ Plans:
   2. The engine produces correct outputs for at least four typological strategies: concatenative (affix), Semitic root-and-pattern (template), vowel ablaut, and analytic (particle/aux verb, defined as a no-transform passthrough)
   3. User can define word derivation rules (e.g. denominalizer, agentive) that chain with root definitions to produce derived words
   4. User can mark any individual word as an exception to any morphological rule and supply the irregular form directly
-**Plans:** 4 plans in 3 waves
+**Plans:** 10 plans in 5 waves (4 core + 6 gap closure)
 
 Plans:
-- [ ] 02-01-PLAN.md — TDD: Morphology DSL data model, petitparser grammar, serializer, and evaluation engine (all 7 operation types + branching conditions)
-- [ ] 02-02-PLAN.md — Drift schema extension (MorphologicalRules + Exceptions tables, v4 migration), MorphologyDao, Riverpod providers
-- [ ] 02-03-PLAN.md — Morphology tab + router, rule editor UI with hybrid authoring (structured form + live DSL + preview panel)
-- [ ] 02-04-PLAN.md — Checkpoint: end-to-end verification of all typological strategies + UI fixes
+- [x] 02-01-PLAN.md — TDD: Morphology DSL data model, petitparser grammar, serializer, and evaluation engine (all 7 operation types + branching conditions)
+- [x] 02-02-PLAN.md — Drift schema extension (MorphologicalRules + Exceptions tables, v4 migration), MorphologyDao, Riverpod providers
+- [x] 02-03-PLAN.md — Morphology tab + router, rule editor UI with hybrid authoring (structured form + live DSL + preview panel)
+- [x] 02-04-PLAN.md — Checkpoint: end-to-end verification of all typological strategies + UI fixes
+- [ ] 02-05-PLAN.md — Gap closure: InfixOp DSL parser fix (TDD) + exception UI deferral to Phase 3
+- [ ] 02-06-PLAN.md — Gap closure: Jargon clarity, IPA keyboards in morphology, preview polish (font + regen)
+- [ ] 02-07-PLAN.md — Gap closure: Rule reordering with up/down buttons and DAO swap
+- [ ] 02-08-PLAN.md — Gap closure: Parts of Speech definitions + POS-based rule filtering
+- [ ] 02-09-PLAN.md — Gap closure: Condition pattern redesign (phonological notation replacing fixed types)
+- [ ] 02-10-PLAN.md — Gap closure: Preview enhancements (phonotactic violation highlighting + multi-rule stacking)
 
 ### Phase 3: Lexicon
 **Goal**: Users can build and navigate a root-and-derived-word dictionary with full search, semantic coverage guidance, flashcard export, and inline phonotactic validation throughout the interface
