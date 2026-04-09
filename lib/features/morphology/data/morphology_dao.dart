@@ -40,6 +40,30 @@ class MorphologyDao extends DatabaseAccessor<AppDatabase>
   Future<int> deleteRule(int id) =>
       (delete(morphologicalRules)..where((t) => t.id.equals(id))).go();
 
+  /// Swaps the [ordering] values of two rules so their display positions exchange.
+  Future<void> swapOrdering(int ruleIdA, int ruleIdB) async {
+    await transaction(() async {
+      final a = await (select(morphologicalRules)
+            ..where((t) => t.id.equals(ruleIdA)))
+          .getSingle();
+      final b = await (select(morphologicalRules)
+            ..where((t) => t.id.equals(ruleIdB)))
+          .getSingle();
+      await (update(morphologicalRules)..where((t) => t.id.equals(ruleIdA)))
+          .write(MorphologicalRulesCompanion(ordering: Value(b.ordering)));
+      await (update(morphologicalRules)..where((t) => t.id.equals(ruleIdB)))
+          .write(MorphologicalRulesCompanion(ordering: Value(a.ordering)));
+    });
+  }
+
+  /// Returns the next ordering value (max + 1) for inserting a new rule at the end.
+  Future<int> nextOrdering() async {
+    final result = await customSelect(
+      'SELECT COALESCE(MAX(ordering), -1) + 1 AS next_ord FROM morphological_rules',
+    ).getSingle();
+    return result.read<int>('next_ord');
+  }
+
   // ---------------------------------------------------------------------------
   // Exceptions — reactive queries
   // ---------------------------------------------------------------------------
