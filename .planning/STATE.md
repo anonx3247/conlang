@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-04-08)
 
 **Core value:** A powerful, flexible morphology engine that handles the full spectrum of language types through a readable pattern mini-language
-**Current focus:** Phase 2 (Morphology Engine) — UI complete, integration tests/derivation next
+**Current focus:** Phase 2 complete — ready for Phase 3 (Lexicon)
 
 ## Current Position
 
-Phase: 2 of 6 (Morphology Engine) — COMPLETE
-Plan: 10 of 10 in current phase (all gap closure plans 05-10 complete)
-Status: Plan 10 complete. Preview panel: phonotactic violation highlighting (wavy red underline + tooltip) and multi-rule stack mode (layers toggle). UAT gaps 8 and 9 closed. All Phase 2 plans done.
-Last activity: 2026-04-09 — Phase 2 Plan 10: preview panel violation highlighting and stack mode, 2 tasks, 1 file
+Phase: 2 of 6 (Morphology Engine) — VERIFIED COMPLETE
+Plan: 10/10 complete (4 core + 6 gap closure)
+Status: Phase 2 verified — 11/11 must-haves pass, 24 tests green, no regressions. All 9 UAT gaps closed. Exception UI formally deferred to Phase 3.
+Last activity: 2026-04-09 — Phase 2 verified complete, all gap closure plans executed and verified
 
-Progress: [█████░░░░░] 45% (20/44 total plans)
+Progress: [██████░░░░] 55% (24/44 total plans)
 
 ## Performance Metrics
 
@@ -125,8 +125,7 @@ None yet.
 
 ### Blockers/Concerns
 
-- Phase 2 gap closure: 9 UX items identified in UAT. Gap 3 (rule reordering) CLOSED in plan 07. Remaining: Items 4-5 (POS filtering, condition pattern redesign) highest priority. Items 2/6/7 are polish. Items 8/9 are PreviewPanel-only changes.
-- Phase 2 research flag: Pattern mini-language DSL design has no canonical reference — requires design spike before implementation commits (run one-page spec ceiling check)
+- Phase 2: ALL 9 UAT gaps closed (plans 05-10). Verified complete 2026-04-09.
 - Phase 3: Conlanger's Thesaurus PDF (fiatlingua.org) must be pre-extracted to JSON — verify PDF structure is parseable before Phase 3 planning
 - Phase 1: Verify OGG audio playback on Windows with just_audio before finalizing IPA audio asset format
 - Phase 1: riverpod_lint custom_lint plugin cannot be used as IDE analyzer plugin in Dart 3.10.4 (AOT snapshot build hook incompatibility); use `dart run custom_lint` CLI instead
@@ -134,5 +133,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-04-09
-Stopped at: Completed 02-10-PLAN.md — preview panel phonotactic violation highlighting and multi-rule stacking. All Phase 2 plans complete.
+Stopped at: Phase 2 (Morphology Engine) VERIFIED COMPLETE. 10/10 plans, 11/11 must-haves, 24 tests green. Ready for Phase 3 (Lexicon).
 Resume file: None
