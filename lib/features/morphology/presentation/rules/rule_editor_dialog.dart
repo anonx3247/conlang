@@ -20,7 +20,7 @@ enum OpType {
   ablaut('Vowel change'),
   template('Root template'),
   reduplication('Reduplication (copy)'),
-  suppletive('Replacement form');
+  suppletive('Whole-word override (irregular)');
 
   const OpType(this.label);
   final String label;
@@ -38,11 +38,16 @@ class _OpState {
   String redupScope;    // 'full' | 'CV' | 'C'
   String redupPosition; // 'prefix' | 'suffix'
   final TextEditingController suppletiveCtrl = TextEditingController();
+  // Ablaut direction and count
+  AblautDirection ablautDirection;
+  int? ablautCount; // null = all
 
   _OpState()
       : type = OpType.suffix,
         redupScope = 'CV',
-        redupPosition = 'prefix';
+        redupPosition = 'prefix',
+        ablautDirection = AblautDirection.fromStart,
+        ablautCount = null;
 
   void dispose() {
     affixCtrl.dispose();
@@ -71,7 +76,12 @@ class _OpState {
           final from = ablautFromCtrl.text.trim();
           final to = ablautToCtrl.text.trim();
           return (from.isNotEmpty && to.isNotEmpty)
-              ? AblautOp(from: from, to: to)
+              ? AblautOp(
+                  from: from,
+                  to: to,
+                  count: ablautCount,
+                  direction: ablautDirection,
+                )
               : null;
         }(),
       OpType.template => templateCtrl.text.trim().isNotEmpty
@@ -86,22 +96,31 @@ class _OpState {
   }
 }
 
+/// Mutable state for a single condition in a branch.
+class _CondState {
+  CondPosition position;
+  final TextEditingController patternCtrl;
+
+  _CondState({this.position = CondPosition.contains, String pattern = ''})
+      : patternCtrl = TextEditingController(text: pattern);
+
+  void dispose() {
+    patternCtrl.dispose();
+  }
+}
+
 /// Mutable state for a single branch in the form.
-///
-/// Conditions are stored as a list of [TextEditingController]s — one per
-/// pattern. Empty list of non-empty controllers = default branch.
 class _BranchState {
-  /// One controller per condition pattern. At least one is always present.
-  List<TextEditingController> condPatternCtrls;
+  List<_CondState> conditions;
   final List<_OpState> ops;
 
   _BranchState({List<_OpState>? ops})
-      : condPatternCtrls = [TextEditingController()],
+      : conditions = [_CondState()],
         ops = ops ?? [_OpState()];
 
   void dispose() {
-    for (final ctrl in condPatternCtrls) {
-      ctrl.dispose();
+    for (final c in conditions) {
+      c.dispose();
     }
     for (final op in ops) {
       op.dispose();
@@ -114,13 +133,13 @@ class _BranchState {
         ops.map((o) => o.toOperation()).whereType<MorphOperation>().toList();
     if (operations.isEmpty) return null;
 
-    final conditions = condPatternCtrls
-        .map((c) => c.text.trim())
-        .where((s) => s.isNotEmpty)
-        .map((s) => PatternCond(s) as MorphCondition)
+    final conds = conditions
+        .where((c) => c.patternCtrl.text.trim().isNotEmpty)
+        .map((c) => PatternCond(c.patternCtrl.text.trim(),
+            position: c.position) as MorphCondition)
         .toList();
 
-    return MorphBranch(conditions: conditions, operations: operations);
+    return MorphBranch(conditions: conds, operations: operations);
   }
 }
 
@@ -130,8 +149,8 @@ class _BranchState {
 
 /// Hybrid rule editor dialog for creating and editing morphological rules.
 ///
-/// Opens as a large dialog. Shows structured form fields alongside a live DSL
-/// expression display that updates on every form change.
+/// Opens as a large dialog. Shows structured form fields alongside a live
+/// preview panel that updates on every form change.
 ///
 /// Pass [existing] to open in edit mode (pre-populated from the Drift row);
 /// otherwise opens in create mode.
@@ -148,7 +167,7 @@ class RuleEditorDialog extends ConsumerStatefulWidget {
 class _RuleEditorDialogState extends ConsumerState<RuleEditorDialog> {
   final _nameCtrl = TextEditingController();
   final List<_BranchState> _branches = [];
-  String _dslPreview = '';
+  int? _selectedPosId;
   String? _validationError;
   bool _saving = false;
 
@@ -161,19 +180,16 @@ class _RuleEditorDialogState extends ConsumerState<RuleEditorDialog> {
       // Default: one branch with one suffix op.
       _branches.add(_BranchState());
     }
-    _updateDsl();
   }
 
   /// Populate form state from a Drift [db.MorphologicalRule] row.
-  ///
-  /// Parses the [source] DSL string to reconstruct branch/operation structure.
   void _loadFromExisting(db.MorphologicalRule row) {
     _nameCtrl.text = row.name;
+    _selectedPosId = row.posId;
 
     // Parse DSL source into domain model.
     final parsed = parseMorphDsl(row.source, id: row.id, name: row.name);
     if (!parsed.isValid || parsed.rule == null) {
-      // Source is unparseable — show a default empty branch; user can edit.
       _branches.add(_BranchState());
       return;
     }
@@ -181,16 +197,15 @@ class _RuleEditorDialogState extends ConsumerState<RuleEditorDialog> {
     for (final branch in parsed.rule!.branches) {
       final bs = _BranchState(ops: []);
 
-      // Conditions: one controller per PatternCond.
+      // Conditions: one _CondState per PatternCond.
       if (branch.conditions.isEmpty) {
-        bs.condPatternCtrls = [TextEditingController()]; // default branch
+        bs.conditions = [_CondState()]; // default branch
       } else {
-        bs.condPatternCtrls = branch.conditions.map((cond) {
-          final ctrl = TextEditingController();
-          if (cond case PatternCond(:final pattern)) {
-            ctrl.text = pattern;
+        bs.conditions = branch.conditions.map((cond) {
+          if (cond case PatternCond(:final pattern, :final position)) {
+            return _CondState(position: position, pattern: pattern);
           }
-          return ctrl;
+          return _CondState();
         }).toList();
       }
 
@@ -208,10 +223,12 @@ class _RuleEditorDialogState extends ConsumerState<RuleEditorDialog> {
             os.type = OpType.infix;
             os.affixCtrl.text = affix;
             os.posCtrl.text = '$position';
-          case AblautOp(:final from, :final to):
+          case AblautOp(:final from, :final to, :final count, :final direction):
             os.type = OpType.ablaut;
             os.ablautFromCtrl.text = from;
             os.ablautToCtrl.text = to;
+            os.ablautCount = count;
+            os.ablautDirection = direction;
           case TemplateOp(:final pattern):
             os.type = OpType.template;
             os.templateCtrl.text = pattern;
@@ -246,22 +263,8 @@ class _RuleEditorDialogState extends ConsumerState<RuleEditorDialog> {
   }
 
   // ---------------------------------------------------------------------------
-  // DSL computation
+  // Domain rule builder
   // ---------------------------------------------------------------------------
-
-  void _updateDsl() {
-    final rule = _buildDomainRule(id: 0);
-    if (rule != null) {
-      setState(() {
-        _dslPreview = serializeMorphRule(rule);
-        _validationError = null;
-      });
-    } else {
-      setState(() {
-        _dslPreview = '(incomplete)';
-      });
-    }
-  }
 
   /// Build a domain [MorphologicalRule] from current form state.
   /// Returns null if form is incomplete (no valid branches).
@@ -270,7 +273,6 @@ class _RuleEditorDialogState extends ConsumerState<RuleEditorDialog> {
     final branches =
         _branches.map((b) => b.toBranch()).whereType<MorphBranch>().toList();
     if (branches.isEmpty) return null;
-    // First build without source to get the serialized form, then embed it.
     final tempRule =
         MorphologicalRule(id: id, name: name, branches: branches, source: '');
     final source = serializeMorphRule(tempRule);
@@ -312,12 +314,19 @@ class _RuleEditorDialogState extends ConsumerState<RuleEditorDialog> {
 
     try {
       if (widget.existing != null) {
-        await dao.updateRule(widget.existing!.copyWith(name: name, source: source));
+        await dao.updateRule(widget.existing!.copyWith(
+          name: name,
+          source: source,
+          posId: Value(_selectedPosId),
+        ));
       } else {
+        final ordering = await dao.nextOrdering();
         await dao.insertRule(
           db.MorphologicalRulesCompanion(
             name: Value(name),
             source: Value(source),
+            ordering: Value(ordering),
+            posId: Value(_selectedPosId),
           ),
         );
       }
@@ -338,6 +347,10 @@ class _RuleEditorDialogState extends ConsumerState<RuleEditorDialog> {
 
     // Compute current domain rule for the preview panel.
     final previewRule = _buildDomainRule(id: widget.existing?.id ?? 0);
+
+    // POS list for selector
+    final posAsync = ref.watch(posListProvider);
+    final posList = posAsync.asData?.value ?? [];
 
     return Dialog(
       insetPadding: const EdgeInsets.symmetric(horizontal: 40, vertical: 32),
@@ -386,7 +399,39 @@ class _RuleEditorDialogState extends ConsumerState<RuleEditorDialog> {
                               hintText: 'e.g. Plural, Agentive',
                               border: OutlineInputBorder(),
                             ),
-                            onChanged: (_) => _updateDsl(),
+                            onChanged: (_) => setState(() {}),
+                          ),
+                          const SizedBox(height: 12),
+
+                          // POS selector
+                          Row(
+                            children: [
+                              Text(
+                                'Part of speech:',
+                                style: theme.textTheme.bodyMedium?.copyWith(
+                                  color: cs.onSurface.withValues(alpha: 0.7),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              DropdownButton<int?>(
+                                value: _selectedPosId,
+                                underline: const SizedBox.shrink(),
+                                items: [
+                                  const DropdownMenuItem<int?>(
+                                    value: null,
+                                    child: Text('Applies to all'),
+                                  ),
+                                  ...posList.map(
+                                    (pos) => DropdownMenuItem<int?>(
+                                      value: pos.id,
+                                      child: Text(pos.name),
+                                    ),
+                                  ),
+                                ],
+                                onChanged: (v) =>
+                                    setState(() => _selectedPosId = v),
+                              ),
+                            ],
                           ),
                           const SizedBox(height: 16),
 
@@ -401,16 +446,10 @@ class _RuleEditorDialogState extends ConsumerState<RuleEditorDialog> {
                               setState(() {
                                 _branches.add(_BranchState());
                               });
-                              _updateDsl();
                             },
                             icon: const Icon(Icons.add, size: 16),
                             label: const Text('Add branch'),
                           ),
-
-                          const SizedBox(height: 20),
-
-                          // DSL expression display
-                          _buildDslDisplay(theme, cs),
                         ],
                       ),
                     ),
@@ -510,7 +549,6 @@ class _RuleEditorDialogState extends ConsumerState<RuleEditorDialog> {
                           _branches[bi].dispose();
                           _branches.removeAt(bi);
                         });
-                        _updateDsl();
                       },
                     ),
                 ],
@@ -518,7 +556,7 @@ class _RuleEditorDialogState extends ConsumerState<RuleEditorDialog> {
 
               const SizedBox(height: 8),
 
-              // Condition section (pattern-based)
+              // Condition section
               _buildConditionSection(branch, bi, theme, cs),
 
               const SizedBox(height: 10),
@@ -536,7 +574,6 @@ class _RuleEditorDialogState extends ConsumerState<RuleEditorDialog> {
                   setState(() {
                     branch.ops.add(_OpState());
                   });
-                  _updateDsl();
                 },
                 icon: const Icon(Icons.add, size: 14),
                 label: const Text('Add operation'),
@@ -553,7 +590,7 @@ class _RuleEditorDialogState extends ConsumerState<RuleEditorDialog> {
   }
 
   // ---------------------------------------------------------------------------
-  // Condition section (pattern-based)
+  // Condition section (dropdown + pattern)
   // ---------------------------------------------------------------------------
 
   Widget _buildConditionSection(
@@ -562,33 +599,58 @@ class _RuleEditorDialogState extends ConsumerState<RuleEditorDialog> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Conditions (phonological patterns):',
+          'Conditions:',
           style: theme.textTheme.bodySmall
               ?.copyWith(color: cs.onSurface.withValues(alpha: 0.6)),
         ),
         const SizedBox(height: 6),
 
-        // One row per condition controller
-        ...List.generate(branch.condPatternCtrls.length, (ci) {
-          final ctrl = branch.condPatternCtrls[ci];
+        // One row per condition
+        ...List.generate(branch.conditions.length, (ci) {
+          final cond = branch.conditions[ci];
           return Padding(
             padding: const EdgeInsets.only(bottom: 6),
             child: Row(
               children: [
+                // Position dropdown
+                DropdownButton<CondPosition>(
+                  value: cond.position,
+                  isDense: true,
+                  items: const [
+                    DropdownMenuItem(
+                      value: CondPosition.startsWith,
+                      child: Text('starts with'),
+                    ),
+                    DropdownMenuItem(
+                      value: CondPosition.endsWith,
+                      child: Text('ends with'),
+                    ),
+                    DropdownMenuItem(
+                      value: CondPosition.contains,
+                      child: Text('contains'),
+                    ),
+                  ],
+                  onChanged: (v) {
+                    if (v == null) return;
+                    setState(() => cond.position = v);
+                  },
+                ),
+                const SizedBox(width: 8),
+                // Pattern field
                 Expanded(
                   child: IpaTextField(
-                    controller: ctrl,
+                    controller: cond.patternCtrl,
                     decoration: const InputDecoration(
-                      hintText: 'e.g. [nasal]V_, _CV, Vk(l)_, _ (default)',
+                      hintText: 'e.g. [nasal]V, CV, Vk(l)',
                       isDense: true,
                       border: OutlineInputBorder(),
                       contentPadding: EdgeInsets.symmetric(
                           horizontal: 8, vertical: 6),
                     ),
-                    onChanged: (_) => _updateDsl(),
+                    onChanged: (_) => setState(() {}),
                   ),
                 ),
-                if (branch.condPatternCtrls.length > 1) ...[
+                if (branch.conditions.length > 1) ...[
                   const SizedBox(width: 4),
                   IconButton(
                     icon: Icon(Icons.close,
@@ -599,10 +661,9 @@ class _RuleEditorDialogState extends ConsumerState<RuleEditorDialog> {
                         const BoxConstraints(minWidth: 24, minHeight: 24),
                     onPressed: () {
                       setState(() {
-                        branch.condPatternCtrls[ci].dispose();
-                        branch.condPatternCtrls.removeAt(ci);
+                        branch.conditions[ci].dispose();
+                        branch.conditions.removeAt(ci);
                       });
-                      _updateDsl();
                     },
                   ),
                 ],
@@ -615,9 +676,8 @@ class _RuleEditorDialogState extends ConsumerState<RuleEditorDialog> {
         TextButton.icon(
           onPressed: () {
             setState(() {
-              branch.condPatternCtrls.add(TextEditingController());
+              branch.conditions.add(_CondState());
             });
-            _updateDsl();
           },
           icon: const Icon(Icons.add, size: 14),
           label: const Text('Add condition (AND)'),
@@ -631,7 +691,7 @@ class _RuleEditorDialogState extends ConsumerState<RuleEditorDialog> {
         Padding(
           padding: const EdgeInsets.only(top: 2),
           child: Text(
-            'Syntax: [class]  C  V  literal  (optional)  _=anchor',
+            'Pattern: [class]  C  V  literal  (optional)',
             style: theme.textTheme.bodySmall?.copyWith(
               color: cs.onSurface.withValues(alpha: 0.45),
               fontStyle: FontStyle.italic,
@@ -665,7 +725,6 @@ class _RuleEditorDialogState extends ConsumerState<RuleEditorDialog> {
             onChanged: (v) {
               if (v == null) return;
               setState(() => op.type = v);
-              _updateDsl();
             },
           ),
 
@@ -688,7 +747,6 @@ class _RuleEditorDialogState extends ConsumerState<RuleEditorDialog> {
                   branch.ops[oi].dispose();
                   branch.ops.removeAt(oi);
                 });
-                _updateDsl();
               },
             ),
         ],
@@ -708,7 +766,7 @@ class _RuleEditorDialogState extends ConsumerState<RuleEditorDialog> {
           controller: op.affixCtrl,
           decoration:
               fieldDecoration.copyWith(hintText: 'IPA affix, e.g. in, ɯ'),
-          onChanged: (_) => _updateDsl(),
+          onChanged: (_) => setState(() {}),
         ),
       OpType.infix => Row(
           children: [
@@ -717,7 +775,7 @@ class _RuleEditorDialogState extends ConsumerState<RuleEditorDialog> {
                 controller: op.affixCtrl,
                 decoration:
                     fieldDecoration.copyWith(hintText: 'IPA affix'),
-                onChanged: (_) => _updateDsl(),
+                onChanged: (_) => setState(() {}),
               ),
             ),
             const SizedBox(width: 6),
@@ -728,30 +786,81 @@ class _RuleEditorDialogState extends ConsumerState<RuleEditorDialog> {
                 decoration:
                     fieldDecoration.copyWith(hintText: 'after C#'),
                 keyboardType: TextInputType.number,
-                onChanged: (_) => _updateDsl(),
+                onChanged: (_) => setState(() {}),
               ),
             ),
           ],
         ),
-      OpType.ablaut => Row(
+      OpType.ablaut => Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Expanded(
-              child: IpaTextField(
-                controller: op.ablautFromCtrl,
-                decoration: fieldDecoration.copyWith(hintText: 'from (IPA)'),
-                onChanged: (_) => _updateDsl(),
-              ),
+            Row(
+              children: [
+                Expanded(
+                  child: IpaTextField(
+                    controller: op.ablautFromCtrl,
+                    decoration: fieldDecoration.copyWith(hintText: 'from (IPA)'),
+                    onChanged: (_) => setState(() {}),
+                  ),
+                ),
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 6),
+                  child: Icon(Icons.arrow_forward, size: 14),
+                ),
+                Expanded(
+                  child: IpaTextField(
+                    controller: op.ablautToCtrl,
+                    decoration: fieldDecoration.copyWith(hintText: 'to (IPA)'),
+                    onChanged: (_) => setState(() {}),
+                  ),
+                ),
+              ],
             ),
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 6),
-              child: Icon(Icons.arrow_forward, size: 14),
-            ),
-            Expanded(
-              child: IpaTextField(
-                controller: op.ablautToCtrl,
-                decoration: fieldDecoration.copyWith(hintText: 'to (IPA)'),
-                onChanged: (_) => _updateDsl(),
-              ),
+            const SizedBox(height: 6),
+            Row(
+              children: [
+                DropdownButton<AblautDirection>(
+                  value: op.ablautDirection,
+                  isDense: true,
+                  items: const [
+                    DropdownMenuItem(
+                      value: AblautDirection.fromStart,
+                      child: Text('from the beginning'),
+                    ),
+                    DropdownMenuItem(
+                      value: AblautDirection.fromEnd,
+                      child: Text('from the end'),
+                    ),
+                  ],
+                  onChanged: (v) {
+                    if (v == null) return;
+                    setState(() => op.ablautDirection = v);
+                  },
+                ),
+                const SizedBox(width: 12),
+                DropdownButton<int?>(
+                  value: op.ablautCount,
+                  isDense: true,
+                  items: const [
+                    DropdownMenuItem(value: null, child: Text('all')),
+                    DropdownMenuItem(value: 1, child: Text('1')),
+                    DropdownMenuItem(value: 2, child: Text('2')),
+                    DropdownMenuItem(value: 3, child: Text('3')),
+                  ],
+                  onChanged: (v) {
+                    setState(() => op.ablautCount = v);
+                  },
+                ),
+                Padding(
+                  padding: const EdgeInsets.only(left: 4),
+                  child: Text(
+                    'occurrences',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: cs.onSurface.withValues(alpha: 0.6),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ],
         ),
@@ -762,7 +871,7 @@ class _RuleEditorDialogState extends ConsumerState<RuleEditorDialog> {
             helperText:
                 'Digits = consonant slots, other chars literal',
           ),
-          onChanged: (_) => _updateDsl(),
+          onChanged: (_) => setState(() {}),
         ),
       OpType.reduplication => Row(
           children: [
@@ -778,7 +887,6 @@ class _RuleEditorDialogState extends ConsumerState<RuleEditorDialog> {
               onChanged: (v) {
                 if (v == null) return;
                 setState(() => op.redupScope = v);
-                _updateDsl();
               },
             ),
             const SizedBox(width: 12),
@@ -794,7 +902,6 @@ class _RuleEditorDialogState extends ConsumerState<RuleEditorDialog> {
               onChanged: (v) {
                 if (v == null) return;
                 setState(() => op.redupPosition = v);
-                _updateDsl();
               },
             ),
           ],
@@ -802,48 +909,9 @@ class _RuleEditorDialogState extends ConsumerState<RuleEditorDialog> {
       OpType.suppletive => IpaTextField(
           controller: op.suppletiveCtrl,
           decoration: fieldDecoration.copyWith(
-              hintText: 'Replacement form (e.g. went, mice)'),
-          onChanged: (_) => _updateDsl(),
+              hintText: 'Replaces entire word (e.g. went for go, mice for mouse)'),
+          onChanged: (_) => setState(() {}),
         ),
     };
-  }
-
-  // ---------------------------------------------------------------------------
-  // DSL display
-  // ---------------------------------------------------------------------------
-
-  Widget _buildDslDisplay(ThemeData theme, ColorScheme cs) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'DSL Expression',
-          style: theme.textTheme.labelMedium?.copyWith(
-            color: cs.onSurface.withValues(alpha: 0.6),
-            letterSpacing: 0.8,
-          ),
-        ),
-        const SizedBox(height: 6),
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            color: cs.surfaceContainerHighest,
-            borderRadius: BorderRadius.circular(6),
-            border: Border.all(color: cs.outlineVariant),
-          ),
-          child: Text(
-            _dslPreview.isEmpty ? '(incomplete)' : _dslPreview,
-            style: theme.textTheme.bodyMedium?.copyWith(
-              fontFamily: 'monospace',
-              fontFamilyFallback: const ['Courier New', 'Courier', 'monospace'],
-              color: _dslPreview.isEmpty
-                  ? cs.onSurface.withValues(alpha: 0.35)
-                  : cs.onSurface,
-            ),
-          ),
-        ),
-      ],
-    );
   }
 }

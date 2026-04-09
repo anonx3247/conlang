@@ -41,6 +41,9 @@ class MorphologyDao extends DatabaseAccessor<AppDatabase>
       (delete(morphologicalRules)..where((t) => t.id.equals(id))).go();
 
   /// Swaps the [ordering] values of two rules so their display positions exchange.
+  ///
+  /// Handles the degenerate case where both rules have the same ordering value
+  /// (e.g. both 0) by assigning distinct values before swapping.
   Future<void> swapOrdering(int ruleIdA, int ruleIdB) async {
     await transaction(() async {
       final a = await (select(morphologicalRules)
@@ -49,10 +52,42 @@ class MorphologyDao extends DatabaseAccessor<AppDatabase>
       final b = await (select(morphologicalRules)
             ..where((t) => t.id.equals(ruleIdB)))
           .getSingle();
+
+      var ordA = a.ordering;
+      var ordB = b.ordering;
+
+      // If both have the same ordering, assign distinct values first.
+      if (ordA == ordB) {
+        ordB = ordA + 1;
+        await (update(morphologicalRules)..where((t) => t.id.equals(ruleIdB)))
+            .write(MorphologicalRulesCompanion(ordering: Value(ordB)));
+      }
+
       await (update(morphologicalRules)..where((t) => t.id.equals(ruleIdA)))
-          .write(MorphologicalRulesCompanion(ordering: Value(b.ordering)));
+          .write(MorphologicalRulesCompanion(ordering: Value(ordB)));
       await (update(morphologicalRules)..where((t) => t.id.equals(ruleIdB)))
-          .write(MorphologicalRulesCompanion(ordering: Value(a.ordering)));
+          .write(MorphologicalRulesCompanion(ordering: Value(ordA)));
+    });
+  }
+
+  /// Assigns sequential ordering values to all rules that share duplicate ordering.
+  ///
+  /// Call once on rules page load to fix existing rules that all have ordering=0.
+  Future<void> fixDuplicateOrdering() async {
+    final rules = await (select(morphologicalRules)
+          ..orderBy([(t) => OrderingTerm.asc(t.ordering), (t) => OrderingTerm.asc(t.id)]))
+        .get();
+    if (rules.length <= 1) return;
+
+    // Check if any duplicates exist
+    final orderings = rules.map((r) => r.ordering).toSet();
+    if (orderings.length == rules.length) return; // all unique
+
+    await transaction(() async {
+      for (var i = 0; i < rules.length; i++) {
+        await (update(morphologicalRules)..where((t) => t.id.equals(rules[i].id)))
+            .write(MorphologicalRulesCompanion(ordering: Value(i)));
+      }
     });
   }
 

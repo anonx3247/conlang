@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../features/phonology/data/phonotactic_providers.dart';
+import '../../../../features/phonology/data/romanization_providers.dart';
+import '../../../../features/phonology/domain/phonotactic_dsl.dart';
 import '../../../../features/phonology/domain/word_generator.dart';
 import '../../data/morphology_providers.dart';
 import '../../domain/morphology_dsl.dart';
@@ -63,11 +65,22 @@ class _PreviewPanelState extends ConsumerState<PreviewPanel> {
     if (!mounted) return;
 
     final inventory = ref.read(phonemeInventoryProvider);
-    final sampleWords = ref.read(generatedWordsProvider);
     final rule = widget.rule;
 
-    // Take up to 8 sample words.
-    final words = sampleWords.take(8).toList();
+    // Generate words locally (not from cached provider) so regenerate works.
+    final templates = ref.read(parsedTemplatesProvider).when(
+      data: (v) => v,
+      loading: () => <ParsedTemplate>[],
+      error: (_, _) => <ParsedTemplate>[],
+    );
+    final gen = WordGenerator();
+    final words = gen.generateWords(
+      templates: templates,
+      inventory: inventory,
+      count: 8,
+      minSyllables: 1,
+      maxSyllables: 3,
+    );
 
     if (rule == null) {
       setState(() {
@@ -194,10 +207,10 @@ class _PreviewPanelState extends ConsumerState<PreviewPanel> {
     final cs = theme.colorScheme;
 
     final inventory = ref.watch(phonemeInventoryProvider);
-    final sampleWords = ref.watch(generatedWordsProvider);
+    final templates = ref.watch(parsedTemplatesProvider);
 
     final hasInventory = inventory.consonants.isNotEmpty || inventory.vowels.isNotEmpty;
-    final hasTemplates = sampleWords.isNotEmpty;
+    final hasTemplates = templates.asData?.value.isNotEmpty ?? false;
 
     if (!hasInventory) {
       return _emptyState(
@@ -296,6 +309,7 @@ class _PreviewPanelState extends ConsumerState<PreviewPanel> {
   }
 
   TableRow _buildRow(_PreviewRow row, ThemeData theme, ColorScheme cs) {
+    final romanize = ref.read(romanizeProvider);
     final monoStyle = theme.textTheme.bodyMedium?.copyWith(
       fontFamily: 'monospace',
       fontFamilyFallback: const ['Courier New', 'Courier', 'monospace'],
@@ -304,8 +318,11 @@ class _PreviewPanelState extends ConsumerState<PreviewPanel> {
     Widget derivedWidget;
     if (row.derived != null) {
       final hasViolation = row.violations != null && !row.violations!.isValid;
+      final romanized = romanize(row.derived!);
+      final showRomanized = romanized.isNotEmpty && romanized != row.derived;
+
+      Widget ipaText;
       if (hasViolation) {
-        // Build tooltip text from violation descriptions.
         final tooltipParts = row.violations!.violations.map((v) {
           final desc = v.ruleDescription.isNotEmpty
               ? '${v.ruleDescription} at position ${v.position}'
@@ -314,7 +331,7 @@ class _PreviewPanelState extends ConsumerState<PreviewPanel> {
         }).toList();
         final tooltipText = tooltipParts.join('\n');
 
-        derivedWidget = Tooltip(
+        ipaText = Tooltip(
           message: tooltipText,
           child: Text(
             row.derived!,
@@ -326,8 +343,22 @@ class _PreviewPanelState extends ConsumerState<PreviewPanel> {
           ),
         );
       } else {
-        derivedWidget = Text(row.derived!, style: monoStyle);
+        ipaText = Text(row.derived!, style: monoStyle);
       }
+
+      derivedWidget = Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ipaText,
+          if (showRomanized)
+            Text(
+              '/ $romanized /',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: cs.onSurface.withValues(alpha: 0.55),
+              ),
+            ),
+        ],
+      );
     } else {
       derivedWidget = Text(
         row.error ?? 'no match',
@@ -338,10 +369,7 @@ class _PreviewPanelState extends ConsumerState<PreviewPanel> {
       );
     }
 
-    // Use double arrow in stack mode to signal multiple rules applied.
-    final arrowIcon = row.stackMode && row.rulesApplied > 1
-        ? const Icon(Icons.arrow_forward, size: 14)
-        : const Icon(Icons.arrow_forward, size: 14);
+    final arrowIcon = const Icon(Icons.arrow_forward, size: 14);
 
     return TableRow(
       children: [

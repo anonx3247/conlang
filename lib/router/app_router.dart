@@ -101,7 +101,7 @@ GoRouter appRouter(Ref ref) {
             routes: [
               GoRoute(
                 path: '/morphology',
-                redirect: (_, _) => '/morphology/rules',
+                redirect: (_, _) => '/morphology/pos',
               ),
               StatefulShellRoute.indexedStack(
                 builder: (context, state, navigationShell) =>
@@ -110,16 +110,16 @@ GoRouter appRouter(Ref ref) {
                   StatefulShellBranch(
                     routes: [
                       GoRoute(
-                        path: '/morphology/rules',
-                        builder: (_, _) => const RulesPage(),
+                        path: '/morphology/pos',
+                        builder: (_, _) => const PosPage(),
                       ),
                     ],
                   ),
                   StatefulShellBranch(
                     routes: [
                       GoRoute(
-                        path: '/morphology/pos',
-                        builder: (_, _) => const PosPage(),
+                        path: '/morphology/rules',
+                        builder: (_, _) => const RulesPage(),
                       ),
                     ],
                   ),

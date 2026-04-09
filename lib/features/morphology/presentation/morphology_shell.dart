@@ -15,12 +15,12 @@ class MorphologyShell extends StatelessWidget {
   final StatefulNavigationShell navigationShell;
 
   static const _sidebarItems = [
-    _SidebarItem(label: 'Rules', icon: Icons.rule, path: '/morphology/rules'),
     _SidebarItem(
       label: 'Parts of Speech',
       icon: Icons.category,
       path: '/morphology/pos',
     ),
+    _SidebarItem(label: 'Rules', icon: Icons.rule, path: '/morphology/rules'),
   ];
 
   void _onSidebarTap(BuildContext context, int index) {

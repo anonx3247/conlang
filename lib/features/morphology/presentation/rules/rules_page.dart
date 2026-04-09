@@ -2,14 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/morphology_providers.dart';
+import 'morphology_preview_panel.dart';
 import 'rule_editor_dialog.dart';
 
 /// Main rules list page for morphological rules.
 ///
-/// Shows all rules with CRUD actions. Watches [morphologicalRuleListProvider]
-/// for reactive updates from the Drift database.
+/// Shows all rules with CRUD actions on the left, and a live morphology preview
+/// panel on the right (modeled on the phonology word generator panel).
 ///
-/// A POS filter dropdown above the list allows filtering rules by part of speech.
+/// Watches [morphologicalRuleListProvider] for reactive updates from Drift.
 class RulesPage extends ConsumerStatefulWidget {
   const RulesPage({super.key});
 
@@ -20,6 +21,7 @@ class RulesPage extends ConsumerStatefulWidget {
 class _RulesPageState extends ConsumerState<RulesPage> {
   /// The currently selected POS id for filtering, or null for "All".
   int? _selectedPosId;
+  bool _didFixOrdering = false;
 
   @override
   Widget build(BuildContext context) {
@@ -28,6 +30,12 @@ class _RulesPageState extends ConsumerState<RulesPage> {
 
     final dao = ref.watch(morphologyDaoProvider);
     final hasProject = dao != null;
+
+    // Fix duplicate ordering on first build with a valid DAO.
+    if (hasProject && !_didFixOrdering) {
+      _didFixOrdering = true;
+      dao.fixDuplicateOrdering();
+    }
 
     if (!hasProject) {
       return Center(
@@ -63,226 +71,249 @@ class _RulesPageState extends ConsumerState<RulesPage> {
     final posList = posAsync.asData?.value ?? [];
 
     return Scaffold(
-      body: rulesAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('Error: $e')),
-        data: (rules) {
-          // Apply POS filter
-          final filtered = _selectedPosId == null
-              ? rules
-              : rules.where((r) => r.posId == _selectedPosId).toList();
+      body: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // ---- Left: rules list -------------------------------------------
+          SizedBox(
+            width: 420,
+            child: rulesAsync.when(
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (e, _) => Center(child: Text('Error: $e')),
+              data: (rules) {
+                // Apply POS filter
+                final filtered = _selectedPosId == null
+                    ? rules
+                    : rules.where((r) => r.posId == _selectedPosId).toList();
 
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // POS filter bar
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-                child: Row(
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Text(
-                      'Filter by POS:',
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: cs.onSurface.withValues(alpha: 0.7),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    DropdownButton<int?>(
-                      value: _selectedPosId,
-                      underline: const SizedBox.shrink(),
-                      items: [
-                        const DropdownMenuItem<int?>(
-                          value: null,
-                          child: Text('All'),
-                        ),
-                        ...posList.map(
-                          (pos) => DropdownMenuItem<int?>(
-                            value: pos.id,
-                            child: Text(pos.name),
+                    // POS filter bar
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                      child: Row(
+                        children: [
+                          Text(
+                            'Filter by POS:',
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              color: cs.onSurface.withValues(alpha: 0.7),
+                            ),
                           ),
-                        ),
-                      ],
-                      onChanged: (v) => setState(() => _selectedPosId = v),
-                    ),
-                  ],
-                ),
-              ),
-
-              // Rules list
-              Expanded(
-                child: filtered.isEmpty
-                    ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.auto_fix_high_outlined,
-                              size: 64,
-                              color: cs.onSurface.withValues(alpha: 0.2),
-                            ),
-                            const SizedBox(height: 16),
-                            Text(
-                              rules.isEmpty
-                                  ? 'No morphological rules yet.'
-                                  : 'No rules match the selected POS.',
-                              style: theme.textTheme.titleMedium?.copyWith(
-                                color: cs.onSurface.withValues(alpha: 0.45),
+                          const SizedBox(width: 12),
+                          DropdownButton<int?>(
+                            value: _selectedPosId,
+                            underline: const SizedBox.shrink(),
+                            items: [
+                              const DropdownMenuItem<int?>(
+                                value: null,
+                                child: Text('All'),
                               ),
-                            ),
-                            const SizedBox(height: 6),
-                            if (rules.isEmpty)
-                              Text(
-                                'Add one to get started.',
-                                style: theme.textTheme.bodyMedium?.copyWith(
-                                  color: cs.onSurface.withValues(alpha: 0.3),
+                              ...posList.map(
+                                (pos) => DropdownMenuItem<int?>(
+                                  value: pos.id,
+                                  child: Text(pos.name),
                                 ),
                               ),
-                          ],
-                        ),
-                      )
-                    : ListView.builder(
-                        padding: const EdgeInsets.all(16),
-                        itemCount: filtered.length,
-                        itemBuilder: (context, i) {
-                          final rule = filtered[i];
-                          // Original index in unfiltered list (for arrow buttons)
-                          final origIndex = rules.indexOf(rule);
-                          return Card(
-                            margin: const EdgeInsets.symmetric(vertical: 6),
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 10,
-                              ),
-                              child: Row(
+                            ],
+                            onChanged: (v) =>
+                                setState(() => _selectedPosId = v),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    // Rules list
+                    Expanded(
+                      child: filtered.isEmpty
+                          ? Center(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  // Name + DSL source
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
+                                  Icon(
+                                    Icons.auto_fix_high_outlined,
+                                    size: 64,
+                                    color:
+                                        cs.onSurface.withValues(alpha: 0.2),
+                                  ),
+                                  const SizedBox(height: 16),
+                                  Text(
+                                    rules.isEmpty
+                                        ? 'No morphological rules yet.'
+                                        : 'No rules match the selected POS.',
+                                    style:
+                                        theme.textTheme.titleMedium?.copyWith(
+                                      color: cs.onSurface
+                                          .withValues(alpha: 0.45),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 6),
+                                  if (rules.isEmpty)
+                                    Text(
+                                      'Add one to get started.',
+                                      style:
+                                          theme.textTheme.bodyMedium?.copyWith(
+                                        color: cs.onSurface
+                                            .withValues(alpha: 0.3),
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            )
+                          : ListView.builder(
+                              padding: const EdgeInsets.all(16),
+                              itemCount: filtered.length,
+                              itemBuilder: (context, i) {
+                                final rule = filtered[i];
+                                final origIndex = rules.indexOf(rule);
+                                return Card(
+                                  margin:
+                                      const EdgeInsets.symmetric(vertical: 6),
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                      vertical: 10,
+                                    ),
+                                    child: Row(
                                       children: [
-                                        Text(
-                                          rule.name,
-                                          style: theme.textTheme.bodyLarge
-                                              ?.copyWith(
-                                            fontWeight: FontWeight.w600,
+                                        // Name only (no DSL source)
+                                        Expanded(
+                                          child: Text(
+                                            rule.name,
+                                            style: theme.textTheme.bodyLarge
+                                                ?.copyWith(
+                                              fontWeight: FontWeight.w600,
+                                            ),
                                           ),
                                         ),
-                                        const SizedBox(height: 4),
-                                        Text(
-                                          rule.source,
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: theme.textTheme.bodySmall
-                                              ?.copyWith(
-                                            fontFamily: 'monospace',
-                                            color: cs.onSurface
-                                                .withValues(alpha: 0.6),
+
+                                        // Reorder up
+                                        Opacity(
+                                          opacity:
+                                              origIndex == 0 ? 0.2 : 1.0,
+                                          child: IconButton(
+                                            icon: const Icon(
+                                              Icons.arrow_upward,
+                                              size: 18,
+                                            ),
+                                            tooltip: 'Move up',
+                                            visualDensity:
+                                                VisualDensity.compact,
+                                            constraints:
+                                                const BoxConstraints(
+                                              minWidth: 28,
+                                              minHeight: 28,
+                                            ),
+                                            onPressed: origIndex == 0
+                                                ? null
+                                                : () => dao.swapOrdering(
+                                                      rules[origIndex].id,
+                                                      rules[origIndex - 1]
+                                                          .id,
+                                                    ),
                                           ),
+                                        ),
+
+                                        // Reorder down
+                                        Opacity(
+                                          opacity:
+                                              origIndex == rules.length - 1
+                                                  ? 0.2
+                                                  : 1.0,
+                                          child: IconButton(
+                                            icon: const Icon(
+                                              Icons.arrow_downward,
+                                              size: 18,
+                                            ),
+                                            tooltip: 'Move down',
+                                            visualDensity:
+                                                VisualDensity.compact,
+                                            constraints:
+                                                const BoxConstraints(
+                                              minWidth: 28,
+                                              minHeight: 28,
+                                            ),
+                                            onPressed: origIndex ==
+                                                    rules.length - 1
+                                                ? null
+                                                : () => dao.swapOrdering(
+                                                      rules[origIndex].id,
+                                                      rules[origIndex + 1]
+                                                          .id,
+                                                    ),
+                                          ),
+                                        ),
+
+                                        // Active toggle
+                                        Switch(
+                                          value: rule.isActive,
+                                          onChanged: (value) async {
+                                            await dao.updateRule(
+                                              rule.copyWith(isActive: value),
+                                            );
+                                          },
+                                        ),
+
+                                        // Edit button
+                                        IconButton(
+                                          icon: const Icon(
+                                              Icons.edit_outlined),
+                                          tooltip: 'Edit rule',
+                                          onPressed: () async {
+                                            await showDialog<void>(
+                                              context: context,
+                                              builder: (_) =>
+                                                  RuleEditorDialog(
+                                                      existing: rule),
+                                            );
+                                          },
+                                        ),
+
+                                        // Delete button
+                                        IconButton(
+                                          icon: Icon(
+                                            Icons.delete_outline,
+                                            color: cs.error,
+                                          ),
+                                          tooltip: 'Delete rule',
+                                          onPressed: () async {
+                                            final confirmed =
+                                                await _confirmDelete(
+                                              context,
+                                              rule.name,
+                                            );
+                                            if (confirmed &&
+                                                context.mounted) {
+                                              await dao
+                                                  .deleteRule(rule.id);
+                                            }
+                                          },
                                         ),
                                       ],
                                     ),
                                   ),
-
-                                  // Reorder up button (uses unfiltered index)
-                                  Opacity(
-                                    opacity: origIndex == 0 ? 0.2 : 1.0,
-                                    child: IconButton(
-                                      icon: const Icon(
-                                        Icons.arrow_upward,
-                                        size: 18,
-                                      ),
-                                      tooltip: 'Move up',
-                                      visualDensity: VisualDensity.compact,
-                                      constraints: const BoxConstraints(
-                                        minWidth: 28,
-                                        minHeight: 28,
-                                      ),
-                                      onPressed: origIndex == 0
-                                          ? null
-                                          : () => dao.swapOrdering(
-                                                rules[origIndex].id,
-                                                rules[origIndex - 1].id,
-                                              ),
-                                    ),
-                                  ),
-
-                                  // Reorder down button (uses unfiltered index)
-                                  Opacity(
-                                    opacity: origIndex == rules.length - 1
-                                        ? 0.2
-                                        : 1.0,
-                                    child: IconButton(
-                                      icon: const Icon(
-                                        Icons.arrow_downward,
-                                        size: 18,
-                                      ),
-                                      tooltip: 'Move down',
-                                      visualDensity: VisualDensity.compact,
-                                      constraints: const BoxConstraints(
-                                        minWidth: 28,
-                                        minHeight: 28,
-                                      ),
-                                      onPressed: origIndex == rules.length - 1
-                                          ? null
-                                          : () => dao.swapOrdering(
-                                                rules[origIndex].id,
-                                                rules[origIndex + 1].id,
-                                              ),
-                                    ),
-                                  ),
-
-                                  // Active toggle
-                                  Switch(
-                                    value: rule.isActive,
-                                    onChanged: (value) async {
-                                      await dao.updateRule(
-                                        rule.copyWith(isActive: value),
-                                      );
-                                    },
-                                  ),
-
-                                  // Edit button
-                                  IconButton(
-                                    icon: const Icon(Icons.edit_outlined),
-                                    tooltip: 'Edit rule',
-                                    onPressed: () async {
-                                      await showDialog<void>(
-                                        context: context,
-                                        builder: (_) =>
-                                            RuleEditorDialog(existing: rule),
-                                      );
-                                    },
-                                  ),
-
-                                  // Delete button
-                                  IconButton(
-                                    icon: Icon(
-                                      Icons.delete_outline,
-                                      color: cs.error,
-                                    ),
-                                    tooltip: 'Delete rule',
-                                    onPressed: () async {
-                                      final confirmed = await _confirmDelete(
-                                        context,
-                                        rule.name,
-                                      );
-                                      if (confirmed && context.mounted) {
-                                        await dao.deleteRule(rule.id);
-                                      }
-                                    },
-                                  ),
-                                ],
-                              ),
+                                );
+                              },
                             ),
-                          );
-                        },
-                      ),
-              ),
-            ],
-          );
-        },
+                    ),
+                  ],
+                );
+              },
+            ),
+          ),
+
+          // ---- Vertical divider -------------------------------------------
+          VerticalDivider(
+            width: 1,
+            thickness: 1,
+            color: cs.outlineVariant,
+          ),
+
+          // ---- Right: morphology preview panel ----------------------------
+          const Expanded(
+            child: MorphologyPreviewPanel(),
+          ),
+        ],
       ),
       floatingActionButton: hasProject
           ? FloatingActionButton.extended(
