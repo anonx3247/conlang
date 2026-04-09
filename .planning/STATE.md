@@ -126,5 +126,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-04-09
-Stopped at: Completed 02-07-PLAN.md — rule reordering (UAT gap 3) closed; up/down buttons on rule cards, swapOrdering atomic DB transaction, ordering persists.
+Stopped at: Completed 02-06-PLAN.md — rule editor UX polish: plain-language OpType labels, IpaTextField in all IPA fields, regenerate button in preview panel.
 Resume file: None
