@@ -4,12 +4,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../db/app_database.dart';
 import '../../data/romanization_dao.dart';
 import '../../data/romanization_providers.dart';
+import '../shared/ipa_keyboard/ipa_text_field.dart';
 
-/// Two-column editable table for defining IPA → Latin romanization mappings.
+/// Two-column editable table for defining Latin letter → IPA romanization mappings.
 ///
 /// Each row shows one mapping with inline edit and delete controls. An "Add
-/// mapping" button at the bottom lets users create new entries. A live preview
-/// panel lets users type IPA text and see the romanized output immediately.
+/// letter" button at the bottom lets users create new entries.
+///
+/// Columns are Latin-first: the Latin letter (romanization key) appears in the
+/// first column, and the associated IPA sound in the second. This matches the
+/// mental model of "I write 'sh', which sounds like /ʃ/".
 ///
 /// Mappings are project-scoped and persisted in the project SQLite database via
 /// [RomanizationDao]. The section is self-contained — it can be dropped into
@@ -30,14 +34,10 @@ class _RomanizationSectionState extends ConsumerState<RomanizationSection> {
   final _ipaController = TextEditingController();
   final _latinController = TextEditingController();
 
-  // Preview field state.
-  final _previewController = TextEditingController();
-
   @override
   void dispose() {
     _ipaController.dispose();
     _latinController.dispose();
-    _previewController.dispose();
     super.dispose();
   }
 
@@ -50,24 +50,24 @@ class _RomanizationSectionState extends ConsumerState<RomanizationSection> {
   void _startEdit(RomanizationMapping mapping) {
     setState(() {
       _editingId = mapping.id;
-      _ipaController.text = mapping.ipaSymbol;
       _latinController.text = mapping.latinMapping;
+      _ipaController.text = mapping.ipaSymbol;
     });
   }
 
   void _startAdd() {
     setState(() {
       _editingId = -1; // sentinel: new row
-      _ipaController.clear();
       _latinController.clear();
+      _ipaController.clear();
     });
   }
 
   void _cancelEdit() {
     setState(() {
       _editingId = null;
-      _ipaController.clear();
       _latinController.clear();
+      _ipaController.clear();
     });
   }
 
@@ -99,26 +99,6 @@ class _RomanizationSectionState extends ConsumerState<RomanizationSection> {
 
   Future<void> _deleteMapping(int id) async {
     await _dao?.deleteMapping(id);
-  }
-
-  // ---------------------------------------------------------------------------
-  // Live preview
-  // ---------------------------------------------------------------------------
-
-  String _applyPreview(
-    String input,
-    List<RomanizationMapping> mappings,
-  ) {
-    if (input.isEmpty || mappings.isEmpty) return input;
-
-    final sorted = List<RomanizationMapping>.from(mappings)
-      ..sort((a, b) => b.ipaSymbol.length.compareTo(a.ipaSymbol.length));
-
-    var result = input;
-    for (final m in sorted) {
-      result = result.replaceAll(m.ipaSymbol, m.latinMapping);
-    }
-    return result;
   }
 
   // ---------------------------------------------------------------------------
@@ -160,14 +140,14 @@ class _RomanizationSectionState extends ConsumerState<RomanizationSection> {
               ),
               const SizedBox(width: 8),
               Text(
-                'Romanization Mappings',
+                'Romanization',
                 style: theme.textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.w600,
                 ),
               ),
               const SizedBox(width: 8),
               Text(
-                '(IPA \u2192 Latin script)',
+                '(Latin letters \u2192 IPA sounds)',
                 style: theme.textTheme.bodySmall?.copyWith(
                   color: colorScheme.onSurface.withValues(alpha: 0.55),
                 ),
@@ -181,7 +161,7 @@ class _RomanizationSectionState extends ConsumerState<RomanizationSection> {
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 8),
             child: Text(
-              'No mappings defined. Add one to start romanizing IPA text.',
+              'No romanization letters defined yet. Add a Latin letter and associate its default IPA sound.',
               style: theme.textTheme.bodySmall?.copyWith(
                 color: colorScheme.onSurface.withValues(alpha: 0.5),
               ),
@@ -192,18 +172,13 @@ class _RomanizationSectionState extends ConsumerState<RomanizationSection> {
 
         const SizedBox(height: 8),
 
-        // Add mapping button.
+        // Add letter button.
         if (_editingId == null)
           TextButton.icon(
             onPressed: _startAdd,
             icon: const Icon(Icons.add, size: 18),
-            label: const Text('Add mapping'),
+            label: const Text('Add letter'),
           ),
-
-        const SizedBox(height: 24),
-
-        // Live preview panel.
-        _buildPreviewPanel(theme, colorScheme, mappings),
       ],
     );
   }
@@ -228,7 +203,7 @@ class _RomanizationSectionState extends ConsumerState<RomanizationSection> {
               SizedBox(
                 width: 160,
                 child: Text(
-                  'IPA symbol',
+                  'Latin letter',
                   style: theme.textTheme.labelSmall?.copyWith(
                     color: colorScheme.onSurface.withValues(alpha: 0.6),
                     fontWeight: FontWeight.w600,
@@ -238,7 +213,7 @@ class _RomanizationSectionState extends ConsumerState<RomanizationSection> {
               ),
               Expanded(
                 child: Text(
-                  'Latin romanization',
+                  'IPA sound (default)',
                   style: theme.textTheme.labelSmall?.copyWith(
                     color: colorScheme.onSurface.withValues(alpha: 0.6),
                     fontWeight: FontWeight.w600,
@@ -292,20 +267,22 @@ class _RomanizationSectionState extends ConsumerState<RomanizationSection> {
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
           child: Row(
             children: [
+              // Latin letter — normal font (first column)
               SizedBox(
                 width: 160,
+                child: Text(
+                  mapping.latinMapping,
+                  style: theme.textTheme.bodyMedium,
+                ),
+              ),
+              // IPA sound — monospace with primary color (second column)
+              Expanded(
                 child: Text(
                   mapping.ipaSymbol,
                   style: theme.textTheme.bodyMedium?.copyWith(
                     fontFamily: 'monospace',
                     color: colorScheme.primary,
                   ),
-                ),
-              ),
-              Expanded(
-                child: Text(
-                  mapping.latinMapping,
-                  style: theme.textTheme.bodyMedium,
                 ),
               ),
               // Edit / Delete buttons.
@@ -366,12 +343,32 @@ class _RomanizationSectionState extends ConsumerState<RomanizationSection> {
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
       child: Row(
         children: [
-          // IPA symbol input.
+          // Latin letter input (first column — plain TextField, no IPA keyboard).
           SizedBox(
             width: 152,
             child: TextField(
-              controller: _ipaController,
+              controller: _latinController,
               autofocus: true,
+              decoration: const InputDecoration(
+                hintText: 'sh',
+                isDense: true,
+                contentPadding: EdgeInsets.symmetric(
+                  horizontal: 8,
+                  vertical: 8,
+                ),
+                border: OutlineInputBorder(),
+              ),
+              style: theme.textTheme.bodyMedium,
+              onSubmitted: (_) => _saveEdit(existing),
+            ),
+          ),
+
+          const SizedBox(width: 8),
+
+          // IPA sound input (second column — IpaTextField with IPA keyboard).
+          Expanded(
+            child: IpaTextField(
+              controller: _ipaController,
               decoration: const InputDecoration(
                 hintText: '/ʃ/',
                 isDense: true,
@@ -384,26 +381,6 @@ class _RomanizationSectionState extends ConsumerState<RomanizationSection> {
               style: theme.textTheme.bodyMedium?.copyWith(
                 fontFamily: 'monospace',
               ),
-              onSubmitted: (_) => _saveEdit(existing),
-            ),
-          ),
-
-          const SizedBox(width: 8),
-
-          // Latin romanization input.
-          Expanded(
-            child: TextField(
-              controller: _latinController,
-              decoration: const InputDecoration(
-                hintText: 'sh',
-                isDense: true,
-                contentPadding: EdgeInsets.symmetric(
-                  horizontal: 8,
-                  vertical: 8,
-                ),
-                border: OutlineInputBorder(),
-              ),
-              style: theme.textTheme.bodyMedium,
               onSubmitted: (_) => _saveEdit(existing),
             ),
           ),
@@ -445,83 +422,6 @@ class _RomanizationSectionState extends ConsumerState<RomanizationSection> {
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildPreviewPanel(
-    ThemeData theme,
-    ColorScheme colorScheme,
-    List<RomanizationMapping> mappings,
-  ) {
-    final previewInput = _previewController.text;
-    final previewOutput = _applyPreview(previewInput, mappings);
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Live Preview',
-          style: theme.textTheme.labelSmall?.copyWith(
-            color: colorScheme.onSurface.withValues(alpha: 0.6),
-            fontWeight: FontWeight.w600,
-            letterSpacing: 0.8,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Row(
-          children: [
-            // IPA input.
-            Expanded(
-              child: TextField(
-                controller: _previewController,
-                decoration: const InputDecoration(
-                  labelText: 'IPA input',
-                  hintText: 'Type IPA here\u2026',
-                  isDense: true,
-                  border: OutlineInputBorder(),
-                ),
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  fontFamily: 'monospace',
-                ),
-                onChanged: (_) => setState(() {}),
-              ),
-            ),
-
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Icon(
-                Icons.arrow_forward,
-                color: colorScheme.onSurface.withValues(alpha: 0.4),
-              ),
-            ),
-
-            // Romanized output.
-            Expanded(
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 10,
-                ),
-                decoration: BoxDecoration(
-                  color: colorScheme.surfaceContainerHigh,
-                  borderRadius: BorderRadius.circular(4),
-                  border: Border.all(
-                    color: colorScheme.outlineVariant,
-                  ),
-                ),
-                child: Text(
-                  previewOutput.isEmpty ? '\u2014' : previewOutput,
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: previewOutput.isEmpty
-                        ? colorScheme.onSurface.withValues(alpha: 0.4)
-                        : null,
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ],
     );
   }
 }
