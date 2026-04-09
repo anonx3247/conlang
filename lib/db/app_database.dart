@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart';
 import 'package:drift_flutter/drift_flutter.dart';
 
+import '../features/lexicon/data/lexeme_dao.dart';
 import '../features/morphology/data/morphology_dao.dart';
 import '../features/phonology/data/natural_class_dao.dart';
 import '../features/phonology/data/phoneme_dao.dart';
@@ -150,6 +151,8 @@ class MorphologicalRuleExceptions extends Table {
 /// - [romanization]: the Latin form derived from [ipa] via romanization mappings
 /// - [meaning]: plain-text gloss
 /// - [partOfSpeech]: e.g. "noun", "verb", "adjective"
+/// - [isPhonologicalException]: marks word as exempt from phonotactic violation
+///   highlighting (e.g. loanwords) — added in schema v7
 class Lexemes extends Table {
   IntColumn get id => integer().autoIncrement()();
   TextColumn get ipa => text()();
@@ -159,6 +162,10 @@ class Lexemes extends Table {
   TextColumn get romanization => text().nullable()();
   TextColumn get meaning => text().nullable()();
   TextColumn get partOfSpeech => text().nullable()();
+  /// Marks this word as exempt from phonotactic violation highlighting.
+  /// Defaults to false. Added in schema v7.
+  BoolColumn get isPhonologicalException =>
+      boolean().withDefault(const Constant(false))();
 }
 
 // ---------------------------------------------------------------------------
@@ -179,7 +186,7 @@ class Lexemes extends Table {
     MorphologicalRules,
     MorphologicalRuleExceptions,
   ],
-  daos: [PhonemeDao, NaturalClassDao, RomanizationDao, PhonotacticDao, RewriteRuleDao, MorphologyDao],
+  daos: [PhonemeDao, NaturalClassDao, RomanizationDao, PhonotacticDao, RewriteRuleDao, MorphologyDao, LexemeDao],
 )
 class AppDatabase extends _$AppDatabase {
   /// Creates an AppDatabase with an injected [QueryExecutor].
@@ -189,7 +196,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase(super.e);
 
   @override
-  int get schemaVersion => 6;
+  int get schemaVersion => 7;
 
   @override
   MigrationStrategy get migration {
@@ -221,6 +228,10 @@ class AppDatabase extends _$AppDatabase {
           await m.addColumn(morphologicalRules, morphologicalRules.posIds);
           // v6: add position column to phonotactic_constraints
           await m.addColumn(phonotacticConstraints, phonotacticConstraints.position);
+        }
+        if (from < 7) {
+          // v7: add isPhonologicalException column to lexemes
+          await m.addColumn(lexemes, lexemes.isPhonologicalException);
         }
       },
       beforeOpen: (details) async {
@@ -286,9 +297,18 @@ class AppDatabase extends _$AppDatabase {
             '"position" TEXT NOT NULL DEFAULT \'anywhere\'',
           );
         } catch (_) {}
+        try {
+          await customStatement(
+            'ALTER TABLE lexemes ADD COLUMN '
+            '"is_phonological_exception" INTEGER NOT NULL DEFAULT 0',
+          );
+        } catch (_) {}
       },
     );
   }
+
+  /// Returns the [LexemeDao] for this database.
+  LexemeDao get lexemeDao => LexemeDao(this);
 
   /// Factory that opens a Drift database backed by a file at [absolutePath].
   ///
