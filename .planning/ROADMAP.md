@@ -12,7 +12,7 @@ Conlang Workbench is built from the inside out: the morphology engine — the ar
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [x] **Phase 1: Foundation** - Flutter app shell, project management, phonology tools, and derivation-aware database schema
+- [ ] **Phase 1: Foundation** - Flutter app shell, project management, phonology tools, and derivation-aware database schema (UAT gap closure in progress)
 - [ ] **Phase 2: Morphology Engine** - Pattern mini-language, plugin architecture, and rule editor — the centrepiece differentiator
 - [ ] **Phase 3: Lexicon** - Root and derived-word dictionary, search, semantic references, Anki export, phonotactic highlighting
 - [ ] **Phase 4: Grammar** - Parts of speech, declension/conjugation rules, paradigm chart generation, typology settings
@@ -31,7 +31,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. User can enter IPA text using the on-screen IPA keyboard without switching input methods
   4. User can define phonotactic syllable structure rules and phonological rules (e.g. vowel assimilation), then use the word generator to produce random words that conform to those rules
   5. User can define a romanization mapping so any IPA transcription can be displayed in the project's chosen Latin script
-**Plans:** 7 plans in 4 waves
+**Plans:** 9 plans in 5 waves
 
 Plans:
 - [x] 01-01-PLAN.md — App shell: Flutter project init, dependencies, window setup, go_router tabs+sidebar navigation
@@ -41,6 +41,8 @@ Plans:
 - [x] 01-05-PLAN.md — Phoneme inventory editor: CRUD for consonants/vowels, articulation properties, natural class management
 - [x] 01-06-PLAN.md — Romanization mappings: IPA-to-Latin mapping editor with live preview and conversion function
 - [x] 01-07-PLAN.md — Phonotactic rules + word generator: petitparser DSL for syllable templates, live word generation preview
+- [ ] 01-08-PLAN.md — Gap closure: IPA keyboard popup fix, template editor fix, IPA chart overflow, constraint docs
+- [ ] 01-09-PLAN.md — Gap closure: Phoneme dialog redesign (feature-driven IPA, delete button), romanization Latin-first flip
 
 ### Phase 2: Morphology Engine
 **Goal**: Users can express any word transformation rule — concatenative, templatic, ablaut, or suppletive — in a readable pattern mini-language, and the engine applies those rules consistently
@@ -126,7 +128,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4. Phases 5 and 6 depend only
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation | 7/7 | ✓ Complete | 2026-04-08 |
+| 1. Foundation | 7/9 | UAT gap closure | - |
 | 2. Morphology Engine | 0/4 | Not started | - |
 | 3. Lexicon | 0/5 | Not started | - |
 | 4. Grammar | 0/3 | Not started | - |
