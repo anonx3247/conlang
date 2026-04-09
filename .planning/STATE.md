@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-04-08)
 
 **Core value:** A powerful, flexible morphology engine that handles the full spectrum of language types through a readable pattern mini-language
-**Current focus:** Phase 1 fully complete — UAT passed (15/15), ready for Phase 2 (Morphology Engine)
+**Current focus:** Phase 2 (Morphology Engine) — data layer complete, DSL parser next
 
 ## Current Position
 
-Phase: 1 of 6 (Foundation) — COMPLETE ✓ (UAT passed 2026-04-09)
-Plan: 13 of 13 in current phase — PHASE COMPLETE
-Status: Phase 1 complete. All 13 plans executed, 5/5 success criteria verified, UAT retest 15/15 passed. 7 inline bug fixes during UAT.
-Last activity: 2026-04-09 — UAT retest2 passed (15/15), rewrite rule application added, fill-in-the-blank UI
+Phase: 2 of 6 (Morphology Engine) — IN PROGRESS
+Plan: 2 of 4 in current phase
+Status: Phase 2 Plan 02 complete. Schema v4 with MorphologicalRules + MorphologicalRuleExceptions tables, MorphologyDao, and Riverpod providers. Ready for Plan 03 (UI) or Plan 04 (engine).
+Last activity: 2026-04-09 — Phase 2 Plan 02: morphology data layer (schema v4, DAO, providers)
 
-Progress: [███░░░░░░░] 29% (13/44 total plans)
+Progress: [████░░░░░░] 34% (15/44 total plans)
 
 ## Performance Metrics
 
@@ -93,6 +93,8 @@ Recent decisions affecting current work:
 - 01-12: asData?.value used for AsyncValue null-safe access (riverpod 3.x has no valueOrNull getter)
 - 01-12: Feature-to-string reverse maps inlined as private static methods in romanization_section — 4 simple switch expressions not worth extracting to shared file
 - 01-12: insertOnConflictUpdate on ProjectSettings.key unique column for upsert; schema bumped to v3 with from < 3 guard in onUpgrade
+- 02-02: Drift generates MorphologicalRule and MorphologicalRuleException data class names (not MorphologicalRulesData) — table class name minus trailing 's', no suffix
+- 02-02: morphology_providers.dart imports app_database.dart directly alongside morphology_dao.dart — required for generated type resolution in StreamProvider type arguments
 
 ### Pending Todos
 
@@ -108,5 +110,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-04-09
-Stopped at: Phase 1 fully complete — UAT retest2 passed 15/15, rewrite rules apply to word generator, fill-in-the-blank UI. Ready for Phase 2.
+Stopped at: Completed 02-02-PLAN.md — morphology data layer (schema v4, MorphologyDao, Riverpod providers). Phase 2 Plan 2 of 4 complete.
 Resume file: None
