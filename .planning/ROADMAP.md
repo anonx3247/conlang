@@ -57,13 +57,13 @@ Plans:
   2. The engine produces correct outputs for at least four typological strategies: concatenative (affix), Semitic root-and-pattern (template), vowel ablaut, and analytic (particle/aux verb, defined as a no-transform passthrough)
   3. User can define word derivation rules (e.g. denominalizer, agentive) that chain with root definitions to produce derived words
   4. User can mark any individual word as an exception to any morphological rule and supply the irregular form directly
-**Plans**: TBD
+**Plans:** 4 plans in 3 waves
 
 Plans:
-- [ ] 02-01: Pattern mini-language design spike — one-page spec, PEG grammar (petitparser), AST node types for AFFIX / TEMPLATE / ABLAUT / LOOKUP
-- [ ] 02-02: Morphology engine core — lexer, parser, AST-to-bytecode compiler, runtime evaluator with plugin dispatch
-- [ ] 02-03: Plugin implementations — concatenative, Semitic template, ablaut/vowel-change, reduplication, suppletive lookup
-- [ ] 02-04: MorphologyRepository and rule editor UI — CRUD for rules, per-word exception overrides, live preview of rule output
+- [ ] 02-01-PLAN.md — TDD: Morphology DSL data model, petitparser grammar, serializer, and evaluation engine (all 7 operation types + branching conditions)
+- [ ] 02-02-PLAN.md — Drift schema extension (MorphologicalRules + Exceptions tables, v4 migration), MorphologyDao, Riverpod providers
+- [ ] 02-03-PLAN.md — Morphology tab + router, rule editor UI with hybrid authoring (structured form + live DSL + preview panel)
+- [ ] 02-04-PLAN.md — Checkpoint: end-to-end verification of all typological strategies + UI fixes
 
 ### Phase 3: Lexicon
 **Goal**: Users can build and navigate a root-and-derived-word dictionary with full search, semantic coverage guidance, flashcard export, and inline phonotactic validation throughout the interface
@@ -97,7 +97,7 @@ Plans:
 
 Plans:
 - [ ] 04-01: GrammarRepository — user-defined POS categories, feature dimension definitions, typology settings storage
-- [ ] 04-02: GrammarService — paradigm generation (feature matrix × morphology engine), per-cell exception handling
+- [ ] 04-02: GrammarService — paradigm generation (feature matrix x morphology engine), per-cell exception handling
 - [ ] 04-03: Grammar UI — POS editor, feature dimension editor, typology settings panel, paradigm chart view
 
 ### Phase 5: Culture Wiki
