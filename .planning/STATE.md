@@ -10,27 +10,27 @@ See: .planning/PROJECT.md (updated 2026-04-08)
 ## Current Position
 
 Phase: 1 of 6 (Foundation)
-Plan: 1 of 7 in current phase
+Plan: 4 of 7 in current phase
 Status: In progress
-Last activity: 2026-04-09 — Plan 01 complete (app shell + navigation)
+Last activity: 2026-04-09 — Plan 04 complete (IPA keyboard popup + IpaTextField)
 
-Progress: [█░░░░░░░░░] 2% (1/42 total plans)
+Progress: [█░░░░░░░░░] 5% (2/42 total plans)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 1
-- Average duration: 7 min
-- Total execution time: 0.1 hours
+- Total plans completed: 2
+- Average duration: 5 min
+- Total execution time: 0.15 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 01-foundation | 1 | 7 min | 7 min |
+| 01-foundation | 2 | 9 min | 5 min |
 
 **Recent Trend:**
-- Last 5 plans: 7 min
+- Last 5 plans: 7 min, 2 min
 - Trend: —
 
 *Updated after each plan completion*
@@ -48,6 +48,9 @@ Recent decisions affecting current work:
 - 01-01: Used riverpod_generator 3.0.3 (not 4.x) — transitive test_api conflict with flutter_test in Dart 3.10.4 ecosystem
 - 01-01: Used drift 2.31.0 + drift_flutter 0.2.8 (not 2.32.x) — drift_dev 2.32.x requires analyzer >=10.0.0, incompatible with riverpod_generator 3.x's analyzer <9.0.0
 - 01-01: Dark theme as default for professional desktop tool feel
+- 01-04: IPA symbol data defined locally in keyboard widget — keyboard layout and chart layout serve different purposes; integrate with ipa_data.dart (Plan 03) later if needed
+- 01-04: Popup trigger is focus-based + suffix icon toggle — auto-shows on focus (convenience), manual toggle (control)
+- 01-04: TapRegion for outside-tap dismissal — cleaner than GestureDetector, correctly excludes popup from "outside" boundary
 
 ### Pending Todos
 
@@ -63,5 +66,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-04-09
-Stopped at: Completed 01-foundation/01-01-PLAN.md (app shell, navigation, all dependencies)
+Stopped at: Completed 01-foundation/01-04-PLAN.md (IPA keyboard popup + IpaTextField widget)
 Resume file: None
