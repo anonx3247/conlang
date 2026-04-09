@@ -9,12 +9,12 @@ See: .planning/PROJECT.md (updated 2026-04-08)
 
 ## Current Position
 
-Phase: 2 of 6 (Morphology Engine) — COMPLETE (gap closure pending)
-Plan: 4 of 4 in current phase — ALL DONE
-Status: Phase 2 complete. DSL engine (TDD), schema v4, full rule editor UI, human-verified end-to-end. 9 UX gaps identified for gap closure before/alongside Phase 3.
-Last activity: 2026-04-09 — Phase 2 Plan 04: morphology engine verified end-to-end, all 6 tests approved, 9 UX gaps captured
+Phase: 2 of 6 (Morphology Engine) — gap closure in progress
+Plan: 7 of 10 in current phase (gap closure plans 05-10 active)
+Status: Gap closure plan 07 complete. Rule reordering (UAT gap 3) closed — up/down buttons on rule cards, swapOrdering DAO method, persists to DB.
+Last activity: 2026-04-09 — Phase 2 Plan 07: rule reordering via up/down buttons, 2 tasks, 2 files
 
-Progress: [█████░░░░░] 41% (18/44 total plans)
+Progress: [█████░░░░░] 43% (19/44 total plans)
 
 ## Performance Metrics
 
@@ -42,6 +42,7 @@ Progress: [█████░░░░░] 41% (18/44 total plans)
 | Phase 01-foundation P08 | 18 min | 2 tasks | 4 files |
 | Phase 01-foundation P09 | 4 min | 2 tasks | 3 files |
 | Phase 02-morphology-engine P03 | 25 | 2 tasks | 7 files |
+| Phase 02-morphology-engine P06 | 2 | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -104,6 +105,11 @@ Recent decisions affecting current work:
 - [Phase 02-morphology-engine]: 02-03: RuleEditorDialog uses local StatefulWidget state for ephemeral in-editor form state; Riverpod only for DAO saves and preview reads
 - [Phase 02-morphology-engine]: 02-04: 9 UX improvement items from UAT deferred as gap closure plans (not inline fixes) — keeps Phase 2 scope boundary clean; highest priority items are rule reordering, POS filtering, and condition pattern redesign
 - [Phase 02-morphology-engine]: 02-04: Condition system will be redesigned around phonological pattern notation [nasal]Vk(l) with multiple conditions per branch — current EndsWithLiteral/StartsWithLiteral types are insufficient for real conlanging workflows
+- [Phase 02-morphology-engine]: 02-07: swapOrdering uses drift transaction() to atomically exchange ordering values — no temp value needed; Drift handles intermediate state within a transaction
+- [Phase 02-morphology-engine]: 02-07: Disabled arrow buttons shown at 20% Opacity rather than hidden — preserves layout stability and signals affordance at boundaries
+- [Phase 02-morphology-engine]: 02-07: New rules retain ordering=0 default; users can move them down — avoids expanding scope to rule_editor_dialog.dart
+- [Phase 02-morphology-engine]: 02-06: IpaTextField used conditionally in condition value field — only for endsWithLiteral/startsWithLiteral, not class-based conditions
+- [Phase 02-morphology-engine]: 02-06: Regenerate button added to _emptyState as well as main preview view — always visible regardless of rule completeness
 
 ### Pending Todos
 
@@ -111,7 +117,7 @@ None yet.
 
 ### Blockers/Concerns
 
-- Phase 2 gap closure: 9 UX items identified in UAT must be planned as gap closure plans. Items 3-5 (rule reordering, POS filtering, condition pattern redesign) are highest priority before Phase 3 lexicon authoring. Items 2/6/7 are polish. Items 8/9 are PreviewPanel-only changes.
+- Phase 2 gap closure: 9 UX items identified in UAT. Gap 3 (rule reordering) CLOSED in plan 07. Remaining: Items 4-5 (POS filtering, condition pattern redesign) highest priority. Items 2/6/7 are polish. Items 8/9 are PreviewPanel-only changes.
 - Phase 2 research flag: Pattern mini-language DSL design has no canonical reference — requires design spike before implementation commits (run one-page spec ceiling check)
 - Phase 3: Conlanger's Thesaurus PDF (fiatlingua.org) must be pre-extracted to JSON — verify PDF structure is parseable before Phase 3 planning
 - Phase 1: Verify OGG audio playback on Windows with just_audio before finalizing IPA audio asset format
@@ -120,5 +126,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-04-09
-Stopped at: Completed 02-04-PLAN.md — morphology engine human-verified end-to-end, all 6 tests approved. Phase 2 COMPLETE. 9 UX gaps captured for gap closure plans before/alongside Phase 3.
+Stopped at: Completed 02-07-PLAN.md — rule reordering (UAT gap 3) closed; up/down buttons on rule cards, swapOrdering atomic DB transaction, ordering persists.
 Resume file: None
