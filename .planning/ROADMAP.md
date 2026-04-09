@@ -81,14 +81,15 @@ Plans:
   3. User can open the Swadesh list view and the Conlanger's Thesaurus reference to identify semantic gaps and guide vocabulary creation
   4. User can export selected lexicon entries as Anki .apkg flashcards with morphological context in the card fields
   5. Words that violate phonotactic rules are highlighted in red throughout the entire tool (lexicon, grammar tables, and any text field), with an option to mark individual words as exceptions
-**Plans:** 5 plans in 3 waves
+**Plans:** 6 plans in 3 waves
 
 Plans:
 - [ ] 03-01-PLAN.md — Data layer: LexemeDao, schema v7 migration, providers, client-side filter, bundled Swadesh + Thesaurus JSON assets
-- [ ] 03-02-PLAN.md — Dictionary UI: master-detail layout, word list panel, word detail panel, creation form, derivation tree, inspiration panel, exception UI
+- [ ] 03-02-PLAN.md — Dictionary UI: master-detail layout, word list panel, word detail panel, creation form, derivation tree (on-the-fly engine), inspiration panel, exception UI, query param handling for D-16
 - [ ] 03-03-PLAN.md — Semantic references: Swadesh list checklist with coverage progress, Thesaurus hierarchical tree browser with search
 - [ ] 03-04-PLAN.md — Anki export: .apkg builder with sqlite3 + archive, selection checkboxes, export flow with snackbar confirmation
-- [ ] 03-05-PLAN.md — Phonotactic highlighting: shared ViolationText widget, validation provider, per-word exception toggle
+- [ ] 03-05-PLAN.md — Phonotactic highlighting infrastructure: shared ViolationText widget extraction, validation provider
+- [ ] 03-06-PLAN.md — Phonotactic highlighting wiring: ViolationText into lexicon detail/list, per-word exception toggle, batch validation provider
 
 ### Phase 4: Grammar
 **Goal**: Users can define the grammatical structure of their language — parts of speech, inflection rules, and typological choices — and generate complete paradigm charts for any word
@@ -140,7 +141,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4. Phases 5 and 6 depend only on
 |-------|----------------|--------|-----------|
 | 1. Foundation | 13/13 | Complete | 2026-04-09 |
 | 2. Morphology Engine | 10/10 | Complete | 2026-04-09 |
-| 3. Lexicon | 0/5 | In progress | - |
+| 3. Lexicon | 0/6 | In progress | - |
 | 4. Grammar | 0/3 | Not started | - |
 | 5. Culture Wiki | 0/2 | Not started | - |
 | 6. Reference Glossary | 0/1 | Not started | - |
