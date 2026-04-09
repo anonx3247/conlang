@@ -1,0 +1,59 @@
+name: conlang_workbench
+description: "A professional conlang workbench for phonology, lexicon, grammar, and culture design."
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.10.4
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # Navigation
+  go_router: ^17.2.0
+
+  # Database
+  drift: ^2.30.0
+  drift_flutter: ^0.2.8
+
+  # State management
+  flutter_riverpod: ^3.0.3
+  riverpod_annotation: ^3.0.3
+
+  # Parser
+  petitparser: ^7.0.2
+
+  # Audio
+  just_audio: ^0.10.5
+  just_audio_media_kit: ^2.1.0
+  media_kit_libs_linux: any
+  media_kit_libs_windows_audio: any
+
+  # Window management
+  window_manager: ^0.5.1
+
+  # Utilities
+  path_provider: ^2.1.5
+  path: ^1.9.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  # Code generation
+  build_runner: ^2.4.15
+  drift_dev: ^2.30.1
+  riverpod_generator: ^3.0.3
+
+  # Linting
+  flutter_lints: ^6.0.0
+  riverpod_lint: ^3.0.3
+
+flutter:
+  uses-material-design: true
+
+  # IPA audio assets (to be populated in Plan 03)
+  # assets:
+  #   - assets/ipa_audio/
