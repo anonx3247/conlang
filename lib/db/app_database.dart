@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart';
 import 'package:drift_flutter/drift_flutter.dart';
 
+import '../features/morphology/data/morphology_dao.dart';
 import '../features/phonology/data/natural_class_dao.dart';
 import '../features/phonology/data/phoneme_dao.dart';
 import '../features/phonology/data/phonotactic_dao.dart';
@@ -92,6 +93,33 @@ class ProjectSettings extends Table {
   TextColumn get value => text()();
 }
 
+/// Morphological rules (e.g. "Plural", "Agentive -er") in a pattern DSL.
+///
+/// [source] stores the raw DSL string verbatim for round-tripping.
+/// [ordering] allows user-defined rule ordering (default 0 = insertion order).
+/// [isActive] allows toggling a rule without deleting it.
+class MorphologicalRules extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  TextColumn get name => text()(); // e.g. "Plural", "Agentive -er"
+  TextColumn get source => text()(); // Raw DSL string
+  IntColumn get ordering => integer().withDefault(const Constant(0))();
+  BoolColumn get isActive => boolean().withDefault(const Constant(true))();
+}
+
+/// Per-lexeme exceptions overriding a morphological rule with an irregular form.
+///
+/// [lexemeId] is an FK to Lexemes; [ruleId] is an FK to MorphologicalRules.
+/// [overrideForm] is the irregular surface form to use instead of the rule output.
+/// [ruleSourceSnapshot] records the [MorphologicalRules.source] value at exception
+/// creation time so stale exceptions can be detected when the rule is later edited.
+class MorphologicalRuleExceptions extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  IntColumn get lexemeId => integer()(); // FK to Lexemes
+  IntColumn get ruleId => integer()(); // FK to MorphologicalRules
+  TextColumn get overrideForm => text()(); // The irregular form
+  TextColumn get ruleSourceSnapshot => text()(); // source at time of exception creation
+}
+
 /// The lexeme table — supports derivation-aware morphology (Phase 2).
 ///
 /// - [ipa]: the underlying IPA representation of the word
@@ -129,8 +157,10 @@ class Lexemes extends Table {
     Lexemes,
     RewriteRules,
     ProjectSettings,
+    MorphologicalRules,
+    MorphologicalRuleExceptions,
   ],
-  daos: [PhonemeDao, NaturalClassDao, RomanizationDao, PhonotacticDao, RewriteRuleDao],
+  daos: [PhonemeDao, NaturalClassDao, RomanizationDao, PhonotacticDao, RewriteRuleDao, MorphologyDao],
 )
 class AppDatabase extends _$AppDatabase {
   /// Creates an AppDatabase with an injected [QueryExecutor].
@@ -140,7 +170,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase(super.e);
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration {
@@ -156,6 +186,11 @@ class AppDatabase extends _$AppDatabase {
         if (from < 3) {
           // v3: add project_settings table
           await m.createTable(projectSettings);
+        }
+        if (from < 4) {
+          // v4: add morphological_rules and morphological_rule_exceptions tables
+          await m.createTable(morphologicalRules);
+          await m.createTable(morphologicalRuleExceptions);
         }
       },
       beforeOpen: (details) async {
@@ -176,6 +211,24 @@ class AppDatabase extends _$AppDatabase {
           '"id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, '
           '"key" TEXT NOT NULL UNIQUE, '
           '"value" TEXT NOT NULL'
+          ')',
+        );
+        await customStatement(
+          'CREATE TABLE IF NOT EXISTS morphological_rules ('
+          '"id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, '
+          '"name" TEXT NOT NULL, '
+          '"source" TEXT NOT NULL, '
+          '"ordering" INTEGER NOT NULL DEFAULT 0, '
+          '"is_active" INTEGER NOT NULL DEFAULT 1'
+          ')',
+        );
+        await customStatement(
+          'CREATE TABLE IF NOT EXISTS morphological_rule_exceptions ('
+          '"id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, '
+          '"lexeme_id" INTEGER NOT NULL, '
+          '"rule_id" INTEGER NOT NULL, '
+          '"override_form" TEXT NOT NULL, '
+          '"rule_source_snapshot" TEXT NOT NULL'
           ')',
         );
       },

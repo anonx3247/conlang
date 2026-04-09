@@ -2752,6 +2752,723 @@ class ProjectSettingsCompanion extends UpdateCompanion<ProjectSetting> {
   }
 }
 
+class $MorphologicalRulesTable extends MorphologicalRules
+    with TableInfo<$MorphologicalRulesTable, MorphologicalRule> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $MorphologicalRulesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _nameMeta = const VerificationMeta('name');
+  @override
+  late final GeneratedColumn<String> name = GeneratedColumn<String>(
+    'name',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _sourceMeta = const VerificationMeta('source');
+  @override
+  late final GeneratedColumn<String> source = GeneratedColumn<String>(
+    'source',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _orderingMeta = const VerificationMeta(
+    'ordering',
+  );
+  @override
+  late final GeneratedColumn<int> ordering = GeneratedColumn<int>(
+    'ordering',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _isActiveMeta = const VerificationMeta(
+    'isActive',
+  );
+  @override
+  late final GeneratedColumn<bool> isActive = GeneratedColumn<bool>(
+    'is_active',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_active" IN (0, 1))',
+    ),
+    defaultValue: const Constant(true),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [id, name, source, ordering, isActive];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'morphological_rules';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<MorphologicalRule> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('name')) {
+      context.handle(
+        _nameMeta,
+        name.isAcceptableOrUnknown(data['name']!, _nameMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_nameMeta);
+    }
+    if (data.containsKey('source')) {
+      context.handle(
+        _sourceMeta,
+        source.isAcceptableOrUnknown(data['source']!, _sourceMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_sourceMeta);
+    }
+    if (data.containsKey('ordering')) {
+      context.handle(
+        _orderingMeta,
+        ordering.isAcceptableOrUnknown(data['ordering']!, _orderingMeta),
+      );
+    }
+    if (data.containsKey('is_active')) {
+      context.handle(
+        _isActiveMeta,
+        isActive.isAcceptableOrUnknown(data['is_active']!, _isActiveMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  MorphologicalRule map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return MorphologicalRule(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      name: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}name'],
+      )!,
+      source: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}source'],
+      )!,
+      ordering: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}ordering'],
+      )!,
+      isActive: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_active'],
+      )!,
+    );
+  }
+
+  @override
+  $MorphologicalRulesTable createAlias(String alias) {
+    return $MorphologicalRulesTable(attachedDatabase, alias);
+  }
+}
+
+class MorphologicalRule extends DataClass
+    implements Insertable<MorphologicalRule> {
+  final int id;
+  final String name;
+  final String source;
+  final int ordering;
+  final bool isActive;
+  const MorphologicalRule({
+    required this.id,
+    required this.name,
+    required this.source,
+    required this.ordering,
+    required this.isActive,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['name'] = Variable<String>(name);
+    map['source'] = Variable<String>(source);
+    map['ordering'] = Variable<int>(ordering);
+    map['is_active'] = Variable<bool>(isActive);
+    return map;
+  }
+
+  MorphologicalRulesCompanion toCompanion(bool nullToAbsent) {
+    return MorphologicalRulesCompanion(
+      id: Value(id),
+      name: Value(name),
+      source: Value(source),
+      ordering: Value(ordering),
+      isActive: Value(isActive),
+    );
+  }
+
+  factory MorphologicalRule.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return MorphologicalRule(
+      id: serializer.fromJson<int>(json['id']),
+      name: serializer.fromJson<String>(json['name']),
+      source: serializer.fromJson<String>(json['source']),
+      ordering: serializer.fromJson<int>(json['ordering']),
+      isActive: serializer.fromJson<bool>(json['isActive']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'name': serializer.toJson<String>(name),
+      'source': serializer.toJson<String>(source),
+      'ordering': serializer.toJson<int>(ordering),
+      'isActive': serializer.toJson<bool>(isActive),
+    };
+  }
+
+  MorphologicalRule copyWith({
+    int? id,
+    String? name,
+    String? source,
+    int? ordering,
+    bool? isActive,
+  }) => MorphologicalRule(
+    id: id ?? this.id,
+    name: name ?? this.name,
+    source: source ?? this.source,
+    ordering: ordering ?? this.ordering,
+    isActive: isActive ?? this.isActive,
+  );
+  MorphologicalRule copyWithCompanion(MorphologicalRulesCompanion data) {
+    return MorphologicalRule(
+      id: data.id.present ? data.id.value : this.id,
+      name: data.name.present ? data.name.value : this.name,
+      source: data.source.present ? data.source.value : this.source,
+      ordering: data.ordering.present ? data.ordering.value : this.ordering,
+      isActive: data.isActive.present ? data.isActive.value : this.isActive,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('MorphologicalRule(')
+          ..write('id: $id, ')
+          ..write('name: $name, ')
+          ..write('source: $source, ')
+          ..write('ordering: $ordering, ')
+          ..write('isActive: $isActive')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, name, source, ordering, isActive);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is MorphologicalRule &&
+          other.id == this.id &&
+          other.name == this.name &&
+          other.source == this.source &&
+          other.ordering == this.ordering &&
+          other.isActive == this.isActive);
+}
+
+class MorphologicalRulesCompanion extends UpdateCompanion<MorphologicalRule> {
+  final Value<int> id;
+  final Value<String> name;
+  final Value<String> source;
+  final Value<int> ordering;
+  final Value<bool> isActive;
+  const MorphologicalRulesCompanion({
+    this.id = const Value.absent(),
+    this.name = const Value.absent(),
+    this.source = const Value.absent(),
+    this.ordering = const Value.absent(),
+    this.isActive = const Value.absent(),
+  });
+  MorphologicalRulesCompanion.insert({
+    this.id = const Value.absent(),
+    required String name,
+    required String source,
+    this.ordering = const Value.absent(),
+    this.isActive = const Value.absent(),
+  }) : name = Value(name),
+       source = Value(source);
+  static Insertable<MorphologicalRule> custom({
+    Expression<int>? id,
+    Expression<String>? name,
+    Expression<String>? source,
+    Expression<int>? ordering,
+    Expression<bool>? isActive,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (name != null) 'name': name,
+      if (source != null) 'source': source,
+      if (ordering != null) 'ordering': ordering,
+      if (isActive != null) 'is_active': isActive,
+    });
+  }
+
+  MorphologicalRulesCompanion copyWith({
+    Value<int>? id,
+    Value<String>? name,
+    Value<String>? source,
+    Value<int>? ordering,
+    Value<bool>? isActive,
+  }) {
+    return MorphologicalRulesCompanion(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      source: source ?? this.source,
+      ordering: ordering ?? this.ordering,
+      isActive: isActive ?? this.isActive,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (name.present) {
+      map['name'] = Variable<String>(name.value);
+    }
+    if (source.present) {
+      map['source'] = Variable<String>(source.value);
+    }
+    if (ordering.present) {
+      map['ordering'] = Variable<int>(ordering.value);
+    }
+    if (isActive.present) {
+      map['is_active'] = Variable<bool>(isActive.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('MorphologicalRulesCompanion(')
+          ..write('id: $id, ')
+          ..write('name: $name, ')
+          ..write('source: $source, ')
+          ..write('ordering: $ordering, ')
+          ..write('isActive: $isActive')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $MorphologicalRuleExceptionsTable extends MorphologicalRuleExceptions
+    with
+        TableInfo<
+          $MorphologicalRuleExceptionsTable,
+          MorphologicalRuleException
+        > {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $MorphologicalRuleExceptionsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _lexemeIdMeta = const VerificationMeta(
+    'lexemeId',
+  );
+  @override
+  late final GeneratedColumn<int> lexemeId = GeneratedColumn<int>(
+    'lexeme_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _ruleIdMeta = const VerificationMeta('ruleId');
+  @override
+  late final GeneratedColumn<int> ruleId = GeneratedColumn<int>(
+    'rule_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _overrideFormMeta = const VerificationMeta(
+    'overrideForm',
+  );
+  @override
+  late final GeneratedColumn<String> overrideForm = GeneratedColumn<String>(
+    'override_form',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _ruleSourceSnapshotMeta =
+      const VerificationMeta('ruleSourceSnapshot');
+  @override
+  late final GeneratedColumn<String> ruleSourceSnapshot =
+      GeneratedColumn<String>(
+        'rule_source_snapshot',
+        aliasedName,
+        false,
+        type: DriftSqlType.string,
+        requiredDuringInsert: true,
+      );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    lexemeId,
+    ruleId,
+    overrideForm,
+    ruleSourceSnapshot,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'morphological_rule_exceptions';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<MorphologicalRuleException> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('lexeme_id')) {
+      context.handle(
+        _lexemeIdMeta,
+        lexemeId.isAcceptableOrUnknown(data['lexeme_id']!, _lexemeIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_lexemeIdMeta);
+    }
+    if (data.containsKey('rule_id')) {
+      context.handle(
+        _ruleIdMeta,
+        ruleId.isAcceptableOrUnknown(data['rule_id']!, _ruleIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_ruleIdMeta);
+    }
+    if (data.containsKey('override_form')) {
+      context.handle(
+        _overrideFormMeta,
+        overrideForm.isAcceptableOrUnknown(
+          data['override_form']!,
+          _overrideFormMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_overrideFormMeta);
+    }
+    if (data.containsKey('rule_source_snapshot')) {
+      context.handle(
+        _ruleSourceSnapshotMeta,
+        ruleSourceSnapshot.isAcceptableOrUnknown(
+          data['rule_source_snapshot']!,
+          _ruleSourceSnapshotMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_ruleSourceSnapshotMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  MorphologicalRuleException map(
+    Map<String, dynamic> data, {
+    String? tablePrefix,
+  }) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return MorphologicalRuleException(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      lexemeId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}lexeme_id'],
+      )!,
+      ruleId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}rule_id'],
+      )!,
+      overrideForm: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}override_form'],
+      )!,
+      ruleSourceSnapshot: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}rule_source_snapshot'],
+      )!,
+    );
+  }
+
+  @override
+  $MorphologicalRuleExceptionsTable createAlias(String alias) {
+    return $MorphologicalRuleExceptionsTable(attachedDatabase, alias);
+  }
+}
+
+class MorphologicalRuleException extends DataClass
+    implements Insertable<MorphologicalRuleException> {
+  final int id;
+  final int lexemeId;
+  final int ruleId;
+  final String overrideForm;
+  final String ruleSourceSnapshot;
+  const MorphologicalRuleException({
+    required this.id,
+    required this.lexemeId,
+    required this.ruleId,
+    required this.overrideForm,
+    required this.ruleSourceSnapshot,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['lexeme_id'] = Variable<int>(lexemeId);
+    map['rule_id'] = Variable<int>(ruleId);
+    map['override_form'] = Variable<String>(overrideForm);
+    map['rule_source_snapshot'] = Variable<String>(ruleSourceSnapshot);
+    return map;
+  }
+
+  MorphologicalRuleExceptionsCompanion toCompanion(bool nullToAbsent) {
+    return MorphologicalRuleExceptionsCompanion(
+      id: Value(id),
+      lexemeId: Value(lexemeId),
+      ruleId: Value(ruleId),
+      overrideForm: Value(overrideForm),
+      ruleSourceSnapshot: Value(ruleSourceSnapshot),
+    );
+  }
+
+  factory MorphologicalRuleException.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return MorphologicalRuleException(
+      id: serializer.fromJson<int>(json['id']),
+      lexemeId: serializer.fromJson<int>(json['lexemeId']),
+      ruleId: serializer.fromJson<int>(json['ruleId']),
+      overrideForm: serializer.fromJson<String>(json['overrideForm']),
+      ruleSourceSnapshot: serializer.fromJson<String>(
+        json['ruleSourceSnapshot'],
+      ),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'lexemeId': serializer.toJson<int>(lexemeId),
+      'ruleId': serializer.toJson<int>(ruleId),
+      'overrideForm': serializer.toJson<String>(overrideForm),
+      'ruleSourceSnapshot': serializer.toJson<String>(ruleSourceSnapshot),
+    };
+  }
+
+  MorphologicalRuleException copyWith({
+    int? id,
+    int? lexemeId,
+    int? ruleId,
+    String? overrideForm,
+    String? ruleSourceSnapshot,
+  }) => MorphologicalRuleException(
+    id: id ?? this.id,
+    lexemeId: lexemeId ?? this.lexemeId,
+    ruleId: ruleId ?? this.ruleId,
+    overrideForm: overrideForm ?? this.overrideForm,
+    ruleSourceSnapshot: ruleSourceSnapshot ?? this.ruleSourceSnapshot,
+  );
+  MorphologicalRuleException copyWithCompanion(
+    MorphologicalRuleExceptionsCompanion data,
+  ) {
+    return MorphologicalRuleException(
+      id: data.id.present ? data.id.value : this.id,
+      lexemeId: data.lexemeId.present ? data.lexemeId.value : this.lexemeId,
+      ruleId: data.ruleId.present ? data.ruleId.value : this.ruleId,
+      overrideForm: data.overrideForm.present
+          ? data.overrideForm.value
+          : this.overrideForm,
+      ruleSourceSnapshot: data.ruleSourceSnapshot.present
+          ? data.ruleSourceSnapshot.value
+          : this.ruleSourceSnapshot,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('MorphologicalRuleException(')
+          ..write('id: $id, ')
+          ..write('lexemeId: $lexemeId, ')
+          ..write('ruleId: $ruleId, ')
+          ..write('overrideForm: $overrideForm, ')
+          ..write('ruleSourceSnapshot: $ruleSourceSnapshot')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(id, lexemeId, ruleId, overrideForm, ruleSourceSnapshot);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is MorphologicalRuleException &&
+          other.id == this.id &&
+          other.lexemeId == this.lexemeId &&
+          other.ruleId == this.ruleId &&
+          other.overrideForm == this.overrideForm &&
+          other.ruleSourceSnapshot == this.ruleSourceSnapshot);
+}
+
+class MorphologicalRuleExceptionsCompanion
+    extends UpdateCompanion<MorphologicalRuleException> {
+  final Value<int> id;
+  final Value<int> lexemeId;
+  final Value<int> ruleId;
+  final Value<String> overrideForm;
+  final Value<String> ruleSourceSnapshot;
+  const MorphologicalRuleExceptionsCompanion({
+    this.id = const Value.absent(),
+    this.lexemeId = const Value.absent(),
+    this.ruleId = const Value.absent(),
+    this.overrideForm = const Value.absent(),
+    this.ruleSourceSnapshot = const Value.absent(),
+  });
+  MorphologicalRuleExceptionsCompanion.insert({
+    this.id = const Value.absent(),
+    required int lexemeId,
+    required int ruleId,
+    required String overrideForm,
+    required String ruleSourceSnapshot,
+  }) : lexemeId = Value(lexemeId),
+       ruleId = Value(ruleId),
+       overrideForm = Value(overrideForm),
+       ruleSourceSnapshot = Value(ruleSourceSnapshot);
+  static Insertable<MorphologicalRuleException> custom({
+    Expression<int>? id,
+    Expression<int>? lexemeId,
+    Expression<int>? ruleId,
+    Expression<String>? overrideForm,
+    Expression<String>? ruleSourceSnapshot,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (lexemeId != null) 'lexeme_id': lexemeId,
+      if (ruleId != null) 'rule_id': ruleId,
+      if (overrideForm != null) 'override_form': overrideForm,
+      if (ruleSourceSnapshot != null)
+        'rule_source_snapshot': ruleSourceSnapshot,
+    });
+  }
+
+  MorphologicalRuleExceptionsCompanion copyWith({
+    Value<int>? id,
+    Value<int>? lexemeId,
+    Value<int>? ruleId,
+    Value<String>? overrideForm,
+    Value<String>? ruleSourceSnapshot,
+  }) {
+    return MorphologicalRuleExceptionsCompanion(
+      id: id ?? this.id,
+      lexemeId: lexemeId ?? this.lexemeId,
+      ruleId: ruleId ?? this.ruleId,
+      overrideForm: overrideForm ?? this.overrideForm,
+      ruleSourceSnapshot: ruleSourceSnapshot ?? this.ruleSourceSnapshot,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (lexemeId.present) {
+      map['lexeme_id'] = Variable<int>(lexemeId.value);
+    }
+    if (ruleId.present) {
+      map['rule_id'] = Variable<int>(ruleId.value);
+    }
+    if (overrideForm.present) {
+      map['override_form'] = Variable<String>(overrideForm.value);
+    }
+    if (ruleSourceSnapshot.present) {
+      map['rule_source_snapshot'] = Variable<String>(ruleSourceSnapshot.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('MorphologicalRuleExceptionsCompanion(')
+          ..write('id: $id, ')
+          ..write('lexemeId: $lexemeId, ')
+          ..write('ruleId: $ruleId, ')
+          ..write('overrideForm: $overrideForm, ')
+          ..write('ruleSourceSnapshot: $ruleSourceSnapshot')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -2768,6 +3485,10 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $ProjectSettingsTable projectSettings = $ProjectSettingsTable(
     this,
   );
+  late final $MorphologicalRulesTable morphologicalRules =
+      $MorphologicalRulesTable(this);
+  late final $MorphologicalRuleExceptionsTable morphologicalRuleExceptions =
+      $MorphologicalRuleExceptionsTable(this);
   late final PhonemeDao phonemeDao = PhonemeDao(this as AppDatabase);
   late final NaturalClassDao naturalClassDao = NaturalClassDao(
     this as AppDatabase,
@@ -2781,6 +3502,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final RewriteRuleDao rewriteRuleDao = RewriteRuleDao(
     this as AppDatabase,
   );
+  late final MorphologyDao morphologyDao = MorphologyDao(this as AppDatabase);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -2794,6 +3516,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     lexemes,
     rewriteRules,
     projectSettings,
+    morphologicalRules,
+    morphologicalRuleExceptions,
   ];
 }
 
@@ -4374,6 +5098,430 @@ typedef $$ProjectSettingsTableProcessedTableManager =
       ProjectSetting,
       PrefetchHooks Function()
     >;
+typedef $$MorphologicalRulesTableCreateCompanionBuilder =
+    MorphologicalRulesCompanion Function({
+      Value<int> id,
+      required String name,
+      required String source,
+      Value<int> ordering,
+      Value<bool> isActive,
+    });
+typedef $$MorphologicalRulesTableUpdateCompanionBuilder =
+    MorphologicalRulesCompanion Function({
+      Value<int> id,
+      Value<String> name,
+      Value<String> source,
+      Value<int> ordering,
+      Value<bool> isActive,
+    });
+
+class $$MorphologicalRulesTableFilterComposer
+    extends Composer<_$AppDatabase, $MorphologicalRulesTable> {
+  $$MorphologicalRulesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get source => $composableBuilder(
+    column: $table.source,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get ordering => $composableBuilder(
+    column: $table.ordering,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isActive => $composableBuilder(
+    column: $table.isActive,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$MorphologicalRulesTableOrderingComposer
+    extends Composer<_$AppDatabase, $MorphologicalRulesTable> {
+  $$MorphologicalRulesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get source => $composableBuilder(
+    column: $table.source,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get ordering => $composableBuilder(
+    column: $table.ordering,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get isActive => $composableBuilder(
+    column: $table.isActive,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$MorphologicalRulesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $MorphologicalRulesTable> {
+  $$MorphologicalRulesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumn<String> get source =>
+      $composableBuilder(column: $table.source, builder: (column) => column);
+
+  GeneratedColumn<int> get ordering =>
+      $composableBuilder(column: $table.ordering, builder: (column) => column);
+
+  GeneratedColumn<bool> get isActive =>
+      $composableBuilder(column: $table.isActive, builder: (column) => column);
+}
+
+class $$MorphologicalRulesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $MorphologicalRulesTable,
+          MorphologicalRule,
+          $$MorphologicalRulesTableFilterComposer,
+          $$MorphologicalRulesTableOrderingComposer,
+          $$MorphologicalRulesTableAnnotationComposer,
+          $$MorphologicalRulesTableCreateCompanionBuilder,
+          $$MorphologicalRulesTableUpdateCompanionBuilder,
+          (
+            MorphologicalRule,
+            BaseReferences<
+              _$AppDatabase,
+              $MorphologicalRulesTable,
+              MorphologicalRule
+            >,
+          ),
+          MorphologicalRule,
+          PrefetchHooks Function()
+        > {
+  $$MorphologicalRulesTableTableManager(
+    _$AppDatabase db,
+    $MorphologicalRulesTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$MorphologicalRulesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$MorphologicalRulesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$MorphologicalRulesTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<String> name = const Value.absent(),
+                Value<String> source = const Value.absent(),
+                Value<int> ordering = const Value.absent(),
+                Value<bool> isActive = const Value.absent(),
+              }) => MorphologicalRulesCompanion(
+                id: id,
+                name: name,
+                source: source,
+                ordering: ordering,
+                isActive: isActive,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required String name,
+                required String source,
+                Value<int> ordering = const Value.absent(),
+                Value<bool> isActive = const Value.absent(),
+              }) => MorphologicalRulesCompanion.insert(
+                id: id,
+                name: name,
+                source: source,
+                ordering: ordering,
+                isActive: isActive,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$MorphologicalRulesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $MorphologicalRulesTable,
+      MorphologicalRule,
+      $$MorphologicalRulesTableFilterComposer,
+      $$MorphologicalRulesTableOrderingComposer,
+      $$MorphologicalRulesTableAnnotationComposer,
+      $$MorphologicalRulesTableCreateCompanionBuilder,
+      $$MorphologicalRulesTableUpdateCompanionBuilder,
+      (
+        MorphologicalRule,
+        BaseReferences<
+          _$AppDatabase,
+          $MorphologicalRulesTable,
+          MorphologicalRule
+        >,
+      ),
+      MorphologicalRule,
+      PrefetchHooks Function()
+    >;
+typedef $$MorphologicalRuleExceptionsTableCreateCompanionBuilder =
+    MorphologicalRuleExceptionsCompanion Function({
+      Value<int> id,
+      required int lexemeId,
+      required int ruleId,
+      required String overrideForm,
+      required String ruleSourceSnapshot,
+    });
+typedef $$MorphologicalRuleExceptionsTableUpdateCompanionBuilder =
+    MorphologicalRuleExceptionsCompanion Function({
+      Value<int> id,
+      Value<int> lexemeId,
+      Value<int> ruleId,
+      Value<String> overrideForm,
+      Value<String> ruleSourceSnapshot,
+    });
+
+class $$MorphologicalRuleExceptionsTableFilterComposer
+    extends Composer<_$AppDatabase, $MorphologicalRuleExceptionsTable> {
+  $$MorphologicalRuleExceptionsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get lexemeId => $composableBuilder(
+    column: $table.lexemeId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get ruleId => $composableBuilder(
+    column: $table.ruleId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get overrideForm => $composableBuilder(
+    column: $table.overrideForm,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get ruleSourceSnapshot => $composableBuilder(
+    column: $table.ruleSourceSnapshot,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$MorphologicalRuleExceptionsTableOrderingComposer
+    extends Composer<_$AppDatabase, $MorphologicalRuleExceptionsTable> {
+  $$MorphologicalRuleExceptionsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get lexemeId => $composableBuilder(
+    column: $table.lexemeId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get ruleId => $composableBuilder(
+    column: $table.ruleId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get overrideForm => $composableBuilder(
+    column: $table.overrideForm,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get ruleSourceSnapshot => $composableBuilder(
+    column: $table.ruleSourceSnapshot,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$MorphologicalRuleExceptionsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $MorphologicalRuleExceptionsTable> {
+  $$MorphologicalRuleExceptionsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<int> get lexemeId =>
+      $composableBuilder(column: $table.lexemeId, builder: (column) => column);
+
+  GeneratedColumn<int> get ruleId =>
+      $composableBuilder(column: $table.ruleId, builder: (column) => column);
+
+  GeneratedColumn<String> get overrideForm => $composableBuilder(
+    column: $table.overrideForm,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get ruleSourceSnapshot => $composableBuilder(
+    column: $table.ruleSourceSnapshot,
+    builder: (column) => column,
+  );
+}
+
+class $$MorphologicalRuleExceptionsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $MorphologicalRuleExceptionsTable,
+          MorphologicalRuleException,
+          $$MorphologicalRuleExceptionsTableFilterComposer,
+          $$MorphologicalRuleExceptionsTableOrderingComposer,
+          $$MorphologicalRuleExceptionsTableAnnotationComposer,
+          $$MorphologicalRuleExceptionsTableCreateCompanionBuilder,
+          $$MorphologicalRuleExceptionsTableUpdateCompanionBuilder,
+          (
+            MorphologicalRuleException,
+            BaseReferences<
+              _$AppDatabase,
+              $MorphologicalRuleExceptionsTable,
+              MorphologicalRuleException
+            >,
+          ),
+          MorphologicalRuleException,
+          PrefetchHooks Function()
+        > {
+  $$MorphologicalRuleExceptionsTableTableManager(
+    _$AppDatabase db,
+    $MorphologicalRuleExceptionsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$MorphologicalRuleExceptionsTableFilterComposer(
+                $db: db,
+                $table: table,
+              ),
+          createOrderingComposer: () =>
+              $$MorphologicalRuleExceptionsTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$MorphologicalRuleExceptionsTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<int> lexemeId = const Value.absent(),
+                Value<int> ruleId = const Value.absent(),
+                Value<String> overrideForm = const Value.absent(),
+                Value<String> ruleSourceSnapshot = const Value.absent(),
+              }) => MorphologicalRuleExceptionsCompanion(
+                id: id,
+                lexemeId: lexemeId,
+                ruleId: ruleId,
+                overrideForm: overrideForm,
+                ruleSourceSnapshot: ruleSourceSnapshot,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required int lexemeId,
+                required int ruleId,
+                required String overrideForm,
+                required String ruleSourceSnapshot,
+              }) => MorphologicalRuleExceptionsCompanion.insert(
+                id: id,
+                lexemeId: lexemeId,
+                ruleId: ruleId,
+                overrideForm: overrideForm,
+                ruleSourceSnapshot: ruleSourceSnapshot,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$MorphologicalRuleExceptionsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $MorphologicalRuleExceptionsTable,
+      MorphologicalRuleException,
+      $$MorphologicalRuleExceptionsTableFilterComposer,
+      $$MorphologicalRuleExceptionsTableOrderingComposer,
+      $$MorphologicalRuleExceptionsTableAnnotationComposer,
+      $$MorphologicalRuleExceptionsTableCreateCompanionBuilder,
+      $$MorphologicalRuleExceptionsTableUpdateCompanionBuilder,
+      (
+        MorphologicalRuleException,
+        BaseReferences<
+          _$AppDatabase,
+          $MorphologicalRuleExceptionsTable,
+          MorphologicalRuleException
+        >,
+      ),
+      MorphologicalRuleException,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -4397,4 +5545,12 @@ class $AppDatabaseManager {
       $$RewriteRulesTableTableManager(_db, _db.rewriteRules);
   $$ProjectSettingsTableTableManager get projectSettings =>
       $$ProjectSettingsTableTableManager(_db, _db.projectSettings);
+  $$MorphologicalRulesTableTableManager get morphologicalRules =>
+      $$MorphologicalRulesTableTableManager(_db, _db.morphologicalRules);
+  $$MorphologicalRuleExceptionsTableTableManager
+  get morphologicalRuleExceptions =>
+      $$MorphologicalRuleExceptionsTableTableManager(
+        _db,
+        _db.morphologicalRuleExceptions,
+      );
 }
