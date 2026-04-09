@@ -9,12 +9,12 @@ See: .planning/PROJECT.md (updated 2026-04-08)
 
 ## Current Position
 
-Phase: 2 of 6 (Morphology Engine) — gap closure in progress
-Plan: 7 of 10 in current phase (gap closure plans 05-10 active)
-Status: Gap closure plan 07 complete. Rule reordering (UAT gap 3) closed — up/down buttons on rule cards, swapOrdering DAO method, persists to DB.
-Last activity: 2026-04-09 — Phase 2 Plan 07: rule reordering via up/down buttons, 2 tasks, 2 files
+Phase: 2 of 6 (Morphology Engine) — COMPLETE
+Plan: 10 of 10 in current phase (all gap closure plans 05-10 complete)
+Status: Plan 10 complete. Preview panel: phonotactic violation highlighting (wavy red underline + tooltip) and multi-rule stack mode (layers toggle). UAT gaps 8 and 9 closed. All Phase 2 plans done.
+Last activity: 2026-04-09 — Phase 2 Plan 10: preview panel violation highlighting and stack mode, 2 tasks, 1 file
 
-Progress: [█████░░░░░] 43% (19/44 total plans)
+Progress: [█████░░░░░] 45% (20/44 total plans)
 
 ## Performance Metrics
 
@@ -112,6 +112,9 @@ Recent decisions affecting current work:
 - [Phase 02-morphology-engine]: 02-07: New rules retain ordering=0 default; users can move them down — avoids expanding scope to rule_editor_dialog.dart
 - [Phase 02-morphology-engine]: 02-06: IpaTextField used conditionally in condition value field — only for endsWithLiteral/startsWithLiteral, not class-based conditions
 - [Phase 02-morphology-engine]: 02-06: Regenerate button added to _emptyState as well as main preview view — always visible regardless of rule completeness
+- [Phase 02-morphology-engine]: 02-10: ref.read inside _evaluate() for constraints/rule list — avoids extra rebuilds; _evaluate is already on 300ms debounce timer
+- [Phase 02-morphology-engine]: 02-10: Stack mode skips MorphNoMatch rules and continues with current form — no-match is a no-op, not an error; preserves partial chain results
+- [Phase 02-morphology-engine]: 02-10: Stack mode reads morphologicalRuleListProvider via ConsumerStatefulWidget ref — no widget param threading needed
 
 ### Pending Todos
 
@@ -128,5 +131,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-04-09
-Stopped at: Completed 02-06-PLAN.md — rule editor UX polish: plain-language OpType labels, IpaTextField in all IPA fields, regenerate button in preview panel.
+Stopped at: Completed 02-10-PLAN.md — preview panel phonotactic violation highlighting and multi-rule stacking. All Phase 2 plans complete.
 Resume file: None
