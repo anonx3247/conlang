@@ -8,9 +8,10 @@ import '../domain/phonotactic_dsl.dart';
 import '../domain/word_generator.dart';
 import 'phoneme_providers.dart';
 import 'phonotactic_dao.dart';
+import 'rewrite_rule_dao.dart';
 
 // ---------------------------------------------------------------------------
-// DAO provider
+// DAO providers
 // ---------------------------------------------------------------------------
 
 /// Returns the [PhonotacticDao] for the currently open project database, or
@@ -21,6 +22,26 @@ import 'phonotactic_dao.dart';
 final phonotacticDaoProvider = Provider<PhonotacticDao?>((ref) {
   final db = ref.watch(currentDatabaseProvider);
   return db?.phonotacticDao;
+});
+
+/// Returns the [RewriteRuleDao] for the currently open project database, or
+/// null when no project is open.
+final rewriteRuleDaoProvider = Provider<RewriteRuleDao?>((ref) {
+  final db = ref.watch(currentDatabaseProvider);
+  return db?.rewriteRuleDao;
+});
+
+// ---------------------------------------------------------------------------
+// Rewrite rule providers
+// ---------------------------------------------------------------------------
+
+/// Watches all rewrite rules in the current project.
+///
+/// Emits an empty list when no project is open.
+final rewriteRuleListProvider = StreamProvider<List<RewriteRule>>((ref) {
+  final dao = ref.watch(rewriteRuleDaoProvider);
+  if (dao == null) return Stream.value([]);
+  return dao.watchAll();
 });
 
 // ---------------------------------------------------------------------------

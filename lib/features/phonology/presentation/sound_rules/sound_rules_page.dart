@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/phonotactic_providers.dart';
 import 'constraint_editor.dart';
+import 'rewrite_rule_editor.dart';
 import 'template_editor.dart';
 import 'word_generator_panel.dart';
 
@@ -74,6 +75,10 @@ class SoundRulesPage extends ConsumerWidget {
                   Divider(height: 1),
                   SizedBox(height: 8),
                   ConstraintEditor(),
+                  SizedBox(height: 8),
+                  Divider(height: 1),
+                  SizedBox(height: 8),
+                  RewriteRuleEditor(),
                   SizedBox(height: 16),
                 ],
               ),

@@ -305,8 +305,8 @@ ParsedConstraint parseConstraintRule(String input) {
 ///   - `V -> [+nasal] / _N`  (vowel nasalization before nasal)
 ///   - `t -> ʔ / _#`  (glottal stop at word boundary)
 ///   - `a -> e / [stop]_`  (vowel raising after stops)
-class RewriteRule {
-  const RewriteRule({
+class PhonologicalRewriteRule {
+  const PhonologicalRewriteRule({
     required this.input,
     required this.output,
     required this.leftContext,
@@ -345,7 +345,7 @@ class ParsedRewriteRule {
       : rule = null;
 
   final String source;
-  final RewriteRule? rule;
+  final PhonologicalRewriteRule? rule;
   final String? error;
 
   bool get isValid => error == null;
@@ -465,7 +465,7 @@ ParsedRewriteRule parseRewriteRule(String input) {
 
   return ParsedRewriteRule.success(
     source: input,
-    rule: RewriteRule(
+    rule: PhonologicalRewriteRule(
       input: inputSlots,
       output: outputPart,
       leftContext: leftContext,
