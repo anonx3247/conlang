@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
+import '../features/morphology/presentation/morphology_shell.dart';
+import '../features/morphology/presentation/rules/rules_page.dart';
 import '../features/phonology/presentation/inventory/inventory_page.dart';
 import '../features/phonology/presentation/phonology_shell.dart';
 import '../features/phonology/presentation/sound_rules/sound_rules_page.dart';
@@ -93,7 +95,31 @@ GoRouter appRouter(Ref ref) {
             ],
           ),
 
-          // Branch 1: Lexicon (Phase 3 placeholder)
+          // Branch 1: Morphology (Phase 2)
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/morphology',
+                redirect: (_, _) => '/morphology/rules',
+              ),
+              StatefulShellRoute.indexedStack(
+                builder: (context, state, navigationShell) =>
+                    MorphologyShell(navigationShell: navigationShell),
+                branches: [
+                  StatefulShellBranch(
+                    routes: [
+                      GoRoute(
+                        path: '/morphology/rules',
+                        builder: (_, _) => const RulesPage(),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ],
+          ),
+
+          // Branch 2: Lexicon (Phase 3 placeholder)
           StatefulShellBranch(
             routes: [
               GoRoute(
@@ -103,7 +129,7 @@ GoRouter appRouter(Ref ref) {
             ],
           ),
 
-          // Branch 2: Grammar (Phase 4 placeholder)
+          // Branch 3: Grammar (Phase 4 placeholder)
           StatefulShellBranch(
             routes: [
               GoRoute(
@@ -113,7 +139,7 @@ GoRouter appRouter(Ref ref) {
             ],
           ),
 
-          // Branch 3: Culture (Phase 5 placeholder)
+          // Branch 4: Culture (Phase 5 placeholder)
           StatefulShellBranch(
             routes: [
               GoRoute(
