@@ -203,20 +203,28 @@ class _WordRow extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 3),
       child: Row(
         children: [
-          // IPA word (with violation underline if any)
-          ViolationText(
-            text: word,
-            violations: violations,
-          ),
-
-          // Romanized form
+          // Romanized form (primary) or plain IPA when no romanization
           if (romanized.isNotEmpty && romanized != word) ...[
-            const SizedBox(width: 8),
             Text(
-              '/ $romanized /',
+              romanized,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: cs.onSurface,
+              ),
+            ),
+            const SizedBox(width: 8),
+            // IPA in square brackets as secondary (with violation underline if any)
+            ViolationText(
+              text: '[$word]',
+              violations: violations,
               style: theme.textTheme.bodySmall?.copyWith(
                 color: cs.onSurface.withValues(alpha: 0.55),
               ),
+            ),
+          ] else ...[
+            // Plain IPA only (no romanization to show)
+            ViolationText(
+              text: word,
+              violations: violations,
             ),
           ],
 
