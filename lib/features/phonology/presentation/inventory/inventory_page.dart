@@ -5,7 +5,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../db/app_database.dart';
 import '../../../../features/project/data/project_providers.dart';
+import '../../data/ipa_data.dart';
 import '../../data/phoneme_providers.dart';
+import '../shared/vowel_trapezoid_painter.dart';
 import 'natural_class_editor.dart';
 import 'phoneme_edit_dialog.dart';
 import 'romanization_section.dart';
@@ -39,17 +41,6 @@ const _placeOrder = [
   'glottal',
 ];
 
-const _heightOrder = [
-  'close',
-  'near-close',
-  'close-mid',
-  'mid',
-  'open-mid',
-  'near-open',
-  'open',
-];
-
-const _backnessOrder = ['front', 'near-front', 'central', 'near-back', 'back'];
 
 String _shortPlace(String p) {
   const m = {
@@ -364,82 +355,144 @@ class _VowelSection extends ConsumerWidget {
   }
 }
 
-class _VowelChart extends ConsumerWidget {
+/// Maps a height string (from DB) to [VowelHeight] enum.
+VowelHeight? _heightFromString(String? h) {
+  switch (h) {
+    case 'close':
+      return VowelHeight.close;
+    case 'near-close':
+      return VowelHeight.nearClose;
+    case 'close-mid':
+      return VowelHeight.closeMid;
+    case 'mid':
+      return VowelHeight.mid;
+    case 'open-mid':
+      return VowelHeight.openMid;
+    case 'near-open':
+      return VowelHeight.nearOpen;
+    case 'open':
+      return VowelHeight.open;
+    default:
+      return null;
+  }
+}
+
+/// Maps a backness string (from DB) to [VowelBackness] enum.
+VowelBackness? _backnessFromString(String? b) {
+  switch (b) {
+    case 'front':
+      return VowelBackness.front;
+    case 'near-front':
+      return VowelBackness.nearFront;
+    case 'central':
+      return VowelBackness.central;
+    case 'near-back':
+      return VowelBackness.nearBack;
+    case 'back':
+      return VowelBackness.back;
+    default:
+      return null;
+  }
+}
+
+class _VowelChart extends StatelessWidget {
   const _VowelChart({required this.vowels});
 
   final List<Phoneme> vowels;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
-    const cellW = 88.0;
-    const cellH = 40.0;
-    const labelW = 90.0;
-    const headerH = 28.0;
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
 
-    final Map<String, Map<String, List<Phoneme>>> grid = {};
+    // Group vowels by (height, backness)
+    final Map<VowelHeight, Map<VowelBackness, List<Phoneme>>> grid = {};
     for (final v in vowels) {
-      final h = v.height ?? '';
-      final b = v.backness ?? '';
-      (grid[h] ??= {})[b] = [...((grid[h] ?? {})[b] ?? []), v];
+      final height = _heightFromString(v.height);
+      final backness = _backnessFromString(v.backness);
+      if (height == null || backness == null) {
+        debugPrint(
+          '_VowelChart: skipping vowel "${v.symbol}" — '
+          'unknown height="${v.height}" backness="${v.backness}"',
+        );
+        continue;
+      }
+      ((grid[height] ??= {})[backness] ??= []).add(v);
     }
 
-    final usedHeights = _heightOrder.where(grid.containsKey).toList();
-    final usedBackness = {for (final r in grid.values) ...r.keys};
-    final cols = _backnessOrder.where(usedBackness.contains).toList();
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // Scale trapezoid to available width; maintain ~2.2:1 aspect ratio
+        final width = constraints.maxWidth.clamp(200.0, double.infinity);
+        final height = (width / 2.2).clamp(0.0, 200.0);
+        final size = Size(width, height);
 
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const SizedBox(width: labelW),
-              ...cols.map(
-                (b) => SizedBox(
-                  width: cellW,
-                  height: headerH,
-                  child: Center(
-                    child: Text(
-                      b[0].toUpperCase() + b.substring(1),
-                      style: theme.textTheme.labelSmall?.copyWith(
-                        color: theme.colorScheme.onSurface.withValues(
-                          alpha: 0.55,
-                        ),
-                      ),
-                    ),
-                  ),
+        // Build positioned phoneme chip widgets
+        final positionedChips = <Widget>[];
+
+        for (final heightEntry in grid.entries) {
+          for (final backnessEntry in heightEntry.value.entries) {
+            final phonemesHere = backnessEntry.value;
+            if (phonemesHere.isEmpty) continue;
+
+            // Sort: unrounded first, then rounded (IPA convention)
+            final sorted = List<Phoneme>.from(phonemesHere)
+              ..sort((a, b) =>
+                  ((a.rounded ?? false) ? 1 : 0)
+                      .compareTo((b.rounded ?? false) ? 1 : 0));
+
+            final anchor = vowelPosition(
+              heightEntry.key,
+              backnessEntry.key,
+              size,
+            );
+
+            // Estimate total width: each chip ~34px (6px h-pad * 2 + symbol + margin)
+            const chipW = 34.0;
+            const chipH = 28.0;
+            final totalW = sorted.length * chipW;
+
+            final left = (anchor.dx - totalW / 2).clamp(0.0, width - totalW);
+            final top = (anchor.dy - chipH / 2).clamp(0.0, height - chipH);
+
+            positionedChips.add(
+              Positioned(
+                left: left,
+                top: top,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: sorted
+                      .map((p) => _PhonemeChip(
+                            phoneme: p,
+                            onTap: () => showDialog(
+                              context: context,
+                              builder: (_) => PhonemeEditDialog(phoneme: p),
+                            ),
+                          ))
+                      .toList(),
                 ),
               ),
+            );
+          }
+        }
+
+        return SizedBox(
+          width: width,
+          height: height,
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              CustomPaint(
+                size: size,
+                painter: VowelTrapezoidPainter(
+                  outlineColor: colorScheme.outline.withValues(alpha: 0.5),
+                  guideColor: colorScheme.outline.withValues(alpha: 0.15),
+                ),
+              ),
+              ...positionedChips,
             ],
           ),
-          ...usedHeights.map((height) => Row(
-                children: [
-                  SizedBox(
-                    width: labelW,
-                    height: cellH,
-                    child: Align(
-                      alignment: Alignment.centerLeft,
-                      child: Text(
-                        height[0].toUpperCase() + height.substring(1),
-                        style: theme.textTheme.bodySmall,
-                      ),
-                    ),
-                  ),
-                  ...cols.map((backness) {
-                    final phonemesHere = (grid[height] ?? {})[backness] ?? [];
-                    return _PhonemeCell(
-                      phonemes: phonemesHere,
-                      width: cellW,
-                      height: cellH,
-                      sortByRoundedness: true,
-                    );
-                  }),
-                ],
-              )),
-        ],
-      ),
+        );
+      },
     );
   }
 }
@@ -453,13 +506,11 @@ class _PhonemeCell extends ConsumerWidget {
     required this.phonemes,
     required this.width,
     required this.height,
-    this.sortByRoundedness = false,
   });
 
   final List<Phoneme> phonemes;
   final double width;
   final double height;
-  final bool sortByRoundedness;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -481,20 +532,12 @@ class _PhonemeCell extends ConsumerWidget {
       );
     }
 
-    final sorted = List<Phoneme>.from(phonemes);
-    if (sortByRoundedness) {
-      sorted.sort(
-        (a, b) => ((a.rounded ?? false) ? 1 : 0).compareTo(
-          (b.rounded ?? false) ? 1 : 0,
-        ),
-      );
-    } else {
-      sorted.sort(
+    final sorted = List<Phoneme>.from(phonemes)
+      ..sort(
         (a, b) => (a.voicing == 'voiceless' ? 0 : 1).compareTo(
           b.voicing == 'voiceless' ? 0 : 1,
         ),
       );
-    }
 
     return SizedBox(
       width: width,
