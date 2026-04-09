@@ -8,12 +8,15 @@ import 'package:conlang_workbench/features/phonology/domain/word_generator.dart'
 // ---------------------------------------------------------------------------
 
 /// Simple inventory: consonants k,t,b,m,n,l,s — vowels a,e,i,o,u
+/// Natural classes: 'nasal' = [m, n], 'stop' = [k, t, b]
 final testInventory = PhonemeInventory(
   consonants: ['k', 't', 'b', 'm', 'n', 'l', 's'],
   vowels: ['a', 'e', 'i', 'o', 'u'],
   naturalClasses: {
     'c': ['k', 't', 'b', 'm', 'n', 'l', 's'],
     'v': ['a', 'e', 'i', 'o', 'u'],
+    'nasal': ['m', 'n'],
+    'stop': ['k', 't', 'b'],
   },
 );
 
@@ -24,7 +27,7 @@ MorphologicalRule simpleRule(List<MorphOperation> ops, {String source = ''}) {
   return MorphologicalRule(
     id: 0,
     name: 'test',
-    branches: [MorphBranch(condition: null, operations: ops)],
+    branches: [MorphBranch(conditions: const [], operations: ops)],
     source: source,
   );
 }
@@ -116,80 +119,41 @@ void main() {
   });
 
   // -------------------------------------------------------------------------
-  // 9. Branching - literal condition
+  // 9. Branching - PatternCond literal suffix / prefix
   // -------------------------------------------------------------------------
-  test('Branching with EndsWithLiteralCond selects correct branch', () {
+  test('Branching with PatternCond(o_) selects correct branch', () {
     // Branch 1: ends with 'o' -> remove 'o', add 'in'
     // Branch 2 (default): add 'in'
-    // 'kamo' should hit branch 1 -> remove 'o' -> 'kam' -> add 'in' -> 'kamin'
+    // 'kamo' should hit branch 1 -> -o -> 'kam' -> +in -> 'kamin'
     // 'kam' should hit branch 2 -> add 'in' -> 'kamin'
     final rule = MorphologicalRule(
       id: 0,
       name: 'test',
       branches: [
         MorphBranch(
-          condition: const EndsWithLiteralCond('o'),
-          // Remove 'o' by using SuppleteOp-style won't work; we need a trim op.
-          // Instead: use a suffix of '' is wrong. Use the engine to strip 'o'
-          // then add 'in'. We model "remove trailing o" as: ablaut from the
-          // full root. Actually we need a RemoveSuffixOp or the test should
-          // reflect realistic expectations. Per plan: "remove 'o' then suffix 'in'"
-          // The plan doesn't define RemoveSuffixOp explicitly. We'll use a
-          // combination: SuppleteOp that computes from root minus last char is
-          // also not right. Let's model this as the engine trims the condition
-          // suffix and applies suffix 'in'.
-          // Per plan test 9: 'kamo' -> 'kamin'. This means: strip 'o', add 'in'.
-          // We need a way to express this. In the plan the op is "-o +in" in DSL.
-          // For the data model test we'll use two ops: first SuffixOp isn't right.
-          // The plan says "remove 'o' then suffix 'in'" — we need a strip op.
-          // Since the plan didn't spec a StripSuffixOp in the sealed hierarchy
-          // but the test expects this behavior, we'll model it as a workaround:
-          // The engine, when it sees EndsWithLiteralCond('o') match, can
-          // automatically strip the matched suffix before applying ops.
-          // That would make branching conditions context-aware in a specific way.
-          // OR: we add a RemoveSuffixOp to the sealed class. The plan says
-          // "-o" in DSL format which would be a RemoveSuffixOp('o').
-          // The plan's must_haves seal class mentions 7 ops: PrefixOp, SuffixOp,
-          // InfixOp, AblautOp, TemplateOp, RedupOp, SuppleteOp. No RemoveSuffixOp.
-          // Re-read plan task 9: [remove 'o' then suffix 'in'] with 'kamo'->'kamin'
-          // and 'kam'->'kamin'. Both produce 'kamin'. This works if:
-          // branch1(ends-with-o): strip last char + suffix 'in' (uses AblautOp? No)
-          // OR the engine strips the condition literal before applying ops.
-          // Simplest model for the test: AblautOp(from:'o', to:'') + SuffixOp('in')
-          // But AblautOp replaces ALL 'o's, not just last.
-          // The cleaner model: use the condition literal as an implicit strip.
-          // Let's test with the explicit data model approach most aligned with
-          // the plan: use a SuffixOp('in') for both branches (both yield 'kamin')
-          // and use EndsWithLiteralCond to select. For the 'kamo' case, we strip
-          // 'o' and add 'in' = 'kamin'. We'll model stripping as AblautOp but
-          // since 'a' is also 'a' in 'kamo', it's only the terminal 'o'.
-          // Final decision: model the strip as the engine feature where a matched
-          // EndsWithLiteral condition causes the suffix to be stripped from the
-          // working form before ops are applied. This is tested here.
-          operations: [const SuffixOp('in')],
+          conditions: const [PatternCond('o_')],
+          operations: const [RemoveSuffixOp('o'), SuffixOp('in')],
         ),
         MorphBranch(
-          condition: null,
-          operations: [const SuffixOp('in')],
+          conditions: const [],
+          operations: const [SuffixOp('in')],
         ),
       ],
       source: '',
     );
     final result1 = engine.applyRule(rule, 'kamo', testInventory);
     expect(result1, isA<MorphSuccess>());
-    // 'kamo' ends with 'o': strip 'o' -> 'kam', then suffix 'in' -> 'kamin'
     expect((result1 as MorphSuccess).form, equals('kamin'));
 
     final result2 = engine.applyRule(rule, 'kam', testInventory);
     expect(result2, isA<MorphSuccess>());
-    // 'kam' hits default: suffix 'in' -> 'kamin'
     expect((result2 as MorphSuccess).form, equals('kamin'));
   });
 
   // -------------------------------------------------------------------------
-  // 10. Branching - class condition
+  // 10. Branching - PatternCond class (vowel-final)
   // -------------------------------------------------------------------------
-  test('Branching with EndsWithClassCond selects correct branch', () {
+  test('Branching with PatternCond(V_) selects correct branch', () {
     // Branch 1: ends with V -> suffix 'n'
     // Branch 2 (default): suffix 'an'
     final rule = MorphologicalRule(
@@ -197,12 +161,12 @@ void main() {
       name: 'test',
       branches: [
         MorphBranch(
-          condition: const EndsWithClassCond('V'),
-          operations: [const SuffixOp('n')],
+          conditions: const [PatternCond('V_')],
+          operations: const [SuffixOp('n')],
         ),
         MorphBranch(
-          condition: null,
-          operations: [const SuffixOp('an')],
+          conditions: const [],
+          operations: const [SuffixOp('an')],
         ),
       ],
       source: '',
@@ -243,14 +207,14 @@ void main() {
   // 13. No matching branch
   // -------------------------------------------------------------------------
   test('Engine returns MorphNoMatch when no branch condition matches', () {
-    // Rule has only one branch with EndsWithLiteralCond('x'); root 'kam' does not match
+    // Rule has only one branch with PatternCond('x_'); root 'kam' does not match
     final rule = MorphologicalRule(
       id: 0,
       name: 'test',
       branches: [
         MorphBranch(
-          condition: const EndsWithLiteralCond('x'),
-          operations: [const SuffixOp('in')],
+          conditions: const [PatternCond('x_')],
+          operations: const [SuffixOp('in')],
         ),
       ],
       source: '',
@@ -283,8 +247,8 @@ void main() {
   // -------------------------------------------------------------------------
   // 15. DSL parse: multi-branch rule
   // -------------------------------------------------------------------------
-  test('DSL parse: [C_] +in | [V_] +ain | "o" -o +in produces 3 branches', () {
-    const source = '[C_] +in | [V_] +ain | "o" -o +in';
+  test('DSL parse: {C_} +in | {V_} +ain | {o_} -"o" +in produces 3 branches', () {
+    const source = '{C_} +in | {V_} +ain | {o_} -"o" +in';
     final parsed = parseMorphDsl(source);
     expect(parsed.isValid, isTrue, reason: 'Parse should succeed: ${parsed.error}');
     expect(parsed.rule!.branches.length, equals(3));
@@ -313,5 +277,134 @@ void main() {
       expect((op as InfixOp).affix, equals('um'));
       expect(op.position, equals(1));
     });
+  });
+
+  // -------------------------------------------------------------------------
+  // 17. PatternCond: V_ matches vowel-final, not consonant-final
+  // -------------------------------------------------------------------------
+  test('PatternCond V_ matches vowel-final word', () {
+    expect(patternConditionMatches(const PatternCond('V_'), 'taka', testInventory), isTrue);
+    expect(patternConditionMatches(const PatternCond('V_'), 'tak', testInventory), isFalse);
+  });
+
+  // -------------------------------------------------------------------------
+  // 18. PatternCond: _CV matches words starting with consonant+vowel
+  // -------------------------------------------------------------------------
+  test('PatternCond _CV matches word starting with C+V', () {
+    expect(patternConditionMatches(const PatternCond('_CV'), 'taka', testInventory), isTrue);
+    // 'atka' starts with vowel, not consonant -> no match
+    expect(patternConditionMatches(const PatternCond('_CV'), 'atka', testInventory), isFalse);
+  });
+
+  // -------------------------------------------------------------------------
+  // 19. PatternCond: [nasal]V_ matches word ending with nasal+vowel
+  // -------------------------------------------------------------------------
+  test('PatternCond [nasal]V_ matches word ending with nasal+vowel', () {
+    // 'tana': t-a-n-a. Last two: n(nasal)+a(vowel) -> matches [nasal]V_
+    expect(
+      patternConditionMatches(const PatternCond('[nasal]V_'), 'tana', testInventory),
+      isTrue,
+    );
+    // 'tanka': ends with n-k-a (consonant-final nasal sequence) -> no match for [nasal]V_
+    expect(
+      patternConditionMatches(const PatternCond('[nasal]V_'), 'taka', testInventory),
+      isFalse,
+    );
+  });
+
+  // -------------------------------------------------------------------------
+  // 20. PatternCond: Vk(l)_ matches word ending with vowel+k or vowel+k+l
+  // -------------------------------------------------------------------------
+  test('PatternCond Vk(l)_ matches Vkl and Vk suffixes', () {
+    // 'takl': t-a-k-l -> ends with a(V)+k+l -> matches Vk(l)_
+    expect(patternConditionMatches(const PatternCond('Vk(l)_'), 'takl', testInventory), isTrue);
+    // 'tak': t-a-k -> ends with a(V)+k -> optional l absent -> still matches Vk(l)_
+    expect(patternConditionMatches(const PatternCond('Vk(l)_'), 'tak', testInventory), isTrue);
+    // 'taka': ends with k+a -> V is in wrong position for Vk_ -> no match
+    expect(patternConditionMatches(const PatternCond('Vk(l)_'), 'taka', testInventory), isFalse);
+  });
+
+  // -------------------------------------------------------------------------
+  // 21. Multiple conditions (AND logic) per branch
+  // -------------------------------------------------------------------------
+  test('Multiple conditions on a branch require all to match (AND)', () {
+    // Branch: conditions = [PatternCond('_C'), PatternCond('V_')]
+    // Must start with C AND end with V.
+    final rule = MorphologicalRule(
+      id: 0,
+      name: 'test',
+      branches: [
+        MorphBranch(
+          conditions: const [PatternCond('_C'), PatternCond('V_')],
+          operations: const [SuffixOp('x')],
+        ),
+        MorphBranch(
+          conditions: const [],
+          operations: const [SuffixOp('y')],
+        ),
+      ],
+      source: '',
+    );
+
+    // 'kata': starts with k(C) AND ends with a(V) -> branch 1 -> 'katax'
+    final r1 = engine.applyRule(rule, 'kata', testInventory);
+    expect(r1, isA<MorphSuccess>());
+    expect((r1 as MorphSuccess).form, equals('katax'));
+
+    // 'akat': starts with a(V) not C -> falls to default -> 'akaty'
+    final r2 = engine.applyRule(rule, 'akat', testInventory);
+    expect(r2, isA<MorphSuccess>());
+    expect((r2 as MorphSuccess).form, equals('akaty'));
+
+    // 'katan': starts with k(C) but ends with n(C) -> falls to default -> 'katany'
+    final r3 = engine.applyRule(rule, 'katan', testInventory);
+    expect(r3, isA<MorphSuccess>());
+    expect((r3 as MorphSuccess).form, equals('katany'));
+  });
+
+  // -------------------------------------------------------------------------
+  // 22. DSL round-trip for PatternCond branches
+  // -------------------------------------------------------------------------
+  test('DSL round-trip: PatternCond branches serialize and re-parse correctly', () {
+    const source = '{V_} +n | _ +an';
+    final parsed = parseMorphDsl(source);
+    expect(parsed.isValid, isTrue, reason: 'Parse should succeed: ${parsed.error}');
+    expect(parsed.rule!.branches.length, equals(2));
+
+    final branch0 = parsed.rule!.branches[0];
+    expect(branch0.conditions.length, equals(1));
+    expect((branch0.conditions[0] as PatternCond).pattern, equals('V_'));
+
+    final branch1 = parsed.rule!.branches[1];
+    expect(branch1.conditions.isEmpty, isTrue);
+
+    // Serialize and re-parse
+    final serialized = serializeMorphRule(parsed.rule!);
+    final reparsed = parseMorphDsl(serialized);
+    expect(reparsed.isValid, isTrue);
+    expect(reparsed.rule!.branches.length, equals(2));
+  });
+
+  // -------------------------------------------------------------------------
+  // 23. Migration: old-style DSL syntax loads via backward-compat parser
+  // -------------------------------------------------------------------------
+  test('Migration: old [C_] ends-with-class syntax parses to PatternCond', () {
+    // Old-style: [C_] ends-with-class -> now PatternCond('[C]_')
+    const source = '[C_] +in | _ +an';
+    final parsed = parseMorphDsl(source);
+    expect(parsed.isValid, isTrue, reason: 'Parse should succeed: ${parsed.error}');
+    expect(parsed.rule!.branches.length, equals(2));
+    final cond = parsed.rule!.branches[0].conditions.first;
+    expect(cond, isA<PatternCond>());
+    expect((cond as PatternCond).pattern, equals('[C]_'));
+  });
+
+  test('Migration: old "lit"_ ends-with-literal syntax parses to PatternCond', () {
+    const source = '"o"_ +in | _ +an';
+    final parsed = parseMorphDsl(source);
+    expect(parsed.isValid, isTrue, reason: 'Parse should succeed: ${parsed.error}');
+    final cond = parsed.rule!.branches[0].conditions.first;
+    expect(cond, isA<PatternCond>());
+    expect((cond as PatternCond).pattern, equals('o_'));
   });
 }

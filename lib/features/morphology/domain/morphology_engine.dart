@@ -87,6 +87,177 @@ List<String> resolvePhonemeClass(String classRef, PhonemeInventory inventory) {
 }
 
 // ---------------------------------------------------------------------------
+// Pattern condition parser / matcher
+// ---------------------------------------------------------------------------
+
+/// A single segment in a parsed phonological pattern.
+sealed class _PatternSegment {
+  const _PatternSegment();
+}
+
+class _ClassSegment extends _PatternSegment {
+  const _ClassSegment(this.classRef);
+  final String classRef;
+}
+
+class _LiteralSegment extends _PatternSegment {
+  const _LiteralSegment(this.text);
+  final String text;
+}
+
+class _OptionalGroup extends _PatternSegment {
+  const _OptionalGroup(this.segments);
+  final List<_PatternSegment> segments;
+}
+
+/// Parses a raw pattern string into a list of [_PatternSegment]s plus
+/// anchor flags.
+({
+  bool anchoredStart,
+  bool anchoredEnd,
+  List<_PatternSegment> segments,
+}) _parsePattern(String pattern) {
+  var s = pattern;
+  final anchoredStart = s.startsWith('_');
+  if (anchoredStart) s = s.substring(1);
+  final anchoredEnd = s.endsWith('_');
+  if (anchoredEnd) s = s.substring(0, s.length - 1);
+
+  final segments = <_PatternSegment>[];
+  var i = 0;
+  while (i < s.length) {
+    if (s[i] == '[') {
+      // Named class: [className]
+      final close = s.indexOf(']', i + 1);
+      if (close == -1) {
+        // Malformed — treat rest as literal.
+        segments.add(_LiteralSegment(s.substring(i)));
+        break;
+      }
+      final name = s.substring(i + 1, close);
+      segments.add(_ClassSegment(name));
+      i = close + 1;
+    } else if (s[i] == '(') {
+      // Optional group: (...)
+      final close = s.indexOf(')', i + 1);
+      if (close == -1) {
+        segments.add(_LiteralSegment(s.substring(i)));
+        break;
+      }
+      final inner = s.substring(i + 1, close);
+      // Parse inner segments recursively (no nesting required for now).
+      final innerParsed = _parsePattern(inner);
+      segments.add(_OptionalGroup(innerParsed.segments));
+      i = close + 1;
+    } else if (s[i] == 'C' || s[i] == 'V') {
+      // Uppercase shorthand: C = consonants, V = vowels
+      segments.add(_ClassSegment(s[i]));
+      i++;
+    } else {
+      // Literal: accumulate consecutive literal chars (non-special)
+      final buf = StringBuffer();
+      while (i < s.length &&
+          s[i] != '[' &&
+          s[i] != '(' &&
+          s[i] != ')' &&
+          s[i] != 'C' &&
+          s[i] != 'V') {
+        buf.write(s[i]);
+        i++;
+      }
+      if (buf.isNotEmpty) segments.add(_LiteralSegment(buf.toString()));
+    }
+  }
+
+  return (
+    anchoredStart: anchoredStart,
+    anchoredEnd: anchoredEnd,
+    segments: segments,
+  );
+}
+
+/// Tries to match [segments] against [tokens] starting at [start].
+/// Returns the number of tokens consumed if successful, -1 if not.
+int _matchSegments(
+    List<_PatternSegment> segments, List<String> tokens, int start,
+    PhonemeInventory inventory) {
+  var pos = start;
+  for (final seg in segments) {
+    switch (seg) {
+      case _ClassSegment(:final classRef):
+        if (pos >= tokens.length) return -1;
+        final members = resolvePhonemeClass(classRef, inventory);
+        if (!members.contains(tokens[pos])) return -1;
+        pos++;
+
+      case _LiteralSegment(:final text):
+        // A literal segment may span multiple tokens (e.g. 'na' = 'n'+'a').
+        // Match token by token against the literal text left-to-right.
+        var remaining = text;
+        while (remaining.isNotEmpty) {
+          if (pos >= tokens.length) return -1;
+          final tok = tokens[pos];
+          if (remaining.startsWith(tok)) {
+            remaining = remaining.substring(tok.length);
+            pos++;
+          } else {
+            return -1;
+          }
+        }
+
+      case _OptionalGroup(:final segments):
+        // Try matching the group; if it fails, skip (zero occurrences).
+        final tried = _matchSegments(segments, tokens, pos, inventory);
+        if (tried >= 0) pos = tried;
+        // If tried == -1, skip the group (optional).
+    }
+  }
+  return pos;
+}
+
+/// Returns true if [cond] matches [root] given [inventory].
+bool patternConditionMatches(
+  PatternCond cond,
+  String root,
+  PhonemeInventory inventory,
+) {
+  if (root.isEmpty) return false;
+
+  final parsed = _parsePattern(cond.pattern);
+  final tokens = tokenizeIpa(root, inventory);
+  if (tokens.isEmpty) return false;
+
+  final (:anchoredStart, :anchoredEnd, :segments) = parsed;
+
+  if (segments.isEmpty) {
+    // Empty pattern = always matches (degenerate).
+    return true;
+  }
+
+  if (anchoredStart && anchoredEnd) {
+    // Must match entire token list.
+    final end = _matchSegments(segments, tokens, 0, inventory);
+    return end == tokens.length;
+  } else if (anchoredStart) {
+    // Must match from position 0 but may end anywhere.
+    return _matchSegments(segments, tokens, 0, inventory) >= 0;
+  } else if (anchoredEnd) {
+    // Must end at the last token. Try matching at every start position.
+    for (var start = 0; start <= tokens.length; start++) {
+      final end = _matchSegments(segments, tokens, start, inventory);
+      if (end == tokens.length) return true;
+    }
+    return false;
+  } else {
+    // Unanchored: match anywhere.
+    for (var start = 0; start <= tokens.length; start++) {
+      if (_matchSegments(segments, tokens, start, inventory) >= 0) return true;
+    }
+    return false;
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Condition matching
 // ---------------------------------------------------------------------------
 
@@ -95,24 +266,29 @@ List<String> resolvePhonemeClass(String classRef, PhonemeInventory inventory) {
 /// A null condition = default branch = always matches.
 /// Guards against empty roots.
 bool conditionMatches(
-  MorphCondition? cond,
+  MorphCondition cond,
   String root,
   PhonemeInventory inventory,
 ) {
-  if (cond == null) return true; // default branch
   if (root.isEmpty) return false;
 
-  final tokens = tokenizeIpa(root, inventory);
-  if (tokens.isEmpty) return false;
-
   return switch (cond) {
-    EndsWithLiteralCond(:final suffix) => root.endsWith(suffix),
-    StartsWithLiteralCond(:final prefix) => root.startsWith(prefix),
-    EndsWithClassCond(:final classRef) =>
-      resolvePhonemeClass(classRef, inventory).contains(tokens.last),
-    StartsWithClassCond(:final classRef) =>
-      resolvePhonemeClass(classRef, inventory).contains(tokens.first),
+    PatternCond() => patternConditionMatches(cond, root, inventory),
   };
+}
+
+/// Returns true if all conditions in [conditions] match [root].
+///
+/// Empty list = default branch = always matches.
+bool allConditionsMatch(
+  List<MorphCondition> conditions,
+  String root,
+  PhonemeInventory inventory,
+) {
+  if (conditions.isEmpty) return true; // default branch
+  if (root.isEmpty) return false;
+
+  return conditions.every((c) => conditionMatches(c, root, inventory));
 }
 
 // ---------------------------------------------------------------------------
@@ -278,9 +454,7 @@ class MorphologyEngine {
 
   /// Applies [rule] to [root] using [inventory] for phoneme class resolution.
   ///
-  /// Iterates branches in order. The first branch whose condition matches wins.
-  /// When [EndsWithLiteralCond] matches, the matched suffix is stripped from
-  /// the working form before operations are applied.
+  /// Iterates branches in order. The first branch whose conditions all match wins.
   /// Returns [MorphNoMatch] if root is empty or no branch matches.
   MorphResult applyRule(
     MorphologicalRule rule,
@@ -292,25 +466,10 @@ class MorphologyEngine {
     }
 
     for (final branch in rule.branches) {
-      if (!conditionMatches(branch.condition, root, inventory)) continue;
-
-      // Branch matched — determine the working form.
-      // When EndsWithLiteralCond matched, strip the suffix before applying ops.
-      var workingForm = root;
-      if (branch.condition case EndsWithLiteralCond(:final suffix)) {
-        if (workingForm.endsWith(suffix)) {
-          workingForm =
-              workingForm.substring(0, workingForm.length - suffix.length);
-        }
-      }
-      // Similarly for StartsWithLiteralCond, strip the prefix.
-      if (branch.condition case StartsWithLiteralCond(:final prefix)) {
-        if (workingForm.startsWith(prefix)) {
-          workingForm = workingForm.substring(prefix.length);
-        }
-      }
+      if (!allConditionsMatch(branch.conditions, root, inventory)) continue;
 
       // Apply operations in sequence.
+      var workingForm = root;
       for (final op in branch.operations) {
         workingForm = _applyOp(op, workingForm, inventory);
       }

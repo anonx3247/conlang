@@ -51,10 +51,8 @@ class SuppleteOp extends MorphOperation {
 
 /// Strips a literal suffix from the working form.
 ///
-/// Used in DSL branches like `"o" -o +in` to explicitly remove the matched
-/// suffix before applying further operations. The engine also strips the
-/// [EndsWithLiteralCond] suffix automatically; this op makes the strip
-/// explicit and supports round-trip serialization.
+/// Used in DSL branches like `{o_} -o +in` to explicitly remove the matched
+/// suffix before applying further operations.
 class RemoveSuffixOp extends MorphOperation {
   const RemoveSuffixOp(this.suffix);
   final String suffix;
@@ -68,24 +66,25 @@ sealed class MorphCondition {
   const MorphCondition();
 }
 
-class EndsWithLiteralCond extends MorphCondition {
-  const EndsWithLiteralCond(this.suffix);
-  final String suffix;
-}
-
-class StartsWithLiteralCond extends MorphCondition {
-  const StartsWithLiteralCond(this.prefix);
-  final String prefix;
-}
-
-class EndsWithClassCond extends MorphCondition {
-  const EndsWithClassCond(this.classRef);
-  final String classRef;
-}
-
-class StartsWithClassCond extends MorphCondition {
-  const StartsWithClassCond(this.classRef);
-  final String classRef;
+/// Pattern-based condition using phonological notation.
+///
+/// Pattern elements:
+/// - `[className]` — matches any phoneme in the named natural class
+/// - Single uppercase letter: `C` = any consonant, `V` = any vowel
+/// - Lowercase letters: literal phoneme match (e.g. `k`, `na`)
+/// - `(group)` — optional group (matches zero or one occurrence)
+/// - `_` at start = pattern must match word start (anchored prefix)
+/// - `_` at end = pattern must match word end (anchored suffix)
+/// - No anchors = pattern matches anywhere in the word
+///
+/// Examples:
+/// - `[nasal]V_` — ends with nasal + vowel
+/// - `_CV` — starts with consonant + vowel
+/// - `Vk(l)_` — ends with vowel + k + optional l
+/// - `[stop][stop]` — contains two consecutive stops anywhere
+class PatternCond extends MorphCondition {
+  const PatternCond(this.pattern);
+  final String pattern; // Raw pattern string
 }
 
 // ---------------------------------------------------------------------------
@@ -94,10 +93,12 @@ class StartsWithClassCond extends MorphCondition {
 
 class MorphBranch {
   const MorphBranch({
-    required this.condition,
+    required this.conditions,
     required this.operations,
   });
-  final MorphCondition? condition; // null = default/else branch
+  /// Empty list = default/else branch (always matches).
+  /// Non-empty = all conditions must match (AND logic).
+  final List<MorphCondition> conditions;
   final List<MorphOperation> operations;
 }
 
@@ -137,65 +138,102 @@ class ParsedMorphRule {
 //
 // Grammar (pipe-separated branches; first match wins):
 //   rule    := branch ( ' | ' branch )*
-//   branch  := cond_spec? op+
-//   cond    := '[' classRef '_]'   ends-with-class
-//            | '[_' classRef ']'   starts-with-class
-//            | '"' lit '"_'        ends-with-literal (trailing underscore)
-//            | '_"' lit '"'        starts-with-literal (leading underscore)
-//            | '_'                 default (no condition)
-//   op      := '+' affix           suffix
-//            | affix '+'           prefix  (affix: one or more non-space/non-plus)
-//            | '-"' lit '"'        remove trailing literal
-//            | '/' from '/' to '/' ablaut
-//            | '1' ... (template pattern with digits)
-//            | 'redup:scope:pos'   reduplication
-//            | '=' '"' form '"'    suppletive
+//   branch  := cond_spec* op+
+//   cond    := '{' pattern '}'       new pattern-based condition
+//            | '[' classRef '_]'     old ends-with-class (migration)
+//            | '[_' classRef ']'     old starts-with-class (migration)
+//            | '"' lit '"_'          old ends-with-literal (migration)
+//            | '_"' lit '"'          old starts-with-literal (migration)
+//            | '_'                   default (no condition)
+//   op      := '+' affix             suffix
+//            | affix '+'             prefix
+//            | '-"' lit '"'          remove trailing literal (quoted)
+//            | '-' lit               remove trailing literal (bare)
+//            | '/' from '/' to '/'   ablaut
+//            | 'redup:scope:pos'     reduplication
+//            | 'infix:affix:pos'     infix
+//            | '=' '"' form '"'      suppletive
 // ---------------------------------------------------------------------------
 
 // Parser builders (lazy initialization via grammar definition)
-Parser<MorphCondition?> _buildConditionParser() {
-  // [C_] ends-with-class: classRef (no underscore in name) followed by '_]'
-  // classRef: letters/digits/hyphens/colons only (no underscore — underscore is sentinel)
+
+/// Parses a single condition token. Returns a [PatternCond] or null for
+/// the bare `_` default marker.
+Parser<MorphCondition?> _buildSingleConditionParser() {
+  // New: {pattern} -> PatternCond
+  final newPattern = (char('{') &
+          pattern(r'^}').plus().flatten() &
+          char('}'))
+      .map((values) => PatternCond(values[1] as String) as MorphCondition?);
+
+  // Migration: [C_] ends-with-class -> PatternCond('[C]_')
   final endsWithClass = (char('[') &
           pattern('a-zA-Z0-9:-').plus().flatten() &
           string('_]'))
-      .map((values) => EndsWithClassCond(values[1] as String) as MorphCondition?);
+      .map((values) => PatternCond('[${values[1]}]_') as MorphCondition?);
 
-  // [_C] starts-with-class: '_' then classRef inside brackets
+  // Migration: [_C] starts-with-class -> PatternCond('_[C]')
   final startsWithClass = (string('[_') &
           pattern('a-zA-Z0-9_:-').plus().flatten() &
           char(']'))
-      .map((values) => StartsWithClassCond(values[1] as String) as MorphCondition?);
+      .map((values) => PatternCond('_[${values[1]}]') as MorphCondition?);
 
-  // "lit"_ ends-with-literal (quoted literal followed by _)
+  // Migration: "lit"_ ends-with-literal -> PatternCond('lit_')
   final endsWithLitUnderscore = (char('"') &
           pattern('^"').plus().flatten() &
           string('"_'))
-      .map((values) => EndsWithLiteralCond(values[1] as String) as MorphCondition?);
+      .map((values) => PatternCond('${values[1]}_') as MorphCondition?);
 
-  // "lit" ends-with-literal (quoted literal, no trailing underscore)
-  // Must be tried after "lit"_ so the underscore form takes priority.
-  final endsWithLitBare = (char('"') &
-          pattern('^"').plus().flatten() &
-          char('"'))
-      .map((values) => EndsWithLiteralCond(values[1] as String) as MorphCondition?);
-
-  // _"lit" starts-with-literal
+  // Migration: _"lit" starts-with-literal -> PatternCond('_lit')
   final startsWithLit = (string('_"') &
           pattern('^"').plus().flatten() &
           char('"'))
-      .map((values) => StartsWithLiteralCond(values[1] as String) as MorphCondition?);
+      .map((values) => PatternCond('_${values[1]}') as MorphCondition?);
+
+  // Migration: "lit" ends-with-literal bare (no trailing _) -> PatternCond('lit_')
+  final endsWithLitBare = (char('"') &
+          pattern('^"').plus().flatten() &
+          char('"'))
+      .map((values) => PatternCond('${values[1]}_') as MorphCondition?);
 
   // _ alone = default branch (null condition)
   final defaultCond = char('_').map((_) => null);
 
-  return (endsWithClass |
+  // New pattern first, then old migration forms, then default.
+  return (newPattern |
+          endsWithClass |
           startsWithClass |
           endsWithLitUnderscore |
           startsWithLit |
           defaultCond |
           endsWithLitBare)
       .cast<MorphCondition?>();
+}
+
+/// Parses zero or more condition tokens followed by a space.
+/// Returns a list of [MorphCondition] (empty = default branch).
+Parser<List<MorphCondition>> _buildConditionsParser() {
+  final singleCond = _buildSingleConditionParser();
+  final space = char(' ');
+
+  // Multiple adjacent {pattern} tokens = AND conditions.
+  // Each condition is followed by a space when more conditions follow or
+  // when operations follow. We parse: (cond space)+ then peek for ops.
+  //
+  // Strategy: parse one or more (cond space) groups as the condition prefix.
+  // The last space before ops is consumed here.
+  //
+  // For default `_` form: just `_ ` = one null condition (empty list).
+  final condWithSpace = (singleCond & space).map((v) => v[0] as MorphCondition?);
+
+  return condWithSpace.plus().map((list) {
+    // Filter out nulls (default `_`) — they contribute nothing to the list.
+    // If we parsed `_ `, the list has one null → conditions = [] (default).
+    final filtered = list.cast<MorphCondition?>()
+        .whereType<MorphCondition>()
+        .toList();
+    return filtered;
+  });
 }
 
 Parser<MorphOperation> _buildOperationParser() {
@@ -212,7 +250,6 @@ Parser<MorphOperation> _buildOperationParser() {
       .map((values) => RemoveSuffixOp(values[1] as String) as MorphOperation);
 
   // -lit -> RemoveSuffixOp (bare form, no quotes; stops at space or pipe)
-  // e.g. '-o' in '"o" -o +in' means strip trailing 'o'.
   final removeSuffixBare = (char('-') & pattern('^ |').plus().flatten())
       .map((values) => RemoveSuffixOp(values[1] as String) as MorphOperation);
 
@@ -235,7 +272,6 @@ Parser<MorphOperation> _buildOperationParser() {
               as MorphOperation);
 
   // infix:affix:position -> InfixOp
-  // e.g. 'infix:um:1' means insert 'um' after the 1st consonant
   final infix = (string('infix:') &
           pattern('^ |:').plus().flatten() &
           char(':') &
@@ -249,16 +285,11 @@ Parser<MorphOperation> _buildOperationParser() {
       .map((values) => SuppleteOp(values[1] as String) as MorphOperation);
 
   // Template: pattern starting with a digit 1-9, followed by letters/digits
-  // e.g. '1a23aa', '1a2b3'
-  // Must start with a digit to distinguish from prefix (which ends with +)
   final templateFirst = pattern('1-9');
   final templateRest = pattern('0-9a-zA-Z').star().flatten();
   final template = (templateFirst.flatten() & templateRest)
       .map((values) => TemplateOp((values[0] as String) + (values[1] as String)) as MorphOperation);
 
-  // Order matters: try longer/more-specific patterns first.
-  // removeSuffixQuoted before removeSuffixBare (quoted is more specific).
-  // infix placed after redup and before supplete (all use colon-prefixed tokens).
   return (ablaut | redup | infix | supplete | removeSuffixQuoted | removeSuffixBare | suffix | template | prefix)
       .cast<MorphOperation>();
 }
@@ -275,21 +306,21 @@ Parser<List<MorphOperation>> _buildOpsParser() {
 }
 
 Parser<MorphBranch> _buildBranchParser() {
-  final cond = _buildConditionParser();
+  final conditions = _buildConditionsParser();
   final ops = _buildOpsParser();
-  final space = char(' ');
 
-  // Branch with condition: cond space ops
-  final branchWithCond = (cond & space & ops).map((values) {
+  // Branch with condition(s): conditions ops
+  // Note: _buildConditionsParser already consumes the trailing space before ops.
+  final branchWithCond = (conditions & ops).map((values) {
     return MorphBranch(
-      condition: values[0] as MorphCondition?,
-      operations: (values[2] as List).cast<MorphOperation>(),
+      conditions: (values[0] as List).cast<MorphCondition>(),
+      operations: (values[1] as List).cast<MorphOperation>(),
     );
   });
 
-  // Branch without condition: just ops
+  // Branch without condition: just ops (pure default)
   final branchNoCondOps = ops.map((opsList) {
-    return MorphBranch(condition: null, operations: opsList);
+    return MorphBranch(conditions: const [], operations: opsList);
   });
 
   return (branchWithCond | branchNoCondOps).cast<MorphBranch>();
@@ -298,7 +329,7 @@ Parser<MorphBranch> _buildBranchParser() {
 /// Parses a morphology DSL string into a [ParsedMorphRule].
 ///
 /// Grammar: branches separated by ' | ' (space-pipe-space).
-/// Each branch: optional condition spec + space + operation sequence.
+/// Each branch: optional condition spec(s) + space + operation sequence.
 ParsedMorphRule parseMorphDsl(String source, {int id = 0, String name = ''}) {
   final trimmed = source.trim();
   if (trimmed.isEmpty) {
@@ -355,21 +386,18 @@ String _serializeBranch(MorphBranch branch) {
   final opParts = branch.operations.map(_serializeOp).toList();
   final opStr = opParts.join(' ');
 
-  if (branch.condition == null) {
+  if (branch.conditions.isEmpty) {
     // Default branch: just ops (no condition prefix)
     return opStr;
   }
 
-  final condStr = _serializeCondition(branch.condition!);
+  final condStr = branch.conditions.map(_serializeCondition).join('');
   return '$condStr $opStr';
 }
 
 String _serializeCondition(MorphCondition cond) {
   return switch (cond) {
-    EndsWithClassCond(:final classRef) => '[${classRef}_]',
-    StartsWithClassCond(:final classRef) => '[_$classRef]',
-    EndsWithLiteralCond(:final suffix) => '"$suffix"_',
-    StartsWithLiteralCond(:final prefix) => '_"$prefix"',
+    PatternCond(:final pattern) => '{$pattern}',
   };
 }
 
