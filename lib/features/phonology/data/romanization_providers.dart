@@ -32,6 +32,40 @@ final romanizationMappingsProvider = StreamProvider<List<RomanizationMapping>>(
 );
 
 // ---------------------------------------------------------------------------
+// Romanization enabled provider
+// ---------------------------------------------------------------------------
+
+const _kRomanizationKey = 'romanization_enabled';
+
+/// Watches the project-level romanization toggle.
+///
+/// Returns `true` when no setting exists (default on). Updates reactively
+/// when the setting changes.
+final romanizationEnabledProvider = StreamProvider<bool>((ref) {
+  final db = ref.watch(currentDatabaseProvider);
+  if (db == null) return Stream.value(true);
+  return db
+      .select(db.projectSettings)
+      .watch()
+      .map((rows) {
+        final row = rows.where((r) => r.key == _kRomanizationKey).firstOrNull;
+        return row?.value != 'false';
+      });
+});
+
+/// Upserts the romanization_enabled setting for the current project.
+Future<void> setRomanizationEnabled(WidgetRef ref, bool enabled) async {
+  final db = ref.read(currentDatabaseProvider);
+  if (db == null) return;
+  await db.into(db.projectSettings).insertOnConflictUpdate(
+        ProjectSettingsCompanion.insert(
+          key: _kRomanizationKey,
+          value: enabled.toString(),
+        ),
+      );
+}
+
+// ---------------------------------------------------------------------------
 // Romanization conversion function provider
 // ---------------------------------------------------------------------------
 

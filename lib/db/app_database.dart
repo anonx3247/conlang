@@ -80,6 +80,18 @@ class RewriteRules extends Table {
   IntColumn get ordering => integer().withDefault(const Constant(0))();
 }
 
+/// Key-value store for project-level settings.
+///
+/// Example entries:
+///  - key='romanization_enabled', value='true'
+///
+/// The [key] column has a unique constraint so upserts replace the old value.
+class ProjectSettings extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  TextColumn get key => text().unique()();
+  TextColumn get value => text()();
+}
+
 /// The lexeme table — supports derivation-aware morphology (Phase 2).
 ///
 /// - [ipa]: the underlying IPA representation of the word
@@ -116,6 +128,7 @@ class Lexemes extends Table {
     RomanizationMappings,
     Lexemes,
     RewriteRules,
+    ProjectSettings,
   ],
   daos: [PhonemeDao, NaturalClassDao, RomanizationDao, PhonotacticDao, RewriteRuleDao],
 )
@@ -127,7 +140,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase(super.e);
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration {
@@ -139,6 +152,10 @@ class AppDatabase extends _$AppDatabase {
         if (from < 2) {
           // v2: add rewrite_rules table
           await m.createTable(rewriteRules);
+        }
+        if (from < 3) {
+          // v3: add project_settings table
+          await m.createTable(projectSettings);
         }
       },
       beforeOpen: (details) async {

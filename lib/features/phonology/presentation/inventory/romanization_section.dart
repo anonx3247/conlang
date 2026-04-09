@@ -110,12 +110,16 @@ class _RomanizationSectionState extends ConsumerState<RomanizationSection> {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
+    final enabledAsync = ref.watch(romanizationEnabledProvider);
     final mappingsAsync = ref.watch(romanizationMappingsProvider);
+
+    final enabled = enabledAsync.asData?.value ?? true;
 
     return mappingsAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (e, _) => Center(child: Text('Error: $e')),
-      data: (mappings) => _buildContent(context, theme, colorScheme, mappings),
+      data: (mappings) =>
+          _buildContent(context, theme, colorScheme, mappings, enabled),
     );
   }
 
@@ -124,11 +128,12 @@ class _RomanizationSectionState extends ConsumerState<RomanizationSection> {
     ThemeData theme,
     ColorScheme colorScheme,
     List<RomanizationMapping> mappings,
+    bool enabled,
   ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Section header.
+        // Section header with toggle.
         Padding(
           padding: const EdgeInsets.fromLTRB(0, 0, 0, 12),
           child: Row(
@@ -152,33 +157,59 @@ class _RomanizationSectionState extends ConsumerState<RomanizationSection> {
                   color: colorScheme.onSurface.withValues(alpha: 0.55),
                 ),
               ),
+              const Spacer(),
+              Text(
+                'Enabled',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: colorScheme.onSurface.withValues(alpha: 0.6),
+                ),
+              ),
+              const SizedBox(width: 4),
+              Switch(
+                value: enabled,
+                onChanged: (val) => setRomanizationEnabled(ref, val),
+              ),
             ],
           ),
         ),
 
-        // Table.
-        if (mappings.isEmpty && _editingId == null)
+        // Content: hidden when disabled.
+        if (!enabled)
           Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8),
+            padding: const EdgeInsets.symmetric(vertical: 12),
             child: Text(
-              'No romanization letters defined yet. Add a Latin letter and associate its default IPA sound.',
+              'Romanization is disabled for this project.',
               style: theme.textTheme.bodySmall?.copyWith(
-                color: colorScheme.onSurface.withValues(alpha: 0.5),
+                color: colorScheme.onSurface.withValues(alpha: 0.45),
+                fontStyle: FontStyle.italic,
               ),
             ),
           )
-        else
-          _buildTable(context, theme, colorScheme, mappings),
+        else ...[
+          // Table.
+          if (mappings.isEmpty && _editingId == null)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Text(
+                'No romanization letters defined yet. Add a Latin letter and associate its default IPA sound.',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: colorScheme.onSurface.withValues(alpha: 0.5),
+                ),
+              ),
+            )
+          else
+            _buildTable(context, theme, colorScheme, mappings),
 
-        const SizedBox(height: 8),
+          const SizedBox(height: 8),
 
-        // Add letter button.
-        if (_editingId == null)
-          TextButton.icon(
-            onPressed: _startAdd,
-            icon: const Icon(Icons.add, size: 18),
-            label: const Text('Add letter'),
-          ),
+          // Add letter button.
+          if (_editingId == null)
+            TextButton.icon(
+              onPressed: _startAdd,
+              icon: const Icon(Icons.add, size: 18),
+              label: const Text('Add letter'),
+            ),
+        ],
       ],
     );
   }
