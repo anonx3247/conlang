@@ -159,6 +159,10 @@ class InventoryPage extends ConsumerWidget {
               ),
             ],
           ),
+          const SizedBox(height: 12),
+
+          // All phonemes as chips (nothing can hide)
+          const _AllPhonemesRow(),
           const SizedBox(height: 24),
 
           // Phoneme inventory sections.
@@ -170,6 +174,40 @@ class InventoryPage extends ConsumerWidget {
           const SizedBox(height: 32),
         ],
       ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// All phonemes row (flat chip list — ensures nothing is hidden)
+// ---------------------------------------------------------------------------
+
+class _AllPhonemesRow extends ConsumerWidget {
+  const _AllPhonemesRow();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final asyncAll = ref.watch(allPhonemesProvider);
+
+    return asyncAll.when(
+      loading: () => const SizedBox.shrink(),
+      error: (_, _) => const SizedBox.shrink(),
+      data: (phonemes) {
+        if (phonemes.isEmpty) return const SizedBox.shrink();
+        return Wrap(
+          spacing: 4,
+          runSpacing: 4,
+          children: phonemes
+              .map((p) => _PhonemeChip(
+                    phoneme: p,
+                    onTap: () => showDialog(
+                      context: context,
+                      builder: (_) => PhonemeEditDialog(phoneme: p),
+                    ),
+                  ))
+              .toList(),
+        );
+      },
     );
   }
 }
