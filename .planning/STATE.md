@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-04-08)
 
 **Core value:** A powerful, flexible morphology engine that handles the full spectrum of language types through a readable pattern mini-language
-**Current focus:** Phase 1 complete — ready for Phase 2 (Morphology Engine)
+**Current focus:** Phase 1 gap closure plans in progress (plans 10-13)
 
 ## Current Position
 
-Phase: 1 of 6 (Foundation) — COMPLETE ✓
-Plan: 9 of 9 in current phase — PHASE COMPLETE
-Status: Phase 1 verified and complete. All 9 plans executed, 5/5 success criteria verified.
-Last activity: 2026-04-08 — Phase 1 complete (gap closure plans 08-09 executed, verification passed)
+Phase: 1 of 6 (Foundation) — gap closure in progress
+Plan: 11 of 13 in current phase (gap closure plans 10-13 added after UAT)
+Status: Plan 11 complete — unified Add Phoneme button + reverse IPA symbol derivation
+Last activity: 2026-04-09 — plan 11 executed (inventory UX + phoneme dialog reverse lookup)
 
-Progress: [██░░░░░░░░] 21% (9/42 total plans)
+Progress: [██░░░░░░░░] 24% (11/44 total plans)
 
 ## Performance Metrics
 
@@ -80,6 +80,9 @@ Recent decisions affecting current work:
 - 01-09: Custom symbol TextField shown only when all dropdowns selected but combo unknown — avoids clutter in common case while handling non-standard sounds
 - 01-09: Delete button added to phoneme dialog actions — replaces hidden long-press on chip; uses existing confirmDeletePhoneme + pops dialog after deletion
 - 01-09: Romanization table is Latin-first (Latin letter → IPA sound) — matches user mental model; DB columns unchanged
+- 01-11: _symbolToFeatures built as file-level lazy map from IpaSound static data using collection-for — reverse lookup with zero duplication of forward maps
+- 01-11: IPA symbol field reuses existing _symbolController (pre-filled in edit mode) — no second controller needed
+- 01-11: Reverse lookup is silent for unknown symbols — dropdowns stay unchanged, manual selection always works
 
 ### Pending Todos
 
@@ -94,6 +97,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-08
-Stopped at: Phase 1 complete — all 9 plans executed, verification passed (5/5). Ready for Phase 2.
+Last session: 2026-04-09
+Stopped at: Completed 01-11-PLAN.md — unified Add Phoneme button + reverse IPA symbol derivation
 Resume file: None
