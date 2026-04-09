@@ -250,11 +250,11 @@ class _ConsonantCell extends StatelessWidget {
         if (voiceless != null)
           _IpaSymbolButton(sound: voiceless!, audioPlayer: audioPlayer)
         else
-          const SizedBox(width: 12),
+          const SizedBox(width: 9),
         if (voiced != null)
           _IpaSymbolButton(sound: voiced!, audioPlayer: audioPlayer)
         else
-          const SizedBox(width: 12),
+          const SizedBox(width: 9),
       ],
     );
   }
@@ -364,11 +364,11 @@ class _VowelChart extends StatelessWidget {
                         if (unrounded != null)
                           _IpaSymbolButton(sound: unrounded, audioPlayer: audioPlayer)
                         else
-                          const SizedBox(width: 12),
+                          const SizedBox(width: 9),
                         if (rounded != null)
                           _IpaSymbolButton(sound: rounded, audioPlayer: audioPlayer)
                         else if (unrounded != null)
-                          const SizedBox(width: 12),
+                          const SizedBox(width: 9),
                       ],
                     ),
                   );
@@ -479,8 +479,8 @@ class _IpaSymbolButton extends StatelessWidget {
         borderRadius: BorderRadius.circular(3),
         hoverColor: hoverColor,
         child: Container(
-          constraints: const BoxConstraints(minWidth: 12, minHeight: 16),
-          padding: const EdgeInsets.symmetric(horizontal: 1),
+          constraints: const BoxConstraints(minWidth: 9, minHeight: 16),
+          padding: EdgeInsets.zero,
           child: Center(
             child: Text(
               sound.symbol,

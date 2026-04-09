@@ -342,17 +342,25 @@ class _ConstraintEditDialogState extends State<_ConstraintEditDialog> {
 
             // Syntax help text
             Container(
+              width: double.infinity,
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
                 color: cs.surfaceContainerLow,
                 borderRadius: BorderRadius.circular(4),
               ),
               child: Text(
-                'Syntax: <segments> -> <label>\n'
-                'Segments: C V N [className]  •  Label: "forbidden", "required", or description\n'
-                'Examples: VN -> nasalised V   [stop][stop] -> forbidden',
+                'How to write constraints:\n\n'
+                '  C = any consonant    V = any vowel\n'
+                '  [name] = natural class (e.g. [stop], [nasal])\n\n'
+                '  Pattern:  segments -> label\n\n'
+                'Examples:\n'
+                '  [stop][stop] -> forbidden     (no two stops in a row)\n'
+                '  VN -> nasalised vowel         (vowel before nasal is nasalised)\n'
+                '  V[fricative]V -> allowed      (fricatives between vowels)\n'
+                '  CC -> forbidden               (no consonant clusters)',
                 style: theme.textTheme.labelSmall?.copyWith(
                   color: cs.onSurface.withValues(alpha: 0.6),
+                  fontFamily: 'monospace',
                 ),
               ),
             ),
