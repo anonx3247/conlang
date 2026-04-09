@@ -77,11 +77,14 @@ class ParsedTemplate {
   bool get isValid => error == null;
 }
 
-/// A phonotactic constraint rule in `LHS -> RHS` notation.
+/// A forbidden sound sequence constraint.
 ///
 /// Examples:
-///   - `VN -> nasalised V`    → pattern=[V,N], description='nasalised V', isForbidden=false
-///   - `[stop][stop] -> forbidden` → pattern=[stop,stop], description='forbidden', isForbidden=true
+///   - `[stop][stop]` → pattern=[stop,stop] — no two stops in a row
+///   - `CC`           → pattern=[C,C]       — no consonant clusters
+///
+/// All constraints are forbidden sequences. Legacy `LHS -> RHS` format is
+/// accepted for backward compatibility but the RHS is stored as description.
 class ConstraintRule {
   const ConstraintRule({
     required this.pattern,
@@ -90,20 +93,20 @@ class ConstraintRule {
     required this.source,
   });
 
-  /// The LHS segment sequence to match (reuses the same [Slot] type as templates).
+  /// The segment sequence to match (reuses the same [Slot] type as templates).
   final List<Slot> pattern;
 
-  /// The RHS label (e.g. 'nasalised V', 'forbidden', 'required').
+  /// Optional description (from legacy RHS or user-provided).
   final String description;
 
-  /// True when the description indicates the pattern is prohibited.
+  /// Always true — all constraints are forbidden sequences.
   final bool isForbidden;
 
   /// Original source string, for display/edit round-tripping.
   final String source;
 
   @override
-  String toString() => '$pattern -> $description';
+  String toString() => '$pattern';
 }
 
 /// Result of parsing a constraint rule string.
@@ -228,66 +231,57 @@ ParsedTemplate parseSyllableTemplate(String input) {
 // Constraint rule parser
 // ---------------------------------------------------------------------------
 
-/// Parses a constraint rule string such as `VN -> nasalised V`.
+/// Parses a forbidden sequence pattern such as `[stop][stop]` or `CC`.
+///
+/// Also accepts legacy `LHS -> RHS` format for backward compatibility,
+/// but the RHS is treated as an optional description only.
 ///
 /// Returns a [ParsedConstraint] — check [ParsedConstraint.isValid] before use.
 ParsedConstraint parseConstraintRule(String input) {
   if (input.trim().isEmpty) {
-    return ParsedConstraint.failure(source: input, error: 'Rule is empty');
+    return ParsedConstraint.failure(source: input, error: 'Pattern is empty');
   }
 
-  // Split on the FIRST occurrence of `->` to avoid false splits in RHS.
+  String patternRaw;
+  String description;
+
+  // Support legacy `LHS -> RHS` format for existing data.
   final arrowIdx = input.indexOf('->');
-  if (arrowIdx < 0) {
+  if (arrowIdx >= 0) {
+    patternRaw = input.substring(0, arrowIdx).trim();
+    description = input.substring(arrowIdx + 2).trim();
+  } else {
+    patternRaw = input.trim();
+    description = 'forbidden';
+  }
+
+  if (patternRaw.isEmpty) {
     return ParsedConstraint.failure(
       source: input,
-      error: "Missing '->' separator",
+      error: 'Pattern is empty',
     );
   }
 
-  final lhsRaw = input.substring(0, arrowIdx).trim();
-  final rhsRaw = input.substring(arrowIdx + 2).trim();
+  // Parse the pattern as a sequence of segments.
+  final parser = _segmentParser().plus().end();
+  final result = parser.parse(patternRaw);
 
-  if (lhsRaw.isEmpty) {
-    return ParsedConstraint.failure(
-      source: input,
-      error: 'LHS pattern is empty',
-    );
-  }
-  if (rhsRaw.isEmpty) {
-    return ParsedConstraint.failure(
-      source: input,
-      error: 'RHS description is empty',
-    );
-  }
-
-  // Parse the LHS as a sequence of segments.
-  final lhsParser = _segmentParser().plus().end();
-  final lhsResult = lhsParser.parse(lhsRaw);
-
-  switch (lhsResult) {
+  switch (result) {
     case Failure():
       return ParsedConstraint.failure(
         source: input,
         error:
-            'LHS parse error at position ${lhsResult.position}: expected ${lhsResult.message}',
+            'Parse error at position ${result.position}: expected ${result.message}',
       );
     case Success():
-      final slots = List<Slot>.from(lhsResult.value);
-
-      // Determine if the constraint marks the pattern as forbidden.
-      final descLower = rhsRaw.toLowerCase();
-      final isForbidden =
-          descLower == 'forbidden' ||
-          descLower.startsWith('!') ||
-          descLower.startsWith('no ');
+      final slots = List<Slot>.from(result.value);
 
       return ParsedConstraint.success(
         source: input,
         rule: ConstraintRule(
           pattern: slots,
-          description: rhsRaw,
-          isForbidden: isForbidden,
+          description: description,
+          isForbidden: true, // All constraints are forbidden sequences
           source: input,
         ),
       );

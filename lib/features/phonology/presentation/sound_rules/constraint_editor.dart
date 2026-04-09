@@ -7,14 +7,11 @@ import '../../data/phonotactic_providers.dart';
 import '../../domain/phonotactic_dsl.dart';
 import 'sound_rules_shared.dart';
 
-/// Widget for managing phonotactic constraint rules.
+/// Widget for managing forbidden sound sequences.
 ///
-/// Displays all constraints with parse status, active toggle, edit and delete
-/// controls. Constraint rules use `LHS -> RHS` notation
-/// (e.g. "VN -> nasalised V", "[stop][stop] -> forbidden").
-///
-/// This covers phonotactic CONSTRAINTS only — what patterns are allowed or
-/// forbidden in sound sequences. It is NOT a sound change engine.
+/// Displays all forbidden sequence patterns with parse status, active toggle,
+/// edit and delete controls. Patterns use segment notation
+/// (e.g. "[stop][stop]", "CC", "V[fricative]V").
 class ConstraintEditor extends ConsumerWidget {
   const ConstraintEditor({super.key});
 
@@ -26,18 +23,17 @@ class ConstraintEditor extends ConsumerWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         SoundRulesSectionHeader(
-          title: 'Phonotactic Constraints',
+          title: 'Forbidden Sequences',
           helpText:
-              'Define allowed or forbidden sound sequences. '
-              'Use <segments> -> <label>, e.g. "VN -> nasalised V" or '
-              '"[stop][stop] -> forbidden".',
+              'Patterns the word generator must avoid. '
+              'e.g. "[stop][stop]" or "CC".',
           onAdd: () => _showAddDialog(context, ref),
         ),
         allConstraintsAsync.when(
           data: (constraints) => constraints.isEmpty
               ? const SoundRulesEmptyHint(
                   message:
-                      'No constraints yet. Add one to flag invalid sequences.',
+                      'No forbidden sequences yet. Add one to filter word generation.',
                 )
               : Column(
                   children: constraints
@@ -86,7 +82,6 @@ class _ConstraintRow extends ConsumerWidget {
     final cs = theme.colorScheme;
     final parsed = parseConstraintRule(constraint.pattern);
     final isValid = parsed.isValid;
-    final isForbidden = parsed.rule?.isForbidden ?? false;
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 3),
@@ -101,16 +96,12 @@ class _ConstraintRow extends ConsumerWidget {
           // Parse status icon
           Tooltip(
             message: isValid
-                ? (isForbidden ? 'Forbidden pattern' : 'Constraint rule')
+                ? 'Forbidden sequence'
                 : (parsed.error ?? 'Invalid'),
             child: Icon(
-              isValid
-                  ? (isForbidden ? Icons.block_outlined : Icons.rule_outlined)
-                  : Icons.error_outline,
+              isValid ? Icons.block_outlined : Icons.error_outline,
               size: 16,
-              color: isValid
-                  ? (isForbidden ? cs.error : cs.primary)
-                  : cs.error,
+              color: isValid ? cs.error : cs.error,
             ),
           ),
           const SizedBox(width: 8),
@@ -199,7 +190,7 @@ class _ConstraintRow extends ConsumerWidget {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Delete constraint?'),
+        title: const Text('Delete forbidden sequence?'),
         content: Text('Remove "${constraint.pattern}"?'),
         actions: [
           TextButton(
@@ -287,7 +278,7 @@ class _ConstraintEditDialogState extends State<_ConstraintEditDialog> {
 
     return AlertDialog(
       title: Text(
-        widget.initial == null ? 'Add constraint' : 'Edit constraint',
+        widget.initial == null ? 'Add forbidden sequence' : 'Edit forbidden sequence',
       ),
       content: SizedBox(
         width: 440,
@@ -299,8 +290,8 @@ class _ConstraintEditDialogState extends State<_ConstraintEditDialog> {
             TextField(
               controller: _patternCtrl,
               decoration: InputDecoration(
-                labelText: 'Constraint pattern',
-                hintText: 'VN -> nasalised V',
+                labelText: 'Forbidden pattern',
+                hintText: '[stop][stop]',
                 border: const OutlineInputBorder(),
                 suffixIcon: isEmpty
                     ? null
@@ -333,7 +324,7 @@ class _ConstraintEditDialogState extends State<_ConstraintEditDialog> {
               controller: _descCtrl,
               decoration: const InputDecoration(
                 labelText: 'Description (optional)',
-                hintText: 'e.g. Vowel before nasal is nasalised',
+                hintText: 'e.g. No two stops in a row',
                 border: OutlineInputBorder(),
               ),
             ),
@@ -349,15 +340,13 @@ class _ConstraintEditDialogState extends State<_ConstraintEditDialog> {
                 borderRadius: BorderRadius.circular(4),
               ),
               child: Text(
-                'How to write constraints:\n\n'
+                'Symbols:\n'
                 '  C = any consonant    V = any vowel\n'
                 '  [name] = natural class (e.g. [stop], [nasal])\n\n'
-                '  Pattern:  segments -> label\n\n'
                 'Examples:\n'
-                '  [stop][stop] -> forbidden     (no two stops in a row)\n'
-                '  VN -> nasalised vowel         (vowel before nasal is nasalised)\n'
-                '  V[fricative]V -> allowed      (fricatives between vowels)\n'
-                '  CC -> forbidden               (no consonant clusters)',
+                '  [stop][stop]    no two stops in a row\n'
+                '  CC              no consonant clusters\n'
+                '  [nasal][stop]   no nasal+stop sequences',
                 style: theme.textTheme.labelSmall?.copyWith(
                   color: cs.onSurface.withValues(alpha: 0.6),
                   fontFamily: 'monospace',
