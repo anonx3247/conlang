@@ -5,7 +5,7 @@
 See: .planning/PROJECT.md (updated 2026-04-08)
 
 **Core value:** A powerful, flexible morphology engine that handles the full spectrum of language types through a readable pattern mini-language
-**Current focus:** Phase 1 — Foundation
+**Current focus:** Phase 1 complete — ready for Phase 2 (Morphology Engine)
 
 ## Current Position
 
