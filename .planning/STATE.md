@@ -10,9 +10,9 @@ See: .planning/PROJECT.md (updated 2026-04-08)
 ## Current Position
 
 Phase: 1 of 6 (Foundation)
-Plan: 7 of 7 in current phase
-Status: In progress
-Last activity: 2026-04-09 — Plan 05 complete (phoneme inventory editor, consonant grid, vowel chart, natural classes)
+Plan: 7 of 7 in current phase — COMPLETE
+Status: Phase 1 complete, ready for Phase 2
+Last activity: 2026-04-08 — Plan 07 complete (phonotactic DSL parser, word generator, sound rules page)
 
 Progress: [██░░░░░░░░] 17% (7/42 total plans)
 
@@ -20,20 +20,25 @@ Progress: [██░░░░░░░░] 17% (7/42 total plans)
 
 **Velocity:**
 - Total plans completed: 7
-- Average duration: 6 min
-- Total execution time: 0.7 hours
+- Average duration: 12 min (updated)
+- Total execution time: 1.3 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 01-foundation | 7 | 47 min | 7 min |
+| 01-foundation | 7 | 82 min | 12 min |
 
 **Recent Trend:**
-- Last 5 plans: 2 min, 6 min, 14 min, 7 min, 11 min
+- Last 5 plans: 6 min, 14 min, 7 min, 11 min, 35 min
 - Trend: stable
 
 *Updated after each plan completion*
+
+**Detailed metrics (01-07):**
+| Plan | Duration | Tasks | Files |
+|------|----------|-------|-------|
+| Phase 01-foundation P07 | 35 min | 2 tasks | 13 files |
 
 ## Accumulated Context
 
@@ -61,6 +66,10 @@ Recent decisions affecting current work:
 - 01-05: riverpod_generator 3.x cannot resolve drift part-file types (Phoneme, NaturalClassesData) at codegen time — use manual Provider/StreamProvider for all drift-type providers
 - 01-05: NaturalClasses table generates NaturalClassesData (not NaturalClass) in Drift 2.30 — generated data class name = table class name + Data suffix
 - 01-05: Consonant/vowel grids show only occupied rows/columns (sparse display) — cleaner for small inventories than rendering full 88-cell IPA chart
+- 01-07: petitparser 7.x sealed Result class requires pattern matching (case Success/Failure) — no isFailure getter exists in 7.x
+- 01-07: flatten() in petitparser 7.x uses named param {String? message} not positional — breaking change from earlier versions
+- 01-07: Private Dart classes cannot be imported across files — extract shared helpers to a public file when multiple widgets need them
+- 01-07: WordGeneratorPanel uses ref.listen() + Timer debounce for live preview — prevents rebuild storms on every keystroke
 
 ### Pending Todos
 
@@ -75,6 +84,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-09
-Stopped at: Completed 01-foundation/01-05-PLAN.md (phoneme inventory editor, consonant grid, vowel chart, natural classes)
+Last session: 2026-04-08
+Stopped at: Completed 01-foundation/01-07-PLAN.md (phonotactic DSL parser, word generator, sound rules page) — Phase 1 COMPLETE
 Resume file: None
