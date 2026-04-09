@@ -4,6 +4,7 @@ import 'package:drift_flutter/drift_flutter.dart';
 import '../features/phonology/data/natural_class_dao.dart';
 import '../features/phonology/data/phoneme_dao.dart';
 import '../features/phonology/data/phonotactic_dao.dart';
+import '../features/phonology/data/rewrite_rule_dao.dart';
 import '../features/phonology/data/romanization_dao.dart';
 
 part 'app_database.g.dart';
@@ -68,6 +69,17 @@ class RomanizationMappings extends Table {
   TextColumn get latinMapping => text()();
 }
 
+/// Phonological rewrite rules in SPE-style A -> B / C_D notation.
+///
+/// Example: "k -> x / V_V" (velar lenition between vowels).
+/// The [source] column stores the raw DSL string verbatim for round-tripping.
+/// [ordering] allows user-defined rule ordering (default 0 = insertion order).
+class RewriteRules extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  TextColumn get source => text()(); // The raw DSL string, e.g. "k -> x / V_V"
+  IntColumn get ordering => integer().withDefault(const Constant(0))();
+}
+
 /// The lexeme table — supports derivation-aware morphology (Phase 2).
 ///
 /// - [ipa]: the underlying IPA representation of the word
@@ -103,8 +115,9 @@ class Lexemes extends Table {
     PhonotacticConstraints,
     RomanizationMappings,
     Lexemes,
+    RewriteRules,
   ],
-  daos: [PhonemeDao, NaturalClassDao, RomanizationDao, PhonotacticDao],
+  daos: [PhonemeDao, NaturalClassDao, RomanizationDao, PhonotacticDao, RewriteRuleDao],
 )
 class AppDatabase extends _$AppDatabase {
   /// Creates an AppDatabase with an injected [QueryExecutor].
@@ -114,13 +127,19 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase(super.e);
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
 
   @override
   MigrationStrategy get migration {
     return MigrationStrategy(
       onCreate: (m) async {
         await m.createAll();
+      },
+      onUpgrade: (m, from, to) async {
+        if (from < 2) {
+          // v2: add rewrite_rules table
+          await m.createTable(rewriteRules);
+        }
       },
       beforeOpen: (details) async {
         // Enable foreign key enforcement for every connection.

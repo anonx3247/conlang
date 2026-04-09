@@ -142,7 +142,7 @@ Parser<String> _singleLetterParser() => uppercase().flatten();
 /// Any character that is NOT a structural grammar character.
 /// Catches multi-character IPA sequences and special phoneme characters.
 Parser<String> _ipaCharParser() =>
-    pattern('^\\[\\]() >\n\r-').plus().flatten();
+    pattern('^\\[\\]() >\n\r-#_').plus().flatten();
 
 // ---------------------------------------------------------------------------
 // Core segment parser (shared by template and constraint parsers)
@@ -154,6 +154,7 @@ Parser<String> _ipaCharParser() =>
 ///   1. `[className]`  — natural class in brackets
 ///   2. Single uppercase letter — shorthand class (C, V, N …)
 ///   3. IPA literal — any other phoneme symbol
+///   4. `#` — word boundary marker
 ///
 /// Returns a [Slot] with `isOptional = false` — optionality is applied by the
 /// template parser wrapping this in `(...)`.
@@ -170,7 +171,10 @@ Parser<Slot> _segmentParser() {
   // 3. IPA literal
   final literal = _ipaCharParser().map((s) => Slot(literalPhoneme: s));
 
-  return (bracketClass | singleClass | literal).cast<Slot>();
+  // 4. Word boundary marker
+  final wordBoundary = char('#').map((_) => Slot(literalPhoneme: '#'));
+
+  return (bracketClass | singleClass | literal | wordBoundary).cast<Slot>();
 }
 
 // ---------------------------------------------------------------------------
@@ -288,4 +292,185 @@ ParsedConstraint parseConstraintRule(String input) {
         ),
       );
   }
+}
+
+// ---------------------------------------------------------------------------
+// Rewrite rule data model
+// ---------------------------------------------------------------------------
+
+/// A phonological rewrite rule in SPE-style notation: A -> B / C_D
+///
+/// Examples:
+///   - `k -> x / V_V`  (velar lenition between vowels)
+///   - `V -> [+nasal] / _N`  (vowel nasalization before nasal)
+///   - `t -> ʔ / _#`  (glottal stop at word boundary)
+///   - `a -> e / [stop]_`  (vowel raising after stops)
+class RewriteRule {
+  const RewriteRule({
+    required this.input,
+    required this.output,
+    required this.leftContext,
+    required this.rightContext,
+    required this.source,
+  });
+
+  /// The LHS input segment(s) to match (what changes).
+  final List<Slot> input;
+
+  /// The RHS output: either a literal string (replacement) or a feature
+  /// description in brackets. Stored as raw string for v1 — we parse the
+  /// input context but keep the output as a display string since applying
+  /// the transformation is Phase 2 morphology engine work.
+  final String output;
+
+  /// Segments to the left of the target (before '_'). Empty list = no left context.
+  final List<Slot> leftContext;
+
+  /// Segments to the right of the target (after '_'). Empty list = no right context.
+  final List<Slot> rightContext;
+
+  /// Original source string for round-tripping.
+  final String source;
+
+  @override
+  String toString() => source;
+}
+
+/// Result of parsing a rewrite rule string.
+class ParsedRewriteRule {
+  const ParsedRewriteRule.success({required this.source, required this.rule})
+      : error = null;
+
+  const ParsedRewriteRule.failure({required this.source, required this.error})
+      : rule = null;
+
+  final String source;
+  final RewriteRule? rule;
+  final String? error;
+
+  bool get isValid => error == null;
+}
+
+// ---------------------------------------------------------------------------
+// Rewrite rule parser
+// ---------------------------------------------------------------------------
+
+/// Parses a rewrite rule string such as `k -> x / V_V`.
+///
+/// Notation: `input -> output / leftContext_rightContext`
+/// The environment (/ ...) is optional; left or right context can be empty.
+///
+/// Returns a [ParsedRewriteRule] — check [ParsedRewriteRule.isValid] before use.
+ParsedRewriteRule parseRewriteRule(String input) {
+  if (input.trim().isEmpty) {
+    return ParsedRewriteRule.failure(source: input, error: 'Rule is empty');
+  }
+
+  // Split on " -> " (with spaces) to separate input from rhs.
+  final arrowIdx = input.indexOf(' -> ');
+  if (arrowIdx < 0) {
+    return ParsedRewriteRule.failure(
+      source: input,
+      error: "Missing ' -> ' separator (use spaces around ->)",
+    );
+  }
+
+  final inputPart = input.substring(0, arrowIdx).trim();
+  final rhsPart = input.substring(arrowIdx + 4).trim(); // skip " -> "
+
+  if (inputPart.isEmpty) {
+    return ParsedRewriteRule.failure(
+      source: input,
+      error: 'Input (LHS) is empty',
+    );
+  }
+  if (rhsPart.isEmpty) {
+    return ParsedRewriteRule.failure(
+      source: input,
+      error: 'Output (RHS) is empty',
+    );
+  }
+
+  // Split rhs on " / " to separate output from optional context.
+  final slashIdx = rhsPart.indexOf(' / ');
+  final outputPart =
+      slashIdx >= 0 ? rhsPart.substring(0, slashIdx).trim() : rhsPart.trim();
+  final contextPart =
+      slashIdx >= 0 ? rhsPart.substring(slashIdx + 3).trim() : null;
+
+  if (outputPart.isEmpty) {
+    return ParsedRewriteRule.failure(
+      source: input,
+      error: 'Output segment is empty',
+    );
+  }
+
+  // Parse the input segment(s) using the shared segment parser.
+  final inputParser = _segmentParser().plus().end();
+  final inputResult = inputParser.parse(inputPart);
+  if (inputResult is Failure) {
+    return ParsedRewriteRule.failure(
+      source: input,
+      error:
+          'Input parse error at position ${inputResult.position}: ${inputResult.message}',
+    );
+  }
+  final inputSlots = List<Slot>.from((inputResult as Success).value);
+
+  // Parse context if present.
+  List<Slot> leftContext = [];
+  List<Slot> rightContext = [];
+
+  if (contextPart != null) {
+    // Split on "_" to get left and right context.
+    final underscoreIdx = contextPart.indexOf('_');
+    if (underscoreIdx < 0) {
+      return ParsedRewriteRule.failure(
+        source: input,
+        error: "Context must contain '_' to mark target position",
+      );
+    }
+
+    final leftRaw = contextPart.substring(0, underscoreIdx).trim();
+    final rightRaw = contextPart.substring(underscoreIdx + 1).trim();
+
+    // Parse left context (zero or more segments).
+    if (leftRaw.isNotEmpty) {
+      final leftParser = _segmentParser().plus().end();
+      final leftResult = leftParser.parse(leftRaw);
+      if (leftResult is Failure) {
+        return ParsedRewriteRule.failure(
+          source: input,
+          error:
+              'Left context parse error at position ${leftResult.position}: ${leftResult.message}',
+        );
+      }
+      leftContext = List<Slot>.from((leftResult as Success).value);
+    }
+
+    // Parse right context (zero or more segments).
+    if (rightRaw.isNotEmpty) {
+      final rightParser = _segmentParser().plus().end();
+      final rightResult = rightParser.parse(rightRaw);
+      if (rightResult is Failure) {
+        return ParsedRewriteRule.failure(
+          source: input,
+          error:
+              'Right context parse error at position ${rightResult.position}: ${rightResult.message}',
+        );
+      }
+      rightContext = List<Slot>.from((rightResult as Success).value);
+    }
+  }
+
+  return ParsedRewriteRule.success(
+    source: input,
+    rule: RewriteRule(
+      input: inputSlots,
+      output: outputPart,
+      leftContext: leftContext,
+      rightContext: rightContext,
+      source: input,
+    ),
+  );
 }

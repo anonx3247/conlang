@@ -2258,6 +2258,252 @@ class LexemesCompanion extends UpdateCompanion<Lexeme> {
   }
 }
 
+class $RewriteRulesTable extends RewriteRules
+    with TableInfo<$RewriteRulesTable, RewriteRule> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $RewriteRulesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _sourceMeta = const VerificationMeta('source');
+  @override
+  late final GeneratedColumn<String> source = GeneratedColumn<String>(
+    'source',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _orderingMeta = const VerificationMeta(
+    'ordering',
+  );
+  @override
+  late final GeneratedColumn<int> ordering = GeneratedColumn<int>(
+    'ordering',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [id, source, ordering];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'rewrite_rules';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<RewriteRule> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('source')) {
+      context.handle(
+        _sourceMeta,
+        source.isAcceptableOrUnknown(data['source']!, _sourceMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_sourceMeta);
+    }
+    if (data.containsKey('ordering')) {
+      context.handle(
+        _orderingMeta,
+        ordering.isAcceptableOrUnknown(data['ordering']!, _orderingMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  RewriteRule map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return RewriteRule(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      source: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}source'],
+      )!,
+      ordering: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}ordering'],
+      )!,
+    );
+  }
+
+  @override
+  $RewriteRulesTable createAlias(String alias) {
+    return $RewriteRulesTable(attachedDatabase, alias);
+  }
+}
+
+class RewriteRule extends DataClass implements Insertable<RewriteRule> {
+  final int id;
+  final String source;
+  final int ordering;
+  const RewriteRule({
+    required this.id,
+    required this.source,
+    required this.ordering,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['source'] = Variable<String>(source);
+    map['ordering'] = Variable<int>(ordering);
+    return map;
+  }
+
+  RewriteRulesCompanion toCompanion(bool nullToAbsent) {
+    return RewriteRulesCompanion(
+      id: Value(id),
+      source: Value(source),
+      ordering: Value(ordering),
+    );
+  }
+
+  factory RewriteRule.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return RewriteRule(
+      id: serializer.fromJson<int>(json['id']),
+      source: serializer.fromJson<String>(json['source']),
+      ordering: serializer.fromJson<int>(json['ordering']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'source': serializer.toJson<String>(source),
+      'ordering': serializer.toJson<int>(ordering),
+    };
+  }
+
+  RewriteRule copyWith({int? id, String? source, int? ordering}) => RewriteRule(
+    id: id ?? this.id,
+    source: source ?? this.source,
+    ordering: ordering ?? this.ordering,
+  );
+  RewriteRule copyWithCompanion(RewriteRulesCompanion data) {
+    return RewriteRule(
+      id: data.id.present ? data.id.value : this.id,
+      source: data.source.present ? data.source.value : this.source,
+      ordering: data.ordering.present ? data.ordering.value : this.ordering,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('RewriteRule(')
+          ..write('id: $id, ')
+          ..write('source: $source, ')
+          ..write('ordering: $ordering')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, source, ordering);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is RewriteRule &&
+          other.id == this.id &&
+          other.source == this.source &&
+          other.ordering == this.ordering);
+}
+
+class RewriteRulesCompanion extends UpdateCompanion<RewriteRule> {
+  final Value<int> id;
+  final Value<String> source;
+  final Value<int> ordering;
+  const RewriteRulesCompanion({
+    this.id = const Value.absent(),
+    this.source = const Value.absent(),
+    this.ordering = const Value.absent(),
+  });
+  RewriteRulesCompanion.insert({
+    this.id = const Value.absent(),
+    required String source,
+    this.ordering = const Value.absent(),
+  }) : source = Value(source);
+  static Insertable<RewriteRule> custom({
+    Expression<int>? id,
+    Expression<String>? source,
+    Expression<int>? ordering,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (source != null) 'source': source,
+      if (ordering != null) 'ordering': ordering,
+    });
+  }
+
+  RewriteRulesCompanion copyWith({
+    Value<int>? id,
+    Value<String>? source,
+    Value<int>? ordering,
+  }) {
+    return RewriteRulesCompanion(
+      id: id ?? this.id,
+      source: source ?? this.source,
+      ordering: ordering ?? this.ordering,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (source.present) {
+      map['source'] = Variable<String>(source.value);
+    }
+    if (ordering.present) {
+      map['ordering'] = Variable<int>(ordering.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('RewriteRulesCompanion(')
+          ..write('id: $id, ')
+          ..write('source: $source, ')
+          ..write('ordering: $ordering')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -2270,6 +2516,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $RomanizationMappingsTable romanizationMappings =
       $RomanizationMappingsTable(this);
   late final $LexemesTable lexemes = $LexemesTable(this);
+  late final $RewriteRulesTable rewriteRules = $RewriteRulesTable(this);
   late final PhonemeDao phonemeDao = PhonemeDao(this as AppDatabase);
   late final NaturalClassDao naturalClassDao = NaturalClassDao(
     this as AppDatabase,
@@ -2278,6 +2525,9 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     this as AppDatabase,
   );
   late final PhonotacticDao phonotacticDao = PhonotacticDao(
+    this as AppDatabase,
+  );
+  late final RewriteRuleDao rewriteRuleDao = RewriteRuleDao(
     this as AppDatabase,
   );
   @override
@@ -2291,6 +2541,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     phonotacticConstraints,
     romanizationMappings,
     lexemes,
+    rewriteRules,
   ];
 }
 
@@ -3557,6 +3808,162 @@ typedef $$LexemesTableProcessedTableManager =
       Lexeme,
       PrefetchHooks Function()
     >;
+typedef $$RewriteRulesTableCreateCompanionBuilder =
+    RewriteRulesCompanion Function({
+      Value<int> id,
+      required String source,
+      Value<int> ordering,
+    });
+typedef $$RewriteRulesTableUpdateCompanionBuilder =
+    RewriteRulesCompanion Function({
+      Value<int> id,
+      Value<String> source,
+      Value<int> ordering,
+    });
+
+class $$RewriteRulesTableFilterComposer
+    extends Composer<_$AppDatabase, $RewriteRulesTable> {
+  $$RewriteRulesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get source => $composableBuilder(
+    column: $table.source,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get ordering => $composableBuilder(
+    column: $table.ordering,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$RewriteRulesTableOrderingComposer
+    extends Composer<_$AppDatabase, $RewriteRulesTable> {
+  $$RewriteRulesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get source => $composableBuilder(
+    column: $table.source,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get ordering => $composableBuilder(
+    column: $table.ordering,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$RewriteRulesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $RewriteRulesTable> {
+  $$RewriteRulesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get source =>
+      $composableBuilder(column: $table.source, builder: (column) => column);
+
+  GeneratedColumn<int> get ordering =>
+      $composableBuilder(column: $table.ordering, builder: (column) => column);
+}
+
+class $$RewriteRulesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $RewriteRulesTable,
+          RewriteRule,
+          $$RewriteRulesTableFilterComposer,
+          $$RewriteRulesTableOrderingComposer,
+          $$RewriteRulesTableAnnotationComposer,
+          $$RewriteRulesTableCreateCompanionBuilder,
+          $$RewriteRulesTableUpdateCompanionBuilder,
+          (
+            RewriteRule,
+            BaseReferences<_$AppDatabase, $RewriteRulesTable, RewriteRule>,
+          ),
+          RewriteRule,
+          PrefetchHooks Function()
+        > {
+  $$RewriteRulesTableTableManager(_$AppDatabase db, $RewriteRulesTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$RewriteRulesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$RewriteRulesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$RewriteRulesTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<String> source = const Value.absent(),
+                Value<int> ordering = const Value.absent(),
+              }) => RewriteRulesCompanion(
+                id: id,
+                source: source,
+                ordering: ordering,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required String source,
+                Value<int> ordering = const Value.absent(),
+              }) => RewriteRulesCompanion.insert(
+                id: id,
+                source: source,
+                ordering: ordering,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$RewriteRulesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $RewriteRulesTable,
+      RewriteRule,
+      $$RewriteRulesTableFilterComposer,
+      $$RewriteRulesTableOrderingComposer,
+      $$RewriteRulesTableAnnotationComposer,
+      $$RewriteRulesTableCreateCompanionBuilder,
+      $$RewriteRulesTableUpdateCompanionBuilder,
+      (
+        RewriteRule,
+        BaseReferences<_$AppDatabase, $RewriteRulesTable, RewriteRule>,
+      ),
+      RewriteRule,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -3576,4 +3983,6 @@ class $AppDatabaseManager {
       $$RomanizationMappingsTableTableManager(_db, _db.romanizationMappings);
   $$LexemesTableTableManager get lexemes =>
       $$LexemesTableTableManager(_db, _db.lexemes);
+  $$RewriteRulesTableTableManager get rewriteRules =>
+      $$RewriteRulesTableTableManager(_db, _db.rewriteRules);
 }
