@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../features/project/data/project_providers.dart';
-import '../../features/project/domain/project.dart';
+import '../../features/project/data/project_registry.dart';
 import '../../features/project/presentation/project_menu.dart';
 
 /// Top-level application shell with a horizontal tab bar for major sections.
@@ -34,6 +34,9 @@ class AppShell extends ConsumerWidget {
 
     // Watch current project to show name in title and toggle content.
     final currentProjectId = ref.watch(currentProjectIdProvider);
+
+    // Keep registry provider alive for project name badge and menu.
+    final registryAsync = ref.watch(projectRegistryProvider);
 
     return Scaffold(
       backgroundColor: colorScheme.surface,
@@ -88,7 +91,14 @@ class AppShell extends ConsumerWidget {
 
                       // Current project name (right-aligned)
                       if (currentProjectId != null)
-                        _ProjectNameBadge(projectId: currentProjectId)
+                        registryAsync.when(
+                          data: (registry) => _ProjectNameBadge(
+                            projectId: currentProjectId,
+                            registry: registry,
+                          ),
+                          loading: () => _projectNamePlaceholder(theme, colorScheme),
+                          error: (_, _) => const SizedBox.shrink(),
+                        )
                       else
                         _projectNamePlaceholder(theme, colorScheme),
 
@@ -131,47 +141,51 @@ class AppShell extends ConsumerWidget {
 // Project name badge (async, reads from registry)
 // ---------------------------------------------------------------------------
 
-class _ProjectNameBadge extends ConsumerWidget {
-  const _ProjectNameBadge({required this.projectId});
+class _ProjectNameBadge extends StatefulWidget {
+  const _ProjectNameBadge({required this.projectId, required this.registry});
 
   final String projectId;
+  final ProjectRegistry registry;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  State<_ProjectNameBadge> createState() => _ProjectNameBadgeState();
+}
+
+class _ProjectNameBadgeState extends State<_ProjectNameBadge> {
+  String? _name;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadName();
+  }
+
+  @override
+  void didUpdateWidget(_ProjectNameBadge old) {
+    super.didUpdateWidget(old);
+    if (old.projectId != widget.projectId) _loadName();
+  }
+
+  Future<void> _loadName() async {
+    final project = await widget.registry.findById(widget.projectId);
+    if (mounted) setState(() => _name = project?.name);
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-
-    final registryAsync = ref.watch(projectRegistryProvider);
 
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
         Icon(Icons.folder, size: 14, color: colorScheme.primary.withValues(alpha: 0.7)),
         const SizedBox(width: 6),
-        registryAsync.when(
-          data: (registry) => FutureBuilder<Project?>(
-            future: registry.findById(projectId),
-            builder: (_, snap) => Text(
-              snap.data?.name ?? projectId,
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: colorScheme.onSurface.withValues(alpha: 0.7),
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-          loading: () => Text(
-            projectId,
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: colorScheme.onSurface.withValues(alpha: 0.7),
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          error: (_, _) => Text(
-            projectId,
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: colorScheme.onSurface.withValues(alpha: 0.7),
-              fontWeight: FontWeight.w600,
-            ),
+        Text(
+          _name ?? widget.projectId,
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: colorScheme.onSurface.withValues(alpha: 0.7),
+            fontWeight: FontWeight.w600,
           ),
         ),
       ],
