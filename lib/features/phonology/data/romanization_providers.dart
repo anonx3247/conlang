@@ -1,3 +1,4 @@
+import 'package:drift/drift.dart' show Value;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../db/app_database.dart';
@@ -54,15 +55,25 @@ final romanizationEnabledProvider = StreamProvider<bool>((ref) {
 });
 
 /// Upserts the romanization_enabled setting for the current project.
+///
+/// Uses a direct UPDATE-then-INSERT pattern because Drift's
+/// `insertOnConflictUpdate` targets the primary key (id), not the unique
+/// `key` column — so a second insert creates a duplicate row instead of
+/// updating the existing one.
 Future<void> setRomanizationEnabled(WidgetRef ref, bool enabled) async {
   final db = ref.read(currentDatabaseProvider);
   if (db == null) return;
-  await db.into(db.projectSettings).insertOnConflictUpdate(
-        ProjectSettingsCompanion.insert(
-          key: _kRomanizationKey,
-          value: enabled.toString(),
-        ),
-      );
+  final updated = await (db.update(db.projectSettings)
+        ..where((t) => t.key.equals(_kRomanizationKey)))
+      .write(ProjectSettingsCompanion(value: Value(enabled.toString())));
+  if (updated == 0) {
+    await db.into(db.projectSettings).insert(
+          ProjectSettingsCompanion.insert(
+            key: _kRomanizationKey,
+            value: enabled.toString(),
+          ),
+        );
+  }
 }
 
 // ---------------------------------------------------------------------------
