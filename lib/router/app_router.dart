@@ -147,7 +147,12 @@ GoRouter appRouter(Ref ref) {
                     routes: [
                       GoRoute(
                         path: '/lexicon/dictionary',
-                        builder: (_, __) => const DictionaryPage(),
+                        builder: (context, state) => DictionaryPage(
+                          createWithMeaning:
+                              state.uri.queryParameters['create'] == 'true'
+                                  ? state.uri.queryParameters['meaning']
+                                  : null,
+                        ),
                       ),
                     ],
                   ),
