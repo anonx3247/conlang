@@ -1,5 +1,5 @@
 ---
-status: complete
+status: diagnosed
 phase: 01-foundation
 source: 01-08-SUMMARY.md, 01-09-SUMMARY.md
 started: 2026-04-08T22:00:00Z
@@ -59,7 +59,7 @@ result: pass
 
 total: 10
 passed: 9
-issues: 1
+issues: 6
 pending: 0
 skipped: 0
 
@@ -76,3 +76,66 @@ skipped: 0
       issue: "TextField's built-in onTapOutside bypasses TapRegion groupId grouping"
   missing:
     - "Fix committed (3ef282c) — needs re-test after hot restart"
+
+- truth: "User can type an IPA symbol (e.g. 'b') in phoneme dialog and have features auto-filled (reverse derivation)"
+  status: failed
+  reason: "User requested: selecting features derives symbol, but typing a symbol should also fill in features"
+  severity: major
+  test: 5
+  root_cause: "Reverse lookup not implemented — only forward derivation (features → symbol) exists"
+  artifacts:
+    - path: "lib/features/phonology/presentation/inventory/phoneme_edit_dialog.dart"
+      issue: "No reverse mapping from IPA symbol to features"
+  missing:
+    - "Add IPA symbol text input that reverse-derives features from IpaSound data"
+
+- truth: "Phoneme ↔ romanization stay in sync: adding a romanization auto-creates the phoneme and vice versa; romanization is a project-wide toggle"
+  status: failed
+  reason: "User requested: romanization and phoneme inventory should be bidirectionally synced, romanization is project-wide on/off"
+  severity: major
+  test: 8
+  root_cause: "Phoneme and romanization are independent tables with no sync logic"
+  artifacts:
+    - path: "lib/features/phonology/presentation/inventory/romanization_section.dart"
+      issue: "No auto-creation of phoneme when romanization added"
+    - path: "lib/features/phonology/presentation/inventory/phoneme_edit_dialog.dart"
+      issue: "No auto-creation of romanization when phoneme added"
+  missing:
+    - "Bidirectional sync between phonemes and romanization mappings"
+    - "Project-wide romanization enabled/disabled toggle"
+
+- truth: "Single 'Add Phoneme' button with consonant/vowel type dropdown inside the dialog"
+  status: failed
+  reason: "User requested: consonant/vowel should be a dropdown in dialog, not separate add buttons for each section"
+  severity: major
+  test: 5
+  root_cause: "Inventory page has separate add buttons for consonants and vowels sections"
+  artifacts:
+    - path: "lib/features/phonology/presentation/inventory/inventory_page.dart"
+      issue: "Separate add buttons per section instead of unified add"
+  missing:
+    - "Single Add Phoneme button with type selection in dialog"
+
+- truth: "Phonological rewrite rules (A → B / C_D) can be defined on the Sound Rules page"
+  status: failed
+  reason: "User requested: want to define sound change rules like a[stop] -> e[stop], not just phonotactic constraints"
+  severity: major
+  test: 4
+  root_cause: "Constraint system only supports labeling (allowed/forbidden), not transformational rules"
+  artifacts:
+    - path: "lib/features/phonology/domain/phonotactic_dsl.dart"
+      issue: "DSL only parses LHS pattern + label, no RHS transformation"
+  missing:
+    - "New rule type: phonological rewrite rules with LHS → RHS transformation"
+
+- truth: "IPA keyboard popup plays audio preview when clicking a symbol"
+  status: failed
+  reason: "User requested: clicking IPA symbol in keyboard popup should play its sound"
+  severity: minor
+  test: 9
+  root_cause: "IpaKeyboardPopup only inserts symbol text, no audio playback integration"
+  artifacts:
+    - path: "lib/features/phonology/presentation/shared/ipa_keyboard/ipa_keyboard_popup.dart"
+      issue: "No IpaAudioPlayer integration in symbol buttons"
+  missing:
+    - "Play audio via IpaAudioPlayer when symbol is tapped in keyboard popup"
