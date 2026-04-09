@@ -80,6 +80,9 @@ Recent decisions affecting current work:
 - 01-09: Custom symbol TextField shown only when all dropdowns selected but combo unknown — avoids clutter in common case while handling non-standard sounds
 - 01-09: Delete button added to phoneme dialog actions — replaces hidden long-press on chip; uses existing confirmDeletePhoneme + pops dialog after deletion
 - 01-09: Romanization table is Latin-first (Latin letter → IPA sound) — matches user mental model; DB columns unchanged
+- 01-10: _isInteractingWithPopup Listener flag + 100ms delay in _onFocusChanged replaces microtask — eliminates race where focus-loss hide fires before requestFocus() in symbol insertion
+- 01-10: IpaAudioPlayer passed as constructor param to IpaKeyboardPopup — IpaTextField (ConsumerStatefulWidget) reads provider and passes down to overlay
+- 01-10: _symbolToAudioPath built lazily from IpaSound static lists in keyboard popup — single source of truth, no duplicated asset paths
 - 01-11: _symbolToFeatures built as file-level lazy map from IpaSound static data using collection-for — reverse lookup with zero duplication of forward maps
 - 01-11: IPA symbol field reuses existing _symbolController (pre-filled in edit mode) — no second controller needed
 - 01-11: Reverse lookup is silent for unknown symbols — dropdowns stay unchanged, manual selection always works
