@@ -142,7 +142,7 @@ Parser<String> _singleLetterParser() => uppercase().flatten();
 /// Any character that is NOT a structural grammar character.
 /// Catches multi-character IPA sequences and special phoneme characters.
 Parser<String> _ipaCharParser() =>
-    pattern('^\\[\\]\\(\\) \\->\n\r').plus().flatten();
+    pattern('^\\[\\]() >\n\r-').plus().flatten();
 
 // ---------------------------------------------------------------------------
 // Core segment parser (shared by template and constraint parsers)

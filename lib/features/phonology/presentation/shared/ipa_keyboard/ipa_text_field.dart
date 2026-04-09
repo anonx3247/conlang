@@ -267,6 +267,10 @@ class _IpaTextFieldState extends State<IpaTextField> {
         link: _layerLink,
         child: TapRegion(
           groupId: _tapGroupId,
+          // When a tap lands outside BOTH the field and popup (i.e. truly
+          // outside the group), unfocus the field so _onFocusChanged hides
+          // the popup.
+          onTapOutside: (_) => _focusNode.unfocus(),
           child: KeyboardListener(
             focusNode: FocusNode(skipTraversal: true),
             onKeyEvent: (event) {
@@ -279,6 +283,10 @@ class _IpaTextFieldState extends State<IpaTextField> {
               controller: _controller,
               focusNode: _focusNode,
               decoration: decoration,
+              // Disable the TextField's built-in onTapOutside unfocus — our
+              // outer TapRegion with groupId handles this correctly, taking
+              // the popup into account.
+              onTapOutside: (_) {},
               style: widget.style,
               onChanged: widget.onChanged,
               onSubmitted: widget.onSubmitted,
