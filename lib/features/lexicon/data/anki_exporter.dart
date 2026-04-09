@@ -225,9 +225,9 @@ class AnkiExporter {
         final noteId = now * 1000 + i;
         final guid = 'conlang_${noteId}_$i';
 
-        // Build front field: IPA + optional romanization
+        // Build front field: romanization (line 1) + [IPA] (line 2) per D-05
         final front = e.romanization != null && e.romanization!.isNotEmpty
-            ? '${_htmlEscape(e.ipa)} [${_htmlEscape(e.romanization!)}]'
+            ? '${_htmlEscape(e.romanization!)}<br>[${_htmlEscape(e.ipa)}]'
             : _htmlEscape(e.ipa);
 
         final back = _htmlEscape(e.meaning ?? '');
