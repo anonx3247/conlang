@@ -2270,6 +2270,13 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $RomanizationMappingsTable romanizationMappings =
       $RomanizationMappingsTable(this);
   late final $LexemesTable lexemes = $LexemesTable(this);
+  late final PhonemeDao phonemeDao = PhonemeDao(this as AppDatabase);
+  late final NaturalClassDao naturalClassDao = NaturalClassDao(
+    this as AppDatabase,
+  );
+  late final RomanizationDao romanizationDao = RomanizationDao(
+    this as AppDatabase,
+  );
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();

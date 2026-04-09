@@ -212,7 +212,7 @@ final class ProjectDatabaseProvider
   }
 }
 
-String _$projectDatabaseHash() => r'cce515c762afceb4d9a1fb0347d361048b9f9366';
+String _$projectDatabaseHash() => r'b9bba9f97342904760ddc8ad90263acb59cd9e7d';
 
 /// Returns an [AppDatabase] instance scoped to [projectId].
 ///

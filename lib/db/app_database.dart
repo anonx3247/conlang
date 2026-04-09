@@ -1,6 +1,10 @@
 import 'package:drift/drift.dart';
 import 'package:drift_flutter/drift_flutter.dart';
 
+import '../features/phonology/data/natural_class_dao.dart';
+import '../features/phonology/data/phoneme_dao.dart';
+import '../features/phonology/data/romanization_dao.dart';
+
 part 'app_database.g.dart';
 
 // ---------------------------------------------------------------------------
@@ -90,14 +94,17 @@ class Lexemes extends Table {
 // Database class
 // ---------------------------------------------------------------------------
 
-@DriftDatabase(tables: [
-  Phonemes,
-  NaturalClasses,
-  PhonotacticTemplates,
-  PhonotacticConstraints,
-  RomanizationMappings,
-  Lexemes,
-])
+@DriftDatabase(
+  tables: [
+    Phonemes,
+    NaturalClasses,
+    PhonotacticTemplates,
+    PhonotacticConstraints,
+    RomanizationMappings,
+    Lexemes,
+  ],
+  daos: [PhonemeDao, NaturalClassDao, RomanizationDao],
+)
 class AppDatabase extends _$AppDatabase {
   /// Creates an AppDatabase with an injected [QueryExecutor].
   ///
