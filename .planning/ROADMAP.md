@@ -14,8 +14,10 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Foundation** - Flutter app shell, project management, phonology tools, and derivation-aware database schema
 - [x] **Phase 2: Morphology Engine** - Pattern mini-language, plugin architecture, and rule editor — the centrepiece differentiator
-- [ ] **Phase 3: Lexicon** - Root and derived-word dictionary, search, semantic references, Anki export, phonotactic highlighting
-- [ ] **Phase 4: Grammar** - Parts of speech, declension/conjugation rules, paradigm chart generation, typology settings
+- [x] **Phase 3: Lexicon** - Root and derived-word dictionary, search, semantic references, Anki export, phonotactic highlighting
+- [ ] **Phase 3.1: Display & UX Fixes** - IPA chart shapes, word display format, Anki export UX, romanization toggle (INSERTED)
+- [ ] **Phase 3.2: Phonology Enhancements** - Predefined natural classes, shareable classes, allophone viewer (INSERTED)
+- [ ] **Phase 4: Grammar & Morphology** - Dimensional POS features, inflectional rules, paradigm generation, morphology tab merge (revised)
 - [ ] **Phase 5: Culture Wiki** - Markdown wiki with internal linking for world-building documentation
 - [ ] **Phase 6: Reference & Polish** - Built-in linguistic glossary and cross-cutting quality pass
 
@@ -91,21 +93,50 @@ Plans:
 - [x] 03-05-PLAN.md — Phonotactic highlighting infrastructure: shared ViolationText widget extraction, validation provider
 - [x] 03-06-PLAN.md — Phonotactic highlighting wiring: ViolationText into lexicon detail/list, per-word exception toggle, batch validation provider
 
-### Phase 4: Grammar
-**Goal**: Users can define the grammatical structure of their language — parts of speech, inflection rules, and typological choices — and generate complete paradigm charts for any word
+### Phase 3.1: Display & UX Fixes INSERTED
+**Goal**: Fix visual and UX issues from phases 1–3: IPA chart shapes, word display format, Anki export UX, and romanization visibility toggle
 **Depends on**: Phase 3
-**Requirements**: GRAM-01, GRAM-02, GRAM-03, GRAM-04
+**Requirements**: FIX-01, FIX-02, FIX-03, FIX-04, FIX-05
 **Success Criteria** (what must be TRUE):
-  1. User can define custom parts of speech categories with their grammatical feature dimensions (e.g. case, number, tense) as user-defined data, not a fixed list
-  2. User can write declension and conjugation rules using the pattern mini-language and attach them to a part of speech
-  3. User can select any word from the lexicon and view a fully generated paradigm chart (all inflected forms in a table) with per-cell exception support
-  4. User can record language-level typology choices — alignment (ergative/accusative), word order, and modality expression strategy (morphological vs analytic) — and these choices are documented and accessible throughout the tool
+  1. IPA vowel chart and phoneme inventory charts render with correct trapezoid/triangular shapes matching standard IPA layout
+  2. Word generator shows words as `/romanization/ [phonetics]` (romanization first, IPA in brackets)
+  3. Anki cards show `/romanization/` on one line then `[IPA]` below — not `[IPA] romanization`
+  4. Anki export UI shows an "Export to Anki" button; selection checkboxes only appear after pressing it, with a confirm/cancel flow
+  5. Phoneme inventory shows romanized form (e.g. /sh/) alongside IPA only when holding alt/ctrl, IPA-only by default
+
+Plans: TBD
+
+### Phase 3.2: Phonology Enhancements INSERTED
+**Goal**: Predefined natural classes with sensible defaults, cross-language shareable classes, and an allophone viewer for contextual phoneme realization
+**Depends on**: Phase 3.1
+**Requirements**: PHON-09, PHON-10, PHON-11
+**Success Criteria** (what must be TRUE):
+  1. Predefined natural classes (Stop/S, Liquid/L, Rhotic/R, Nasal/N, Fricative/F, etc.) ship with sensible IPA defaults and can include sounds not in the project's phoneme inventory
+  2. Natural classes are shareable across languages within the app (global definitions reusable per project)
+  3. User can click a phoneme and see all its contextual allophones based on defined phonological rules (e.g. /s/ → [s | z])
+
+Plans: TBD
+
+### Phase 4: Grammar & Morphology (revised)
+**Goal**: Users can define grammatical structure through N-dimensional feature systems per part of speech, with inflectional morphology rules organized by those dimensions and paradigm generation — the current Morphology tab merges into Grammar, and derivational morphology moves to Lexicon
+**Depends on**: Phase 3.2
+**Requirements**: GRAM-01, GRAM-02, GRAM-03, GRAM-04, GRAM-05, GRAM-06, GRAM-07
+**Success Criteria** (what must be TRUE):
+  1. User can define custom parts of speech with N grammatical dimensions, each with K levels (e.g. noun: gender[M/F] × number[SG/PL] × case[NOM/ACC/...])
+  2. User can attach inflectional morphology rules to dimension levels that stack hierarchically (e.g. gender suffix + number suffix), with the combined output auto-generated
+  3. User can override any cell in the paradigm table with a manual exception form
+  4. User can select any word from the lexicon and view a fully generated paradigm chart (all inflected forms in a dimension-based table)
+  5. User can record language-level typology choices (alignment, word order, modality expression strategy)
+  6. The standalone Morphology tab is removed; its rule editor UI is reused within Grammar (inflectional) and Lexicon (derivational)
+  7. Existing morphology rules are migrated to lexicon derivational rules; derivational rules appear in a "Derivations" tab within Lexicon with romanization for all derived forms
 **Plans**: TBD
 
 Plans:
-- [ ] 04-01: GrammarRepository — user-defined POS categories, feature dimension definitions, typology settings storage
-- [ ] 04-02: GrammarService — paradigm generation (feature matrix x morphology engine), per-cell exception handling
-- [ ] 04-03: Grammar UI — POS editor, feature dimension editor, typology settings panel, paradigm chart view
+- [ ] 04-01: Schema + migration — POS dimension tables, inflectional rule bindings, migrate existing morph rules to lexicon derivations
+- [ ] 04-02: Grammar data layer — GrammarRepository for POS dimensions, inflectional rule management, typology settings
+- [ ] 04-03: Paradigm engine — feature matrix × morphology engine, rule stacking, per-cell exception handling
+- [ ] 04-04: Grammar UI — POS dimension editor, inflectional rule editor (reusing morph rule UI), paradigm chart view, typology panel
+- [ ] 04-05: Lexicon derivations — derivation tab in Lexicon, derivational rule management, romanization for all derived forms, paradigm table per word
 
 ### Phase 5: Culture Wiki
 **Goal**: Users can document the world and culture behind their conlang in a structured wiki with Markdown formatting and navigable internal links between pages
@@ -141,7 +172,9 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4. Phases 5 and 6 depend only on
 |-------|----------------|--------|-----------|
 | 1. Foundation | 13/13 | Complete | 2026-04-09 |
 | 2. Morphology Engine | 10/10 | Complete | 2026-04-09 |
-| 3. Lexicon | 0/6 | In progress | - |
-| 4. Grammar | 0/3 | Not started | - |
+| 3. Lexicon | 6/6 | Complete | 2026-04-09 |
+| 3.1 Display & UX Fixes | 0/? | Not started | - |
+| 3.2 Phonology Enhancements | 0/? | Not started | - |
+| 4. Grammar & Morphology | 0/5 | Not started | - |
 | 5. Culture Wiki | 0/2 | Not started | - |
 | 6. Reference Glossary | 0/1 | Not started | - |

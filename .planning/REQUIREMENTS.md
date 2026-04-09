@@ -41,12 +41,29 @@ Requirements for initial release. Each maps to roadmap phases.
 - [ ] **MORPH-03**: User can define word derivation rules (e.g. -tion, -er, CaCCaaC templates from triconsonantal roots)
 - [ ] **MORPH-04**: User can define per-word exceptions to override any morphological rule for irregular forms
 
+### Display & UX Fixes
+
+- [ ] **FIX-01**: IPA vowel chart and phoneme inventory charts render with correct standard IPA shapes (trapezoid vowel chart)
+- [ ] **FIX-02**: Word generator displays words as `/romanization/ [phonetics]` (romanization first)
+- [ ] **FIX-03**: Anki cards show `/romanization/` on first line, `[IPA]` on second line
+- [ ] **FIX-04**: Anki export UI uses an "Export to Anki" button that reveals selection checkboxes on demand, with confirm/cancel
+- [ ] **FIX-05**: Phoneme inventory shows romanized form alongside IPA only when holding alt/ctrl modifier key
+
+### Phonology (additional)
+
+- [ ] **PHON-09**: Predefined natural classes (Stop, Liquid, Rhotic, Nasal, Fricative, etc.) with sensible IPA defaults, including sounds outside the project inventory
+- [ ] **PHON-10**: Natural classes are shareable across languages (global definitions reusable per project)
+- [ ] **PHON-11**: User can click a phoneme to view all contextual allophones based on phonological rules
+
 ### Grammar
 
-- [ ] **GRAM-01**: User can define parts of speech categories and their grammatical properties
-- [ ] **GRAM-02**: User can define declension and conjugation rules per part of speech using the pattern mini-language
-- [ ] **GRAM-03**: User can generate full paradigm charts (declension/conjugation tables) for any word
+- [ ] **GRAM-01**: User can define parts of speech categories with N user-defined grammatical dimensions, each with K levels (e.g. gender[M/F] × number[SG/PL] × case[NOM/ACC])
+- [ ] **GRAM-02**: User can attach inflectional morphology rules to dimension levels that stack hierarchically with auto-generated combined forms
+- [ ] **GRAM-03**: User can generate full paradigm charts (declension/conjugation tables) for any word based on its POS dimensions
 - [ ] **GRAM-04**: User can specify language typology choices (ergative/accusative alignment, word order, modality expression as morphological vs analytic)
+- [ ] **GRAM-05**: User can override any individual cell in a paradigm table with a manual exception form
+- [ ] **GRAM-06**: The standalone Morphology tab is removed; rule editor UI is reused within Grammar (inflectional) and Lexicon (derivational)
+- [ ] **GRAM-07**: Existing morphology rules migrate to lexicon derivational rules; derivational rules have a dedicated tab in Lexicon with romanization for all derived forms
 
 ### Culture
 
@@ -60,6 +77,23 @@ Requirements for initial release. Each maps to roadmap phases.
 ## v2 Requirements
 
 Deferred to future release. Tracked but not in current roadmap.
+
+### Input & Diacritics
+
+- **DIAC-01**: App-wide compose-key system for common romanization diacritics (e.g. a+macron → ā, h+dot → ḣ)
+
+### Writing System
+
+- **WSYS-01**: Writing system tab for defining and previewing custom scripts/orthographies
+
+### Language Evolution
+
+- **EVOL-01**: Language evolution tools for modeling sound changes and phoneme splits over time
+- **EVOL-02**: Allophone-to-phoneme promotion workflow (allophones becoming separate phonemes through evolution)
+
+### Word Preview
+
+- **WPREV-01**: Example paragraph preview in word generator showing generated words in running text
 
 ### Writing Scratchpad
 
@@ -121,17 +155,28 @@ Which phases cover which requirements. Updated during roadmap creation.
 | MORPH-02 | Phase 2 | Pending |
 | MORPH-03 | Phase 2 | Pending |
 | MORPH-04 | Phase 2 | Pending |
+| FIX-01 | Phase 3.1 | Pending |
+| FIX-02 | Phase 3.1 | Pending |
+| FIX-03 | Phase 3.1 | Pending |
+| FIX-04 | Phase 3.1 | Pending |
+| FIX-05 | Phase 3.1 | Pending |
+| PHON-09 | Phase 3.2 | Pending |
+| PHON-10 | Phase 3.2 | Pending |
+| PHON-11 | Phase 3.2 | Pending |
 | GRAM-01 | Phase 4 | Pending |
 | GRAM-02 | Phase 4 | Pending |
 | GRAM-03 | Phase 4 | Pending |
 | GRAM-04 | Phase 4 | Pending |
+| GRAM-05 | Phase 4 | Pending |
+| GRAM-06 | Phase 4 | Pending |
+| GRAM-07 | Phase 4 | Pending |
 | CULT-01 | Phase 5 | Pending |
 | CULT-02 | Phase 5 | Pending |
 | REF-01 | Phase 6 | Pending |
 
 **Coverage:**
-- v1 requirements: 29 total
-- Mapped to phases: 29
+- v1 requirements: 40 total
+- Mapped to phases: 40
 - Unmapped: 0 ✓
 
 ---
