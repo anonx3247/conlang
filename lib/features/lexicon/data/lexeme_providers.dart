@@ -1,6 +1,10 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../db/app_database.dart';
+import '../../morphology/data/morphology_providers.dart';
+import '../../morphology/domain/morphology_dsl.dart';
+import '../../morphology/domain/morphology_engine.dart';
+import '../../phonology/data/phonotactic_providers.dart';
 import '../../project/data/project_providers.dart';
 import 'lexeme_dao.dart';
 
@@ -115,8 +119,10 @@ final filteredLexemeListProvider = Provider<List<Lexeme>>((ref) {
     for (final l in allLexemes) {
       if (l.rootId != null) {
         final matchesIpa = l.ipa.toLowerCase().contains(query);
-        final matchesRom = l.romanization?.toLowerCase().contains(query) ?? false;
-        final matchesMeaning = l.meaning?.toLowerCase().contains(query) ?? false;
+        final matchesRom =
+            l.romanization?.toLowerCase().contains(query) ?? false;
+        final matchesMeaning =
+            l.meaning?.toLowerCase().contains(query) ?? false;
         if (matchesIpa || matchesRom || matchesMeaning) {
           derivedMatchRootIds.add(l.rootId!);
         }
@@ -157,4 +163,91 @@ final derivedSearchMatchesProvider = Provider<Set<int>>((ref) {
               (l.meaning?.toLowerCase().contains(query) ?? false)))
       .map((l) => l.id)
       .toSet();
+});
+
+// ---------------------------------------------------------------------------
+// Single lexeme by ID provider
+// ---------------------------------------------------------------------------
+
+/// Watches a single lexeme by its ID.
+///
+/// Emits null when not found or no project is open.
+final lexemeByIdProvider =
+    StreamProvider.family<Lexeme?, int>((ref, lexemeId) {
+  final dao = ref.watch(lexemeDaoProvider);
+  if (dao == null) return Stream.value(null);
+  return dao.watchAllLexemes().map(
+        (list) => list.where((l) => l.id == lexemeId).firstOrNull,
+      );
+});
+
+// ---------------------------------------------------------------------------
+// Exceptions for lexeme provider
+// ---------------------------------------------------------------------------
+
+/// Watches morphological rule exceptions for a specific lexeme.
+///
+/// Emits an empty list when no project is open.
+final exceptionsForLexemeProvider = StreamProvider.family<
+    List<MorphologicalRuleException>, int>((ref, lexemeId) {
+  final dao = ref.watch(lexemeDaoProvider);
+  if (dao == null) return Stream.value([]);
+  return dao.watchExceptionsForLexeme(lexemeId);
+});
+
+// ---------------------------------------------------------------------------
+// On-the-fly derivation provider (LEX-02 core)
+// ---------------------------------------------------------------------------
+
+/// Result of applying a single morphological rule to a root word.
+class DerivedFormResult {
+  const DerivedFormResult({
+    required this.ruleName,
+    required this.ruleId,
+    required this.derivedIpa,
+    required this.ruleSource,
+  });
+
+  final String ruleName;
+  final int ruleId;
+  final String derivedIpa;
+  final String ruleSource;
+}
+
+/// Computes derived forms for a root word on-the-fly by applying all active
+/// morphological rules via [MorphologyEngine]. No stored data needed —
+/// derivations are live from the engine.
+///
+/// Returns a list of [DerivedFormResult] for each rule that matched and
+/// produced a different form (i.e. the derivation actually changed the word).
+///
+/// Provider is cached by Riverpod and recomputed only when rules or the
+/// phoneme inventory change, preventing unnecessary work (T-03-05 mitigation).
+final computedDerivedFormsProvider =
+    Provider.family<List<DerivedFormResult>, String>((ref, rootIpa) {
+  final rulesAsync = ref.watch(morphologicalRuleListProvider);
+  final dbRules = rulesAsync.asData?.value ?? [];
+  final inventory = ref.watch(phonemeInventoryProvider);
+
+  const engine = MorphologyEngine();
+  final results = <DerivedFormResult>[];
+
+  for (final dbRule in dbRules) {
+    if (!dbRule.isActive) continue;
+    final parsed =
+        parseMorphDsl(dbRule.source, id: dbRule.id, name: dbRule.name);
+    if (!parsed.isValid || parsed.rule == null) continue;
+    final result = engine.applyRule(parsed.rule!, rootIpa, inventory);
+    if (result case MorphSuccess(:final form)) {
+      if (form != rootIpa) {
+        results.add(DerivedFormResult(
+          ruleName: dbRule.name,
+          ruleId: dbRule.id,
+          derivedIpa: form,
+          ruleSource: dbRule.source,
+        ));
+      }
+    }
+  }
+  return results;
 });
