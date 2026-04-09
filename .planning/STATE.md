@@ -10,9 +10,9 @@ See: .planning/PROJECT.md (updated 2026-04-08)
 ## Current Position
 
 Phase: 2 of 6 (Morphology Engine) — IN PROGRESS
-Plan: 2 of 4 in current phase
-Status: Phase 2 Plan 02 complete. Schema v4 with MorphologicalRules + MorphologicalRuleExceptions tables, MorphologyDao, and Riverpod providers. Ready for Plan 03 (UI) or Plan 04 (engine).
-Last activity: 2026-04-09 — Phase 2 Plan 02: morphology data layer (schema v4, DAO, providers)
+Plan: 3 of 4 in current phase
+Status: Phase 2 Plan 01 complete (TDD). petitparser DSL + engine all 15 tests green. Phase 2 Plan 02 complete. Schema v4. Ready for Plan 03 (UI).
+Last activity: 2026-04-09 — Phase 2 Plan 01: morphology DSL parser, serializer, and engine (TDD)
 
 Progress: [████░░░░░░] 34% (15/44 total plans)
 
@@ -93,6 +93,10 @@ Recent decisions affecting current work:
 - 01-12: asData?.value used for AsyncValue null-safe access (riverpod 3.x has no valueOrNull getter)
 - 01-12: Feature-to-string reverse maps inlined as private static methods in romanization_section — 4 simple switch expressions not worth extracting to shared file
 - 01-12: insertOnConflictUpdate on ProjectSettings.key unique column for upsert; schema bumped to v3 with from < 3 guard in onUpgrade
+- 02-01: RemoveSuffixOp added as 8th sealed MorphOperation subclass — DSL -lit (bare) or -"lit" (quoted) form strips trailing literal from working form; enables full DSL round-trip
+- 02-01: EndsWithLiteralCond accepts both "lit"_ and bare "lit" forms in parser — bare form more natural; serializer always emits underscore form for canonical output
+- 02-01: Engine auto-strips EndsWithLiteralCond matched suffix from working form before applying branch ops
+- 02-01: tokenizeIpa and resolvePhonemeClass extracted as public top-level functions in morphology_engine.dart — word_generator.dart not modified to avoid coupling
 - 02-02: Drift generates MorphologicalRule and MorphologicalRuleException data class names (not MorphologicalRulesData) — table class name minus trailing 's', no suffix
 - 02-02: morphology_providers.dart imports app_database.dart directly alongside morphology_dao.dart — required for generated type resolution in StreamProvider type arguments
 
@@ -110,5 +114,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-04-09
-Stopped at: Completed 02-02-PLAN.md — morphology data layer (schema v4, MorphologyDao, Riverpod providers). Phase 2 Plan 2 of 4 complete.
+Stopped at: Completed 02-01-PLAN.md — morphology DSL parser, serializer, and engine (TDD, 15/15 tests). Phase 2 Plan 1 of 4 complete.
 Resume file: None
