@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../features/phonology/data/phonotactic_providers.dart';
+import '../../../../features/phonology/domain/word_generator.dart';
+import '../../data/morphology_providers.dart';
 import '../../domain/morphology_dsl.dart';
 import '../../domain/morphology_engine.dart';
 
@@ -28,6 +30,7 @@ class _PreviewPanelState extends ConsumerState<PreviewPanel> {
   Timer? _debounce;
   List<_PreviewRow> _rows = [];
   bool _pending = false;
+  bool _stackMode = false;
 
   @override
   void didUpdateWidget(PreviewPanel old) {
@@ -74,16 +77,108 @@ class _PreviewPanelState extends ConsumerState<PreviewPanel> {
       return;
     }
 
+    // Read phonotactic constraints for violation checking.
+    final constraintsAsync = ref.read(parsedConstraintsProvider);
+    final constraints = constraintsAsync.asData?.value ?? [];
+    final wg = WordGenerator();
+
     final engine = const MorphologyEngine();
     final rows = <_PreviewRow>[];
 
-    for (final word in words) {
-      final result = engine.applyRule(rule, word, inventory);
-      switch (result) {
-        case MorphSuccess(:final form):
-          rows.add(_PreviewRow(root: word, derived: form, error: null));
-        case MorphNoMatch(:final reason):
-          rows.add(_PreviewRow(root: word, derived: null, error: reason));
+    if (_stackMode) {
+      // Stack mode: apply all active rules in order, with the current rule
+      // replacing its counterpart (or appended if new).
+      final allRulesAsync = ref.read(morphologicalRuleListProvider);
+      final allDbRules = allRulesAsync.asData?.value ?? [];
+
+      // Build the ordered list of domain rules to apply.
+      final orderedRules = <MorphologicalRule>[];
+      var currentRuleInserted = false;
+      for (final dbRule in allDbRules) {
+        if (!dbRule.isActive) continue;
+        if (dbRule.id == rule.id) {
+          // Replace in-progress edit.
+          orderedRules.add(rule);
+          currentRuleInserted = true;
+        } else {
+          final parsed = parseMorphDsl(dbRule.source, id: dbRule.id, name: dbRule.name);
+          if (parsed.isValid && parsed.rule != null) {
+            orderedRules.add(parsed.rule!);
+          }
+        }
+      }
+      if (!currentRuleInserted) {
+        // New rule not yet saved — append at end.
+        orderedRules.add(rule);
+      }
+
+      for (final word in words) {
+        var current = word;
+        var rulesApplied = 0;
+        for (final r in orderedRules) {
+          final result = engine.applyRule(r, current, inventory);
+          switch (result) {
+            case MorphSuccess(:final form):
+              current = form;
+              rulesApplied++;
+            case MorphNoMatch():
+              // Skip rules that don't match; continue with current form.
+              break;
+          }
+        }
+
+        // Validate the final derived form.
+        ValidationResult? validation;
+        if (constraints.isNotEmpty) {
+          validation = wg.validateWord(
+            word: current,
+            constraints: constraints,
+            inventory: inventory,
+          );
+        }
+
+        rows.add(_PreviewRow(
+          root: word,
+          derived: current != word ? current : null,
+          error: current == word ? 'no match' : null,
+          violations: validation,
+          rulesApplied: rulesApplied,
+          stackMode: true,
+        ));
+      }
+    } else {
+      // Single rule mode.
+      for (final word in words) {
+        final result = engine.applyRule(rule, word, inventory);
+        switch (result) {
+          case MorphSuccess(:final form):
+            // Validate derived form against phonotactic constraints.
+            ValidationResult? validation;
+            if (constraints.isNotEmpty) {
+              validation = wg.validateWord(
+                word: form,
+                constraints: constraints,
+                inventory: inventory,
+              );
+            }
+            rows.add(_PreviewRow(
+              root: word,
+              derived: form,
+              error: null,
+              violations: validation,
+              rulesApplied: 1,
+              stackMode: false,
+            ));
+          case MorphNoMatch(:final reason):
+            rows.add(_PreviewRow(
+              root: word,
+              derived: null,
+              error: reason,
+              violations: null,
+              rulesApplied: 0,
+              stackMode: false,
+            ));
+        }
       }
     }
 
@@ -159,6 +254,24 @@ class _PreviewPanelState extends ConsumerState<PreviewPanel> {
                 ),
               ),
               const Spacer(),
+              Tooltip(
+                message: _stackMode ? 'Showing stacked rules' : 'Show single rule',
+                child: IconButton(
+                  icon: Icon(
+                    Icons.layers,
+                    size: 18,
+                    color: _stackMode
+                        ? cs.primary
+                        : cs.onSurface.withValues(alpha: 0.5),
+                  ),
+                  onPressed: () {
+                    setState(() => _stackMode = !_stackMode);
+                    _scheduleRefresh();
+                  },
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                ),
+              ),
               IconButton(
                 icon: const Icon(Icons.refresh, size: 18),
                 tooltip: 'Regenerate preview',
@@ -188,24 +301,63 @@ class _PreviewPanelState extends ConsumerState<PreviewPanel> {
       fontFamilyFallback: const ['Courier New', 'Courier', 'monospace'],
     );
 
+    Widget derivedWidget;
+    if (row.derived != null) {
+      final hasViolation = row.violations != null && !row.violations!.isValid;
+      if (hasViolation) {
+        // Build tooltip text from violation descriptions.
+        final tooltipParts = row.violations!.violations.map((v) {
+          final desc = v.ruleDescription.isNotEmpty
+              ? '${v.ruleDescription} at position ${v.position}'
+              : 'Phonotactic violation at position ${v.position}';
+          return desc;
+        }).toList();
+        final tooltipText = tooltipParts.join('\n');
+
+        derivedWidget = Tooltip(
+          message: tooltipText,
+          child: Text(
+            row.derived!,
+            style: monoStyle?.copyWith(
+              decoration: TextDecoration.underline,
+              decorationColor: cs.error,
+              decorationStyle: TextDecorationStyle.wavy,
+            ),
+          ),
+        );
+      } else {
+        derivedWidget = Text(row.derived!, style: monoStyle);
+      }
+    } else {
+      derivedWidget = Text(
+        row.error ?? 'no match',
+        style: theme.textTheme.bodySmall?.copyWith(
+          color: cs.error,
+          fontStyle: FontStyle.italic,
+        ),
+      );
+    }
+
+    // Use double arrow in stack mode to signal multiple rules applied.
+    final arrowIcon = row.stackMode && row.rulesApplied > 1
+        ? const Icon(Icons.arrow_forward, size: 14)
+        : const Icon(Icons.arrow_forward, size: 14);
+
     return TableRow(
       children: [
         Padding(
           padding: const EdgeInsets.symmetric(vertical: 3),
           child: Text(row.root, style: monoStyle),
         ),
-        const Icon(Icons.arrow_forward, size: 14),
+        row.stackMode && row.rulesApplied > 1
+            ? Tooltip(
+                message: '${row.rulesApplied} rules applied',
+                child: arrowIcon,
+              )
+            : arrowIcon,
         Padding(
           padding: const EdgeInsets.symmetric(vertical: 3),
-          child: row.derived != null
-              ? Text(row.derived!, style: monoStyle)
-              : Text(
-                  row.error ?? 'no match',
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: cs.error,
-                    fontStyle: FontStyle.italic,
-                  ),
-                ),
+          child: derivedWidget,
         ),
       ],
     );
@@ -232,6 +384,24 @@ class _PreviewPanelState extends ConsumerState<PreviewPanel> {
                 ),
               ),
               const Spacer(),
+              Tooltip(
+                message: _stackMode ? 'Showing stacked rules' : 'Show single rule',
+                child: IconButton(
+                  icon: Icon(
+                    Icons.layers,
+                    size: 18,
+                    color: _stackMode
+                        ? cs.primary
+                        : cs.onSurface.withValues(alpha: 0.5),
+                  ),
+                  onPressed: () {
+                    setState(() => _stackMode = !_stackMode);
+                    _scheduleRefresh();
+                  },
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                ),
+              ),
               IconButton(
                 icon: const Icon(Icons.refresh, size: 18),
                 tooltip: 'Regenerate preview',
@@ -267,9 +437,15 @@ class _PreviewRow {
     required this.root,
     required this.derived,
     required this.error,
+    required this.violations,
+    required this.rulesApplied,
+    required this.stackMode,
   });
 
   final String root;
   final String? derived;
   final String? error;
+  final ValidationResult? violations;
+  final int rulesApplied;
+  final bool stackMode;
 }
