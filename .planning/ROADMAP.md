@@ -81,14 +81,14 @@ Plans:
   3. User can open the Swadesh list view and the Conlanger's Thesaurus reference to identify semantic gaps and guide vocabulary creation
   4. User can export selected lexicon entries as Anki .apkg flashcards with morphological context in the card fields
   5. Words that violate phonotactic rules are highlighted in red throughout the entire tool (lexicon, grammar tables, and any text field), with an option to mark individual words as exceptions
-**Plans**: TBD
+**Plans:** 5 plans in 3 waves
 
 Plans:
-- [ ] 03-01: LexiconRepository — root words table, derived forms cache (root_id, rule_ids, computed_form), FTS5 full-text search, etymology chain
-- [ ] 03-02: Lexicon UI — root dictionary view, word detail panel, derivation tree display, search and filter bar
-- [ ] 03-03: Semantic references — bundled Swadesh list view with coverage indicators, Conlanger's Thesaurus integration (pre-extracted JSON from PDF)
-- [ ] 03-04: Anki export — .apkg builder with morphological context fields, export flow
-- [ ] 03-05: Phonotactic violation highlighting — PhonologyEngine compiled DFA, red highlight widget, per-word exception toggle
+- [ ] 03-01-PLAN.md — Data layer: LexemeDao, schema v7 migration, providers, client-side filter, bundled Swadesh + Thesaurus JSON assets
+- [ ] 03-02-PLAN.md — Dictionary UI: master-detail layout, word list panel, word detail panel, creation form, derivation tree, inspiration panel, exception UI
+- [ ] 03-03-PLAN.md — Semantic references: Swadesh list checklist with coverage progress, Thesaurus hierarchical tree browser with search
+- [ ] 03-04-PLAN.md — Anki export: .apkg builder with sqlite3 + archive, selection checkboxes, export flow with snackbar confirmation
+- [ ] 03-05-PLAN.md — Phonotactic highlighting: shared ViolationText widget, validation provider, per-word exception toggle
 
 ### Phase 4: Grammar
 **Goal**: Users can define the grammatical structure of their language — parts of speech, inflection rules, and typological choices — and generate complete paradigm charts for any word
@@ -140,7 +140,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4. Phases 5 and 6 depend only on
 |-------|----------------|--------|-----------|
 | 1. Foundation | 13/13 | Complete | 2026-04-09 |
 | 2. Morphology Engine | 10/10 | Complete | 2026-04-09 |
-| 3. Lexicon | 0/5 | Not started | - |
+| 3. Lexicon | 0/5 | In progress | - |
 | 4. Grammar | 0/3 | Not started | - |
 | 5. Culture Wiki | 0/2 | Not started | - |
 | 6. Reference Glossary | 0/1 | Not started | - |
