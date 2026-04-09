@@ -99,12 +99,17 @@ Plans:
 **Requirements**: FIX-01, FIX-02, FIX-03, FIX-04, FIX-05
 **Success Criteria** (what must be TRUE):
   1. IPA vowel chart and phoneme inventory charts render with correct trapezoid/triangular shapes matching standard IPA layout
-  2. Word generator shows words as `/romanization/ [phonetics]` (romanization first, IPA in brackets)
-  3. Anki cards show `/romanization/` on one line then `[IPA]` below — not `[IPA] romanization`
+  2. Word generator shows words as `romanization [IPA]` (romanization first, IPA in brackets)
+  3. Anki cards show `romanization` on one line then `[IPA]` below — not `[IPA] romanization`
   4. Anki export UI shows an "Export to Anki" button; selection checkboxes only appear after pressing it, with a confirm/cancel flow
-  5. Phoneme inventory shows romanized form (e.g. /sh/) alongside IPA only when holding alt/ctrl, IPA-only by default
+  5. Phoneme inventory shows romanized form (e.g. th, sh) by default, IPA in /slashes/ only when holding Alt/Option
+**Plans:** 4 plans in 2 waves
 
-Plans: TBD
+Plans:
+- [ ] 03.1-01-PLAN.md — IPA trapezoid vowel chart: CustomPaint trapezoid for reference panel and inventory vowel grid
+- [ ] 03.1-02-PLAN.md — Word display format fixes: romanization-first in word generator and Anki card front field
+- [ ] 03.1-03-PLAN.md — Anki export selection mode: toolbar button, conditional checkboxes, bottom bar confirm/cancel
+- [ ] 03.1-04-PLAN.md — Phoneme inventory romanization toggle: Alt-key listener, romanization default display
 
 ### Phase 3.2: Phonology Enhancements INSERTED
 **Goal**: Predefined natural classes with sensible defaults, cross-language shareable classes, and an allophone viewer for contextual phoneme realization
@@ -173,7 +178,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4. Phases 5 and 6 depend only on
 | 1. Foundation | 13/13 | Complete | 2026-04-09 |
 | 2. Morphology Engine | 10/10 | Complete | 2026-04-09 |
 | 3. Lexicon | 6/6 | Complete | 2026-04-09 |
-| 3.1 Display & UX Fixes | 0/? | Not started | - |
+| 3.1 Display & UX Fixes | 0/4 | Not started | - |
 | 3.2 Phonology Enhancements | 0/? | Not started | - |
 | 4. Grammar & Morphology | 0/5 | Not started | - |
 | 5. Culture Wiki | 0/2 | Not started | - |
