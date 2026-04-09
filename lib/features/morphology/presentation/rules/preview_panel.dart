@@ -74,23 +74,39 @@ class _PreviewPanelState extends ConsumerState<PreviewPanel> {
       error: (_, _) => <ParsedTemplate>[],
     );
     final rewriteRules = ref.read(parsedRewriteRulesProvider);
+    final constraintsAsync = ref.read(parsedConstraintsProvider);
+    final constraints = constraintsAsync.asData?.value ?? [];
     final gen = WordGenerator();
-    final rawWords = gen.generateWords(
+
+    // Generate extra candidates, apply rewrite rules, then filter to only
+    // words that pass phonotactic constraints — so base words are valid
+    // before morphological transforms are applied.
+    final candidates = gen.generateWords(
       templates: templates,
       inventory: inventory,
-      count: 8,
+      count: 40, // over-generate to have enough after filtering
       minSyllables: 1,
       maxSyllables: 3,
     );
-    // Apply phonological rewrite rules so generated words already follow
-    // the phonology rules before morphological transforms are applied.
-    final words = rawWords
-        .map((w) => gen.applyRewriteRules(
-              word: w,
-              rules: rewriteRules,
-              inventory: inventory,
-            ))
-        .toList();
+    final words = <String>[];
+    for (final raw in candidates) {
+      final rewritten = gen.applyRewriteRules(
+        word: raw,
+        rules: rewriteRules,
+        inventory: inventory,
+      );
+      if (constraints.isEmpty) {
+        words.add(rewritten);
+      } else {
+        final v = gen.validateWord(
+          word: rewritten,
+          constraints: constraints,
+          inventory: inventory,
+        );
+        if (v.isValid) words.add(rewritten);
+      }
+      if (words.length >= 8) break;
+    }
 
     if (rule == null) {
       setState(() {
@@ -100,11 +116,7 @@ class _PreviewPanelState extends ConsumerState<PreviewPanel> {
       return;
     }
 
-    // Read phonotactic constraints for violation checking.
-    final constraintsAsync = ref.read(parsedConstraintsProvider);
-    final constraints = constraintsAsync.asData?.value ?? [];
-    final wg = WordGenerator();
-
+    // Reuse gen and constraints from above for post-morph violation checking.
     final engine = const MorphologyEngine();
     final rows = <_PreviewRow>[];
 
@@ -153,7 +165,7 @@ class _PreviewPanelState extends ConsumerState<PreviewPanel> {
         // Validate the final derived form.
         ValidationResult? validation;
         if (constraints.isNotEmpty) {
-          validation = wg.validateWord(
+          validation = gen.validateWord(
             word: current,
             constraints: constraints,
             inventory: inventory,
@@ -178,7 +190,7 @@ class _PreviewPanelState extends ConsumerState<PreviewPanel> {
             // Validate derived form against phonotactic constraints.
             ValidationResult? validation;
             if (constraints.isNotEmpty) {
-              validation = wg.validateWord(
+              validation = gen.validateWord(
                 word: form,
                 constraints: constraints,
                 inventory: inventory,

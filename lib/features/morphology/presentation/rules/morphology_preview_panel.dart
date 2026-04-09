@@ -48,24 +48,36 @@ class _MorphologyPreviewPanelState
 
     final rewriteRules = ref.watch(parsedRewriteRulesProvider);
 
-    // Generate words locally (fresh on every rebuild, including regenerate)
-    // and apply phonological rewrite rules so they follow phonology rules
+    // Generate extra candidates, apply rewrite rules, then filter to only
+    // words that pass phonotactic constraints — so base words are valid
     // before morphological transforms are applied.
     final gen = WordGenerator();
-    final rawWords = gen.generateWords(
+    final candidates = gen.generateWords(
       templates: templates,
       inventory: inventory,
-      count: 20,
+      count: 80, // over-generate to have enough after filtering
       minSyllables: 1,
       maxSyllables: 3,
     );
-    final words = rawWords
-        .map((w) => gen.applyRewriteRules(
-              word: w,
-              rules: rewriteRules,
-              inventory: inventory,
-            ))
-        .toList();
+    final words = <String>[];
+    for (final raw in candidates) {
+      final rewritten = gen.applyRewriteRules(
+        word: raw,
+        rules: rewriteRules,
+        inventory: inventory,
+      );
+      if (constraints.isEmpty) {
+        words.add(rewritten);
+      } else {
+        final v = gen.validateWord(
+          word: rewritten,
+          constraints: constraints,
+          inventory: inventory,
+        );
+        if (v.isValid) words.add(rewritten);
+      }
+      if (words.length >= 20) break;
+    }
 
     // Parse all active rules into domain models
     final activeRules = <MorphologicalRule>[];
