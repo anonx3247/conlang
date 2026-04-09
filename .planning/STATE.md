@@ -12,25 +12,25 @@ See: .planning/PROJECT.md (updated 2026-04-08)
 Phase: 1 of 6 (Foundation)
 Plan: 7 of 7 in current phase
 Status: In progress
-Last activity: 2026-04-08 — Plan 06 complete (romanization mapping editor, DAO, live preview UI)
+Last activity: 2026-04-09 — Plan 05 complete (phoneme inventory editor, consonant grid, vowel chart, natural classes)
 
-Progress: [██░░░░░░░░] 14% (6/42 total plans)
+Progress: [██░░░░░░░░] 17% (7/42 total plans)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 6
+- Total plans completed: 7
 - Average duration: 6 min
-- Total execution time: 0.6 hours
+- Total execution time: 0.7 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 01-foundation | 6 | 36 min | 6 min |
+| 01-foundation | 7 | 47 min | 7 min |
 
 **Recent Trend:**
-- Last 5 plans: 7 min, 2 min, 6 min, 14 min, 7 min
+- Last 5 plans: 2 min, 6 min, 14 min, 7 min, 11 min
 - Trend: stable
 
 *Updated after each plan completion*
@@ -58,6 +58,9 @@ Recent decisions affecting current work:
 - 01-04: TapRegion for outside-tap dismissal — cleaner than GestureDetector, correctly excludes popup from "outside" boundary
 - [Phase 01-06]: 01-06: romanize uses longest-match-first sort (IPA symbol length desc) to correctly handle multi-char sequences like t͡s before t
 - [Phase 01-06]: 01-06: Plain flutter_riverpod providers (not @riverpod codegen) for Drift-referenced types — avoids riverpod_generator InvalidTypeException from build ordering
+- 01-05: riverpod_generator 3.x cannot resolve drift part-file types (Phoneme, NaturalClassesData) at codegen time — use manual Provider/StreamProvider for all drift-type providers
+- 01-05: NaturalClasses table generates NaturalClassesData (not NaturalClass) in Drift 2.30 — generated data class name = table class name + Data suffix
+- 01-05: Consonant/vowel grids show only occupied rows/columns (sparse display) — cleaner for small inventories than rendering full 88-cell IPA chart
 
 ### Pending Todos
 
@@ -72,6 +75,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-08
-Stopped at: Completed 01-foundation/01-06-PLAN.md (romanization mapping editor and live preview UI)
+Last session: 2026-04-09
+Stopped at: Completed 01-foundation/01-05-PLAN.md (phoneme inventory editor, consonant grid, vowel chart, natural classes)
 Resume file: None
