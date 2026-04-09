@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../../../../phonology/data/ipa_data.dart';
+import '../../../../phonology/presentation/shared/ipa_chart/ipa_audio_player.dart';
+
 /// IPA symbol categories displayed in the popup keyboard.
 enum _IpaCategory {
   consonants,
@@ -112,19 +115,37 @@ const _ipaSymbols = <_IpaCategory, List<String>>{
   ],
 };
 
+/// Lookup map from IPA symbol to audio asset path.
+///
+/// Built lazily from [IpaSound] static data — single source of truth.
+/// Symbols not in the IpaSound dataset (diacritics, suprasegmentals, etc.)
+/// will not be found here, resulting in null (no audio played).
+final _symbolToAudioPath = <String, String?>{
+  for (final s in [
+    ...IpaSound.pulmonicConsonants,
+    ...IpaSound.vowels,
+    ...IpaSound.nonPulmonicConsonants,
+  ])
+    s.symbol: s.audioAssetPath,
+};
+
 /// A compact popup keyboard displaying categorized IPA symbols.
 ///
 /// Displays a tab bar at the top for category selection and a scrollable
 /// grid of tappable symbol buttons below. Calls [onSymbolSelected] when the
-/// user taps a symbol — does not perform text insertion directly.
+/// user taps a symbol and plays the associated audio recording when available.
 ///
 /// Intended to be shown via [OverlayPortal] inside [IpaTextField].
 class IpaKeyboardPopup extends StatefulWidget {
   const IpaKeyboardPopup({
     super.key,
+    required this.audioPlayer,
     required this.onSymbolSelected,
     required this.onClose,
   });
+
+  /// Audio player used to preview IPA sounds on symbol tap.
+  final IpaAudioPlayer audioPlayer;
 
   /// Called with the tapped IPA symbol string.
   final ValueChanged<String> onSymbolSelected;
@@ -151,6 +172,13 @@ class _IpaKeyboardPopupState extends State<IpaKeyboardPopup>
   void dispose() {
     _tabController.dispose();
     super.dispose();
+  }
+
+  void _onSymbolTapped(String symbol) {
+    // Play audio (fire-and-forget — playSound handles null and errors silently).
+    widget.audioPlayer.playSound(_symbolToAudioPath[symbol]);
+    // Insert the symbol.
+    widget.onSymbolSelected(symbol);
   }
 
   @override
@@ -214,7 +242,7 @@ class _IpaKeyboardPopupState extends State<IpaKeyboardPopup>
                   final symbols = _ipaSymbols[category] ?? [];
                   return _SymbolGrid(
                     symbols: symbols,
-                    onSymbolSelected: widget.onSymbolSelected,
+                    onSymbolSelected: _onSymbolTapped,
                   );
                 }).toList(),
               ),

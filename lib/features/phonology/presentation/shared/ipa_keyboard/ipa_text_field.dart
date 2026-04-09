@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../phonology/presentation/shared/ipa_chart/ipa_audio_player.dart';
 import 'ipa_keyboard_popup.dart';
 
 /// A drop-in replacement for [TextField] that adds an on-screen IPA keyboard
@@ -19,7 +21,7 @@ import 'ipa_keyboard_popup.dart';
 /// - Clicking outside the field and popup
 /// - Pressing the Escape key
 /// - Tapping the close button inside the popup
-class IpaTextField extends StatefulWidget {
+class IpaTextField extends ConsumerStatefulWidget {
   const IpaTextField({
     super.key,
     this.controller,
@@ -70,10 +72,10 @@ class IpaTextField extends StatefulWidget {
   final bool showIpaKeyboard;
 
   @override
-  State<IpaTextField> createState() => _IpaTextFieldState();
+  ConsumerState<IpaTextField> createState() => _IpaTextFieldState();
 }
 
-class _IpaTextFieldState extends State<IpaTextField> {
+class _IpaTextFieldState extends ConsumerState<IpaTextField> {
   late TextEditingController _controller;
   late FocusNode _focusNode;
 
@@ -87,6 +89,12 @@ class _IpaTextFieldState extends State<IpaTextField> {
   bool _ownController = false;
   bool _ownFocusNode = false;
   bool _popupVisible = false;
+
+  /// Set to true when the user presses down inside the popup overlay.
+  /// Prevents _onFocusChanged from hiding the popup during the brief focus
+  /// gap that occurs between pointer-down on a popup button and onTap firing
+  /// (which calls _focusNode.requestFocus()).
+  bool _isInteractingWithPopup = false;
 
   @override
   void initState() {
@@ -157,12 +165,15 @@ class _IpaTextFieldState extends State<IpaTextField> {
     if (_focusNode.hasFocus) {
       _showPopup();
     } else {
-      // Only hide if nothing inside the popup has focus.
-      // We use a short delay so that a tap on a popup button (which briefly
-      // removes focus from the text field before calling onTap) does not
-      // collapse the popup prematurely.
-      Future.microtask(() {
-        if (mounted && !_focusNode.hasFocus) {
+      // Use a longer delay than a microtask so that:
+      // 1. _insertSymbol's _focusNode.requestFocus() has time to reclaim focus,
+      // 2. _isInteractingWithPopup flag has been set by the popup's pointer-down.
+      Future.delayed(const Duration(milliseconds: 100), () {
+        if (!mounted) return;
+        // If the user is actively interacting with the popup, skip hiding —
+        // focus will be restored by _insertSymbol's requestFocus() call.
+        if (_isInteractingWithPopup) return;
+        if (!_focusNode.hasFocus) {
           _hidePopup();
         }
       });
@@ -228,6 +239,8 @@ class _IpaTextFieldState extends State<IpaTextField> {
 
   @override
   Widget build(BuildContext context) {
+    final audioPlayer = ref.read(ipaAudioPlayerProvider);
+
     // Merge the IPA keyboard icon into the field's suffix, preserving any
     // suffixIcon the caller already provided (e.g. validation checkmark).
     final baseDecoration = widget.decoration ?? const InputDecoration();
@@ -262,7 +275,7 @@ class _IpaTextFieldState extends State<IpaTextField> {
 
     return OverlayPortal(
       controller: _overlayController,
-      overlayChildBuilder: _buildOverlay,
+      overlayChildBuilder: (ctx) => _buildOverlay(ctx, audioPlayer),
       child: CompositedTransformTarget(
         link: _layerLink,
         child: TapRegion(
@@ -308,7 +321,7 @@ class _IpaTextFieldState extends State<IpaTextField> {
   }
 
   /// Builds the floating popup anchored below (or above) the text field.
-  Widget _buildOverlay(BuildContext context) {
+  Widget _buildOverlay(BuildContext context, IpaAudioPlayer audioPlayer) {
     const popupHeight = 260.0;
     const popupWidth = 360.0;
 
@@ -348,9 +361,17 @@ class _IpaTextFieldState extends State<IpaTextField> {
           // inside it are NOT treated as outside taps — preventing dismissal
           // before the symbol button's onTap fires.
           groupId: _tapGroupId,
-          child: IpaKeyboardPopup(
-            onSymbolSelected: _insertSymbol,
-            onClose: _hidePopup,
+          child: Listener(
+            // Track pointer-down/up inside the popup to prevent the focus-loss
+            // hide timer from collapsing the popup during symbol interaction.
+            onPointerDown: (_) => _isInteractingWithPopup = true,
+            onPointerUp: (_) => _isInteractingWithPopup = false,
+            onPointerCancel: (_) => _isInteractingWithPopup = false,
+            child: IpaKeyboardPopup(
+              audioPlayer: audioPlayer,
+              onSymbolSelected: _insertSymbol,
+              onClose: _hidePopup,
+            ),
           ),
         ),
       ),
