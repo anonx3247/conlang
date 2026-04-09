@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../db/app_database.dart' as db;
+import '../../../phonology/presentation/shared/ipa_keyboard/ipa_text_field.dart';
 import '../../data/morphology_providers.dart';
 import '../../domain/morphology_dsl.dart';
 import 'preview_panel.dart';
@@ -13,13 +14,13 @@ import 'preview_panel.dart';
 
 /// Operation types the editor supports (matches MorphOperation sealed class).
 enum OpType {
-  prefix('Prefix'),
-  suffix('Suffix'),
-  infix('Infix'),
-  ablaut('Ablaut'),
-  template('Template'),
-  reduplication('Reduplication'),
-  suppletive('Suppletive');
+  prefix('Prefix (add to start)'),
+  suffix('Suffix (add to end)'),
+  infix('Infix (insert inside)'),
+  ablaut('Vowel change'),
+  template('Root template'),
+  reduplication('Reduplication (copy)'),
+  suppletive('Replacement form');
 
   const OpType(this.label);
   final String label;
@@ -611,17 +612,30 @@ class _RuleEditorDialogState extends ConsumerState<RuleEditorDialog> {
           const SizedBox(width: 8),
           SizedBox(
             width: 120,
-            child: TextField(
-              controller: branch.condValueCtrl,
-              decoration: InputDecoration(
-                hintText: hint,
-                isDense: true,
-                border: const OutlineInputBorder(),
-                contentPadding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-              ),
-              onChanged: (_) => _updateDsl(),
-            ),
+            child: (branch.condType == CondType.endsWithLiteral ||
+                    branch.condType == CondType.startsWithLiteral)
+                ? IpaTextField(
+                    controller: branch.condValueCtrl,
+                    decoration: InputDecoration(
+                      hintText: hint,
+                      isDense: true,
+                      border: const OutlineInputBorder(),
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 6),
+                    ),
+                    onChanged: (_) => _updateDsl(),
+                  )
+                : TextField(
+                    controller: branch.condValueCtrl,
+                    decoration: InputDecoration(
+                      hintText: hint,
+                      isDense: true,
+                      border: const OutlineInputBorder(),
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 6),
+                    ),
+                    onChanged: (_) => _updateDsl(),
+                  ),
           ),
         ],
       ],
@@ -690,7 +704,7 @@ class _RuleEditorDialogState extends ConsumerState<RuleEditorDialog> {
     );
 
     return switch (op.type) {
-      OpType.prefix || OpType.suffix => TextField(
+      OpType.prefix || OpType.suffix => IpaTextField(
           controller: op.affixCtrl,
           decoration:
               fieldDecoration.copyWith(hintText: 'IPA affix, e.g. in, ɯ'),
@@ -699,7 +713,7 @@ class _RuleEditorDialogState extends ConsumerState<RuleEditorDialog> {
       OpType.infix => Row(
           children: [
             Expanded(
-              child: TextField(
+              child: IpaTextField(
                 controller: op.affixCtrl,
                 decoration:
                     fieldDecoration.copyWith(hintText: 'IPA affix'),
@@ -722,7 +736,7 @@ class _RuleEditorDialogState extends ConsumerState<RuleEditorDialog> {
       OpType.ablaut => Row(
           children: [
             Expanded(
-              child: TextField(
+              child: IpaTextField(
                 controller: op.ablautFromCtrl,
                 decoration: fieldDecoration.copyWith(hintText: 'from (IPA)'),
                 onChanged: (_) => _updateDsl(),
@@ -733,7 +747,7 @@ class _RuleEditorDialogState extends ConsumerState<RuleEditorDialog> {
               child: Icon(Icons.arrow_forward, size: 14),
             ),
             Expanded(
-              child: TextField(
+              child: IpaTextField(
                 controller: op.ablautToCtrl,
                 decoration: fieldDecoration.copyWith(hintText: 'to (IPA)'),
                 onChanged: (_) => _updateDsl(),
@@ -785,10 +799,10 @@ class _RuleEditorDialogState extends ConsumerState<RuleEditorDialog> {
             ),
           ],
         ),
-      OpType.suppletive => TextField(
+      OpType.suppletive => IpaTextField(
           controller: op.suppletiveCtrl,
           decoration: fieldDecoration.copyWith(
-              hintText: 'Suppletive form (literal)'),
+              hintText: 'Replacement form (e.g. went, mice)'),
           onChanged: (_) => _updateDsl(),
         ),
     };
