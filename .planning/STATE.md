@@ -112,6 +112,9 @@ Recent decisions affecting current work:
 - [Phase 02-morphology-engine]: 02-07: New rules retain ordering=0 default; users can move them down — avoids expanding scope to rule_editor_dialog.dart
 - [Phase 02-morphology-engine]: 02-06: IpaTextField used conditionally in condition value field — only for endsWithLiteral/startsWithLiteral, not class-based conditions
 - [Phase 02-morphology-engine]: 02-06: Regenerate button added to _emptyState as well as main preview view — always visible regardless of rule completeness
+- [Phase 02-morphology-engine]: 02-08: Drift generates PartsOfSpeechData (not PartOfSpeech) — TableName + Data suffix pattern, matches NaturalClassesData precedent
+- [Phase 02-morphology-engine]: 02-08: beforeOpen ALTER TABLE for pos_id wrapped in try/catch — column already exists error silently ignored (safety-net pattern)
+- [Phase 02-morphology-engine]: 02-08: RulesPage reorder arrows reference unfiltered list index when POS filter active — correct swap semantics preserved across filtered views
 - [Phase 02-morphology-engine]: 02-10: ref.read inside _evaluate() for constraints/rule list — avoids extra rebuilds; _evaluate is already on 300ms debounce timer
 - [Phase 02-morphology-engine]: 02-10: Stack mode skips MorphNoMatch rules and continues with current form — no-match is a no-op, not an error; preserves partial chain results
 - [Phase 02-morphology-engine]: 02-10: Stack mode reads morphologicalRuleListProvider via ConsumerStatefulWidget ref — no widget param threading needed
