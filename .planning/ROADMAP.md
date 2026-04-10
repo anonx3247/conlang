@@ -16,7 +16,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 2: Morphology Engine** - Pattern mini-language, plugin architecture, and rule editor — the centrepiece differentiator
 - [x] **Phase 3: Lexicon** - Root and derived-word dictionary, search, semantic references, Anki export, phonotactic highlighting
 - [ ] **Phase 3.1: Display & UX Fixes** - IPA chart shapes, word display format, Anki export UX, romanization toggle (INSERTED)
-- [ ] **Phase 3.2: Phonology Enhancements** - Predefined natural classes, shareable classes, allophone viewer (INSERTED)
+- [ ] **Phase 3.2: Phonology Enhancements** - Predefined natural classes with IPA defaults, contextual allophone viewer (INSERTED)
 - [ ] **Phase 4: Grammar & Morphology** - Dimensional POS features, inflectional rules, paradigm generation, morphology tab merge (revised)
 - [ ] **Phase 5: Culture Wiki** - Markdown wiki with internal linking for world-building documentation
 - [ ] **Phase 6: Reference & Polish** - Built-in linguistic glossary and cross-cutting quality pass
@@ -112,13 +112,12 @@ Plans:
 - [x] 03.1-04-PLAN.md — Phoneme inventory romanization toggle: Alt-key listener, romanization default display
 
 ### Phase 3.2: Phonology Enhancements INSERTED
-**Goal**: Predefined natural classes with sensible defaults, cross-language shareable classes, and an allophone viewer for contextual phoneme realization
+**Goal**: Predefined natural classes with sensible IPA defaults (including sounds outside a project's inventory), and a contextual allophone viewer that surfaces phoneme realizations from existing rewrite rules
 **Depends on**: Phase 3.1
-**Requirements**: PHON-09, PHON-10, PHON-11
+**Requirements**: PHON-09, PHON-11 (PHON-10 descoped from v1 per user decision 2026-04-10)
 **Success Criteria** (what must be TRUE):
-  1. Predefined natural classes (Stop/S, Liquid/L, Rhotic/R, Nasal/N, Fricative/F, etc.) ship with sensible IPA defaults and can include sounds not in the project's phoneme inventory
-  2. Natural classes are shareable across languages within the app (global definitions reusable per project)
-  3. User can click a phoneme and see all its contextual allophones based on defined phonological rules (e.g. /s/ → [s | z])
+  1. Predefined natural classes (Stop/S, Liquid/L, Rhotic/R, Nasal/N, Fricative/F, plus Obstruent/Sonorant/Approximant/Affricate) ship as hardcoded defaults with IPA members and can include sounds not in the project's phoneme inventory. Defaults resolve in the existing DSL wherever a `[class]` reference is allowed.
+  2. User can click a phoneme in the inventory and see its contextual allophones listed in the phoneme dialog. When holding Alt (which already toggles IPA display), each phoneme chip in the consonant/vowel grids shows its allophones inline next to the IPA form.
 
 Plans: TBD
 

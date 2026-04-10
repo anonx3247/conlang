@@ -52,7 +52,7 @@ Requirements for initial release. Each maps to roadmap phases.
 ### Phonology (additional)
 
 - [ ] **PHON-09**: Predefined natural classes (Stop, Liquid, Rhotic, Nasal, Fricative, etc.) with sensible IPA defaults, including sounds outside the project inventory
-- [ ] **PHON-10**: Natural classes are shareable across languages (global definitions reusable per project)
+- [ ] ~~**PHON-10**: Natural classes are shareable across languages (global definitions reusable per project)~~ — **Out of scope (v1)**, user decision 2026-04-10 during Phase 3.2 discussion. Natural classes remain project-local.
 - [ ] **PHON-11**: User can click a phoneme to view all contextual allophones based on phonological rules
 
 ### Grammar
@@ -161,7 +161,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | FIX-04 | Phase 3.1 | Pending |
 | FIX-05 | Phase 3.1 | Pending |
 | PHON-09 | Phase 3.2 | Pending |
-| PHON-10 | Phase 3.2 | Pending |
+| PHON-10 | — | Out of scope (v1) |
 | PHON-11 | Phase 3.2 | Pending |
 | GRAM-01 | Phase 4 | Pending |
 | GRAM-02 | Phase 4 | Pending |
