@@ -335,6 +335,9 @@ class _WordListPanelState extends ConsumerState<WordListPanel> {
 
     // Batch violations for all lexemes — avoids per-item validation calls.
     final violations = ref.watch(lexemeViolationsProvider);
+    // Hoist allLexemes watch outside itemBuilder so we have a single provider
+    // subscription per rebuild rather than one per visible row.
+    final allLexemes = ref.watch(allLexemeListProvider).asData?.value ?? [];
 
     return ListView.builder(
       itemCount: lexemes.length,
@@ -349,8 +352,6 @@ class _WordListPanelState extends ConsumerState<WordListPanel> {
         // We need to count how many derived forms belong to this root
         // derivedSearchMatchesProvider returns derived form IDs
         // We can approximate by checking allLexemeListProvider
-        final allLexemes =
-            ref.watch(allLexemeListProvider).asData?.value ?? [];
         final derivedMatchCount = derivedMatches
             .where((id) =>
                 allLexemes.any((l) => l.id == id && l.rootId == rootIdStr))
