@@ -343,7 +343,16 @@ class _PreviewPanelState extends ConsumerState<PreviewPanel> {
       final romanized = romanize(row.derived!);
       final showRomanized = romanized.isNotEmpty && romanized != row.derived;
 
-      Widget ipaText;
+      Widget ipaLabel = Text(
+        '[${row.derived}]',
+        style: theme.textTheme.bodySmall?.copyWith(
+          color: cs.onSurface.withValues(alpha: 0.55),
+          decoration: hasViolation ? TextDecoration.underline : null,
+          decorationColor: hasViolation ? cs.error : null,
+          decorationStyle: hasViolation ? TextDecorationStyle.wavy : null,
+        ),
+      );
+
       if (hasViolation) {
         final tooltipParts = row.violations!.violations.map((v) {
           final desc = v.ruleDescription.isNotEmpty
@@ -351,34 +360,18 @@ class _PreviewPanelState extends ConsumerState<PreviewPanel> {
               : 'Phonotactic violation at position ${v.position}';
           return desc;
         }).toList();
-        final tooltipText = tooltipParts.join('\n');
-
-        ipaText = Tooltip(
-          message: tooltipText,
-          child: Text(
-            row.derived!,
-            style: monoStyle?.copyWith(
-              decoration: TextDecoration.underline,
-              decorationColor: cs.error,
-              decorationStyle: TextDecorationStyle.wavy,
-            ),
-          ),
+        ipaLabel = Tooltip(
+          message: tooltipParts.join('\n'),
+          child: ipaLabel,
         );
-      } else {
-        ipaText = Text(row.derived!, style: monoStyle);
       }
 
       derivedWidget = Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          ipaText,
           if (showRomanized)
-            Text(
-              '/ $romanized /',
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: cs.onSurface.withValues(alpha: 0.55),
-              ),
-            ),
+            Text(romanized, style: monoStyle),
+          ipaLabel,
         ],
       );
     } else {
@@ -393,11 +386,17 @@ class _PreviewPanelState extends ConsumerState<PreviewPanel> {
 
     final arrowIcon = const Icon(Icons.arrow_forward, size: 14);
 
+    final romanizedRoot = romanize(row.root);
+    final showRomanizedRoot = romanizedRoot.isNotEmpty && romanizedRoot != row.root;
+
     return TableRow(
       children: [
         Padding(
           padding: const EdgeInsets.symmetric(vertical: 3),
-          child: Text(row.root, style: monoStyle),
+          child: Text(
+            showRomanizedRoot ? romanizedRoot : row.root,
+            style: monoStyle,
+          ),
         ),
         row.stackMode && row.rulesApplied > 1
             ? Tooltip(

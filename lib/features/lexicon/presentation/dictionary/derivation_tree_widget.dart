@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../phonology/data/romanization_providers.dart';
 import '../../data/lexeme_providers.dart';
 
 /// Visual derivation tree widget.
@@ -27,6 +28,7 @@ class DerivationTreeWidget extends ConsumerWidget {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
 
+    final romanize = ref.watch(romanizeProvider);
     final derivedForms = ref.watch(computedDerivedFormsProvider(rootIpa));
     final exceptionsAsync = ref.watch(exceptionsForLexemeProvider(rootId));
     final exceptions = exceptionsAsync.asData?.value ?? [];
@@ -35,6 +37,9 @@ class DerivationTreeWidget extends ConsumerWidget {
     final exceptionMap = {
       for (final e in exceptions) e.ruleId: e.overrideForm,
     };
+
+    final romanizedRoot = romanize(rootIpa);
+    final showRomanizedRoot = romanizedRoot.isNotEmpty && romanizedRoot != rootIpa;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -86,7 +91,8 @@ class DerivationTreeWidget extends ConsumerWidget {
             children: [
               // Root node row
               _TreeNode(
-                label: rootIpa,
+                label: showRomanizedRoot ? romanizedRoot : rootIpa,
+                sublabel: showRomanizedRoot ? '[$rootIpa]' : null,
                 level: 0,
                 isException: false,
                 theme: theme,
@@ -95,13 +101,15 @@ class DerivationTreeWidget extends ConsumerWidget {
               ...derivedForms.map((result) {
                 final overrideForm = exceptionMap[result.ruleId];
                 final hasException = overrideForm != null;
+                final ipa = hasException ? overrideForm : result.derivedIpa;
+                final romanized = romanize(ipa);
+                final showRomanized = romanized.isNotEmpty && romanized != ipa;
                 return _TreeNode(
-                  label: hasException
-                      ? overrideForm
-                      : result.derivedIpa,
+                  label: showRomanized ? romanized : ipa,
                   sublabel: hasException
                       ? '${result.ruleName} — Exception'
                       : result.ruleName,
+                  ipaLabel: showRomanized ? '[$ipa]' : null,
                   level: 1,
                   isException: hasException,
                   theme: theme,
@@ -122,10 +130,12 @@ class _TreeNode extends StatelessWidget {
     required this.isException,
     required this.theme,
     this.sublabel,
+    this.ipaLabel,
   });
 
   final String label;
   final String? sublabel;
+  final String? ipaLabel;
   final int level;
   final bool isException;
   final ThemeData theme;
@@ -161,6 +171,14 @@ class _TreeNode extends StatelessWidget {
                     fontWeight: isException ? FontWeight.w600 : FontWeight.normal,
                   ),
                 ),
+                if (ipaLabel != null)
+                  Text(
+                    ipaLabel!,
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      fontSize: 11,
+                      color: cs.onSurface.withValues(alpha: 0.55),
+                    ),
+                  ),
                 if (sublabel != null)
                   Text(
                     sublabel!,

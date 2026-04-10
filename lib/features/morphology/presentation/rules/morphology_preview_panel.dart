@@ -234,10 +234,13 @@ class _MorphWordRow extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(root, style: theme.textTheme.bodyMedium),
+                Text(
+                  showRomanizedRoot ? romanizedRoot : root,
+                  style: theme.textTheme.bodyMedium,
+                ),
                 if (showRomanizedRoot)
                   Text(
-                    '/ $romanizedRoot /',
+                    '[$root]',
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: cs.onSurface.withValues(alpha: 0.55),
                     ),
@@ -259,17 +262,17 @@ class _MorphWordRow extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  ViolationText(
-                    text: derived!,
-                    violations: violations,
+                  Text(
+                    showRomanizedDerived ? romanizedDerived! : derived!,
+                    style: theme.textTheme.bodyMedium,
                   ),
-                  if (showRomanizedDerived)
-                    Text(
-                      '/ $romanizedDerived /',
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: cs.onSurface.withValues(alpha: 0.55),
-                      ),
+                  ViolationText(
+                    text: '[$derived]',
+                    violations: violations,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: cs.onSurface.withValues(alpha: 0.55),
                     ),
+                  ),
                 ],
               ),
             ),
