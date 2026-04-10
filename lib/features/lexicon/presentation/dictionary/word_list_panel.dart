@@ -217,6 +217,19 @@ class _WordListPanelState extends ConsumerState<WordListPanel> {
                               onPressed: filteredLexemes.isEmpty
                                   ? null
                                   : widget.onEnterSelectionMode,
+                              // Disable Material's default minimumSize
+                              // (~64dp) and padding so the button can shrink
+                              // below its natural width when the panel is
+                              // narrow. Without these, Flexible would hand
+                              // the button a maxWidth smaller than its
+                              // minimum — a ~5px RenderFlex overflow.
+                              style: OutlinedButton.styleFrom(
+                                minimumSize: Size.zero,
+                                tapTargetSize:
+                                    MaterialTapTargetSize.shrinkWrap,
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 10, vertical: 6),
+                              ),
                               icon: Opacity(
                                 opacity: filteredLexemes.isEmpty ? 0.38 : 1.0,
                                 child: const Icon(
