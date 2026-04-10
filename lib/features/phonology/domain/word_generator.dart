@@ -1,6 +1,9 @@
 import 'dart:math';
 
+import 'package:flutter/foundation.dart';
+
 import '../../phonology/domain/phonotactic_dsl.dart';
+import 'default_natural_classes.dart' show defaultNaturalClassAliases;
 
 // ---------------------------------------------------------------------------
 // Inventory model (passed in from providers)
@@ -208,27 +211,49 @@ class WordGenerator {
   /// Recognised shorthands:
   ///   - `C` → all consonants
   ///   - `V` → all vowels
+  ///   - Single-letter alias (S/N/F/L/R, case-sensitive) → default class list
+  ///     (D-05a / RESEARCH F-2 — checked BEFORE lowercasing so `S` resolves to
+  ///     Stops without colliding with literal /s/)
   ///   - `[name]` or a named class → looks up [inventory.naturalClasses]
   ///   - Anything else → tries consonants first, then natural classes
   List<String> _resolveClass(String classRef, PhonemeInventory inventory) {
+    // 1. Reserved system shortcuts (C/V from Phase 1).
     switch (classRef) {
       case 'C':
         return inventory.consonants;
       case 'V':
         return inventory.vowels;
-      default:
-        // Try natural class by name (case-insensitive lookup).
-        final key = classRef.toLowerCase();
-        if (inventory.naturalClasses.containsKey(key)) {
-          return inventory.naturalClasses[key]!;
-        }
-        // Fallback: try exact case.
-        if (inventory.naturalClasses.containsKey(classRef)) {
-          return inventory.naturalClasses[classRef]!;
-        }
-        return [];
     }
+
+    // 2. Single-letter alias (case-sensitive — checked BEFORE lowercasing so
+    //    'S' resolves to Stops without colliding with literal /s/).
+    //    See Phase 3.2 D-05a / RESEARCH F-2.
+    final alias = defaultNaturalClassAliases[classRef];
+    if (alias != null) return alias;
+
+    // 3. Lowercased name lookup (existing behavior — hits user classes and
+    //    default full-name classes seeded by buildInventory in Plan 01).
+    final key = classRef.toLowerCase();
+    if (inventory.naturalClasses.containsKey(key)) {
+      return inventory.naturalClasses[key]!;
+    }
+
+    // 4. Exact-case fallback (legacy behavior preserved for edge cases).
+    if (inventory.naturalClasses.containsKey(classRef)) {
+      return inventory.naturalClasses[classRef]!;
+    }
+
+    return [];
   }
+
+  /// Testing-only wrapper around [_resolveClass] so unit tests can assert on
+  /// resolver behavior without going through `generateWords`.
+  @visibleForTesting
+  List<String> resolveClassForTesting(
+    String classRef,
+    PhonemeInventory inventory,
+  ) =>
+      _resolveClass(classRef, inventory);
 
   // ---------------------------------------------------------------------------
   // Tokenizer (splits a word into phoneme tokens for constraint validation)

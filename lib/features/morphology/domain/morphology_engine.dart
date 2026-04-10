@@ -1,3 +1,5 @@
+import '../../phonology/domain/default_natural_classes.dart'
+    show defaultNaturalClassAliases;
 import '../../phonology/domain/word_generator.dart';
 import 'morphology_dsl.dart';
 
@@ -66,24 +68,46 @@ List<String> tokenizeIpa(String word, PhonemeInventory inventory) {
 
 /// Resolves a phoneme class reference to its list of IPA symbols.
 ///
-/// Recognised shorthands: 'C' = all consonants, 'V' = all vowels.
+/// Recognised shorthands:
+///   - `C` = all consonants
+///   - `V` = all vowels
+///   - Single-letter alias (S/N/F/L/R, case-sensitive) = predefined default
+///     class list. Checked BEFORE lowercasing so `S` resolves to Stops without
+///     colliding with literal /s/. See Phase 3.2 D-05a / RESEARCH F-2.
+///
 /// Everything else is looked up in [inventory.naturalClasses] (case-insensitive).
+///
+/// IMPORTANT: This function must stay in lockstep with
+/// [WordGenerator._resolveClass] — both resolvers are exercised by the parity
+/// test in `test/phonology/resolve_class_test.dart`.
 List<String> resolvePhonemeClass(String classRef, PhonemeInventory inventory) {
+  // 1. Reserved system shortcuts (C/V from Phase 1).
   switch (classRef) {
     case 'C':
       return inventory.consonants;
     case 'V':
       return inventory.vowels;
-    default:
-      final key = classRef.toLowerCase();
-      if (inventory.naturalClasses.containsKey(key)) {
-        return inventory.naturalClasses[key]!;
-      }
-      if (inventory.naturalClasses.containsKey(classRef)) {
-        return inventory.naturalClasses[classRef]!;
-      }
-      return [];
   }
+
+  // 2. Single-letter alias (case-sensitive — checked BEFORE lowercasing so
+  //    'S' resolves to Stops without colliding with literal /s/).
+  //    See Phase 3.2 D-05a / RESEARCH F-2.
+  final alias = defaultNaturalClassAliases[classRef];
+  if (alias != null) return alias;
+
+  // 3. Lowercased name lookup (existing behavior — hits user classes and
+  //    default full-name classes seeded by buildInventory in Plan 01).
+  final key = classRef.toLowerCase();
+  if (inventory.naturalClasses.containsKey(key)) {
+    return inventory.naturalClasses[key]!;
+  }
+
+  // 4. Exact-case fallback (legacy behavior preserved for edge cases).
+  if (inventory.naturalClasses.containsKey(classRef)) {
+    return inventory.naturalClasses[classRef]!;
+  }
+
+  return [];
 }
 
 // ---------------------------------------------------------------------------
