@@ -47,12 +47,33 @@ void main() {
       expect(inv.naturalClasses.length, equals(9));
     });
 
-    test("default 'stop' list matches the catalog exactly", () {
+    test('default stop list is intersected with the user inventory', () {
+      // UAT 2026-04-10: defaults are filtered to the user's inventory so
+      // generation only emits in-inventory symbols. Default stops are
+      // [p b t d ʈ ɖ c ɟ k ɡ q ɢ ʔ]; with a user inventory of [p, t, k],
+      // the seeded 'stop' list is [p, t, k].
+      final consonants = [
+        _phoneme(1, 'p', 'consonant'),
+        _phoneme(2, 't', 'consonant'),
+        _phoneme(3, 'k', 'consonant'),
+      ];
+      final inv = buildInventory(consonants, const [], const []);
+      expect(inv.naturalClasses['stop'], equals(['p', 't', 'k']));
+    });
+
+    test('empty user inventory yields empty default lists (not the catalog)',
+        () {
+      // UAT 2026-04-10: with no user phonemes, every default key is present
+      // but maps to an empty list. This is intentional — generation against
+      // an empty inventory cannot produce out-of-inventory IPA symbols.
       final inv = buildInventory(const [], const [], const []);
-      expect(
-        inv.naturalClasses['stop'],
-        equals(defaultNaturalClasses['stop']),
-      );
+      for (final key in defaultNaturalClasses.keys) {
+        expect(
+          inv.naturalClasses[key],
+          isEmpty,
+          reason: 'default "$key" should be empty with no user phonemes',
+        );
+      }
     });
 
     test('keys are lowercased — Stop is not present, stop is', () {
@@ -78,7 +99,7 @@ void main() {
       expect(inv.naturalClasses['stop']!.length, equals(3));
     });
 
-    test("user class with novel name adds to the map additively", () {
+    test('user class with novel name adds to the map additively', () {
       final consonants = [
         _phoneme(1, 'p', 'consonant'),
         _phoneme(2, 't', 'consonant'),
@@ -102,15 +123,19 @@ void main() {
     });
 
     test('malformed phonemeIds JSON does not crash, defaults still merge', () {
+      // Provide a non-empty inventory so we can assert on the filtered
+      // default stop list (post-UAT fix 2026-04-10 — defaults are
+      // intersected with the user's inventory).
+      final consonants = [
+        _phoneme(1, 'p', 'consonant'),
+        _phoneme(2, 'k', 'consonant'),
+      ];
       final bad = _malformedNatClass(10, 'broken');
-      final inv = buildInventory(const [], const [], [bad]);
+      final inv = buildInventory(consonants, const [], [bad]);
 
-      // Defaults still there.
+      // Defaults still present, filtered to inventory.
       expect(inv.naturalClasses.containsKey('stop'), isTrue);
-      expect(
-        inv.naturalClasses['stop'],
-        equals(defaultNaturalClasses['stop']),
-      );
+      expect(inv.naturalClasses['stop'], equals(['p', 'k']));
       // Broken class was skipped (not inserted as empty).
       expect(inv.naturalClasses.containsKey('broken'), isFalse);
     });

@@ -13,7 +13,6 @@
 //      rule evaluation depends on them behaving the same.
 
 import 'package:conlang_workbench/features/morphology/domain/morphology_engine.dart';
-import 'package:conlang_workbench/features/phonology/domain/default_natural_classes.dart';
 import 'package:conlang_workbench/features/phonology/domain/word_generator.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -54,29 +53,41 @@ void main() {
     );
   }
 
-  group('alias-first lookup (D-05a / F-2)', () {
-    test('S returns default stops (NOT user override)', () {
-      bothReturn('S', defaultNaturalClassAliases['S']!);
+  group('alias-first lookup (D-05a / F-2) — intersected with inventory', () {
+    // UAT 2026-04-10: default classes (alias or full-name) must return only
+    // symbols that exist in the user's phoneme inventory. The default catalog
+    // ships with full IPA sets as a reference, but generation/resolution must
+    // only yield in-inventory segments so the word generator never emits
+    // sounds the user hasn't defined. Test inventory consonants are
+    // ['p', 't', 'k', 's', 'm', 'n'].
+
+    test('S returns default stops ∩ inventory = [p, t, k]', () {
+      // default stops = [p b t d ʈ ɖ c ɟ k ɡ q ɢ ʔ]
+      // inventory.consonants ∩ stops = [p, t, k]
+      bothReturn('S', const ['p', 't', 'k']);
     });
 
     test('stop (full name) returns user override — D-06 precedence', () {
       bothReturn('stop', const ['p', 't', 'k']);
     });
 
-    test('N returns default nasals', () {
-      bothReturn('N', defaultNaturalClassAliases['N']!);
+    test('N returns default nasals ∩ inventory = [m, n]', () {
+      // default nasals = [m ɱ n ɳ ɲ ŋ ɴ]
+      // inventory ∩ nasals = [m, n]
+      bothReturn('N', const ['m', 'n']);
     });
 
-    test('F returns default fricatives', () {
-      bothReturn('F', defaultNaturalClassAliases['F']!);
+    test('F returns default fricatives ∩ inventory = [s]', () {
+      // default fricatives include s; inventory has s
+      bothReturn('F', const ['s']);
     });
 
-    test('L returns default liquids', () {
-      bothReturn('L', defaultNaturalClassAliases['L']!);
+    test('L returns default liquids ∩ inventory = [] (no liquids in inv)', () {
+      bothReturn('L', const []);
     });
 
-    test('R returns default rhotics', () {
-      bothReturn('R', defaultNaturalClassAliases['R']!);
+    test('R returns default rhotics ∩ inventory = [] (no rhotics in inv)', () {
+      bothReturn('R', const []);
     });
   });
 

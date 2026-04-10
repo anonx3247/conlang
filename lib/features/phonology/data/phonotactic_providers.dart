@@ -203,11 +203,27 @@ PhonemeInventory buildInventory(
     for (final p in allPhonemes) p.id: p.symbol,
   };
 
-  // Seed with defaults (lowercased keys to match the existing convention).
+  // Seed with defaults intersected with the user's inventory (lowercased
+  // keys to match the existing convention). The predefined catalog ships
+  // with full IPA sets (p b t d ʈ ɖ c ɟ k ɡ q ɢ ʔ for stops) but the word
+  // generator should only emit symbols the user actually has in their
+  // phoneme inventory — otherwise generation produces segments the user
+  // can't represent. See 2026-04-10 UAT feedback.
+  //
+  // The editor's Natural Classes chip display uses `defaultNaturalClasses`
+  // directly (not this map), so the reference view still shows the full
+  // catalog.
+  //
   // User-defined classes overlay below — last write wins → user precedence (D-06).
+  final userPhonemeSymbols = <String>{
+    for (final p in allPhonemes) p.symbol,
+  };
   final naturalClassMap = <String, List<String>>{
     for (final entry in defaultNaturalClasses.entries)
-      entry.key.toLowerCase(): List<String>.from(entry.value),
+      entry.key.toLowerCase(): [
+        for (final sym in entry.value)
+          if (userPhonemeSymbols.contains(sym)) sym,
+      ],
   };
 
   for (final cls in classes) {

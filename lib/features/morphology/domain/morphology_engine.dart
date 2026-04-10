@@ -91,9 +91,19 @@ List<String> resolvePhonemeClass(String classRef, PhonemeInventory inventory) {
 
   // 2. Single-letter alias (case-sensitive — checked BEFORE lowercasing so
   //    'S' resolves to Stops without colliding with literal /s/).
-  //    See Phase 3.2 D-05a / RESEARCH F-2.
+  //    Intersected with the user's inventory — the default catalog ships
+  //    with full IPA sets but resolution must only yield symbols the user
+  //    actually has. Parity with WordGenerator._resolveClass is enforced
+  //    by test/phonology/resolve_class_test.dart. See Phase 3.2 D-05a /
+  //    RESEARCH F-2 and 2026-04-10 UAT.
   final alias = defaultNaturalClassAliases[classRef];
-  if (alias != null) return alias;
+  if (alias != null) {
+    final userSymbols = <String>{
+      ...inventory.consonants,
+      ...inventory.vowels,
+    };
+    return alias.where(userSymbols.contains).toList();
+  }
 
   // 3. Lowercased name lookup (existing behavior — hits user classes and
   //    default full-name classes seeded by buildInventory in Plan 01).
