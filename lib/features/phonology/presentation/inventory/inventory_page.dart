@@ -6,9 +6,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../db/app_database.dart';
 import '../../../../features/project/data/project_providers.dart';
+import '../../data/allophone_providers.dart';
 import '../../data/ipa_data.dart';
 import '../../data/phoneme_providers.dart';
 import '../../data/romanization_providers.dart';
+import '../../domain/allophone_computer.dart';
 import '../shared/vowel_trapezoid_painter.dart';
 import 'natural_class_editor.dart';
 import 'phoneme_edit_dialog.dart';
@@ -896,3 +898,22 @@ class _EmptyHint extends StatelessWidget {
     );
   }
 }
+
+// ---------------------------------------------------------------------------
+// Test-only helpers
+// ---------------------------------------------------------------------------
+
+/// Test-only access to the private [_PhonemeChip] widget.
+@visibleForTesting
+Widget buildPhonemeChipForTesting({
+  required Phoneme phoneme,
+  required bool isAltHeld,
+  VoidCallback? onTap,
+}) =>
+    _PhonemeChip(
+      phoneme: phoneme,
+      isAltHeld: isAltHeld,
+      onTap: onTap ?? _noopTap,
+    );
+
+void _noopTap() {}
