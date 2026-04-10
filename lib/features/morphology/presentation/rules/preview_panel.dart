@@ -147,15 +147,21 @@ class _PreviewPanelState extends ConsumerState<PreviewPanel> {
       for (final word in words) {
         var current = word;
         var rulesApplied = 0;
+        // WR-02 fix: track whether any rule produced a MorphSuccess, so we
+        // don't flag "no match" just because a later rule reverted the form
+        // (e.g. A: a->e, B: e->a). The single-rule branch uses the engine
+        // result directly; stack mode must match that semantics.
+        var anySuccess = false;
         for (final r in orderedRules) {
           final result = engine.applyRule(r, current, inventory);
           switch (result) {
             case MorphSuccess(:final form):
               current = form;
               rulesApplied++;
+              anySuccess = true;
             case MorphNoMatch():
-              // Skip rules that don't match; continue with current form.
-              break;
+            // no-op: continue with current form (Dart 3 pattern switches
+            // do not fall through, so no explicit break is needed).
           }
         }
 
@@ -171,8 +177,8 @@ class _PreviewPanelState extends ConsumerState<PreviewPanel> {
 
         rows.add(_PreviewRow(
           root: word,
-          derived: current != word ? current : null,
-          error: current == word ? 'no match' : null,
+          derived: anySuccess ? current : null,
+          error: anySuccess ? null : 'no match',
           violations: validation,
           rulesApplied: rulesApplied,
           stackMode: true,
