@@ -1,5 +1,4 @@
 import 'package:drift/drift.dart' show Value;
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -617,6 +616,14 @@ class _PhonemeEditDialogState extends ConsumerState<PhonemeEditDialog> {
                     ? _effectiveSymbol
                     : (widget.phoneme?.symbol),
               ),
+
+              // Phase 3.2 D-14 — computed allophones (empty when no rules).
+              const SizedBox(height: 12),
+              _AllophoneSection(
+                phonemeSymbol: _effectiveSymbol.isNotEmpty
+                    ? _effectiveSymbol
+                    : (widget.phoneme?.symbol ?? ''),
+              ),
             ],
           ),
         ),
@@ -812,8 +819,53 @@ class _AllophoneSection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // STUB: filled in during TDD GREEN. Returning a placeholder so the
-    // test file compiles and fails for the right reason (no section key).
-    return const SizedBox.shrink();
+    if (phonemeSymbol.isEmpty) return const SizedBox.shrink();
+
+    final allophoneMap = ref.watch(allophoneMapProvider);
+    final realizations =
+        allophoneMap[phonemeSymbol] ?? const <AllophoneRealization>[];
+
+    // D-18 — empty state renders nothing.
+    if (realizations.isEmpty) return const SizedBox.shrink();
+
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    // D-19 format: /underlying/ → [r1, r2, ...] (comma + space separator).
+    final realizationText = realizations.map((r) => r.output).join(', ');
+
+    return Container(
+      key: const ValueKey('allophone-section'),
+      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            Icons.tune_rounded,
+            size: 14,
+            color: colorScheme.onSurface.withValues(alpha: 0.5),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            'Allophones: ',
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: colorScheme.onSurface.withValues(alpha: 0.6),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              '/$phonemeSymbol/ → [$realizationText]',
+              style: theme.textTheme.bodySmall?.copyWith(
+                fontWeight: FontWeight.w600,
+                color: colorScheme.primary,
+                fontFamily: 'monospace',
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
