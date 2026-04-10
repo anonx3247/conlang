@@ -32,6 +32,20 @@ class _InspirationPanelState extends ConsumerState<InspirationPanel> {
   // Counter used to force rebuild (regenerate) on button press.
   int _regenerateKey = 0;
 
+  // WR-03 fix: memoize generated words against the inputs that should
+  // trigger a regeneration (regenerate key, syllable range, templates,
+  // inventory). Without this cache, EVERY widget rebuild — including
+  // incidental rebuilds from parent state changes, provider updates for
+  // romanize/rewrite rules, etc. — constructs a fresh `WordGenerator()`
+  // with a new `Random()` and produces a completely different candidate
+  // list, causing UI flicker and losing whatever words the user was
+  // looking at. Per the refresh-button tooltip ("Regenerate"), candidates
+  // should persist across incidental rebuilds and only change on explicit
+  // refresh.
+  List<String>? _cachedRawWords;
+  int _lastCacheKey = 0;
+  bool _hasCacheKey = false;
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -42,13 +56,9 @@ class _InspirationPanelState extends ConsumerState<InspirationPanel> {
     final templates = ref.watch(parsedTemplatesProvider).when(
           data: (v) => v,
           loading: () => <ParsedTemplate>[],
-          error: (_, __) => <ParsedTemplate>[],
+          error: (_, _) => <ParsedTemplate>[],
         );
     final rewriteRules = ref.watch(parsedRewriteRulesProvider);
-
-    // Rebuild _words whenever _regenerateKey changes.
-    // ignore: unused_local_variable
-    final _ = _regenerateKey;
 
     // Generate phonemic (raw) candidates and compute their phonetic
     // (surface) transcription for display. The tap handler passes the
@@ -56,13 +66,30 @@ class _InspirationPanelState extends ConsumerState<InspirationPanel> {
     // sees phonemic input, not the rewritten surface form. See
     // word_generator_panel.dart for the full rationale.
     final gen = WordGenerator();
-    final rawWords = gen.generateWords(
-      templates: templates,
-      inventory: inventory,
-      count: 12,
-      minSyllables: _minSyllables,
-      maxSyllables: _maxSyllables,
+    // Cache key covers every input that should trigger regeneration:
+    // explicit regenerate button press, syllable range, template content,
+    // and inventory content. Rewrite rules are NOT in the key — they only
+    // affect the displayed phonetic bracket, not the raw candidates.
+    final cacheKey = Object.hash(
+      _regenerateKey,
+      _minSyllables,
+      _maxSyllables,
+      Object.hashAll(templates.map((t) => t.pattern)),
+      Object.hashAll(inventory.consonants),
+      Object.hashAll(inventory.vowels),
     );
+    if (!_hasCacheKey || cacheKey != _lastCacheKey || _cachedRawWords == null) {
+      _cachedRawWords = gen.generateWords(
+        templates: templates,
+        inventory: inventory,
+        count: 12,
+        minSyllables: _minSyllables,
+        maxSyllables: _maxSyllables,
+      );
+      _lastCacheKey = cacheKey;
+      _hasCacheKey = true;
+    }
+    final rawWords = _cachedRawWords!;
     final phoneticWords = rawWords
         .map((w) => gen.applyRewriteRules(
               word: w,
