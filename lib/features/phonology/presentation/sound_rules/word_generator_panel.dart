@@ -47,7 +47,14 @@ class _WordGeneratorPanelState extends ConsumerState<WordGeneratorPanel> {
         );
     final rewriteRules = ref.watch(parsedRewriteRulesProvider);
 
-    // Generate words, then apply rewrite rules to each.
+    // Generate phonemic (raw) words, then derive their phonetic (surface)
+    // transcription via the rewrite rules.
+    //
+    // IMPORTANT: Rewrite rules produce the PHONETIC transcription shown in
+    // [brackets]. Romanization and phonotactic validation must both operate
+    // on the RAW phonemic form, not the rewritten surface form — otherwise
+    // `s -> z / V_V` would mangle romanization (e.g. /asa/ should romanize
+    // as "asa", not "aza", even though it surfaces as [aza]).
     final gen = WordGenerator();
     final rawWords = gen.generateWords(
       templates: templates,
@@ -56,11 +63,13 @@ class _WordGeneratorPanelState extends ConsumerState<WordGeneratorPanel> {
       minSyllables: _minSyllables,
       maxSyllables: _maxSyllables,
     );
-    final words = rawWords.map((w) => gen.applyRewriteRules(
-      word: w,
-      rules: rewriteRules,
-      inventory: inventory,
-    )).toList();
+    final phoneticWords = rawWords
+        .map((w) => gen.applyRewriteRules(
+              word: w,
+              rules: rewriteRules,
+              inventory: inventory,
+            ))
+        .toList();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -143,7 +152,7 @@ class _WordGeneratorPanelState extends ConsumerState<WordGeneratorPanel> {
 
         // ---- Word list ------------------------------------------------------
         Expanded(
-          child: words.isEmpty
+          child: rawWords.isEmpty
               ? Center(
                   child: Text(
                     'Define templates and add phonemes to preview words.',
@@ -156,17 +165,23 @@ class _WordGeneratorPanelState extends ConsumerState<WordGeneratorPanel> {
                 )
               : ListView.builder(
                   padding: const EdgeInsets.symmetric(vertical: 4),
-                  itemCount: words.length,
+                  itemCount: rawWords.length,
                   itemBuilder: (_, i) {
-                    final word = words[i];
-                    final validation = WordGenerator().validateWord(
-                      word: word,
+                    final rawWord = rawWords[i];
+                    final phoneticWord = phoneticWords[i];
+                    // Validate phonotactics on the phonemic (raw) form —
+                    // phonotactic rules are defined over phonemes, not
+                    // surface forms.
+                    final validation = gen.validateWord(
+                      word: rawWord,
                       constraints: constraints,
                       inventory: inventory,
                     );
-                    final romanized = romanize(word);
+                    // Romanize the raw phonemic form, NOT the rewritten
+                    // form. See the rawWords comment above.
+                    final romanized = romanize(rawWord);
                     return _WordRow(
-                      word: word,
+                      word: phoneticWord,
                       romanized: romanized,
                       violations: validation.violations,
                     );

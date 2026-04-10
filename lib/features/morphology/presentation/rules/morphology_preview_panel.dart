@@ -49,9 +49,17 @@ class _MorphologyPreviewPanelState
 
     final rewriteRules = ref.watch(parsedRewriteRulesProvider);
 
-    // Generate extra candidates, apply rewrite rules, then filter to only
-    // words that pass phonotactic constraints — so base words are valid
-    // before morphological transforms are applied.
+    // Generate extra candidates, filter to only words that pass
+    // phonotactic constraints, then feed PHONEMIC (raw) forms into the
+    // morphology engine. Rewrite rules are applied LATER, after morphology,
+    // to produce the phonetic transcription shown in [brackets].
+    //
+    // IMPORTANT: Morphology and romanization both operate on phonemic
+    // forms. Rewrite rules (e.g. `s -> z / V_V`) are a surface-level
+    // transcription layer — feeding rewritten forms into morphology would
+    // corrupt affix attachment, and romanizing rewritten forms would
+    // mangle the output (e.g. /asa/ → [aza] should still romanize as
+    // "asa", not "aza").
     final gen = WordGenerator();
     final candidates = gen.generateWords(
       templates: templates,
@@ -62,20 +70,16 @@ class _MorphologyPreviewPanelState
     );
     final words = <String>[];
     for (final raw in candidates) {
-      final rewritten = gen.applyRewriteRules(
-        word: raw,
-        rules: rewriteRules,
-        inventory: inventory,
-      );
+      // Validate phonotactics on the phonemic (raw) form.
       if (constraints.isEmpty) {
-        words.add(rewritten);
+        words.add(raw);
       } else {
         final v = gen.validateWord(
-          word: rewritten,
+          word: raw,
           constraints: constraints,
           inventory: inventory,
         );
-        if (v.isValid) words.add(rewritten);
+        if (v.isValid) words.add(raw);
       }
       if (words.length >= 20) break;
     }
@@ -150,9 +154,11 @@ class _MorphologyPreviewPanelState
                   padding: const EdgeInsets.symmetric(vertical: 4),
                   itemCount: words.length,
                   itemBuilder: (_, i) {
+                    // `root` is the phonemic (raw) base word.
                     final root = words[i];
 
-                    // Apply all active rules in sequence
+                    // Apply all active morphology rules in sequence to the
+                    // phonemic form.
                     var current = root;
                     var rulesApplied = 0;
                     for (final rule in activeRules) {
@@ -164,26 +170,45 @@ class _MorphologyPreviewPanelState
                       }
                     }
 
-                    final derived = current != root ? current : null;
+                    // `derivedRaw` is the phonemic derived form (post-
+                    // morphology, pre-rewrite).
+                    final derivedRaw = current != root ? current : null;
 
-                    // Validate derived form
+                    // Validate phonotactics on the phonemic derived form.
                     ValidationResult? validation;
-                    if (derived != null && constraints.isNotEmpty) {
+                    if (derivedRaw != null && constraints.isNotEmpty) {
                       validation = gen.validateWord(
-                        word: derived,
+                        word: derivedRaw,
                         constraints: constraints,
                         inventory: inventory,
                       );
                     }
 
+                    // Romanization uses the phonemic (raw) forms.
                     final romanizedRoot = romanize(root);
                     final romanizedDerived =
-                        derived != null ? romanize(derived) : null;
+                        derivedRaw != null ? romanize(derivedRaw) : null;
+
+                    // Phonetic transcription uses the rewrite rules applied
+                    // to the phonemic form. This is what appears in
+                    // [brackets] in the UI.
+                    final phoneticRoot = gen.applyRewriteRules(
+                      word: root,
+                      rules: rewriteRules,
+                      inventory: inventory,
+                    );
+                    final phoneticDerived = derivedRaw != null
+                        ? gen.applyRewriteRules(
+                            word: derivedRaw,
+                            rules: rewriteRules,
+                            inventory: inventory,
+                          )
+                        : null;
 
                     return _MorphWordRow(
-                      root: root,
+                      root: phoneticRoot,
                       romanizedRoot: romanizedRoot,
-                      derived: derived,
+                      derived: phoneticDerived,
                       romanizedDerived: romanizedDerived,
                       rulesApplied: rulesApplied,
                       violations: validation?.violations ?? [],

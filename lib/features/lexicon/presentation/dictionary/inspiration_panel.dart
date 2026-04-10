@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../phonology/data/phonotactic_providers.dart';
+import '../../../phonology/data/romanization_providers.dart';
 import '../../../phonology/domain/phonotactic_dsl.dart';
 import '../../../phonology/domain/word_generator.dart';
 
@@ -37,6 +38,7 @@ class _InspirationPanelState extends ConsumerState<InspirationPanel> {
     final cs = theme.colorScheme;
 
     final inventory = ref.watch(phonemeInventoryProvider);
+    final romanize = ref.watch(romanizeProvider);
     final templates = ref.watch(parsedTemplatesProvider).when(
           data: (v) => v,
           loading: () => <ParsedTemplate>[],
@@ -48,6 +50,11 @@ class _InspirationPanelState extends ConsumerState<InspirationPanel> {
     // ignore: unused_local_variable
     final _ = _regenerateKey;
 
+    // Generate phonemic (raw) candidates and compute their phonetic
+    // (surface) transcription for display. The tap handler passes the
+    // RAW form downstream so the word creation form's romanize() call
+    // sees phonemic input, not the rewritten surface form. See
+    // word_generator_panel.dart for the full rationale.
     final gen = WordGenerator();
     final rawWords = gen.generateWords(
       templates: templates,
@@ -56,7 +63,7 @@ class _InspirationPanelState extends ConsumerState<InspirationPanel> {
       minSyllables: _minSyllables,
       maxSyllables: _maxSyllables,
     );
-    final words = rawWords
+    final phoneticWords = rawWords
         .map((w) => gen.applyRewriteRules(
               word: w,
               rules: rewriteRules,
@@ -148,7 +155,7 @@ class _InspirationPanelState extends ConsumerState<InspirationPanel> {
 
         // ---- Word candidates -----------------------------------------------
         Expanded(
-          child: words.isEmpty
+          child: rawWords.isEmpty
               ? Center(
                   child: Padding(
                     padding: const EdgeInsets.all(12),
@@ -164,21 +171,50 @@ class _InspirationPanelState extends ConsumerState<InspirationPanel> {
                 )
               : ListView.builder(
                   padding: const EdgeInsets.symmetric(vertical: 4),
-                  itemCount: words.length,
+                  itemCount: rawWords.length,
                   itemBuilder: (context, index) {
-                    final word = words[index];
+                    final rawWord = rawWords[index];
+                    final phoneticWord = phoneticWords[index];
+                    final romanized = romanize(rawWord);
+                    final showRomanized =
+                        romanized.isNotEmpty && romanized != phoneticWord;
                     return InkWell(
-                      onTap: () => widget.onWordSelected(word),
+                      // Pass the RAW (phonemic) form so word_creation_form
+                      // can romanize() it correctly.
+                      onTap: () => widget.onWordSelected(rawWord),
                       child: Padding(
                         padding: const EdgeInsets.symmetric(
                             horizontal: 12, vertical: 6),
-                        child: Text(
-                          word,
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            fontSize: 13,
-                            color: cs.primary,
-                          ),
-                        ),
+                        child: showRomanized
+                            ? Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    romanized,
+                                    style:
+                                        theme.textTheme.bodyMedium?.copyWith(
+                                      fontSize: 13,
+                                      color: cs.primary,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    '[$phoneticWord]',
+                                    style: theme.textTheme.bodySmall?.copyWith(
+                                      fontSize: 11,
+                                      color: cs.onSurface
+                                          .withValues(alpha: 0.55),
+                                    ),
+                                  ),
+                                ],
+                              )
+                            : Text(
+                                phoneticWord,
+                                style: theme.textTheme.bodyMedium?.copyWith(
+                                  fontSize: 13,
+                                  color: cs.primary,
+                                ),
+                              ),
                       ),
                     );
                   },

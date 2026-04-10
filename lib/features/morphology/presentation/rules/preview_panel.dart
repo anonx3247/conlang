@@ -73,14 +73,15 @@ class _PreviewPanelState extends ConsumerState<PreviewPanel> {
       loading: () => <ParsedTemplate>[],
       error: (_, _) => <ParsedTemplate>[],
     );
-    final rewriteRules = ref.read(parsedRewriteRulesProvider);
     final constraintsAsync = ref.read(parsedConstraintsProvider);
     final constraints = constraintsAsync.asData?.value ?? [];
     final gen = WordGenerator();
 
-    // Generate extra candidates, apply rewrite rules, then filter to only
-    // words that pass phonotactic constraints — so base words are valid
-    // before morphological transforms are applied.
+    // Generate extra candidates, filter to only words that pass
+    // phonotactic constraints, then feed PHONEMIC (raw) forms into the
+    // morphology engine. Rewrite rules are applied LATER, to produce the
+    // phonetic [bracket] transcription. See morphology_preview_panel.dart
+    // for the full rationale.
     final candidates = gen.generateWords(
       templates: templates,
       inventory: inventory,
@@ -90,20 +91,16 @@ class _PreviewPanelState extends ConsumerState<PreviewPanel> {
     );
     final words = <String>[];
     for (final raw in candidates) {
-      final rewritten = gen.applyRewriteRules(
-        word: raw,
-        rules: rewriteRules,
-        inventory: inventory,
-      );
+      // Validate phonotactics on the phonemic (raw) form.
       if (constraints.isEmpty) {
-        words.add(rewritten);
+        words.add(raw);
       } else {
         final v = gen.validateWord(
-          word: rewritten,
+          word: raw,
           constraints: constraints,
           inventory: inventory,
         );
-        if (v.isValid) words.add(rewritten);
+        if (v.isValid) words.add(raw);
       }
       if (words.length >= 8) break;
     }
@@ -230,6 +227,9 @@ class _PreviewPanelState extends ConsumerState<PreviewPanel> {
 
     final inventory = ref.watch(phonemeInventoryProvider);
     final templates = ref.watch(parsedTemplatesProvider);
+    // Watch so the [bracket] phonetic transcription refreshes when
+    // rewrite rules are edited.
+    ref.watch(parsedRewriteRulesProvider);
 
     final hasInventory = inventory.consonants.isNotEmpty || inventory.vowels.isNotEmpty;
     final hasTemplates = templates.asData?.value.isNotEmpty ?? false;
@@ -332,6 +332,18 @@ class _PreviewPanelState extends ConsumerState<PreviewPanel> {
 
   TableRow _buildRow(_PreviewRow row, ThemeData theme, ColorScheme cs) {
     final romanize = ref.read(romanizeProvider);
+    final rewriteRules = ref.read(parsedRewriteRulesProvider);
+    final inventory = ref.read(phonemeInventoryProvider);
+    final gen = WordGenerator();
+
+    // Compute the phonetic (surface) transcription for display in
+    // [brackets]. Romanization continues to use the phonemic (raw) form.
+    String toPhonetic(String raw) => gen.applyRewriteRules(
+          word: raw,
+          rules: rewriteRules,
+          inventory: inventory,
+        );
+
     final monoStyle = theme.textTheme.bodyMedium?.copyWith(
       fontFamily: 'monospace',
       fontFamilyFallback: const ['Courier New', 'Courier', 'monospace'],
@@ -341,10 +353,12 @@ class _PreviewPanelState extends ConsumerState<PreviewPanel> {
     if (row.derived != null) {
       final hasViolation = row.violations != null && !row.violations!.isValid;
       final romanized = romanize(row.derived!);
-      final showRomanized = romanized.isNotEmpty && romanized != row.derived;
+      final phoneticDerived = toPhonetic(row.derived!);
+      final showRomanized =
+          romanized.isNotEmpty && romanized != phoneticDerived;
 
       Widget ipaLabel = Text(
-        '[${row.derived}]',
+        '[$phoneticDerived]',
         style: theme.textTheme.bodySmall?.copyWith(
           color: cs.onSurface.withValues(alpha: 0.55),
           decoration: hasViolation ? TextDecoration.underline : null,
@@ -386,15 +400,19 @@ class _PreviewPanelState extends ConsumerState<PreviewPanel> {
 
     final arrowIcon = const Icon(Icons.arrow_forward, size: 14);
 
+    // Root is phonemic; show romanize(raw) as primary. If no romanization
+    // mapping, show the phonetic surface form instead.
     final romanizedRoot = romanize(row.root);
-    final showRomanizedRoot = romanizedRoot.isNotEmpty && romanizedRoot != row.root;
+    final phoneticRoot = toPhonetic(row.root);
+    final showRomanizedRoot =
+        romanizedRoot.isNotEmpty && romanizedRoot != phoneticRoot;
 
     return TableRow(
       children: [
         Padding(
           padding: const EdgeInsets.symmetric(vertical: 3),
           child: Text(
-            showRomanizedRoot ? romanizedRoot : row.root,
+            showRomanizedRoot ? romanizedRoot : phoneticRoot,
             style: monoStyle,
           ),
         ),
