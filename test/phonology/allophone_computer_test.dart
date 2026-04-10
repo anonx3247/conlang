@@ -53,7 +53,7 @@ const _testInventory = PhonemeInventory(
   },
 );
 
-final _resolver = NaturalClassResolver(_testInventory);
+const _resolver = NaturalClassResolver(_testInventory);
 
 void main() {
   group('computeAllophones', () {
