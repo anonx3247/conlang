@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -240,11 +241,11 @@ class _DictionaryPageState extends ConsumerState<DictionaryPage> {
   void _revealInFinder(String dirPath) {
     try {
       if (Platform.isMacOS) {
-        Process.run('open', [dirPath]);
+        unawaited(Process.run('open', [dirPath]));
       } else if (Platform.isLinux) {
-        Process.run('xdg-open', [dirPath]);
+        unawaited(Process.run('xdg-open', [dirPath]));
       } else if (Platform.isWindows) {
-        Process.run('explorer', [dirPath]);
+        unawaited(Process.run('explorer', [dirPath]));
       }
     } catch (_) {
       // Non-fatal — folder reveal is a convenience feature
