@@ -387,15 +387,19 @@ class _WordListPanelState extends ConsumerState<WordListPanel> {
                         Row(
                           children: [
                             Expanded(
-                              child: ViolationText(
-                                text: lexeme.ipa,
-                                violations: itemViolations,
+                              child: Text(
+                                (lexeme.romanization != null &&
+                                        lexeme.romanization!.isNotEmpty)
+                                    ? lexeme.romanization!
+                                    : lexeme.ipa,
                                 style: theme.textTheme.bodyMedium?.copyWith(
                                   fontSize: 13,
                                   fontWeight: isSelected
                                       ? FontWeight.w600
                                       : FontWeight.normal,
                                 ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
                             ),
                             if (derivedMatchCount > 0)
@@ -416,17 +420,14 @@ class _WordListPanelState extends ConsumerState<WordListPanel> {
                               ),
                           ],
                         ),
-                        if (lexeme.romanization != null &&
-                            lexeme.romanization!.isNotEmpty)
-                          Text(
-                            lexeme.romanization!,
-                            style: theme.textTheme.labelSmall?.copyWith(
-                              fontSize: 12,
-                              color: cs.onSurface.withValues(alpha: 0.55),
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+                        ViolationText(
+                          text: '[${lexeme.ipa}]',
+                          violations: itemViolations,
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            fontSize: 12,
+                            color: cs.onSurface.withValues(alpha: 0.55),
                           ),
+                        ),
                         if (lexeme.meaning != null && lexeme.meaning!.isNotEmpty)
                           Text(
                             lexeme.meaning!,
@@ -476,11 +477,11 @@ class _WordListPanelState extends ConsumerState<WordListPanel> {
       String bVal;
       switch (_sortColumnIndex) {
         case 0:
+          aVal = a.romanization ?? a.ipa;
+          bVal = b.romanization ?? b.ipa;
+        case 1:
           aVal = a.ipa;
           bVal = b.ipa;
-        case 1:
-          aVal = a.romanization ?? '';
-          bVal = b.romanization ?? '';
         case 2:
           aVal = a.partOfSpeech ?? '';
           bVal = b.partOfSpeech ?? '';
@@ -546,23 +547,27 @@ class _WordListPanelState extends ConsumerState<WordListPanel> {
           ),
         ],
         rows: sorted.map((lexeme) {
-          final isSelected = widget.selectedLexemeId == lexeme.id;
+          final isSelected = widget.isSelectionMode
+              ? widget.selectedForExport.contains(lexeme.id)
+              : widget.selectedLexemeId == lexeme.id;
           final lexemeViolation = violations[lexeme.id];
           final itemViolations = lexemeViolation?.violations ?? [];
           return DataRow(
             selected: isSelected,
-            onSelectChanged: (_) => widget.onWordSelected(lexeme.id),
+            onSelectChanged: (_) => widget.isSelectionMode
+                ? widget.onToggleExport?.call(lexeme.id)
+                : widget.onWordSelected(lexeme.id),
             cells: [
               DataCell(
-                ViolationText(
-                  text: lexeme.ipa,
-                  violations: itemViolations,
+                Text(
+                  lexeme.romanization ?? lexeme.ipa,
                   style: theme.textTheme.bodySmall?.copyWith(fontSize: 13),
                 ),
               ),
               DataCell(
-                Text(
-                  lexeme.romanization ?? '',
+                ViolationText(
+                  text: '[${lexeme.ipa}]',
+                  violations: itemViolations,
                   style: theme.textTheme.bodySmall?.copyWith(
                     fontSize: 12,
                     color: cs.onSurface.withValues(alpha: 0.7),
