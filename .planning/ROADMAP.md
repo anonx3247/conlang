@@ -15,8 +15,8 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 1: Foundation** - Flutter app shell, project management, phonology tools, and derivation-aware database schema
 - [x] **Phase 2: Morphology Engine** - Pattern mini-language, plugin architecture, and rule editor — the centrepiece differentiator
 - [x] **Phase 3: Lexicon** - Root and derived-word dictionary, search, semantic references, Anki export, phonotactic highlighting
-- [ ] **Phase 3.1: Display & UX Fixes** - IPA chart shapes, word display format, Anki export UX, romanization toggle (INSERTED)
-- [ ] **Phase 3.2: Phonology Enhancements** - Predefined natural classes with IPA defaults, contextual allophone viewer (INSERTED)
+- [x] **Phase 3.1: Display & UX Fixes** - IPA chart shapes, word display format, Anki export UX, romanization toggle (INSERTED)
+- [x] **Phase 3.2: Phonology Enhancements** - Predefined natural classes with IPA defaults, contextual allophone viewer (INSERTED)
 - [ ] **Phase 4: Grammar & Morphology** - Dimensional POS features, inflectional rules, paradigm generation, morphology tab merge (revised)
 - [ ] **Phase 5: Culture Wiki** - Markdown wiki with internal linking for world-building documentation
 - [ ] **Phase 6: Reference & Polish** - Built-in linguistic glossary and cross-cutting quality pass
