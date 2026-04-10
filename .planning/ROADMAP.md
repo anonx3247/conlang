@@ -118,8 +118,13 @@ Plans:
 **Success Criteria** (what must be TRUE):
   1. Predefined natural classes (Stop/S, Liquid/L, Rhotic/R, Nasal/N, Fricative/F, plus Obstruent/Sonorant/Approximant/Affricate) ship as hardcoded defaults with IPA members and can include sounds not in the project's phoneme inventory. Defaults resolve in the existing DSL wherever a `[class]` reference is allowed.
   2. User can click a phoneme in the inventory and see its contextual allophones listed in the phoneme dialog. When holding Alt (which already toggles IPA display), each phoneme chip in the consonant/vowel grids shows its allophones inline next to the IPA form.
+**Plans:** 4 plans in 4 waves
 
-Plans: TBD
+Plans:
+- [ ] 03.2-01-PLAN.md — Default natural classes catalog + `_buildInventory` merge with user precedence (PHON-09 foundation)
+- [ ] 03.2-02-PLAN.md — Alias-first resolver in word_generator + morphology_engine + validator extension + end-to-end DSL test (PHON-09 completion)
+- [ ] 03.2-03-PLAN.md — Allophone computation module (pure function + data class) + derived Riverpod provider (PHON-11 engine)
+- [ ] 03.2-04-PLAN.md — Phoneme dialog Allophones section + Alt-held inline chip suffix + human verification (PHON-11 UI)
 
 ### Phase 4: Grammar & Morphology (revised)
 **Goal**: Users can define grammatical structure through N-dimensional feature systems per part of speech, with inflectional morphology rules organized by those dimensions and paradigm generation — the current Morphology tab merges into Grammar, and derivational morphology moves to Lexicon
@@ -178,7 +183,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4. Phases 5 and 6 depend only on
 | 2. Morphology Engine | 10/10 | Complete | 2026-04-09 |
 | 3. Lexicon | 6/6 | Complete | 2026-04-09 |
 | 3.1 Display & UX Fixes | 0/4 | Not started | - |
-| 3.2 Phonology Enhancements | 0/? | Not started | - |
+| 3.2 Phonology Enhancements | 0/4 | Not started | - |
 | 4. Grammar & Morphology | 0/5 | Not started | - |
 | 5. Culture Wiki | 0/2 | Not started | - |
 | 6. Reference Glossary | 0/1 | Not started | - |
