@@ -58,7 +58,12 @@ class AnkiExporter {
           ArchiveFile('collection.anki21', dbBytes.length, dbBytes));
       final mediaBytes = utf8.encode('{}');
       archive.addFile(ArchiveFile('media', mediaBytes.length, mediaBytes));
-      return Uint8List.fromList(ZipEncoder().encode(archive)!);
+      final encoded = ZipEncoder().encode(archive);
+      if (encoded == null) {
+        throw StateError(
+            'ZipEncoder.encode returned null — archive may be empty or malformed.');
+      }
+      return Uint8List.fromList(encoded);
     } finally {
       db.dispose();
     }
