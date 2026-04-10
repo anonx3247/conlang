@@ -121,10 +121,10 @@ Plans:
 **Plans:** 4 plans in 4 waves
 
 Plans:
-- [ ] 03.2-01-PLAN.md — Default natural classes catalog + `_buildInventory` merge with user precedence (PHON-09 foundation)
-- [ ] 03.2-02-PLAN.md — Alias-first resolver in word_generator + morphology_engine + validator extension + end-to-end DSL test (PHON-09 completion)
-- [ ] 03.2-03-PLAN.md — Allophone computation module (pure function + data class) + derived Riverpod provider (PHON-11 engine)
-- [ ] 03.2-04-PLAN.md — Phoneme dialog Allophones section + Alt-held inline chip suffix + human verification (PHON-11 UI)
+- [x] 03.2-01-PLAN.md — Default natural classes catalog + `_buildInventory` merge with user precedence (PHON-09 foundation)
+- [x] 03.2-02-PLAN.md — Alias-first resolver in word_generator + morphology_engine + validator extension + end-to-end DSL test (PHON-09 completion)
+- [x] 03.2-03-PLAN.md — Allophone computation module (pure function + data class) + derived Riverpod provider (PHON-11 engine)
+- [x] 03.2-04-PLAN.md — Phoneme dialog Allophones section + Alt-held inline chip suffix + human verification (PHON-11 UI)
 
 ### Phase 4: Grammar & Morphology (revised)
 **Goal**: Users can define grammatical structure through N-dimensional feature systems per part of speech, with inflectional morphology rules organized by those dimensions and paradigm generation — the current Morphology tab merges into Grammar, and derivational morphology moves to Lexicon
