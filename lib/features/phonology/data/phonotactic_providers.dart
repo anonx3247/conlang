@@ -1,9 +1,11 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../db/app_database.dart';
 import '../../project/data/project_providers.dart';
+import '../domain/default_natural_classes.dart';
 import '../domain/phonotactic_dsl.dart';
 import '../domain/word_generator.dart';
 import 'phoneme_providers.dart';
@@ -174,10 +176,24 @@ final phonemeInventoryProvider = Provider<PhonemeInventory>((ref) {
         error: (_, e) => <NaturalClassesData>[],
       );
 
-  return _buildInventory(consonants, vowels, classes);
+  return buildInventory(consonants, vowels, classes);
 });
 
-PhonemeInventory _buildInventory(
+/// Builds a [PhonemeInventory] from the raw DB rows.
+///
+/// Seeds `naturalClasses` with the nine predefined default classes
+/// (see `default_natural_classes.dart`) BEFORE overlaying user-defined
+/// classes, so every DSL consumer transparently resolves `[stop]`,
+/// `[nasal]`, etc. even when the project defines no natural classes.
+///
+/// User-defined classes whose lowercased name collides with a default key
+/// win — last write wins → D-06 precedence.
+///
+/// See RESEARCH.md F-1: this is THE load-bearing integration point for the
+/// predefined-natural-classes feature. Patching `NaturalClassDao.resolveClass`
+/// would be invisible to every actual DSL consumer (that method is dead code).
+@visibleForTesting
+PhonemeInventory buildInventory(
   List<Phoneme> consonants,
   List<Phoneme> vowels,
   List<NaturalClassesData> classes,
@@ -187,7 +203,13 @@ PhonemeInventory _buildInventory(
     for (final p in allPhonemes) p.id: p.symbol,
   };
 
-  final naturalClassMap = <String, List<String>>{};
+  // Seed with defaults (lowercased keys to match the existing convention).
+  // User-defined classes overlay below — last write wins → user precedence (D-06).
+  final naturalClassMap = <String, List<String>>{
+    for (final entry in defaultNaturalClasses.entries)
+      entry.key.toLowerCase(): List<String>.from(entry.value),
+  };
+
   for (final cls in classes) {
     try {
       final decoded = jsonDecode(cls.phonemeIds);
