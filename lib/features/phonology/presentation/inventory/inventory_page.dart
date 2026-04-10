@@ -9,6 +9,7 @@ import '../../../../features/project/data/project_providers.dart';
 import '../../data/ipa_data.dart';
 import '../../data/phoneme_providers.dart';
 import '../../data/romanization_providers.dart';
+import '../../domain/default_natural_classes.dart';
 import '../shared/vowel_trapezoid_painter.dart';
 import 'natural_class_editor.dart';
 import 'phoneme_edit_dialog.dart';
@@ -708,7 +709,8 @@ class _NaturalClassesSection extends ConsumerWidget {
         ),
         const SizedBox(height: 4),
         Text(
-          'C and V are built-in system classes. '
+          'C, V, and the predefined phonological classes below are built-in. '
+          'Single-letter aliases (S, N, F, L, R) resolve to Stop/Nasal/Fricative/Liquid/Rhotic. '
           'Custom classes are referenced in phonotactic patterns as [name].',
           style: theme.textTheme.bodySmall?.copyWith(
             color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
@@ -716,13 +718,21 @@ class _NaturalClassesSection extends ConsumerWidget {
         ),
         const SizedBox(height: 12),
 
-        // System classes (always shown, read-only)
-        const Wrap(
+        // Built-in system classes (always shown, read-only).
+        // C/V are inventory-relative; the 9 predefined natural classes below
+        // ship with hardcoded IPA members and resolve regardless of inventory.
+        Wrap(
           spacing: 8,
           runSpacing: 8,
           children: [
-            _SystemClassChip(label: 'C', description: 'all consonants'),
-            _SystemClassChip(label: 'V', description: 'all vowels'),
+            const _SystemClassChip(label: 'C', description: 'all consonants'),
+            const _SystemClassChip(label: 'V', description: 'all vowels'),
+            for (final entry in defaultNaturalClasses.entries)
+              _DefaultClassChip(
+                name: entry.key,
+                members: entry.value,
+                alias: _aliasFor(entry.key),
+              ),
           ],
         ),
         const SizedBox(height: 8),
@@ -799,6 +809,71 @@ class _SystemClassChip extends StatelessWidget {
             ),
             TextSpan(
               text: ' = $description',
+              style: TextStyle(
+                color: theme.colorScheme.onSurfaceVariant,
+                fontSize: 12,
+              ),
+            ),
+          ],
+        ),
+      ),
+      backgroundColor: theme.colorScheme.secondaryContainer.withValues(
+        alpha: 0.4,
+      ),
+    );
+  }
+}
+
+/// Reverse lookup from default class name → single-letter alias, if any.
+///
+/// Uses referential equality on the shared member lists in
+/// `default_natural_classes.dart` to match a class name to its alias. Returns
+/// `null` for classes without an alias (obstruent, sonorant, approximant,
+/// affricate).
+String? _aliasFor(String className) {
+  final members = defaultNaturalClasses[className];
+  if (members == null) return null;
+  for (final entry in defaultNaturalClassAliases.entries) {
+    if (identical(entry.value, members)) return entry.key;
+  }
+  return null;
+}
+
+/// Read-only chip for a predefined natural class (stop, nasal, …).
+///
+/// Visually consistent with `_UserClassChip` but non-editable and styled like
+/// the built-in system chips (secondaryContainer). Displays `[name] / Alias`
+/// when an alias exists, followed by the full member list.
+class _DefaultClassChip extends StatelessWidget {
+  const _DefaultClassChip({
+    required this.name,
+    required this.members,
+    this.alias,
+  });
+
+  final String name;
+  final List<String> members;
+  final String? alias;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final symbols = members.join(' ');
+    final labelText = alias != null ? '[$name] / $alias' : '[$name]';
+
+    return Chip(
+      label: RichText(
+        text: TextSpan(
+          children: [
+            TextSpan(
+              text: labelText,
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: theme.colorScheme.secondary,
+              ),
+            ),
+            TextSpan(
+              text: ' = $symbols',
               style: TextStyle(
                 color: theme.colorScheme.onSurfaceVariant,
                 fontSize: 12,
