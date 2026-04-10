@@ -231,6 +231,16 @@ class _PreviewPanelState extends ConsumerState<PreviewPanel> {
     // rewrite rules are edited.
     ref.watch(parsedRewriteRulesProvider);
 
+    // WR-01 fix: re-evaluate the morphology preview whenever the upstream
+    // inputs change. Without this, `_rows` holds stale root/derived strings
+    // computed against an old inventory/template/constraint snapshot while
+    // `_buildRow` recomputes the [bracket] transcription against the NEW
+    // rewrite rules — producing visibly inconsistent rows.
+    ref.listen(phonemeInventoryProvider, (_, _) => _scheduleRefresh());
+    ref.listen(parsedTemplatesProvider, (_, _) => _scheduleRefresh());
+    ref.listen(parsedConstraintsProvider, (_, _) => _scheduleRefresh());
+    ref.listen(parsedRewriteRulesProvider, (_, _) => _scheduleRefresh());
+
     final hasInventory = inventory.consonants.isNotEmpty || inventory.vowels.isNotEmpty;
     final hasTemplates = templates.asData?.value.isNotEmpty ?? false;
 
