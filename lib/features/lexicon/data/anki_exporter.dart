@@ -220,6 +220,7 @@ class AnkiExporter {
 
   void _insertNotes(Database db, List<AnkiExportEntry> entries) {
     final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+    final nowMs = DateTime.now().millisecondsSinceEpoch;
     final stmt = db.prepare(
       'INSERT INTO notes (id, guid, mid, mod, usn, tags, flds, sfld, csum, flags, data) '
       'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
@@ -227,7 +228,9 @@ class AnkiExporter {
     try {
       for (var i = 0; i < entries.length; i++) {
         final e = entries[i];
-        final noteId = now * 1000 + i;
+        // Use milliseconds * 10000 + i to guarantee uniqueness even for
+        // lexicons with more than 1000 entries in a single second.
+        final noteId = nowMs * 10000 + i;
         final guid = 'conlang_${noteId}_$i';
 
         // Build front field: romanization (line 1) + [IPA] (line 2) per D-05
@@ -254,6 +257,7 @@ class AnkiExporter {
   void _insertCards(Database db, int count) {
     if (count == 0) return;
     final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+    final nowMs = DateTime.now().millisecondsSinceEpoch;
     final stmt = db.prepare(
       'INSERT INTO cards (id, nid, did, ord, mod, usn, type, queue, due, ivl, factor, reps, lapses, left, odue, odid, flags, data) '
       'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
@@ -262,7 +266,9 @@ class AnkiExporter {
       final noteRows = db.select('SELECT id FROM notes ORDER BY id');
       for (var i = 0; i < noteRows.length; i++) {
         final nid = noteRows[i]['id'] as int;
-        final cardId = now * 1000 + 100000 + i;
+        // Use milliseconds * 10000 + offset + i to keep cardId unique for
+        // large exports (> 1000 entries in a single second).
+        final cardId = nowMs * 10000 + 1000000 + i;
         stmt.execute([
           cardId, nid, _deckId, 0, now, -1, 0, 0, i + 1, 0, 0, 0, 0, 0, 0, 0, 0, '',
         ]);
