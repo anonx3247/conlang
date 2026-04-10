@@ -138,14 +138,14 @@ Plans:
   5. User can record language-level typology choices (alignment, word order, modality expression strategy)
   6. The standalone Morphology tab is removed; its rule editor UI is reused within Grammar (inflectional) and Lexicon (derivational)
   7. Existing morphology rules are migrated to lexicon derivational rules; derivational rules appear in a "Derivations" tab within Lexicon with romanization for all derived forms
-**Plans**: TBD
+**Plans:** 5 plans in 5 waves
 
 Plans:
-- [ ] 04-01: Schema + migration — POS dimension tables, inflectional rule bindings, migrate existing morph rules to lexicon derivations
-- [ ] 04-02: Grammar data layer — GrammarRepository for POS dimensions, inflectional rule management, typology settings
-- [ ] 04-03: Paradigm engine — feature matrix × morphology engine, rule stacking, per-cell exception handling
-- [ ] 04-04: Grammar UI — POS dimension editor, inflectional rule editor (reusing morph rule UI), paradigm chart view, typology panel
-- [ ] 04-05: Lexicon derivations — derivation tab in Lexicon, derivational rule management, romanization for all derived forms, paradigm table per word
+- [ ] 04-01-PLAN.md — Schema v8 migration: Dimensions + ParadigmCellOverrides tables, kind/featureBindings/input/outputPosId columns, file-level v7 backup, FeatureBindings TypeConverter
+- [ ] 04-02-PLAN.md — Grammar data layer: dimension template catalog (20+), GrammarDao for Dimensions CRUD, kind-aware MorphologyDao extensions, posForLexeme resolver
+- [ ] 04-03-PLAN.md — Paradigm engine: feature-consumption algorithm (D-10/D-11), tiebreak detector, typology + paradigm-axes providers, computedInflectedParadigmProvider
+- [ ] 04-04-PLAN.md — Grammar UI: router surgery (delete Morphology tab), Grammar shell with 4 sub-tabs, POS+Dimensions page, kind-aware RuleEditorDialog with chip picker + live tiebreak banner, Paradigm Viewer + cell override + coverage matrix, Typology form
+- [ ] 04-05-PLAN.md — Lexicon Derivations: 4th sidebar tab, DerivationsPage reusing RulesPage(kind=derivational), computedDerivedFormsProvider kind filter (pitfall #9), word detail paradigm embed
 
 ### Phase 5: Culture Wiki
 **Goal**: Users can document the world and culture behind their conlang in a structured wiki with Markdown formatting and navigable internal links between pages
@@ -184,6 +184,6 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4. Phases 5 and 6 depend only on
 | 3. Lexicon | 6/6 | Complete | 2026-04-09 |
 | 3.1 Display & UX Fixes | 0/4 | Not started | - |
 | 3.2 Phonology Enhancements | 0/4 | Not started | - |
-| 4. Grammar & Morphology | 0/5 | Not started | - |
+| 4. Grammar & Morphology | 0/5 | Planned | - |
 | 5. Culture Wiki | 0/2 | Not started | - |
 | 6. Reference Glossary | 0/1 | Not started | - |
