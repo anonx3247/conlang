@@ -94,12 +94,19 @@ class WordGenerator {
   /// Generates [count] random IPA words.
   ///
   /// Returns an empty list when no templates or no phonemes are available.
+  ///
+  /// When [constraints] is non-empty, generated words that violate any
+  /// forbidden constraint are rejected and regenerated. The generator
+  /// over-generates (up to `count * rejectionBudgetMultiplier` attempts)
+  /// to collect [count] valid words; if the template/constraint combination
+  /// is overly restrictive the returned list may be shorter than [count].
   List<String> generateWords({
     required List<ParsedTemplate> templates,
     required PhonemeInventory inventory,
     int count = 20,
     int minSyllables = 1,
     int maxSyllables = 3,
+    List<ConstraintRule> constraints = const [],
   }) {
     final activeTemplates =
         templates.where((t) => t.isValid && t.slots.isNotEmpty).toList();
@@ -107,15 +114,36 @@ class WordGenerator {
     if (activeTemplates.isEmpty) return [];
     if (inventory.consonants.isEmpty && inventory.vowels.isEmpty) return [];
 
+    // Only forbidden, non-empty constraints are worth checking during
+    // generation — advisory or malformed rules are silently ignored.
+    final activeConstraints = constraints
+        .where((c) => c.isForbidden && c.pattern.isNotEmpty)
+        .toList();
+
     final results = <String>[];
-    for (var i = 0; i < count; i++) {
+    // Over-generate aggressively when constraints are active so a tight
+    // rule set still yields a usable batch. `* 10` is an empirical budget:
+    // if even this isn't enough, the rule set is effectively impossible.
+    final maxAttempts = activeConstraints.isEmpty ? count : count * 10;
+    for (var i = 0; i < maxAttempts && results.length < count; i++) {
       final word = _generateWord(
         activeTemplates,
         inventory,
         minSyllables,
         maxSyllables,
       );
-      if (word.isNotEmpty) results.add(word);
+      if (word.isEmpty) continue;
+
+      if (activeConstraints.isNotEmpty) {
+        final validation = validateWord(
+          word: word,
+          constraints: activeConstraints,
+          inventory: inventory,
+        );
+        if (!validation.isValid) continue;
+      }
+
+      results.add(word);
     }
     return results;
   }

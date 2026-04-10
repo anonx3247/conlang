@@ -55,6 +55,10 @@ class _WordGeneratorPanelState extends ConsumerState<WordGeneratorPanel> {
     // on the RAW phonemic form, not the rewritten surface form — otherwise
     // `s -> z / V_V` would mangle romanization (e.g. /asa/ should romanize
     // as "asa", not "aza", even though it surfaces as [aza]).
+    // Pass constraints to the generator so it never emits words that
+    // violate any forbidden phonotactic rule. Post-hoc highlighting below
+    // still runs against the PHONETIC (rewritten) form so users can see
+    // violations introduced by rewrite rules on the surface transcription.
     final gen = WordGenerator();
     final rawWords = gen.generateWords(
       templates: templates,
@@ -62,6 +66,7 @@ class _WordGeneratorPanelState extends ConsumerState<WordGeneratorPanel> {
       count: 20,
       minSyllables: _minSyllables,
       maxSyllables: _maxSyllables,
+      constraints: constraints,
     );
     final phoneticWords = rawWords
         .map((w) => gen.applyRewriteRules(
@@ -169,11 +174,14 @@ class _WordGeneratorPanelState extends ConsumerState<WordGeneratorPanel> {
                   itemBuilder: (_, i) {
                     final rawWord = rawWords[i];
                     final phoneticWord = phoneticWords[i];
-                    // Validate phonotactics on the phonemic (raw) form —
-                    // phonotactic rules are defined over phonemes, not
-                    // surface forms.
+                    // Validate phonotactics on the PHONETIC (displayed)
+                    // form so the underline indices line up with the
+                    // characters the user sees. The generator already
+                    // guarantees the raw form is constraint-valid, so any
+                    // violations surfaced here were introduced by rewrite
+                    // rules — which is still useful feedback.
                     final validation = gen.validateWord(
-                      word: rawWord,
+                      word: phoneticWord,
                       constraints: constraints,
                       inventory: inventory,
                     );
@@ -214,6 +222,10 @@ class _WordRow extends StatelessWidget {
     final cs = theme.colorScheme;
     final hasViolations = violations.isNotEmpty;
 
+    final ipaStyle = theme.textTheme.bodySmall?.copyWith(
+      color: cs.onSurface.withValues(alpha: 0.55),
+    );
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 3),
       child: Row(
@@ -227,14 +239,19 @@ class _WordRow extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 8),
-            // IPA in square brackets as secondary (with violation underline if any)
+            // IPA in square brackets as secondary (with violation underline
+            // if any). Brackets are rendered OUTSIDE ViolationText so that
+            // the violation character offsets — which index into the raw
+            // `word` string — align with the highlighted text. Wrapping the
+            // word in brackets here used to shift every highlight by one
+            // character (the opening `[`), producing wrong spans.
+            Text('[', style: ipaStyle),
             ViolationText(
-              text: '[$word]',
+              text: word,
               violations: violations,
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: cs.onSurface.withValues(alpha: 0.55),
-              ),
+              style: ipaStyle,
             ),
+            Text(']', style: ipaStyle),
           ] else ...[
             // Plain IPA only (no romanization to show)
             ViolationText(

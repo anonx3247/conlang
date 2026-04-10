@@ -58,6 +58,11 @@ class _InspirationPanelState extends ConsumerState<InspirationPanel> {
           loading: () => <ParsedTemplate>[],
           error: (_, _) => <ParsedTemplate>[],
         );
+    final constraints = ref.watch(parsedConstraintsProvider).when(
+          data: (v) => v,
+          loading: () => <ConstraintRule>[],
+          error: (_, _) => <ConstraintRule>[],
+        );
     final rewriteRules = ref.watch(parsedRewriteRulesProvider);
 
     // Generate phonemic (raw) candidates and compute their phonetic
@@ -68,8 +73,10 @@ class _InspirationPanelState extends ConsumerState<InspirationPanel> {
     final gen = WordGenerator();
     // Cache key covers every input that should trigger regeneration:
     // explicit regenerate button press, syllable range, template content,
-    // and inventory content. Rewrite rules are NOT in the key — they only
-    // affect the displayed phonetic bracket, not the raw candidates.
+    // inventory content, and active phonotactic constraints (tightening a
+    // constraint should invalidate previously-valid candidates). Rewrite
+    // rules are NOT in the key — they only affect the displayed phonetic
+    // bracket, not the raw candidates.
     final cacheKey = Object.hash(
       _regenerateKey,
       _minSyllables,
@@ -77,6 +84,7 @@ class _InspirationPanelState extends ConsumerState<InspirationPanel> {
       Object.hashAll(templates.map((t) => t.pattern)),
       Object.hashAll(inventory.consonants),
       Object.hashAll(inventory.vowels),
+      Object.hashAll(constraints.map((c) => c.source)),
     );
     if (!_hasCacheKey || cacheKey != _lastCacheKey || _cachedRawWords == null) {
       _cachedRawWords = gen.generateWords(
@@ -85,6 +93,7 @@ class _InspirationPanelState extends ConsumerState<InspirationPanel> {
         count: 12,
         minSyllables: _minSyllables,
         maxSyllables: _maxSyllables,
+        constraints: constraints,
       );
       _lastCacheKey = cacheKey;
       _hasCacheKey = true;
