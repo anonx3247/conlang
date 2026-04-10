@@ -1,10 +1,11 @@
 ---
 phase: 4
 slug: grammar-morphology-revised
-status: draft
+status: approved
 shadcn_initialized: false
 preset: none
 created: 2026-04-10
+reviewed_at: 2026-04-10
 ---
 
 # Phase 4 — UI Design Contract: Grammar & Morphology (revised)
@@ -43,18 +44,30 @@ Declared values (multiples of 4):
 | 3xl | 64px | Empty-state icon size context |
 
 Established patterns from codebase (source):
-- Sidebar tile: `height: 40`, padding `horizontal: 16`, margin `horizontal: 8, vertical: 2` — from `lexicon_shell.dart`
-- List item card: padding `horizontal: 16, vertical: 10` — from `rules_page.dart`
-- Rules filter bar: `fromLTRB(16, 12, 16, 0)` — from `rules_page.dart`
+- Sidebar tile: `height: 40`, padding `horizontal: 16` — from `lexicon_shell.dart`
 - ListView: `padding: EdgeInsets.all(16)` — from `rules_page.dart`
 - Sidebar width: `200px` — from `lexicon_shell.dart`; Grammar shell must match
 - Top tab bar height: `48px` row, `40px` button — from `app_shell.dart`
 
-Exceptions:
+Touch target minimum: **48px** for any interactive cell in the paradigm table (Material 3 recommended minimum; aligns with `2xl` token).
+
+Exceptions — Phase 4 tokens only:
 - Sidebar tile height remains 40px (matches lexicon_shell.dart exactly — do not change)
 - Paradigm table cells: minimum 48px tall × 64px wide to fit two-line rom/IPA stack with 4px internal vertical gap
-- Touch target minimum 44px for any interactive cell in the paradigm table
 - Template picker modal cards: 8px internal padding on all sides
+- Tiebreaker banner / migration banner padding: 12px (see Spacing Exceptions — Inherited Legacy below)
+
+### Spacing Exceptions — Inherited Legacy
+
+These values appear in existing Phase 2/3 widgets that Phase 4 reuses without modification. They are not Phase 4 tokens and must not be changed.
+
+| Value | Location | Usage | Status |
+|-------|----------|-------|--------|
+| `vertical: 10` (list item card padding) | `lib/rules_page.dart` | `EdgeInsets.symmetric(horizontal: 16, vertical: 10)` on rule list item cards | Inherited, not modified in Phase 4 |
+| `vertical: 2` (sidebar tile margin) | `lib/lexicon_shell.dart` | `EdgeInsets.symmetric(horizontal: 8, vertical: 2)` per-tile margin | Inherited, not modified in Phase 4 |
+| `12px` (filter bar top padding) | `lib/rules_page.dart` | `EdgeInsets.fromLTRB(16, 12, 16, 0)` on rules filter bar | Inherited, not modified in Phase 4 |
+
+These are legacy exceptions acknowledged here for codebase fidelity. Phase 4 new widgets use the standard token set only.
 
 ---
 
@@ -76,6 +89,8 @@ Paradigm table cell stacking:
 - Line 2 (IPA): 12px w400, `onSurface.withValues(alpha: 0.6)` — `bodySmall` dimmed
 - When Alt held: lines swap — IPA on line 1 at 13px, romanization on line 2 at 12px dimmed
 - If romanization is disabled project-wide: only IPA shown at 13px
+
+Note on 12px/13px adjacency: the 1px gap between body (13px) and body small (12px) is intentional. Stacked paradigm cells require two visually distinct but close sizes so the IPA line reads as subordinate without shrinking to 11px, which is reserved for dense coverage matrix label text (labelSmall). The 1px difference is sufficient at desktop viewing distances given the accompanying alpha dimming (0.6) on the IPA line.
 
 Coverage matrix cell text: 11px w400 (labelSmall) — abbreviated level names (e.g. "SG", "PL", "NOM")
 
@@ -250,6 +265,11 @@ All new components this phase must ship or extend. Each references the canonical
 | Typology: Modality tooltip | "Synthetic: modality expressed by inflectional morphology (e.g. mood suffixes). Analytic: modality expressed by auxiliary verbs or particles. Mixed: both strategies used." |
 | Template picker tooltip (example — Gender M/F/N) | "Three-gender system distinguishing masculine, feminine, and neuter. Common in Indo-European languages (German, Latin, Russian)." |
 | Paradigm Viewer — synthetic root indicator | "Showing template — no word selected" (italic, bodySmall dimmed) |
+| Icon-only tooltip — Add POS (+ IconButton, POS panel) | "Add POS" |
+| Icon-only tooltip — migration banner dismiss (Icons.close) | "Dismiss" |
+| Icon-only tooltip — reorder arrow up | "Move up" |
+| Icon-only tooltip — reorder arrow down | "Move down" |
+| Icon-only tooltip — dimension drag handle (Icons.drag_handle) | "Drag to reorder" |
 
 ---
 
