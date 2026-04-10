@@ -1,11 +1,14 @@
 import 'package:drift/drift.dart' show Value;
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../db/app_database.dart';
+import '../../data/allophone_providers.dart';
 import '../../data/ipa_data.dart';
 import '../../data/phoneme_providers.dart';
 import '../../data/romanization_providers.dart';
+import '../../domain/allophone_computer.dart';
 
 // ---------------------------------------------------------------------------
 // Consonant articulation options
@@ -783,5 +786,34 @@ Future<void> confirmDeletePhoneme(
   if (confirmed == true) {
     final dao = ref.read(phonemeDaoProvider);
     await dao?.deletePhoneme(phoneme.id);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Allophone section — Phase 3.2 D-14
+// ---------------------------------------------------------------------------
+
+/// Test-only access to the private [_AllophoneSection] widget.
+@visibleForTesting
+Widget buildAllophoneSectionForTesting(String symbol) =>
+    _AllophoneSection(phonemeSymbol: symbol);
+
+/// Displays the computed allophone realizations for [phonemeSymbol] in D-19
+/// format (`/underlying/ → [r1, r2, ...]`).
+///
+/// Watches [allophoneMapProvider] so the section updates live whenever
+/// rewrite rules, the phoneme inventory, or natural class definitions
+/// change. Renders nothing when the phoneme has no matching rules
+/// (D-18 empty state).
+class _AllophoneSection extends ConsumerWidget {
+  const _AllophoneSection({required this.phonemeSymbol});
+
+  final String phonemeSymbol;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    // STUB: filled in during TDD GREEN. Returning a placeholder so the
+    // test file compiles and fails for the right reason (no section key).
+    return const SizedBox.shrink();
   }
 }
