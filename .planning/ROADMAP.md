@@ -106,10 +106,10 @@ Plans:
 **Plans:** 4 plans in 2 waves
 
 Plans:
-- [ ] 03.1-01-PLAN.md — IPA trapezoid vowel chart: CustomPaint trapezoid for reference panel and inventory vowel grid
-- [ ] 03.1-02-PLAN.md — Word display format fixes: romanization-first in word generator and Anki card front field
-- [ ] 03.1-03-PLAN.md — Anki export selection mode: toolbar button, conditional checkboxes, bottom bar confirm/cancel
-- [ ] 03.1-04-PLAN.md — Phoneme inventory romanization toggle: Alt-key listener, romanization default display
+- [x] 03.1-01-PLAN.md — IPA trapezoid vowel chart: CustomPaint trapezoid for reference panel and inventory vowel grid
+- [x] 03.1-02-PLAN.md — Word display format fixes: romanization-first in word generator and Anki card front field
+- [x] 03.1-03-PLAN.md — Anki export selection mode: toolbar button, conditional checkboxes, bottom bar confirm/cancel
+- [x] 03.1-04-PLAN.md — Phoneme inventory romanization toggle: Alt-key listener, romanization default display
 
 ### Phase 3.2: Phonology Enhancements INSERTED
 **Goal**: Predefined natural classes with sensible defaults, cross-language shareable classes, and an allophone viewer for contextual phoneme realization

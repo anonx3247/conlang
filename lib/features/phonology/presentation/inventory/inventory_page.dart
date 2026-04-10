@@ -1,12 +1,14 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../db/app_database.dart';
 import '../../../../features/project/data/project_providers.dart';
 import '../../data/ipa_data.dart';
 import '../../data/phoneme_providers.dart';
+import '../../data/romanization_providers.dart';
 import '../shared/vowel_trapezoid_painter.dart';
 import 'natural_class_editor.dart';
 import 'phoneme_edit_dialog.dart';
@@ -86,11 +88,38 @@ String _shortManner(String manner) {
 /// - Natural classes section
 ///
 /// When no project is open, shows a placeholder message.
-class InventoryPage extends ConsumerWidget {
+class InventoryPage extends ConsumerStatefulWidget {
   const InventoryPage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<InventoryPage> createState() => _InventoryPageState();
+}
+
+class _InventoryPageState extends ConsumerState<InventoryPage> {
+  bool _isAltHeld = false;
+
+  bool _handleKeyEvent(KeyEvent event) {
+    final altPressed = HardwareKeyboard.instance.isAltPressed;
+    if (altPressed != _isAltHeld) {
+      setState(() => _isAltHeld = altPressed);
+    }
+    return false; // Don't consume the event
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    HardwareKeyboard.instance.addHandler(_handleKeyEvent);
+  }
+
+  @override
+  void dispose() {
+    HardwareKeyboard.instance.removeHandler(_handleKeyEvent);
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final db = ref.watch(currentDatabaseProvider);
     final theme = Theme.of(context);
 
@@ -153,13 +182,13 @@ class InventoryPage extends ConsumerWidget {
           const SizedBox(height: 12),
 
           // All phonemes as chips (nothing can hide)
-          const _AllPhonemesRow(),
+          _AllPhonemesRow(isAltHeld: _isAltHeld),
           const SizedBox(height: 24),
 
           // Phoneme inventory sections.
-          const _ConsonantSection(),
+          _ConsonantSection(isAltHeld: _isAltHeld),
           const SizedBox(height: 32),
-          const _VowelSection(),
+          _VowelSection(isAltHeld: _isAltHeld),
           const SizedBox(height: 32),
           const _NaturalClassesSection(),
           const SizedBox(height: 32),
@@ -174,7 +203,9 @@ class InventoryPage extends ConsumerWidget {
 // ---------------------------------------------------------------------------
 
 class _AllPhonemesRow extends ConsumerWidget {
-  const _AllPhonemesRow();
+  const _AllPhonemesRow({required this.isAltHeld});
+
+  final bool isAltHeld;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -191,6 +222,7 @@ class _AllPhonemesRow extends ConsumerWidget {
           children: phonemes
               .map((p) => _PhonemeChip(
                     phoneme: p,
+                    isAltHeld: isAltHeld,
                     onTap: () => showDialog(
                       context: context,
                       builder: (_) => PhonemeEditDialog(phoneme: p),
@@ -208,7 +240,9 @@ class _AllPhonemesRow extends ConsumerWidget {
 // ---------------------------------------------------------------------------
 
 class _ConsonantSection extends ConsumerWidget {
-  const _ConsonantSection();
+  const _ConsonantSection({required this.isAltHeld});
+
+  final bool isAltHeld;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -229,7 +263,7 @@ class _ConsonantSection extends ConsumerWidget {
                 'No consonants yet. Tap "Add Phoneme" to define your first consonant.',
               );
             }
-            return _ConsonantGrid(consonants: consonants);
+            return _ConsonantGrid(consonants: consonants, isAltHeld: isAltHeld);
           },
         ),
       ],
@@ -238,9 +272,10 @@ class _ConsonantSection extends ConsumerWidget {
 }
 
 class _ConsonantGrid extends ConsumerWidget {
-  const _ConsonantGrid({required this.consonants});
+  const _ConsonantGrid({required this.consonants, required this.isAltHeld});
 
   final List<Phoneme> consonants;
+  final bool isAltHeld;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -311,6 +346,7 @@ class _ConsonantGrid extends ConsumerWidget {
                       phonemes: phonemesHere,
                       width: cellW,
                       height: cellH,
+                      isAltHeld: isAltHeld,
                     );
                   }),
                 ],
@@ -326,7 +362,9 @@ class _ConsonantGrid extends ConsumerWidget {
 // ---------------------------------------------------------------------------
 
 class _VowelSection extends ConsumerWidget {
-  const _VowelSection();
+  const _VowelSection({required this.isAltHeld});
+
+  final bool isAltHeld;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -347,7 +385,7 @@ class _VowelSection extends ConsumerWidget {
                 'No vowels yet. Tap "Add Phoneme" to define your first vowel.',
               );
             }
-            return _VowelChart(vowels: vowels);
+            return _VowelChart(vowels: vowels, isAltHeld: isAltHeld);
           },
         ),
       ],
@@ -396,9 +434,10 @@ VowelBackness? _backnessFromString(String? b) {
 }
 
 class _VowelChart extends StatelessWidget {
-  const _VowelChart({required this.vowels});
+  const _VowelChart({required this.vowels, required this.isAltHeld});
 
   final List<Phoneme> vowels;
+  final bool isAltHeld;
 
   @override
   Widget build(BuildContext context) {
@@ -463,6 +502,7 @@ class _VowelChart extends StatelessWidget {
                   children: sorted
                       .map((p) => _PhonemeChip(
                             phoneme: p,
+                            isAltHeld: isAltHeld,
                             onTap: () => showDialog(
                               context: context,
                               builder: (_) => PhonemeEditDialog(phoneme: p),
@@ -506,11 +546,13 @@ class _PhonemeCell extends ConsumerWidget {
     required this.phonemes,
     required this.width,
     required this.height,
+    required this.isAltHeld,
   });
 
   final List<Phoneme> phonemes;
   final double width;
   final double height;
+  final bool isAltHeld;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -549,6 +591,7 @@ class _PhonemeCell extends ConsumerWidget {
             .map(
               (p) => _PhonemeChip(
                 phoneme: p,
+                isAltHeld: isAltHeld,
                 onTap: () => showDialog(
                   context: context,
                   builder: (_) => PhonemeEditDialog(phoneme: p),
@@ -561,18 +604,33 @@ class _PhonemeCell extends ConsumerWidget {
   }
 }
 
-class _PhonemeChip extends StatelessWidget {
+class _PhonemeChip extends ConsumerWidget {
   const _PhonemeChip({
     required this.phoneme,
     required this.onTap,
+    required this.isAltHeld,
   });
 
   final Phoneme phoneme;
   final VoidCallback onTap;
+  final bool isAltHeld;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final romanize = ref.watch(romanizeProvider);
+    final romanized = romanize(phoneme.symbol);
+
+    final String displayText;
+    if (isAltHeld) {
+      // Alt held: show /IPA/ in slashes (phonemic notation)
+      displayText = '/${phoneme.symbol}/';
+    } else {
+      // Default: show romanization (plain text)
+      // If romanization equals IPA (no mapping), show IPA without slashes as fallback
+      displayText = romanized;
+    }
+
     return GestureDetector(
       onTap: onTap,
       child: Tooltip(
@@ -585,7 +643,7 @@ class _PhonemeChip extends StatelessWidget {
             borderRadius: BorderRadius.circular(4),
           ),
           child: Text(
-            phoneme.symbol,
+            displayText,
             style: theme.textTheme.bodyMedium?.copyWith(
               color: theme.colorScheme.onPrimaryContainer,
               fontWeight: FontWeight.bold,
