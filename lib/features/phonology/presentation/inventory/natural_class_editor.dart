@@ -6,6 +6,56 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../db/app_database.dart';
 import '../../data/phoneme_providers.dart';
 
+/// Validates a user-entered natural-class name for the editor dialog.
+///
+/// Returns `null` when the name is acceptable, or a human-readable error
+/// string suitable for a [TextFormField]'s `errorText`.
+///
+/// Reserved names:
+///   - `C`, `V` — system classes from Phase 1 (all consonants / all vowels).
+///   - `S`, `N`, `F`, `L`, `R` — single-letter default-class aliases from
+///     Phase 3.2 (Stop/Nasal/Fricative/Liquid/Rhotic). Blocking these prevents
+///     users from creating classes whose names collide with the predefined
+///     alias map, which would otherwise silently never be reached by the
+///     resolver (alias lookup runs BEFORE the user-class lookup path).
+///
+/// Lowercase full names (`stop`, `nasal`, etc.) are INTENTIONALLY allowed —
+/// D-06 lets users shadow default full-name classes with their own lists.
+String? validateNaturalClassName(String? v) {
+  if (v == null || v.trim().isEmpty) return 'Required';
+  final trimmed = v.trim();
+
+  // Reserved system classes from Phase 1.
+  if (trimmed == 'C' || trimmed == 'V') {
+    return 'C and V are reserved system classes';
+  }
+
+  // Reserved single-letter aliases from Phase 3.2 (D-05a / RESEARCH F-2).
+  const reservedAliases = {'S', 'N', 'F', 'L', 'R'};
+  if (reservedAliases.contains(trimmed)) {
+    return '$trimmed is a reserved default-class alias '
+        '(${_aliasExpansion(trimmed)}). Use a different name.';
+  }
+
+  return null;
+}
+
+String _aliasExpansion(String letter) {
+  switch (letter) {
+    case 'S':
+      return 'Stop';
+    case 'N':
+      return 'Nasal';
+    case 'F':
+      return 'Fricative';
+    case 'L':
+      return 'Liquid';
+    case 'R':
+      return 'Rhotic';
+  }
+  return '';
+}
+
 /// Dialog for creating or editing a natural phonological class.
 ///
 /// A natural class is a named set of phonemes used in DSL expressions
@@ -108,13 +158,7 @@ class _NaturalClassEditorState extends ConsumerState<NaturalClassEditor> {
                   hintText: 'e.g. stop, nasal, liquid, obstruent',
                   helperText: 'Used in DSL as [name], e.g. [stop]',
                 ),
-                validator: (v) {
-                  if (v == null || v.trim().isEmpty) return 'Required';
-                  if (v.trim() == 'C' || v.trim() == 'V') {
-                    return 'C and V are reserved system classes';
-                  }
-                  return null;
-                },
+                validator: validateNaturalClassName,
               ),
               const SizedBox(height: 16),
 

@@ -22,14 +22,14 @@ void main() {
   // the single-letter alias 'S' bypasses the user map entirely (the alias map
   // is always the default list), while the full-name 'stop' still honors user
   // precedence via the lowercased lookup.
-  final inv = PhonemeInventory(
-    consonants: const ['p', 't', 'k', 's', 'm', 'n'],
-    vowels: const ['a', 'e', 'i'],
-    naturalClasses: const {
+  // Note: in a REAL buildInventory run, default 'nasal' etc. would also be
+  // seeded. We omit them here to keep the test focused on resolver behavior,
+  // not merge behavior (which is Plan 01's test).
+  const inv = PhonemeInventory(
+    consonants: ['p', 't', 'k', 's', 'm', 'n'],
+    vowels: ['a', 'e', 'i'],
+    naturalClasses: {
       'stop': ['p', 't', 'k'], // user override
-      // Note: in a REAL buildInventory run, default 'nasal' etc. would also be
-      // seeded. We omit them here to keep the test focused on resolver
-      // behavior, not merge behavior (which is Plan 01's test).
     },
   );
 
