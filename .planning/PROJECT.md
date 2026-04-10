@@ -16,6 +16,9 @@ A powerful, flexible morphology engine that handles the full spectrum of languag
 - [x] Lexicon tab: root dictionary + derived word dictionary with meanings and etymology — Validated in Phase 3: Lexicon
 - [x] Integration with Swadesh list and Conlanger's Thesaurus for word creation guidance — Validated in Phase 3: Lexicon
 - [x] Anki card export from lexicon — Validated in Phase 3: Lexicon
+- [x] Predefined natural classes (stops, nasals, fricatives, liquids, rhotics, obstruents, sonorants, approximants, affricates) usable in the phonotactic DSL with single-letter aliases (S/N/F/L/R) and user-class precedence — Validated in Phase 3.2: Phonology Enhancements
+- [x] Contextual allophone viewer in the phoneme edit dialog that surfaces realizations from existing rewrite rules — Validated in Phase 3.2: Phonology Enhancements
+- [x] Phonological rewrite rules produce phonetic transcription only, not romanization — romanization is always derived from the phonemic (pre-rewrite) form across all preview panels — Validated in Phase 3.2: Phonology Enhancements
 
 ### Active
 
@@ -78,4 +81,4 @@ A powerful, flexible morphology engine that handles the full spectrum of languag
 | AI as tutor + co-creator | Dual role: explain linguistics concepts AND actively help build the language | — Pending |
 
 ---
-*Last updated: 2026-04-09 after Phase 3 (Lexicon) completion*
+*Last updated: 2026-04-10 after Phase 3.2 (Phonology Enhancements) completion*
