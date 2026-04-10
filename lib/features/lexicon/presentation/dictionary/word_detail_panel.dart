@@ -40,19 +40,70 @@ class _WordDetailPanelState extends ConsumerState<WordDetailPanel> {
   final _meaningController = TextEditingController();
   String? _editPos;
 
+  /// Mirrors [WordCreationForm]: true when the user has manually edited the
+  /// IPA field since the last programmatic sync. Initialized by
+  /// [_startEditing] from whether the loaded lexeme's stored IPA diverges
+  /// from what `deromanize(romanization)` would produce.
+  bool _ipaManuallyEdited = false;
+
+  /// Reentrancy guard for programmatic multi-field updates.
+  bool _updatingControllersProgrammatically = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _romanizationController.addListener(_onRomanizationChanged);
+    _ipaController.addListener(_onIpaChanged);
+  }
+
   @override
   void dispose() {
+    _romanizationController.removeListener(_onRomanizationChanged);
+    _ipaController.removeListener(_onIpaChanged);
     _ipaController.dispose();
     _romanizationController.dispose();
     _meaningController.dispose();
     super.dispose();
   }
 
+  void _onRomanizationChanged() {
+    if (!_isEditing) return;
+    if (_updatingControllersProgrammatically) return;
+    if (_ipaManuallyEdited) return;
+    final deromanize = ref.read(deromanizeProvider);
+    final derived = deromanize(_romanizationController.text);
+    if (_ipaController.text == derived) return;
+    _updatingControllersProgrammatically = true;
+    _ipaController.text = derived;
+    _updatingControllersProgrammatically = false;
+  }
+
+  void _onIpaChanged() {
+    if (!_isEditing) return;
+    if (_updatingControllersProgrammatically) return;
+    final deromanize = ref.read(deromanizeProvider);
+    final derived = deromanize(_romanizationController.text);
+    _ipaManuallyEdited = _ipaController.text != derived;
+    // Rebuild so the IPA field label updates to reflect override state.
+    if (mounted) setState(() {});
+  }
+
   void _startEditing(Lexeme lexeme) {
+    _updatingControllersProgrammatically = true;
     _ipaController.text = lexeme.ipa;
     _romanizationController.text = lexeme.romanization ?? '';
     _meaningController.text = lexeme.meaning ?? '';
     _editPos = lexeme.partOfSpeech;
+    // Seed the manual-edit flag from whether the stored IPA diverges from
+    // the orthography-derived form. A word loaded with a manual override
+    // should stay overridden unless the user explicitly re-derives it.
+    final deromanize = ref.read(deromanizeProvider);
+    _ipaManuallyEdited = isIpaManuallyOverridden(
+      lexeme.ipa,
+      lexeme.romanization,
+      deromanize,
+    );
+    _updatingControllersProgrammatically = false;
     setState(() => _isEditing = true);
   }
 
@@ -274,6 +325,18 @@ class _WordDetailPanelState extends ConsumerState<WordDetailPanel> {
     final validation = validate(word: lexeme.ipa);
     final hasViolations = !validation.isValid;
 
+    // Visual flag: IPA is a manual override if it diverges from what
+    // deromanize(romanization) would produce. When true, the IPA is
+    // rendered in a distinct color so the user can spot irregular
+    // pronunciations at a glance.
+    final deromanize = ref.watch(deromanizeProvider);
+    final ipaOverridden = isIpaManuallyOverridden(
+      lexeme.ipa,
+      lexeme.romanization,
+      deromanize,
+    );
+    final ipaOverrideColor = Colors.orange.shade300;
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -298,13 +361,21 @@ class _WordDetailPanelState extends ConsumerState<WordDetailPanel> {
                           fontWeight: FontWeight.w600,
                         ),
                       ),
-                      // IPA sub-label with violation highlighting (unless exception)
+                      // IPA sub-label with violation highlighting (unless
+                      // exception). When the IPA is a manual override, tint
+                      // it in `ipaOverrideColor` and italicize so the user
+                      // can spot irregular pronunciations at a glance.
                       if (lexeme.isPhonologicalException)
                         Text(
                           lexeme.ipa,
                           style: theme.textTheme.labelSmall?.copyWith(
                             fontSize: 12,
-                            color: cs.onSurface.withValues(alpha: 0.65),
+                            color: ipaOverridden
+                                ? ipaOverrideColor
+                                : cs.onSurface.withValues(alpha: 0.65),
+                            fontStyle: ipaOverridden
+                                ? FontStyle.italic
+                                : FontStyle.normal,
                           ),
                         )
                       else
@@ -313,7 +384,12 @@ class _WordDetailPanelState extends ConsumerState<WordDetailPanel> {
                           violations: validation.violations,
                           style: theme.textTheme.labelSmall?.copyWith(
                             fontSize: 12,
-                            color: cs.onSurface.withValues(alpha: 0.65),
+                            color: ipaOverridden
+                                ? ipaOverrideColor
+                                : cs.onSurface.withValues(alpha: 0.65),
+                            fontStyle: ipaOverridden
+                                ? FontStyle.italic
+                                : FontStyle.normal,
                           ),
                         ),
                     ] else ...[
@@ -324,6 +400,10 @@ class _WordDetailPanelState extends ConsumerState<WordDetailPanel> {
                           style: theme.textTheme.bodyMedium?.copyWith(
                             fontSize: 13,
                             fontWeight: FontWeight.w600,
+                            color: ipaOverridden ? ipaOverrideColor : null,
+                            fontStyle: ipaOverridden
+                                ? FontStyle.italic
+                                : FontStyle.normal,
                           ),
                         )
                       else
@@ -333,6 +413,10 @@ class _WordDetailPanelState extends ConsumerState<WordDetailPanel> {
                           style: theme.textTheme.bodyMedium?.copyWith(
                             fontSize: 13,
                             fontWeight: FontWeight.w600,
+                            color: ipaOverridden ? ipaOverrideColor : null,
+                            fontStyle: ipaOverridden
+                                ? FontStyle.italic
+                                : FontStyle.normal,
                           ),
                         ),
                     ],
@@ -561,25 +645,34 @@ class _WordDetailPanelState extends ConsumerState<WordDetailPanel> {
           ),
           const SizedBox(height: 16),
 
-          // IPA field
-          IpaTextField(
-            controller: _ipaController,
-            decoration: const InputDecoration(
-              labelText: 'IPA *',
-            ),
-          ),
-          const SizedBox(height: 12),
-
-          // Romanization (only show when enabled)
+          // When romanization is enabled, it becomes the primary input and
+          // IPA is auto-derived (override-only). Mirrors WordCreationForm.
           if (romanizationEnabled) ...[
             TextField(
               controller: _romanizationController,
               decoration: const InputDecoration(
-                labelText: 'Romanization',
+                labelText: 'Romanization *',
+                helperText: 'IPA is auto-derived from this',
               ),
             ),
             const SizedBox(height: 12),
+            IpaTextField(
+              controller: _ipaController,
+              decoration: InputDecoration(
+                labelText: _ipaManuallyEdited
+                    ? 'IPA (manual override)'
+                    : 'IPA (auto-derived — edit to override)',
+              ),
+            ),
+          ] else ...[
+            IpaTextField(
+              controller: _ipaController,
+              decoration: const InputDecoration(
+                labelText: 'IPA *',
+              ),
+            ),
           ],
+          const SizedBox(height: 12),
 
           // Meaning
           TextField(

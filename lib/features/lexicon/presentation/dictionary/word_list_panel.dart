@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../features/morphology/data/morphology_providers.dart';
 import '../../../../shared/widgets/violation_text.dart';
+import '../../../phonology/data/romanization_providers.dart';
 import '../../data/lexeme_providers.dart';
 
 /// Left panel of the Dictionary master-detail layout.
@@ -176,51 +177,72 @@ class _WordListPanelState extends ConsumerState<WordListPanel> {
             ),
 
           // ---- View toggle + count row + toolbar action -----------------
+          // Flexible children so the row survives the ~200px-wide lexicon
+          // panel: the Export button and word-count text both shrink /
+          // ellipsize before overflowing, and the view-toggle buttons stay
+          // pinned to the right.
           Padding(
             padding: const EdgeInsets.fromLTRB(8, 0, 8, 4),
             child: Row(
               children: [
                 // Toolbar left: "Export to Anki" button (default) or select-all checkbox (selection mode)
-                AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 150),
-                  child: widget.isSelectionMode
-                      ? Tooltip(
-                          key: const ValueKey('select-all'),
-                          message: allSelected ? 'Deselect all' : 'Select all',
-                          child: Checkbox(
-                            value: allSelected ? true : (someSelected ? null : false),
-                            tristate: true,
-                            onChanged: filteredLexemes.isEmpty
-                                ? null
-                                : (_) {
-                                    if (allSelected) {
-                                      widget.onDeselectAll?.call();
-                                    } else {
-                                      widget.onSelectAll?.call();
-                                    }
-                                  },
-                          ),
-                        )
-                      : SizedBox(
-                          key: const ValueKey('export-btn'),
-                          height: 44,
-                          child: OutlinedButton.icon(
-                            onPressed: filteredLexemes.isEmpty
-                                ? null
-                                : widget.onEnterSelectionMode,
-                            icon: Opacity(
-                              opacity: filteredLexemes.isEmpty ? 0.38 : 1.0,
-                              child: const Icon(Icons.file_download_outlined, size: 16),
+                Flexible(
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 150),
+                    child: widget.isSelectionMode
+                        ? Tooltip(
+                            key: const ValueKey('select-all'),
+                            message:
+                                allSelected ? 'Deselect all' : 'Select all',
+                            child: Checkbox(
+                              value: allSelected
+                                  ? true
+                                  : (someSelected ? null : false),
+                              tristate: true,
+                              onChanged: filteredLexemes.isEmpty
+                                  ? null
+                                  : (_) {
+                                      if (allSelected) {
+                                        widget.onDeselectAll?.call();
+                                      } else {
+                                        widget.onSelectAll?.call();
+                                      }
+                                    },
                             ),
-                            label: const Text('Export to Anki', style: TextStyle(fontSize: 12)),
+                          )
+                        : SizedBox(
+                            key: const ValueKey('export-btn'),
+                            height: 44,
+                            child: OutlinedButton.icon(
+                              onPressed: filteredLexemes.isEmpty
+                                  ? null
+                                  : widget.onEnterSelectionMode,
+                              icon: Opacity(
+                                opacity: filteredLexemes.isEmpty ? 0.38 : 1.0,
+                                child: const Icon(
+                                    Icons.file_download_outlined,
+                                    size: 16),
+                              ),
+                              label: const Text(
+                                'Export to Anki',
+                                style: TextStyle(fontSize: 12),
+                                overflow: TextOverflow.ellipsis,
+                                softWrap: false,
+                              ),
+                            ),
                           ),
-                        ),
+                  ),
                 ),
-                Text(
-                  '${filteredLexemes.length} word${filteredLexemes.length == 1 ? '' : 's'}',
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    color: cs.onSurface.withValues(alpha: 0.55),
-                    fontSize: 11,
+                const SizedBox(width: 6),
+                Flexible(
+                  child: Text(
+                    '${filteredLexemes.length} word${filteredLexemes.length == 1 ? '' : 's'}',
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: cs.onSurface.withValues(alpha: 0.55),
+                      fontSize: 11,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
                 const Spacer(),
@@ -338,6 +360,10 @@ class _WordListPanelState extends ConsumerState<WordListPanel> {
     // Hoist allLexemes watch outside itemBuilder so we have a single provider
     // subscription per rebuild rather than one per visible row.
     final allLexemes = ref.watch(allLexemeListProvider).asData?.value ?? [];
+    // Hoist the deromanize function so the per-row override flag check is
+    // a cheap comparison rather than reading the provider per item.
+    final deromanize = ref.watch(deromanizeProvider);
+    final ipaOverrideColor = Colors.orange.shade300;
 
     return ListView.builder(
       itemCount: lexemes.length,
@@ -360,6 +386,13 @@ class _WordListPanelState extends ConsumerState<WordListPanel> {
         // Violations for this specific lexeme (null if it's an exception).
         final lexemeViolation = violations[lexeme.id];
         final itemViolations = lexemeViolation?.violations ?? [];
+        // Manual IPA override flag: stored IPA diverges from what
+        // deromanize(romanization) produces → render in override color.
+        final ipaOverridden = isIpaManuallyOverridden(
+          lexeme.ipa,
+          lexeme.romanization,
+          deromanize,
+        );
 
         return Material(
           color: isSelected ? cs.primaryContainer : Colors.transparent,
@@ -398,6 +431,15 @@ class _WordListPanelState extends ConsumerState<WordListPanel> {
                                   fontWeight: isSelected
                                       ? FontWeight.w600
                                       : FontWeight.normal,
+                                  // Irregular-pronunciation flag: tint the
+                                  // primary heading in the override color
+                                  // when stored IPA diverges from the
+                                  // orthography-derived form.
+                                  color:
+                                      ipaOverridden ? ipaOverrideColor : null,
+                                  fontStyle: ipaOverridden
+                                      ? FontStyle.italic
+                                      : FontStyle.normal,
                                 ),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
@@ -421,12 +463,36 @@ class _WordListPanelState extends ConsumerState<WordListPanel> {
                               ),
                           ],
                         ),
-                        ViolationText(
-                          text: '[${lexeme.ipa}]',
-                          violations: itemViolations,
-                          style: theme.textTheme.labelSmall?.copyWith(
-                            fontSize: 12,
-                            color: cs.onSurface.withValues(alpha: 0.55),
+                        // Brackets rendered OUTSIDE ViolationText so the
+                        // violation offsets (which index into lexeme.ipa)
+                        // line up with the highlighted characters. Wrapping
+                        // the IPA in `'[${lexeme.ipa}]'` used to shift every
+                        // underline one character right. Uses inline spans
+                        // so the brackets stay tight against the IPA.
+                        Text.rich(
+                          TextSpan(
+                            style: theme.textTheme.labelSmall?.copyWith(
+                              fontSize: 12,
+                              color: cs.onSurface.withValues(alpha: 0.55),
+                            ),
+                            children: [
+                              const TextSpan(text: '['),
+                              WidgetSpan(
+                                alignment: PlaceholderAlignment.baseline,
+                                baseline: TextBaseline.alphabetic,
+                                child: ViolationText(
+                                  text: lexeme.ipa,
+                                  violations: itemViolations,
+                                  style:
+                                      theme.textTheme.labelSmall?.copyWith(
+                                    fontSize: 12,
+                                    color: cs.onSurface
+                                        .withValues(alpha: 0.55),
+                                  ),
+                                ),
+                              ),
+                              const TextSpan(text: ']'),
+                            ],
                           ),
                         ),
                         if (lexeme.meaning != null && lexeme.meaning!.isNotEmpty)
@@ -470,6 +536,9 @@ class _WordListPanelState extends ConsumerState<WordListPanel> {
 
     // Batch violations for table view IPA cells.
     final violations = ref.watch(lexemeViolationsProvider);
+    // Same override-flag computation as the list view.
+    final deromanize = ref.watch(deromanizeProvider);
+    final ipaOverrideColor = Colors.orange.shade300;
 
     // Sort lexemes based on current sort state
     final sorted = List.of(lexemes);
@@ -553,6 +622,11 @@ class _WordListPanelState extends ConsumerState<WordListPanel> {
               : widget.selectedLexemeId == lexeme.id;
           final lexemeViolation = violations[lexeme.id];
           final itemViolations = lexemeViolation?.violations ?? [];
+          final ipaOverridden = isIpaManuallyOverridden(
+            lexeme.ipa,
+            lexeme.romanization,
+            deromanize,
+          );
           return DataRow(
             selected: isSelected,
             onSelectChanged: (_) => widget.isSelectionMode
@@ -562,16 +636,40 @@ class _WordListPanelState extends ConsumerState<WordListPanel> {
               DataCell(
                 Text(
                   lexeme.romanization ?? lexeme.ipa,
-                  style: theme.textTheme.bodySmall?.copyWith(fontSize: 13),
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    fontSize: 13,
+                    color: ipaOverridden ? ipaOverrideColor : null,
+                    fontStyle: ipaOverridden
+                        ? FontStyle.italic
+                        : FontStyle.normal,
+                  ),
                 ),
               ),
               DataCell(
-                ViolationText(
-                  text: '[${lexeme.ipa}]',
-                  violations: itemViolations,
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    fontSize: 12,
-                    color: cs.onSurface.withValues(alpha: 0.7),
+                // Brackets rendered outside ViolationText so violation
+                // offsets line up with the IPA characters (see list view).
+                Text.rich(
+                  TextSpan(
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      fontSize: 12,
+                      color: cs.onSurface.withValues(alpha: 0.7),
+                    ),
+                    children: [
+                      const TextSpan(text: '['),
+                      WidgetSpan(
+                        alignment: PlaceholderAlignment.baseline,
+                        baseline: TextBaseline.alphabetic,
+                        child: ViolationText(
+                          text: lexeme.ipa,
+                          violations: itemViolations,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            fontSize: 12,
+                            color: cs.onSurface.withValues(alpha: 0.7),
+                          ),
+                        ),
+                      ),
+                      const TextSpan(text: ']'),
+                    ],
                   ),
                 ),
               ),

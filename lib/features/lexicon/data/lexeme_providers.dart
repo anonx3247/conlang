@@ -1,6 +1,11 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../db/app_database.dart';
+// `MorphologicalRule` is also defined by the Drift-generated row class in
+// app_database.dart; hide that one so unqualified `MorphologicalRule`
+// references in this file resolve to the domain type from morphology_dsl,
+// which is what the MorphologyEngine API expects. The Drift row was never
+// used in this file anyway — only `MorphologicalRuleException` is.
+import '../../../db/app_database.dart' hide MorphologicalRule;
 import '../../morphology/data/morphology_providers.dart';
 import '../../morphology/domain/morphology_dsl.dart';
 import '../../morphology/domain/morphology_engine.dart';
@@ -106,8 +111,13 @@ final lexemePosFilterProvider =
 /// 1. IPA substring match on root
 /// 2. Romanization substring match on root
 /// 3. Meaning substring match on root
-/// 4. Derived-form match: if a derived form (child) matches, include the root
-///    (D-11 requirement — see 03-CONTEXT.md)
+/// 4. Derived-form match: if ANY derived form of this root (either stored as
+///    a child lexeme OR computed on-the-fly by [MorphologyEngine]) matches
+///    the query, include the root (D-11 requirement — see 03-CONTEXT.md).
+///    Previously this only checked stored derived lexemes, but derivations
+///    are computed on demand by [computedDerivedFormsProvider], so stored
+///    children are rare. Without the on-the-fly path, searching a substring
+///    that only appears in a derived form never surfaced the root.
 /// 5. POS exact match (when posFilter is non-empty)
 final filteredLexemeListProvider = Provider<List<Lexeme>>((ref) {
   final roots = ref.watch(rootLexemeListProvider).asData?.value ?? [];
@@ -115,7 +125,8 @@ final filteredLexemeListProvider = Provider<List<Lexeme>>((ref) {
   final query = ref.watch(lexemeSearchQueryProvider).toLowerCase();
   final posFilter = ref.watch(lexemePosFilterProvider);
 
-  // Collect root IDs of derived forms that match the query (D-11).
+  // Collect root IDs whose stored derived children match the query (legacy
+  // path — keeps working for any manually-inserted derived lexemes).
   final derivedMatchRootIds = <String>{};
   if (query.isNotEmpty) {
     for (final l in allLexemes) {
@@ -132,12 +143,47 @@ final filteredLexemeListProvider = Provider<List<Lexeme>>((ref) {
     }
   }
 
+  // Compute-on-the-fly derivation match: for each root, apply all active
+  // morphological rules and check the resulting forms against the query.
+  // Built once per provider rebuild and reused across the where() below so
+  // we don't recompute derivations per filter iteration. Keyed by root id.
+  final computedDerivedMatchRootIds = <int>{};
+  if (query.isNotEmpty) {
+    final rulesAsync = ref.watch(morphologicalRuleListProvider);
+    final dbRules = rulesAsync.asData?.value ?? [];
+    final activeRules = <MorphologicalRule>[];
+    for (final r in dbRules) {
+      if (!r.isActive) continue;
+      final parsed = parseMorphDsl(r.source, id: r.id, name: r.name);
+      if (parsed.isValid && parsed.rule != null) {
+        activeRules.add(parsed.rule!);
+      }
+    }
+    if (activeRules.isNotEmpty) {
+      final inventory = ref.watch(phonemeInventoryProvider);
+      const engine = MorphologyEngine();
+      for (final root in roots) {
+        for (final rule in activeRules) {
+          final result = engine.applyRule(rule, root.ipa, inventory);
+          if (result case MorphSuccess(:final form)) {
+            if (form != root.ipa &&
+                form.toLowerCase().contains(query)) {
+              computedDerivedMatchRootIds.add(root.id);
+              break; // one match is enough — skip remaining rules for root
+            }
+          }
+        }
+      }
+    }
+  }
+
   return roots.where((l) {
     final matchesQuery = query.isEmpty ||
         l.ipa.toLowerCase().contains(query) ||
         (l.romanization?.toLowerCase().contains(query) ?? false) ||
         (l.meaning?.toLowerCase().contains(query) ?? false) ||
-        derivedMatchRootIds.contains(l.id.toString());
+        derivedMatchRootIds.contains(l.id.toString()) ||
+        computedDerivedMatchRootIds.contains(l.id);
     final matchesPos = posFilter.isEmpty ||
         (l.partOfSpeech != null && posFilter.contains(l.partOfSpeech));
     return matchesQuery && matchesPos;

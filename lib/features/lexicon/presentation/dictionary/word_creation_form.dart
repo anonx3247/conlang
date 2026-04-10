@@ -46,20 +46,61 @@ class _WordCreationFormState extends ConsumerState<WordCreationForm> {
   bool _saving = false;
   String? _ipaError;
 
+  /// True once the user has typed directly in the IPA field. Until then,
+  /// the IPA field is auto-populated from the romanization field via
+  /// [deromanizeProvider]. After the user overrides it manually, we stop
+  /// rewriting it so their override sticks.
+  bool _ipaManuallyEdited = false;
+
+  /// Guards against reentrant listener callbacks during programmatic
+  /// multi-field updates (e.g. tapping an InspirationPanel candidate, which
+  /// sets both IPA and romanization in a single batch). While true, the
+  /// controller listeners early-return so we don't treat our own writes as
+  /// user edits.
+  bool _updatingControllersProgrammatically = false;
+
   @override
   void initState() {
     super.initState();
     if (widget.prefillMeaning != null) {
       _meaningController.text = widget.prefillMeaning!;
     }
+    _romanizationController.addListener(_onRomanizationChanged);
+    _ipaController.addListener(_onIpaChanged);
   }
 
   @override
   void dispose() {
+    _romanizationController.removeListener(_onRomanizationChanged);
+    _ipaController.removeListener(_onIpaChanged);
     _ipaController.dispose();
     _romanizationController.dispose();
     _meaningController.dispose();
     super.dispose();
+  }
+
+  /// Called whenever the romanization field changes. Re-derives the IPA
+  /// unless the user has manually edited it.
+  void _onRomanizationChanged() {
+    if (_updatingControllersProgrammatically) return;
+    if (_ipaManuallyEdited) return;
+    final deromanize = ref.read(deromanizeProvider);
+    final derived = deromanize(_romanizationController.text);
+    if (_ipaController.text == derived) return;
+    _updatingControllersProgrammatically = true;
+    _ipaController.text = derived;
+    _updatingControllersProgrammatically = false;
+  }
+
+  /// Called on ANY change to the IPA field. We only mark it as manually
+  /// edited when the change wasn't driven by a programmatic update above.
+  void _onIpaChanged() {
+    if (_updatingControllersProgrammatically) return;
+    // If the current IPA text matches what we'd derive from the romanization,
+    // the "override" is identical to the default — treat it as not manual.
+    final deromanize = ref.read(deromanizeProvider);
+    final derived = deromanize(_romanizationController.text);
+    _ipaManuallyEdited = _ipaController.text != derived;
   }
 
   Future<void> _save() async {
@@ -128,13 +169,23 @@ class _WordCreationFormState extends ConsumerState<WordCreationForm> {
                   const SizedBox(height: 16),
 
                   // ---- IPA / Romanization fields ---------------------------
+                  // When romanization is enabled, the romanized form is the
+                  // primary input — the IPA field is auto-populated via
+                  // `deromanizeProvider` as the user types, and only needs
+                  // manual entry when the pronunciation deviates from the
+                  // orthography (e.g. irregular / loan words). The IPA field
+                  // is labeled "IPA (override)" to signal this.
                   if (romanizationEnabled) ...[
-                    // Romanization as primary input
+                    // Romanization as primary input. The listener added in
+                    // initState auto-derives IPA on every change, so we
+                    // don't need an onChanged callback here beyond the
+                    // implicit rebuild driven by the listener.
                     TextField(
                       controller: _romanizationController,
                       decoration: const InputDecoration(
-                        labelText: 'Romanization',
+                        labelText: 'Romanization *',
                         hintText: 'e.g. kala',
+                        helperText: 'IPA is auto-derived from this',
                       ),
                       onChanged: (_) => setState(() {}),
                     ),
@@ -142,7 +193,9 @@ class _WordCreationFormState extends ConsumerState<WordCreationForm> {
                     IpaTextField(
                       controller: _ipaController,
                       decoration: InputDecoration(
-                        labelText: 'IPA',
+                        labelText: _ipaManuallyEdited
+                            ? 'IPA (manual override)'
+                            : 'IPA (auto-derived — edit to override)',
                         hintText: 'e.g. /kala/',
                         errorText: _ipaError,
                       ),
@@ -250,14 +303,20 @@ class _WordCreationFormState extends ConsumerState<WordCreationForm> {
           child: InspirationPanel(
             onWordSelected: (ipa) {
               setState(() {
+                // Treat a tapped candidate as a clean slate: neither field
+                // is "manually edited" — both are consistent with whatever
+                // the generator produced. Use the programmatic guard so
+                // the listeners don't misclassify these writes as user
+                // input and flip `_ipaManuallyEdited`.
+                _updatingControllersProgrammatically = true;
                 _ipaController.text = ipa;
                 _ipaError = null;
-                // If romanization is enabled, also auto-fill romanization
-                // using the current romanize function
                 if (romanizationEnabled) {
                   final romanize = ref.read(romanizeProvider);
                   _romanizationController.text = romanize(ipa);
                 }
+                _ipaManuallyEdited = false;
+                _updatingControllersProgrammatically = false;
               });
             },
           ),

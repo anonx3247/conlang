@@ -103,3 +103,80 @@ final romanizeProvider = Provider<String Function(String ipa)>((ref) {
     return result;
   };
 });
+
+// ---------------------------------------------------------------------------
+// Inverse romanization (deromanize)
+// ---------------------------------------------------------------------------
+
+/// Returns a `String Function(String latin)` that converts a romanized Latin
+/// string back into its IPA form using the project's currently defined
+/// mappings in reverse.
+///
+/// The inverse walks the input left-to-right, greedy longest-match against
+/// every known `latinMapping`, substituting the corresponding `ipaSymbol`.
+/// Characters that match no mapping are passed through verbatim so users can
+/// type mixed input (e.g. IPA characters interleaved with their romanization)
+/// without data loss.
+///
+/// Ambiguity policy: if two mappings share the same `latinMapping` string,
+/// the first one encountered wins. This is a first-cut heuristic — conlangs
+/// rarely ship ambiguous romanizations, and users can manually correct the
+/// IPA field when they hit the edge case.
+///
+/// When no project is open, returns an identity function.
+///
+/// Used by the word creation / edit forms to auto-populate the IPA field as
+/// the user types in the romanized field, so IPA becomes a manual-override
+/// slot rather than a required parallel entry.
+final deromanizeProvider = Provider<String Function(String latin)>((ref) {
+  final mappingsAsync = ref.watch(romanizationMappingsProvider);
+  final mappings = mappingsAsync.asData?.value;
+  if (mappings == null || mappings.isEmpty) return (String latin) => latin;
+
+  // Longest-first so digraphs like "ch" beat single "c".
+  final sorted = List<RomanizationMapping>.from(mappings)
+    ..sort((a, b) => b.latinMapping.length.compareTo(a.latinMapping.length));
+
+  // Drop mappings with empty latin strings — they'd create an infinite loop.
+  final active =
+      sorted.where((m) => m.latinMapping.isNotEmpty).toList(growable: false);
+  if (active.isEmpty) return (String latin) => latin;
+
+  return (String latin) {
+    if (latin.isEmpty) return latin;
+    final buffer = StringBuffer();
+    var i = 0;
+    while (i < latin.length) {
+      var matched = false;
+      for (final m in active) {
+        if (latin.startsWith(m.latinMapping, i)) {
+          buffer.write(m.ipaSymbol);
+          i += m.latinMapping.length;
+          matched = true;
+          break;
+        }
+      }
+      if (!matched) {
+        buffer.write(latin[i]);
+        i++;
+      }
+    }
+    return buffer.toString();
+  };
+});
+
+/// True when [lexeme] has a manually-overridden IPA — i.e. its stored IPA
+/// differs from what `deromanize(romanization)` would produce. Words with no
+/// romanization, or with a romanization that round-trips to the stored IPA,
+/// are considered NOT overridden.
+///
+/// Used by list / detail views to render a visual flag indicating that the
+/// IPA is intentional rather than derived from orthography.
+bool isIpaManuallyOverridden(
+  String ipa,
+  String? romanization,
+  String Function(String) deromanize,
+) {
+  if (romanization == null || romanization.isEmpty) return false;
+  return deromanize(romanization) != ipa;
+}
