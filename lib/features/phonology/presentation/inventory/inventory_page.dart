@@ -58,7 +58,11 @@ String _shortPlace(String p) {
     'pharyngeal': 'Ph',
     'glottal': 'Gl',
   };
-  return m[p] ?? p.substring(0, 2);
+  if (m.containsKey(p)) return m[p]!;
+  // Guard against empty or single-character strings from malformed DB rows:
+  // p.substring(0, 2) would throw RangeError if p.length < 2.
+  if (p.length < 2) return p;
+  return p.substring(0, 2);
 }
 
 String _shortManner(String manner) {
