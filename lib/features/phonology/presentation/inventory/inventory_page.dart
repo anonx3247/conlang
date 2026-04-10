@@ -6,11 +6,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../db/app_database.dart';
 import '../../../../features/project/data/project_providers.dart';
-import '../../data/allophone_providers.dart';
 import '../../data/ipa_data.dart';
 import '../../data/phoneme_providers.dart';
 import '../../data/romanization_providers.dart';
-import '../../domain/allophone_computer.dart';
 import '../shared/vowel_trapezoid_painter.dart';
 import 'natural_class_editor.dart';
 import 'phoneme_edit_dialog.dart';
@@ -624,20 +622,8 @@ class _PhonemeChip extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
     final romanize = ref.watch(romanizeProvider);
     final romanized = romanize(phoneme.symbol);
-
-    // Phase 3.2 D-15 — watch allophoneMapProvider only when Alt is held so
-    // non-Alt rebuilds don't thrash on rule edits. Trade-off: the first
-    // Alt-press triggers a provider subscription, but that's a human-
-    // timescale event.
-    final allophoneMap = isAltHeld
-        ? ref.watch(allophoneMapProvider)
-        : const <String, List<AllophoneRealization>>{};
-    final realizations =
-        allophoneMap[phoneme.symbol] ?? const <AllophoneRealization>[];
-    final hasRealizations = isAltHeld && realizations.isNotEmpty;
 
     final String displayText;
     if (isAltHeld) {
@@ -649,58 +635,23 @@ class _PhonemeChip extends ConsumerWidget {
       displayText = romanized;
     }
 
-    // D-16: dense comma-without-space format in the inline suffix so chips
-    // stay narrow in 56×40 grid cells. The Tooltip fallback uses the
-    // readable D-19 spaced format.
-    final String suffixText = hasRealizations
-        ? '→[${realizations.map((r) => r.output).join(',')}]'
-        : '';
-    final String tooltipMessage = hasRealizations
-        ? '${_tooltip()}\n/${phoneme.symbol}/ → [${realizations.map((r) => r.output).join(', ')}]'
-        : _tooltip();
-
     return GestureDetector(
       onTap: onTap,
       child: Tooltip(
-        message: tooltipMessage,
+        message: _tooltip(),
         child: Container(
           margin: const EdgeInsets.all(2),
           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
           decoration: BoxDecoration(
-            color: colorScheme.primaryContainer,
+            color: theme.colorScheme.primaryContainer,
             borderRadius: BorderRadius.circular(4),
           ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                displayText,
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: colorScheme.onPrimaryContainer,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              if (hasRealizations) ...[
-                const SizedBox(width: 3),
-                // ConstrainedBox caps suffix width in dense grid cells;
-                // Tooltip provides the full-list fallback (Pitfall 5).
-                ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 60),
-                  child: Text(
-                    suffixText,
-                    key: const ValueKey('allophone-suffix'),
-                    overflow: TextOverflow.ellipsis,
-                    maxLines: 1,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      fontSize: 10,
-                      color: colorScheme.onPrimaryContainer
-                          .withValues(alpha: 0.65),
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ),
-              ],
-            ],
+          child: Text(
+            displayText,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.onPrimaryContainer,
+              fontWeight: FontWeight.bold,
+            ),
           ),
         ),
       ),
@@ -946,21 +897,3 @@ class _EmptyHint extends StatelessWidget {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Test-only helpers
-// ---------------------------------------------------------------------------
-
-/// Test-only access to the private [_PhonemeChip] widget.
-@visibleForTesting
-Widget buildPhonemeChipForTesting({
-  required Phoneme phoneme,
-  required bool isAltHeld,
-  VoidCallback? onTap,
-}) =>
-    _PhonemeChip(
-      phoneme: phoneme,
-      isAltHeld: isAltHeld,
-      onTap: onTap ?? _noopTap,
-    );
-
-void _noopTap() {}
