@@ -339,6 +339,33 @@ class PromotedDerivedForm {
   final String romanization;
 }
 
+/// Resolved display forms for a [Lexeme] row — uses the promoted derivation
+/// computation when the row is a rule-linked derivation, otherwise falls
+/// back to the stored fields. Callers that render a lexeme's rom/ipa
+/// should go through this helper so promoted rows display their derived
+/// form instead of the parent's placeholder IPA.
+///
+/// G-68 (wave 3a-bis, 2026-04-11): promoted rows store `ipa = parent.ipa`
+/// and `romanization = null` (D-58 "computed by default, stored if edited"),
+/// so every word list / detail widget that reads those fields directly
+/// ended up showing the parent's phonemes for the derived row. The
+/// [promotedDerivedFormProvider] already computes the correct values; this
+/// helper adapts it into the plain strings the display sites want.
+({String rom, String ipa}) resolveDisplayForms(
+  Lexeme lexeme,
+  PromotedDerivedForm? promoted,
+) {
+  if (promoted != null) {
+    return (rom: promoted.romanization, ipa: promoted.ipa);
+  }
+  return (
+    rom: (lexeme.romanization != null && lexeme.romanization!.isNotEmpty)
+        ? lexeme.romanization!
+        : lexeme.ipa,
+    ipa: lexeme.ipa,
+  );
+}
+
 /// Computes the rom + ipa for a promoted derived Lexeme at render time,
 /// by applying its rule to its parent's ipa. Reactive via Riverpod stream
 /// propagation — when the rule's DSL or the parent's ipa changes, this

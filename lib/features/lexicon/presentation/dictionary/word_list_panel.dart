@@ -399,13 +399,22 @@ class _WordListPanelState extends ConsumerState<WordListPanel> {
         // Violations for this specific lexeme (null if it's an exception).
         final lexemeViolation = violations[lexeme.id];
         final itemViolations = lexemeViolation?.violations ?? [];
+        // G-68 (wave 3a-bis): promoted derivations store `ipa = parent.ipa`
+        // as a placeholder and compute the real rom/ipa via
+        // `promotedDerivedFormProvider`. Resolve effective display values
+        // through the helper so the list shows the derived form, not the
+        // parent's phonemes.
+        final promoted = ref.watch(promotedDerivedFormProvider(lexeme.id));
+        final display = resolveDisplayForms(lexeme, promoted);
         // Manual IPA override flag: stored IPA diverges from what
         // deromanize(romanization) produces → render in override color.
-        final ipaOverridden = isIpaManuallyOverridden(
-          lexeme.ipa,
-          lexeme.romanization,
-          deromanize,
-        );
+        // Skip for promoted rows — their stored IPA is a placeholder.
+        final ipaOverridden = promoted == null &&
+            isIpaManuallyOverridden(
+              lexeme.ipa,
+              lexeme.romanization,
+              deromanize,
+            );
 
         // D-63 / G-16 (plan 04-14): rootOnlyViaDerivations lexemes render
         // muted (reduced opacity) but remain findable and clickable. The
@@ -442,10 +451,7 @@ class _WordListPanelState extends ConsumerState<WordListPanel> {
                           children: [
                             Expanded(
                               child: Text(
-                                (lexeme.romanization != null &&
-                                        lexeme.romanization!.isNotEmpty)
-                                    ? lexeme.romanization!
-                                    : lexeme.ipa,
+                                display.rom,
                                 style: theme.textTheme.bodyMedium?.copyWith(
                                   fontSize: 13,
                                   fontWeight: isSelected
@@ -501,7 +507,9 @@ class _WordListPanelState extends ConsumerState<WordListPanel> {
                                 alignment: PlaceholderAlignment.baseline,
                                 baseline: TextBaseline.alphabetic,
                                 child: ViolationText(
-                                  text: lexeme.ipa,
+                                  // G-68: use computed IPA for promoted
+                                  // rows, stored IPA otherwise.
+                                  text: display.ipa,
                                   violations: itemViolations,
                                   style:
                                       theme.textTheme.labelSmall?.copyWith(
@@ -643,11 +651,17 @@ class _WordListPanelState extends ConsumerState<WordListPanel> {
               : widget.selectedLexemeId == lexeme.id;
           final lexemeViolation = violations[lexeme.id];
           final itemViolations = lexemeViolation?.violations ?? [];
-          final ipaOverridden = isIpaManuallyOverridden(
-            lexeme.ipa,
-            lexeme.romanization,
-            deromanize,
-          );
+          // G-68 (wave 3a-bis): resolve display forms via the promoted
+          // provider so derived rows render their computed rom/ipa
+          // instead of the parent placeholder stored at promotion time.
+          final promoted = ref.watch(promotedDerivedFormProvider(lexeme.id));
+          final display = resolveDisplayForms(lexeme, promoted);
+          final ipaOverridden = promoted == null &&
+              isIpaManuallyOverridden(
+                lexeme.ipa,
+                lexeme.romanization,
+                deromanize,
+              );
           return DataRow(
             selected: isSelected,
             onSelectChanged: (_) => widget.isSelectionMode
@@ -656,7 +670,7 @@ class _WordListPanelState extends ConsumerState<WordListPanel> {
             cells: [
               DataCell(
                 Text(
-                  lexeme.romanization ?? lexeme.ipa,
+                  display.rom,
                   style: theme.textTheme.bodySmall?.copyWith(
                     fontSize: 13,
                     color: ipaOverridden ? ipaOverrideColor : null,
@@ -681,7 +695,7 @@ class _WordListPanelState extends ConsumerState<WordListPanel> {
                         alignment: PlaceholderAlignment.baseline,
                         baseline: TextBaseline.alphabetic,
                         child: ViolationText(
-                          text: lexeme.ipa,
+                          text: display.ipa,
                           violations: itemViolations,
                           style: theme.textTheme.bodySmall?.copyWith(
                             fontSize: 12,

@@ -323,21 +323,31 @@ class _WordDetailPanelState extends ConsumerState<WordDetailPanel> {
     // Build rule name map for exception display
     final ruleNameMap = {for (final r in rules) r.id: r.name};
 
-    // Phonotactic validation for this word's IPA
+    // G-68 (wave 3a-bis): for promoted derivations the stored ipa is a
+    // placeholder equal to the parent's ipa — resolve the real displayed
+    // rom/ipa via `promotedDerivedFormProvider`. All header widgets and
+    // phonotactic validation below go through `display.ipa` / `display.rom`.
+    final promoted = ref.watch(promotedDerivedFormProvider(lexeme.id));
+    final display = resolveDisplayForms(lexeme, promoted);
+
+    // Phonotactic validation against the displayed form (derived for promoted
+    // rows, stored otherwise) so violations match what the user actually sees.
     final validate = ref.watch(phonotacticValidatorProvider);
-    final validation = validate(word: lexeme.ipa);
+    final validation = validate(word: display.ipa);
     final hasViolations = !validation.isValid;
 
     // Visual flag: IPA is a manual override if it diverges from what
     // deromanize(romanization) would produce. When true, the IPA is
     // rendered in a distinct color so the user can spot irregular
-    // pronunciations at a glance.
+    // pronunciations at a glance. Promoted rows never trigger this — their
+    // stored fields are placeholders, not user overrides.
     final deromanize = ref.watch(deromanizeProvider);
-    final ipaOverridden = isIpaManuallyOverridden(
-      lexeme.ipa,
-      lexeme.romanization,
-      deromanize,
-    );
+    final ipaOverridden = promoted == null &&
+        isIpaManuallyOverridden(
+          lexeme.ipa,
+          lexeme.romanization,
+          deromanize,
+        );
     final ipaOverrideColor = Colors.orange.shade300;
 
     return SingleChildScrollView(
@@ -354,11 +364,13 @@ class _WordDetailPanelState extends ConsumerState<WordDetailPanel> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     if (romanizationEnabled &&
-                        lexeme.romanization != null &&
-                        lexeme.romanization!.isNotEmpty) ...[
-                      // Romanization as primary heading
+                        (promoted != null ||
+                            (lexeme.romanization != null &&
+                                lexeme.romanization!.isNotEmpty))) ...[
+                      // Romanization as primary heading (G-68: derived form
+                      // for promoted rows, stored rom otherwise)
                       Text(
-                        lexeme.romanization!,
+                        display.rom,
                         style: theme.textTheme.bodyMedium?.copyWith(
                           fontSize: 13,
                           fontWeight: FontWeight.w600,
@@ -370,7 +382,7 @@ class _WordDetailPanelState extends ConsumerState<WordDetailPanel> {
                       // can spot irregular pronunciations at a glance.
                       if (lexeme.isPhonologicalException)
                         Text(
-                          lexeme.ipa,
+                          display.ipa,
                           style: theme.textTheme.labelSmall?.copyWith(
                             fontSize: 12,
                             color: ipaOverridden
@@ -383,7 +395,7 @@ class _WordDetailPanelState extends ConsumerState<WordDetailPanel> {
                         )
                       else
                         ViolationText(
-                          text: lexeme.ipa,
+                          text: display.ipa,
                           violations: validation.violations,
                           style: theme.textTheme.labelSmall?.copyWith(
                             fontSize: 12,
@@ -399,7 +411,7 @@ class _WordDetailPanelState extends ConsumerState<WordDetailPanel> {
                       // IPA as primary heading with violation highlighting (unless exception)
                       if (lexeme.isPhonologicalException)
                         Text(
-                          lexeme.ipa,
+                          display.ipa,
                           style: theme.textTheme.bodyMedium?.copyWith(
                             fontSize: 13,
                             fontWeight: FontWeight.w600,
@@ -411,7 +423,7 @@ class _WordDetailPanelState extends ConsumerState<WordDetailPanel> {
                         )
                       else
                         ViolationText(
-                          text: lexeme.ipa,
+                          text: display.ipa,
                           violations: validation.violations,
                           style: theme.textTheme.bodyMedium?.copyWith(
                             fontSize: 13,
