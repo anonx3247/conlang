@@ -9,7 +9,7 @@ import '../../data/lexeme_providers.dart';
 /// Left panel of the Dictionary master-detail layout.
 ///
 /// Shows a scrollable list of root lexemes with:
-///   - "Add root" action button
+///   - "New word" action button
 ///   - Search bar (filters via [lexemeSearchQueryProvider])
 ///   - POS filter chips (filters via [lexemePosFilterProvider])
 ///   - List/table view toggle
@@ -105,13 +105,13 @@ class _WordListPanelState extends ConsumerState<WordListPanel> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // ---- Add root button -------------------------------------------
+          // ---- New word button -------------------------------------------
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
             child: FilledButton.icon(
               onPressed: widget.onAddRoot,
               icon: const Icon(Icons.add, size: 18),
-              label: const Text('Add root'),
+              label: const Text('New word'),
             ),
           ),
 
@@ -349,7 +349,7 @@ class _WordListPanelState extends ConsumerState<WordListPanel> {
         child: Text(
           query.isNotEmpty
               ? 'No words match "$query"'
-              : 'No words yet. Click "Add root" to add your first word.',
+              : 'No words yet. Click "New word" to add your first word.',
           textAlign: TextAlign.center,
           style: theme.textTheme.bodyMedium?.copyWith(
             fontSize: 13,

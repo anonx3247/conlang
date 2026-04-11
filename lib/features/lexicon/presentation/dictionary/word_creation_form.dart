@@ -10,7 +10,7 @@ import 'inspiration_panel.dart';
 
 import '../../../phonology/presentation/shared/ipa_keyboard/ipa_text_field.dart';
 
-/// Inline form for adding a new root word to the lexicon.
+/// Inline form for adding a new word to the lexicon.
 ///
 /// Layout: Row with form on the left (~60%) and [InspirationPanel] on the
 /// right (~40%). The right panel lets users click candidate words to fill
@@ -160,7 +160,7 @@ class _WordCreationFormState extends ConsumerState<WordCreationForm> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Add root word',
+                    'New word',
                     style: theme.textTheme.bodyMedium?.copyWith(
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
@@ -277,7 +277,7 @@ class _WordCreationFormState extends ConsumerState<WordCreationForm> {
                                 child: CircularProgressIndicator(
                                     strokeWidth: 2),
                               )
-                            : const Text('Add root'),
+                            : const Text('New word'),
                       ),
                       const SizedBox(width: 8),
                       TextButton(

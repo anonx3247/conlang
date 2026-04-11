@@ -294,7 +294,7 @@ class _DictionaryPageState extends ConsumerState<DictionaryPage> {
             ),
             const SizedBox(height: 8),
             Text(
-              'Start building your vocabulary. Click "Add root" to add your first word.',
+              'Start building your vocabulary. Click "New word" to add your first word.',
               textAlign: TextAlign.center,
               style: theme.textTheme.bodyMedium?.copyWith(
                 fontSize: 13,
