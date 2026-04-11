@@ -391,8 +391,17 @@ final computedInflectedParadigmProvider =
   final markersAsync = ref.watch(markersForPosProvider(pos.id));
   final markers = markersAsync.asData?.value ?? const <MarkerDecl>[];
 
+  // G-68 (wave 3a-bis): for a promoted derivation, `lexeme.ipa` is a
+  // placeholder equal to `parent.ipa`. Inflecting that placeholder
+  // generates the wrong paradigm — the user saw the root word's
+  // inflections where they expected the derived word's. Resolve the
+  // effective root through `promotedDerivedFormProvider` so the
+  // paradigm engine starts from the computed derived form instead.
+  final promoted = ref.watch(promotedDerivedFormProvider(lexemeId));
+  final root = promoted?.ipa ?? lexeme.ipa;
+
   return generateParadigm(
-    root: lexeme.ipa,
+    root: root,
     dimensions: dims,
     rules: rules,
     inventory: inventory,
