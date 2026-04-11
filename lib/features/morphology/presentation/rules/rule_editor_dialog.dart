@@ -171,6 +171,7 @@ class RuleEditorDialog extends ConsumerStatefulWidget {
     super.key,
     required this.kind,
     this.existing,
+    this.preFilledBindings,
   });
 
   /// Whether this dialog edits an inflectional or derivational rule.
@@ -179,6 +180,14 @@ class RuleEditorDialog extends ConsumerStatefulWidget {
 
   /// Drift data row. When non-null, the dialog opens in edit mode.
   final db.MorphologicalRule? existing;
+
+  /// D-51: When provided and [existing] is null and [kind] is inflectional,
+  /// pre-fills the dimension chip picker with these (dimId -> levelId)
+  /// bindings. Used when the user clicks an empty paradigm cell in the
+  /// Grammar > Inflections sub-tab (D-52 ruleEditor click mode) so the
+  /// new-rule dialog opens with the clicked cell's features already bound.
+  /// Ignored for derivational kind and when editing an existing rule.
+  final Map<int, int>? preFilledBindings;
 
   @override
   ConsumerState<RuleEditorDialog> createState() => _RuleEditorDialogState();
@@ -237,6 +246,12 @@ class _RuleEditorDialogState extends ConsumerState<RuleEditorDialog> {
     } else {
       // Default: one branch with one suffix op.
       _branches.add(_BranchState());
+      // D-51: seed feature bindings from caller-provided pre-fill
+      // (inflectional only — derivational rules have no dim bindings).
+      if (widget.kind == RuleKind.inflectional &&
+          widget.preFilledBindings != null) {
+        _featureBindings.addAll(widget.preFilledBindings!);
+      }
     }
     // Tiebreak is recomputed inside build() from the live Riverpod stream,
     // so initState doesn't need to schedule a post-frame callback.
