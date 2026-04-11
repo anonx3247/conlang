@@ -1,10 +1,72 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../db/app_database.dart';
+import '../../../grammar/data/grammar_providers.dart';
 import '../../../grammar/domain/rule_kind.dart';
+import '../../data/morphology_dao.dart';
 import '../../data/morphology_providers.dart';
 import 'morphology_preview_panel.dart';
 import 'rule_editor_dialog.dart';
+
+/// D-56 grouping — single-POS groups first (alphabetic by POS name), then
+/// multi-POS groups (each set forms one group named after the set,
+/// alphabetized within the tier), then an 'Unattached' group for rules with
+/// no junction rows.
+///
+/// Exported for testability. Deterministic ordering is locked in
+/// `rules_page_pos_grouping_test.dart`.
+typedef InflectionalRuleGroup = ({String header, List<MorphologicalRule> rules});
+
+List<InflectionalRuleGroup> groupInflectionalRulesByPosSet({
+  required List<MorphologicalRule> rules,
+  required Map<int, Set<int>> posSetByRuleId,
+  required List<PartsOfSpeechData> posList,
+}) {
+  final posNameById = {for (final p in posList) p.id: p.name};
+
+  String headerFor(Set<int> posIds) {
+    if (posIds.isEmpty) return 'Unattached';
+    final names = posIds.map((id) => posNameById[id] ?? 'POS#$id').toList()
+      ..sort();
+    return names.join(' + ');
+  }
+
+  // Group rules by a canonical frozen-set key so rules sharing the same POS
+  // set land in the same bucket.
+  final byKey = <String, ({Set<int> posIds, List<MorphologicalRule> rules})>{};
+  for (final rule in rules) {
+    final posIds = posSetByRuleId[rule.id] ?? const <int>{};
+    final key = (posIds.toList()..sort()).join(',');
+    byKey
+        .putIfAbsent(
+          key,
+          () => (posIds: posIds, rules: <MorphologicalRule>[]),
+        )
+        .rules
+        .add(rule);
+  }
+
+  final singleTier = <InflectionalRuleGroup>[];
+  final multiTier = <InflectionalRuleGroup>[];
+  final unattachedTier = <InflectionalRuleGroup>[];
+  for (final group in byKey.values) {
+    final header = headerFor(group.posIds);
+    final entry = (header: header, rules: group.rules);
+    if (group.posIds.isEmpty) {
+      unattachedTier.add(entry);
+    } else if (group.posIds.length == 1) {
+      singleTier.add(entry);
+    } else {
+      multiTier.add(entry);
+    }
+  }
+
+  singleTier.sort((a, b) => a.header.compareTo(b.header));
+  multiTier.sort((a, b) => a.header.compareTo(b.header));
+
+  return [...singleTier, ...multiTier, ...unattachedTier];
+}
 
 /// Main rules list page for morphological rules.
 ///
@@ -96,6 +158,20 @@ class _RulesPageState extends ConsumerState<RulesPage> {
               loading: () => const Center(child: CircularProgressIndicator()),
               error: (e, _) => Center(child: Text('Error: $e')),
               data: (rules) {
+                // Plan 04-11 D-56: in inflectional mode, render the list
+                // grouped by POS set (junction-driven) instead of a flat
+                // filtered list.
+                if (widget.kind == RuleKind.inflectional) {
+                  return _buildInflectionalGroupedList(
+                    context: context,
+                    rules: rules,
+                    posList: posList,
+                    dao: dao,
+                    theme: theme,
+                    cs: cs,
+                  );
+                }
+
                 // Apply POS filter using posIds text column
                 final filtered = _selectedPosId == null
                     ? rules
@@ -355,6 +431,135 @@ class _RulesPageState extends ConsumerState<RulesPage> {
               label: const Text('Add Rule'),
             )
           : null,
+    );
+  }
+
+  /// Plan 04-11 D-56 — render the inflectional rules list grouped by POS
+  /// set from the junction table (`allRulePosSetsProvider`). Single-POS
+  /// groups first (alphabetic by POS name), then multi-POS groups, then an
+  /// 'Unattached' group for rules whose junction is empty.
+  Widget _buildInflectionalGroupedList({
+    required BuildContext context,
+    required List<MorphologicalRule> rules,
+    required List<PartsOfSpeechData> posList,
+    required MorphologyDao dao,
+    required ThemeData theme,
+    required ColorScheme cs,
+  }) {
+    final posSetsAsync = ref.watch(allRulePosSetsProvider);
+    final posSetByRuleId =
+        posSetsAsync.asData?.value ?? const <int, Set<int>>{};
+
+    final groups = groupInflectionalRulesByPosSet(
+      rules: rules,
+      posSetByRuleId: posSetByRuleId,
+      posList: posList,
+    );
+
+    if (rules.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.auto_fix_high_outlined,
+              size: 64,
+              color: cs.onSurface.withValues(alpha: 0.2),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'No inflectional rules yet.',
+              style: theme.textTheme.titleMedium?.copyWith(
+                color: cs.onSurface.withValues(alpha: 0.45),
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'Add one to get started.',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: cs.onSurface.withValues(alpha: 0.3),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // Flatten groups into a list of items (headers + rule cards). Each group
+    // renders a small-caps header row followed by its rule cards.
+    final items = <Widget>[];
+    for (final group in groups) {
+      items.add(Padding(
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
+        child: Text(
+          group.header.toUpperCase(),
+          style: theme.textTheme.labelSmall?.copyWith(
+            color: cs.onSurface.withValues(alpha: 0.55),
+            letterSpacing: 1.1,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ));
+      for (final rule in group.rules) {
+        items.add(Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 3),
+          child: Card(
+            margin: EdgeInsets.zero,
+            child: Padding(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      rule.name,
+                      style: theme.textTheme.bodyLarge?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  Switch(
+                    value: rule.isActive,
+                    onChanged: (value) async {
+                      await dao.updateRule(rule.copyWith(isActive: value));
+                    },
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.edit_outlined),
+                    tooltip: 'Edit rule',
+                    onPressed: () async {
+                      await showDialog<void>(
+                        context: context,
+                        builder: (_) => RuleEditorDialog(
+                          kind: widget.kind ??
+                              RuleKind.fromDbString(rule.kind),
+                          existing: rule,
+                        ),
+                      );
+                    },
+                  ),
+                  IconButton(
+                    icon: Icon(Icons.delete_outline, color: cs.error),
+                    tooltip: 'Delete rule',
+                    onPressed: () async {
+                      final confirmed =
+                          await _confirmDelete(context, rule.name);
+                      if (confirmed && context.mounted) {
+                        await dao.deleteRule(rule.id);
+                      }
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ));
+      }
+    }
+
+    return ListView(
+      padding: const EdgeInsets.only(bottom: 16),
+      children: items,
     );
   }
 
