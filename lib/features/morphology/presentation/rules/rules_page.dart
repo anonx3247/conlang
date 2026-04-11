@@ -80,12 +80,22 @@ List<InflectionalRuleGroup> groupInflectionalRulesByPosSet({
 /// rules inherit that kind (via [RuleEditorDialog]'s required `kind`
 /// parameter). When [kind] is null the page shows all rules and defaults
 /// new rules to [RuleKind.derivational] for backward-compat.
+///
+/// Plan 04-13 D-50: [posScopeFilter] restricts the inflectional-mode
+/// grouped list to groups whose POS set contains the scope POS. Used by
+/// [InflectionsPage]'s bottom pane so only rules attached to the
+/// currently-selected POS (including any multi-POS rules that happen to
+/// include it) are visible. Ignored in derivational mode.
 class RulesPage extends ConsumerStatefulWidget {
-  const RulesPage({super.key, this.kind});
+  const RulesPage({super.key, this.kind, this.posScopeFilter});
 
   /// When non-null, scopes the page to a single rule kind. Backed by
   /// [rulesByKindProvider] instead of [morphologicalRuleListProvider].
   final RuleKind? kind;
+
+  /// D-50 / plan 04-13 — when non-null and [kind] is inflectional, only
+  /// groups whose POS set contains [posScopeFilter] are rendered.
+  final int? posScopeFilter;
 
   @override
   ConsumerState<RulesPage> createState() => _RulesPageState();
@@ -450,11 +460,26 @@ class _RulesPageState extends ConsumerState<RulesPage> {
     final posSetByRuleId =
         posSetsAsync.asData?.value ?? const <int, Set<int>>{};
 
-    final groups = groupInflectionalRulesByPosSet(
+    final allGroups = groupInflectionalRulesByPosSet(
       rules: rules,
       posSetByRuleId: posSetByRuleId,
       posList: posList,
     );
+
+    // D-50 / plan 04-13: when a posScopeFilter is set, keep only groups
+    // whose POS set contains the scope POS. Looks up each rule's junction
+    // set via [posSetByRuleId] — a group matches if ANY of its rules
+    // include the scope POS in its set. This means a multi-POS rule
+    // {Noun, Adjective} is kept when the scope is Noun.
+    final scope = widget.posScopeFilter;
+    final groups = scope == null
+        ? allGroups
+        : allGroups.where((g) {
+            return g.rules.any((r) {
+              final set = posSetByRuleId[r.id] ?? const <int>{};
+              return set.contains(scope);
+            });
+          }).toList();
 
     if (rules.isEmpty) {
       return Center(

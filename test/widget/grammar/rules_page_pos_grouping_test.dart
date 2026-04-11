@@ -259,6 +259,40 @@ void main() {
     );
 
     testWidgets(
+      'Test 4b — posScopeFilter restricts groups to ones containing the scope POS (D-50)',
+      (tester) async {
+        // Three rules: Noun-only, {Noun, Adjective}, Verb-only.
+        // Scoping to Noun should show Noun + "Adjective + Noun" groups
+        // and hide the Verb group entirely.
+        await insertInflectional(name: 'Plural', posIds: {nounId});
+        await insertInflectional(
+            name: 'Agreement', posIds: {nounId, adjId});
+        await insertInflectional(name: 'Past', posIds: {verbId});
+
+        await tester.pumpWidget(
+          buildApp(RulesPage(
+            kind: RuleKind.inflectional,
+            posScopeFilter: nounId,
+          )),
+        );
+        await settle(tester);
+
+        // Noun-only group + multi-POS {Adjective, Noun} group are visible.
+        expect(find.text('NOUN'), findsOneWidget);
+        expect(find.text('ADJECTIVE + NOUN'), findsOneWidget);
+        // The Verb-only group is filtered out.
+        expect(find.text('VERB'), findsNothing);
+        // Plural (Noun-only) and Agreement (multi-POS) rules are visible.
+        expect(find.text('Plural'), findsOneWidget);
+        expect(find.text('Agreement'), findsOneWidget);
+        // Past (Verb-only) is filtered out.
+        expect(find.text('Past'), findsNothing);
+
+        await teardownWidget(tester);
+      },
+    );
+
+    testWidgets(
       'Test 5 — derivational mode uses the existing flat list (unchanged)',
       (tester) async {
         // Insert a derivational rule with legacy posIds CSV so it's still
