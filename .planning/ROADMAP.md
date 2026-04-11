@@ -138,14 +138,16 @@ Plans:
   5. User can record language-level typology choices (alignment, word order, modality expression strategy)
   6. The standalone Morphology tab is removed; its rule editor UI is reused within Grammar (inflectional) and Lexicon (derivational)
   7. Existing morphology rules are migrated to lexicon derivational rules; derivational rules appear in a "Derivations" tab within Lexicon with romanization for all derived forms
-**Plans:** 5 plans in 5 waves
+**Plans:** 7 plans in 7 waves (split during plan-check revision — the original monolithic 04-04 Grammar UI plan was subdivided into 04-04/04-05/04-06 for scope; original 04-05 Lexicon Derivations renumbered to 04-07)
 
 Plans:
 - [ ] 04-01-PLAN.md — Schema v8 migration: Dimensions + ParadigmCellOverrides tables, kind/featureBindings/input/outputPosId columns, file-level v7 backup, FeatureBindings TypeConverter
 - [ ] 04-02-PLAN.md — Grammar data layer: dimension template catalog (20+), GrammarDao for Dimensions CRUD, kind-aware MorphologyDao extensions, posForLexeme resolver
 - [ ] 04-03-PLAN.md — Paradigm engine: feature-consumption algorithm (D-10/D-11), tiebreak detector, typology + paradigm-axes providers, computedInflectedParadigmProvider
-- [ ] 04-04-PLAN.md — Grammar UI: router surgery (delete Morphology tab), Grammar shell with 4 sub-tabs, POS+Dimensions page, kind-aware RuleEditorDialog with chip picker + live tiebreak banner, Paradigm Viewer + cell override + coverage matrix, Typology form
-- [ ] 04-05-PLAN.md — Lexicon Derivations: 4th sidebar tab, DerivationsPage reusing RulesPage(kind=derivational), computedDerivedFormsProvider kind filter (pitfall #9), word detail paradigm embed
+- [ ] 04-04-PLAN.md — Grammar shell + POS page + Typology: router surgery (delete Morphology tab), Grammar shell with 4 sub-tabs, POS+Dimensions master-detail page with template picker, migration banner, Typology form
+- [ ] 04-05-PLAN.md — Inflectional rule editor: kind-aware RuleEditorDialog with FilterChip dimension picker, mandatory live tiebreak banner integration test, InflectionalRulesPage filter
+- [ ] 04-06-PLAN.md — Paradigm Viewer: ParadigmTableWidget with D-25 tabs/dropdown affordance for 3+ dimension POS, per-cell ViolationText wiring, amber override rendering, CellOverrideDialog, CoverageMatrixPanel, ParadigmCellOverrideDao, AxisConfigBar
+- [ ] 04-07-PLAN.md — Lexicon Derivations: 4th sidebar tab, DerivationsPage reusing RulesPage(kind=derivational), computedDerivedFormsProvider kind filter (pitfall #9), word detail paradigm embed
 
 ### Phase 5: Culture Wiki
 **Goal**: Users can document the world and culture behind their conlang in a structured wiki with Markdown formatting and navigable internal links between pages
