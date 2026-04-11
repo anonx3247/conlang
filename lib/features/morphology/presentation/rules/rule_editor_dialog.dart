@@ -10,6 +10,7 @@ import '../../../grammar/domain/inflectional_rule.dart';
 import '../../../grammar/domain/rule_kind.dart';
 import '../../../grammar/domain/tiebreak_detector.dart';
 import '../../../phonology/presentation/shared/ipa_keyboard/ipa_text_field.dart';
+import '../../application/derivation_promotion_service.dart';
 import '../../data/morphology_providers.dart';
 import '../../domain/morphology_dsl.dart';
 import 'preview_panel.dart';
@@ -234,6 +235,11 @@ class _RuleEditorDialogState extends ConsumerState<RuleEditorDialog> {
   /// Derivational mode — target POS (defaults to [_inputPosId] on change).
   int? _outputPosId;
 
+  /// Derivational mode — D-59 auto_apply flag. When true, every matching-POS
+  /// word is auto-promoted into a Lexeme row with a templated gloss on save.
+  /// Ignored in inflectional mode (the column defaults to false there).
+  bool _autoApply = false;
+
   /// Latest tiebreak computation result for inflectional mode. Null when
   /// there's no conflict.
   TiebreakConflict? _tiebreakConflict;
@@ -283,6 +289,9 @@ class _RuleEditorDialogState extends ConsumerState<RuleEditorDialog> {
       _inputPosId =
           row.inputPosId ?? (bindings.pos.isNotEmpty ? bindings.pos.first : null);
       _outputPosId = row.outputPosId ?? _inputPosId;
+      // D-59 (plan 04-14): hydrate the auto_apply flag on edit so the
+      // checkbox reflects the persisted value when the dialog reopens.
+      _autoApply = row.autoApply;
     }
 
     // Load multi-POS selection from posIds text column (legacy fallback —
@@ -515,6 +524,11 @@ class _RuleEditorDialogState extends ConsumerState<RuleEditorDialog> {
           outputPosId: widget.kind == RuleKind.derivational
               ? Value<int?>(_outputPosId)
               : const Value<int?>(null),
+          // D-59 (plan 04-14): persist the derivational auto_apply flag.
+          // Inflectional rules always write false (the column is unused
+          // for that kind).
+          autoApply:
+              widget.kind == RuleKind.derivational ? _autoApply : false,
         ));
       } else {
         final ordering = await dao.nextOrdering();
@@ -527,6 +541,12 @@ class _RuleEditorDialogState extends ConsumerState<RuleEditorDialog> {
             featureBindings: Value(featureBindings),
             inputPosId: companionInputPos,
             outputPosId: companionOutputPos,
+            // D-59 (plan 04-14): new derivational rules carry the flag; the
+            // column defaults to false so the inflectional branch is fine
+            // with `absent`, but we write an explicit false for clarity.
+            autoApply: Value(
+              widget.kind == RuleKind.derivational ? _autoApply : false,
+            ),
           ),
           widget.kind,
         );
@@ -540,6 +560,15 @@ class _RuleEditorDialogState extends ConsumerState<RuleEditorDialog> {
           ruleId: ruleIdForJunction,
           posIds: Set<int>.from(_inflectionalPosSet),
         );
+      }
+
+      // D-59 (plan 04-14): when the user turned auto_apply ON for a
+      // derivational rule, immediately reconcile so every matching-POS
+      // word is promoted NOW instead of waiting for the next app start.
+      // The service is idempotent — re-running on an already-reconciled
+      // rule is a no-op.
+      if (widget.kind == RuleKind.derivational && _autoApply) {
+        await ref.read(derivationPromotionServiceProvider).reconcile();
       }
 
       if (mounted) Navigator.of(context).pop();
@@ -882,6 +911,38 @@ class _RuleEditorDialogState extends ConsumerState<RuleEditorDialog> {
           setState(() => _outputPosId = v);
         },
       ),
+      // D-59 / G-18 (plan 04-14): auto_apply checkbox + templated-gloss
+      // preview. Derivational-only — the column defaults to false for
+      // inflectional rules and the checkbox isn't rendered there.
+      const SizedBox(height: 12),
+      CheckboxListTile(
+        value: _autoApply,
+        onChanged: (v) => setState(() => _autoApply = v ?? false),
+        title: const Text('Auto-apply to all matching words'),
+        subtitle: const Text(
+          'Every matching-POS word gets a new derived lexeme automatically '
+          'with a templated gloss',
+        ),
+        controlAffinity: ListTileControlAffinity.leading,
+        contentPadding: EdgeInsets.zero,
+        dense: true,
+      ),
+      if (_autoApply)
+        Padding(
+          padding: const EdgeInsets.only(left: 48, top: 2),
+          child: Text(
+            // D-59 exact template: "{parent meaning} ({rule.name})" — the
+            // kama/Actor example from 04-CONTEXT-GAPS renders as
+            // "to run (Actor)". Falls back to "rule name" placeholder when
+            // the name field is empty.
+            'Template: "parent meaning '
+            '(${_nameCtrl.text.isEmpty ? 'rule name' : _nameCtrl.text})"',
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+              fontStyle: FontStyle.italic,
+            ),
+          ),
+        ),
     ];
   }
 
