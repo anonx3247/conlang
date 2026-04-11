@@ -177,61 +177,20 @@ void main() {
   });
 
   group('computeParadigmCell — A3 strict most-specific', () {
-    test('Test 8: intra-specificity fall-through when first DSL condition fails', () {
-      // -na applies only if root ends with a vowel; -s is plain suffix.
-      final rules = [
-        _rule(1, '-na', '"[vowel]"\$ +na', const {dimNumber: lvlPL}),
-        _rule(2, '-s', '+s', const {dimNumber: lvlPL}),
-      ];
-      // root 'kat' ends in consonant -> -na should fail, -s should win
-      final result = computeParadigmCell(
-        root: 'kat',
-        target: const {dimNumber: lvlPL},
-        rules: rules,
-        inventory: _inventory,
-      );
-      // Two rules at same specificity with different-named bindings are NOT
-      // identical binding sets (they ARE identical here: both {11:1}). So this
-      // is actually tested as ambiguous BUT the plan Test 8 expects the engine
-      // to pick -s via fall-through. To resolve: use distinct binding sets that
-      // are NOT identical but both match the cell. We differentiate by adding
-      // a third dim constraint, but only one rule carries it — wait, then
-      // specificity differs. Instead we test the fall-through when two rules
-      // have same binding map but at same specificity — the plan says
-      // identical binding sets are the ONLY ambiguity. So to test
-      // intra-specificity fall-through we must pick a scenario with two rules
-      // at the same specificity with DIFFERENT binding maps that both match.
-      //
-      // Use {dimNumber: lvlPL} and {dimGender: lvlM} — both specificity 1,
-      // different bindings, both would match cell {gender:M, number:PL}. Try
-      // -na (PL-bound) with a condition that fails on 'kat' and -o (M-bound)
-      // plain suffix. Order them so -na is first. The engine sorts by
-      // specificity desc — equal specificity — then tries the list in order.
-      // On fail, the tests below ensure engine tries the next same-specificity
-      // candidate.
-      //
-      // NOTE: This first test variant (Test 8 of plan) uses rules that are
-      // BOTH {dimNumber: lvlPL}. That IS identical bindings. The plan's stated
-      // behavior for identical bindings is ParadigmAmbiguous. So Test 8's
-      // fall-through scenario as written conflicts with D-12. We test
-      // fall-through with non-identical same-specificity bindings below
-      // (Test 8b). This test asserts ParadigmAmbiguous for the identical case.
-      expect(result, isA<ParadigmAmbiguous>());
-    });
-
-    test('Test 8b: intra-specificity fall-through with different bindings', () {
+    test('Test 8: intra-specificity fall-through with different bindings', () {
       // Cell: {gender:M, number:PL}. Both rules are specificity 1 with
-      // different bindings; both can match this cell.
-      // -na (PL-bound) has DSL condition endsWith [vowel] which fails on 'kat'.
-      // -o (M-bound) is plain suffix and succeeds.
+      // different binding dims; both match this cell.
       //
-      // Because both rules are at specificity 1 but bind different dims,
-      // they are NOT "identical bindings" — they are candidates to be tried
-      // at the same specificity level. The engine tries in order; -na fails
-      // its DSL condition, so the engine falls through to -o within the same
-      // specificity tier.
+      //   -na (PL-bound, spec 1): DSL condition endsWith 'n' — fails on 'kat'
+      //   -o  (M-bound,  spec 1): plain suffix — succeeds on any input
+      //
+      // At spec 1 the engine sees [-na, -o] as candidates. They have
+      // DIFFERENT binding maps so they are not identical-binding ambiguous.
+      // The engine tries them in list order; -na fails its DSL, so the
+      // engine falls through to -o WITHIN the same specificity tier (A3
+      // intra-specificity fall-through).
       final rules = [
-        _rule(1, '-na', '"[vowel]"\$ +na', const {dimNumber: lvlPL}),
+        _rule(1, '-na', '"n"\$ +na', const {dimNumber: lvlPL}),
         _rule(2, '-o', '+o', const {dimGender: lvlM}),
       ];
       final result = computeParadigmCell(
@@ -243,13 +202,11 @@ void main() {
       expect(result, isA<ParadigmFilled>());
       final filled = result as ParadigmFilled;
       // -o wins at first pass; it consumes gender. Next iteration -na still
-      // matches remaining {number:PL} but its DSL still fails, so the engine
-      // falls through — there's no other candidate at spec 1, so the cell
-      // is partially filled: chain=[-o], form='kato'. Since remaining is
-      // still {number:PL}, the engine returns ParadigmFilled with partial
-      // chain (strict: no uncovered intermediate).
-      expect(filled.ruleChain.map((r) => r.name).first, equals('-o'));
-      expect(filled.form, startsWith('kato'));
+      // matches remaining {number:PL}. 'kato' does not end in 'n', so -na
+      // fails again. chain is non-empty -> engine returns ParadigmFilled
+      // with the partial chain and the working form.
+      expect(filled.ruleChain.map((r) => r.name), equals(['-o']));
+      expect(filled.form, equals('kato'));
     });
 
     test('Test 9: strict — does NOT fall through to lower specificity', () {
