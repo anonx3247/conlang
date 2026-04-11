@@ -10,7 +10,7 @@
 
 Plan 04-15 establishes a single, consistent notation contract across every morphology / phonology surface so that user-facing DSL input is always rom-when-enabled (phonemic-when-disabled), while the single source of truth in storage is always the phonemic form. The immediate motivating bug is G-68 (user wrote `+ci` expecting rom interpretation, engine read it as IPA literal and silently failed — same root cause as the G-66 `AblautOp from='V'` class), but the plan is an architectural cleanup, not a one-line fix.
 
-**In scope:** Inflectional + derivational rule DSL input/storage/eval contract, romanization-mapping bijection enforcement, migration of existing `MorphologicalRules.source` values, full render-path audit of morphology + paradigm + inspiration + word-generator + sound-rule surfaces to confirm `rom → phonemic storage → rom display` flow, removal of the static Morphology Preview pane from both Inflections and Derivations pages.
+**In scope:** Inflectional + derivational rule DSL input/storage/eval contract, romanization-mapping bijection enforcement, migration of existing `MorphologicalRules.source` values, full render-path audit of morphology + paradigm + inspiration + word-generator + sound-rule surfaces to confirm `rom → phonemic storage → rom display` flow, removal of the static Morphology Preview pane from both Inflections and Derivations pages, **and `.` as a user-facing glyph-separator disambiguator in rom input (D-78)** that relaxes strict bijection to "representable via smart romanize()" so users can enter ambiguous digraph cases like `t + h + th` by typing `at.ha` for `/atha/` vs `atha` for `/aθa/`.
 
 **Out of scope (deferred to other plans):**
 - Rules list UX changes (→ 04-16 (a))
@@ -107,6 +107,46 @@ Audit deliverable: a per-surface table in `04-15-VERIFICATION.md` marking each s
 - **Keep** `lib/features/morphology/presentation/rules/preview_panel.dart` — this is the live preview panel inside `rule_editor_dialog.dart:1098`, which is the only preview surface the user wants retained.
 - Any tests referencing `MorphologyPreviewPanel` are updated or deleted.
 - User context: "I said earlier and it wasn't done: remove the 'Morphology Preview' from both the inflectional rules and derivational rules. Only the live preview during the popup is necessary."
+
+### D-78: Dot-separator disambiguator for rom input (new decision, 2026-04-11)
+
+**Motivation:** Strict bijection (D-72) rejects mapping sets like `{t→t, h→h, θ→th}` because `atha` (the rom of `/atha/`) ambiguously re-parses as `/aθa/` under longest-match deromanize. Rejecting these sets is too restrictive — `(t, h, th)` is a natural orthography for many conlangs, and the ambiguity is trivially resolvable if the user has a way to force a glyph boundary.
+
+**Decision:** Add `.` as a first-class **rom-side glyph separator**. It is consumed by `deromanize()` (produces nothing in the phonemic output), inserted automatically by a new boundary-aware `romanize()` whenever naïve concatenation of two adjacent rom tokens would re-parse ambiguously, and treated by the bijection validator as a legal escape hatch that makes previously-rejected mapping sets valid.
+
+**Semantics:**
+- `deromanize("at.ha")` → `/atha/` (dot consumed, no output char, resets longest-match scan)
+- `deromanize("atha")` → `/aθa/` (unchanged — longest-match still applies when no dot is present)
+- `romanize(/atha/)` → `"at.ha"` (boundary-aware: detects that `t` + `h` would re-parse as `θ`)
+- `romanize(/aθa/)` → `"atha"` (unchanged — no ambiguity)
+- Round-trip: `deromanize(romanize(x)) == x` for every phonemic x under any mapping set that the D-72 validator now accepts.
+
+**Boundary insertion algorithm (smart romanize):**
+1. Segment the phonemic input into phonemes via longest-IPA-match left-to-right (same segmentation the current global-replaceAll romanize() implicitly relies on).
+2. For each adjacent pair `(p_i, p_{i+1})` with rom tokens `(r_i, r_{i+1})`, check whether `deromanize(r_i + r_{i+1})` equals `[p_i, p_{i+1}]`. If yes, emit no separator. If no (i.e. the concatenation gets absorbed by a longer rom mapping), emit `.` between them.
+3. The check is pure and uses the same shared longest-match helper that `deromanize()` uses — no duplicated logic.
+
+**Bijection validator revision (D-72):**
+- The `nonRoundTrip` check is upgraded: a mapping set is valid iff **for every phonemic sequence representable via the active mappings, smart `romanize(x)` produces a rom string (possibly containing dots) that `deromanize()` round-trips back to `x`**.
+- With the dot disambiguator, `{t→t, h→h, θ→th}` now PASSES — `/atha/` smart-romanizes to `at.ha` which round-trips. But `{t→t, h→h, θ→t}` still FAILS — both `/t/` and `/θ/` emit the same rom `t`, and no dot placement can recover the distinction.
+- The duplicate-phoneme-target and duplicate-rom-target checks are unchanged — those violations are not dot-disambiguatable.
+
+**Rule editor impact:**
+- On load, rule source fields may now display dots (e.g. a stored `/atha/` affix shows as `at.ha` in the rom field).
+- On save, the user-typed value (which may contain dots) flows through the dot-aware `deromanize()`, and dots are stripped in the stored phonemic.
+- Field helper text adds: `"Use . to force a glyph boundary (e.g. at.ha vs atha)"` when rom is enabled.
+
+**Migration impact (D-74):**
+- The v9→v10 round-trip classify pass uses the SAME shared dot-aware pure helpers. A pre-existing rule stored as rom `atha` under the `(t, h, th)` mapping set would previously have been impossible (bijection would have blocked the mapping set); under D-78 it is possible, and the migration correctly rewrites it to `/aθa/`. Users who wanted `/atha/` must re-type as `at.ha` post-migration — but this is theoretical because the old codepath could not have produced such a rule.
+
+**Class-ref interaction:**
+- `.` is never emitted adjacent to a class-ref token (`V`, `C`, `F`, `[...]`). The smart-romanize algorithm only considers phoneme-to-phoneme boundaries.
+- The DSL parser (`morphology_dsl.dart`) treats `.` as a literal phoneme-segment character when it appears inside a literal run — NOT as an operator. Document this in the class-ref invariant doc comment.
+
+**Out of scope for D-78:**
+- A dedicated UI affordance for "insert dot" beyond the helper text (e.g. a button in the rule editor) — users type `.` directly.
+- Dot support on the rewrite-rule-editor replacement side (which is phonetic per D-76 and does not go through rom conversion).
+- Dot support in class-name brackets like `[na.tural]` — brackets are structural, not phonological.
 
 ### Claude's Discretion
 
