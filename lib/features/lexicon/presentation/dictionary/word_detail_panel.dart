@@ -539,13 +539,22 @@ class _WordDetailPanelState extends ConsumerState<WordDetailPanel> {
 
           const Divider(height: 24),
 
+          // ---- Plan 04-14 D-62: Parents / Etymology --------------------
+          WordDetailParentsSection(lexeme: lexeme),
+
           // ---- Derivation tree -----------------------------------------
           Padding(
-            padding: const EdgeInsets.only(bottom: 24),
+            padding: const EdgeInsets.only(bottom: 12),
             child: DerivationTreeWidget(
               rootIpa: lexeme.ipa,
               rootId: widget.lexemeId,
             ),
+          ),
+
+          // ---- Plan 04-14 D-60: Suggestions chips ----------------------
+          Padding(
+            padding: const EdgeInsets.only(bottom: 24),
+            child: WordDetailSuggestionsSection(lexeme: lexeme),
           ),
 
           // ---- Paradigm section (Phase 4 plan 04-07) -------------------
@@ -806,6 +815,186 @@ class WordDetailParadigmSection extends ConsumerWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Plan 04-14 — D-60 Suggestions + D-62 Parents / Etymology sections
+// ---------------------------------------------------------------------------
+
+/// D-60 / G-19 Suggestions chips section.
+///
+/// Renders one [ActionChip] per derivational rule that:
+///   - has `isActive = true`
+///   - has `kind = 'derivational'`
+///   - has `autoApply = false` (auto-apply rules are already promoted)
+///   - has `inputPosId == lexeme.pos.id` (strict POS match per D-61)
+///   - does NOT already have a promoted Lexeme row for the (parent, rule)
+///     pair — once the user clicks a chip the matching row exists and the
+///     chip is hidden on the next rebuild (applied-suggestion filter).
+///
+/// Clicking a chip calls `LexemeDao.promoteDerivation` with an empty
+/// gloss — the user fills in the meaning via the derivation tree row's
+/// meaning field (Task 2 flow).
+///
+/// Extracted as a public widget so widget tests can pump it without
+/// standing up the full WordDetailPanel provider graph.
+class WordDetailSuggestionsSection extends ConsumerWidget {
+  const WordDetailSuggestionsSection({super.key, required this.lexeme});
+
+  final Lexeme lexeme;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+
+    final posListAsync = ref.watch(posListProvider);
+    final posList =
+        posListAsync.asData?.value ?? const <PartsOfSpeechData>[];
+    final pos = posForLexeme(lexeme, posList);
+    if (pos == null) return const SizedBox.shrink();
+
+    final rulesAsync = ref.watch(morphologicalRuleListProvider);
+    final rules = rulesAsync.asData?.value ?? const [];
+
+    // Collect already-applied (parent, rule) pairs so the chip for an
+    // applied rule disappears (D-60 "applied suggestions disappear").
+    final allLexemes =
+        ref.watch(allLexemeListProvider).asData?.value ?? const <Lexeme>[];
+    final appliedRuleIds = <int>{};
+    for (final lx in allLexemes) {
+      if (lx.derivedFromLexemeId == lexeme.id &&
+          lx.derivedViaRuleId != null) {
+        appliedRuleIds.add(lx.derivedViaRuleId!);
+      }
+    }
+
+    // Filter down to dormant suggestions.
+    final suggestions = [
+      for (final r in rules)
+        if (r.isActive &&
+            r.kind == 'derivational' &&
+            !r.autoApply &&
+            r.inputPosId != null &&
+            r.inputPosId == pos.id &&
+            !appliedRuleIds.contains(r.id))
+          r,
+    ];
+
+    if (suggestions.isEmpty) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 12, bottom: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Suggestions',
+            style: theme.textTheme.bodyMedium?.copyWith(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: [
+              for (final rule in suggestions)
+                ActionChip(
+                  label: Text(rule.name),
+                  tooltip: rule.source,
+                  onPressed: () async {
+                    final dao = ref.read(lexemeDaoProvider);
+                    if (dao == null) return;
+                    // D-60: empty gloss — the user types the meaning via
+                    // the derivation tree row's meaning field.
+                    await dao.promoteDerivation(
+                      parentId: lexeme.id,
+                      ruleId: rule.id,
+                      gloss: '',
+                    );
+                  },
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// D-62 / G-17 Parents / Etymology section.
+///
+/// Lists every [LexemeParentRow] for this child lexeme, resolved against
+/// the parent Lexemes list to display romanization + gloss. When a row
+/// has a non-null `relationship` label the label is appended to the
+/// parent's display string.
+///
+/// Hidden entirely when the child has zero parent rows (avoids an empty
+/// "Parents" header polluting the detail panel).
+///
+/// Extracted as a public widget so widget tests can pump it in isolation.
+class WordDetailParentsSection extends ConsumerWidget {
+  const WordDetailParentsSection({super.key, required this.lexeme});
+
+  final Lexeme lexeme;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+
+    final parentsAsync = ref.watch(parentsForLexemeProvider(lexeme.id));
+    final parents =
+        parentsAsync.asData?.value ?? const <LexemeParentRow>[];
+    if (parents.isEmpty) return const SizedBox.shrink();
+
+    final allLexemes =
+        ref.watch(allLexemeListProvider).asData?.value ?? const <Lexeme>[];
+    final lexemeById = {for (final lx in allLexemes) lx.id: lx};
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 8, bottom: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Parents',
+            style: theme.textTheme.bodyMedium?.copyWith(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 6),
+          for (final row in parents) _buildParentRow(context, row, lexemeById),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildParentRow(
+    BuildContext context,
+    LexemeParentRow row,
+    Map<int, Lexeme> lexemeById,
+  ) {
+    final parent = lexemeById[row.parentLexemeId];
+    if (parent == null) return const SizedBox.shrink();
+    final label = (parent.romanization != null &&
+            parent.romanization!.isNotEmpty)
+        ? parent.romanization!
+        : parent.ipa;
+    final meaning = parent.meaning ?? '';
+    final relationship = row.relationship;
+    final text = relationship != null && relationship.isNotEmpty
+        ? '$label ($meaning) — $relationship'
+        : '$label ($meaning)';
+    return Padding(
+      padding: const EdgeInsets.only(left: 8, top: 2),
+      child: Text(
+        text,
+        style: Theme.of(context).textTheme.bodySmall,
       ),
     );
   }
