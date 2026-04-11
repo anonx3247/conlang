@@ -12,6 +12,7 @@ import '../../morphology/data/morphology_providers.dart';
 import '../../morphology/domain/morphology_dsl.dart';
 import '../../morphology/domain/morphology_engine.dart';
 import '../../phonology/data/phonotactic_providers.dart';
+import '../../phonology/data/romanization_providers.dart';
 import 'phonotactic_validation_provider.dart';
 import '../../phonology/domain/word_generator.dart';
 import '../../project/data/project_providers.dart';
@@ -324,6 +325,69 @@ final computedDerivedFormsProvider =
     }
   }
   return results;
+});
+
+// ---------------------------------------------------------------------------
+// Promoted derivation render-time computation (plan 04-12 — D-57, D-58)
+// ---------------------------------------------------------------------------
+
+/// Computed rom + ipa for a promoted derived [Lexeme] row.
+class PromotedDerivedForm {
+  const PromotedDerivedForm({required this.ipa, required this.romanization});
+
+  final String ipa;
+  final String romanization;
+}
+
+/// Computes the rom + ipa for a promoted derived Lexeme at render time,
+/// by applying its rule to its parent's ipa. Reactive via Riverpod stream
+/// propagation — when the rule's DSL or the parent's ipa changes, this
+/// provider re-emits the new computed form. Satisfies D-58's 100-lexeme
+/// rule-edit constraint: editing a rule flows to every promoted row that
+/// depends on it with no manual re-save.
+///
+/// Returns `null` when the lexeme is NOT a promoted derivation (either
+/// [Lexeme.derivedFromLexemeId] or [Lexeme.derivedViaRuleId] is null) OR
+/// when the computation fails (rule missing, DSL invalid, engine no-match).
+final promotedDerivedFormProvider =
+    Provider.family<PromotedDerivedForm?, int>((ref, lexemeId) {
+  final lexemeAsync = ref.watch(lexemeByIdProvider(lexemeId));
+  final lexeme = lexemeAsync.asData?.value;
+  if (lexeme == null) return null;
+  if (lexeme.derivedFromLexemeId == null ||
+      lexeme.derivedViaRuleId == null) {
+    return null; // not a promoted row — nothing to compute
+  }
+
+  final parentAsync = ref.watch(lexemeByIdProvider(lexeme.derivedFromLexemeId!));
+  final parent = parentAsync.asData?.value;
+  if (parent == null) return null;
+
+  final rulesAsync = ref.watch(morphologicalRuleListProvider);
+  final rules = rulesAsync.asData?.value ?? const [];
+  // Simple linear lookup — the rules list is small in practice (<100
+  // rules per project in typical conlangs), and this provider is
+  // cached per lexeme id so the scan runs at most once per rule edit.
+  final dbRule = () {
+    for (final r in rules) {
+      if (r.id == lexeme.derivedViaRuleId) return r;
+    }
+    return null;
+  }();
+  if (dbRule == null) return null;
+
+  final parsed = parseMorphDsl(dbRule.source, id: dbRule.id, name: dbRule.name);
+  if (!parsed.isValid || parsed.rule == null) return null;
+
+  final inventory = ref.watch(phonemeInventoryProvider);
+  const engine = MorphologyEngine();
+  final result = engine.applyRule(parsed.rule!, parent.ipa, inventory);
+  if (result case MorphSuccess(:final form)) {
+    final romanize = ref.watch(romanizeProvider);
+    final romText = romanize(form);
+    return PromotedDerivedForm(ipa: form, romanization: romText);
+  }
+  return null;
 });
 
 // ---------------------------------------------------------------------------

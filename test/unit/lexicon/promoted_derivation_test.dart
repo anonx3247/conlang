@@ -95,11 +95,17 @@ void main() {
   });
 
   Future<PromotedDerivedForm?> readPromoted(int lexemeId) async {
-    final lexSub = container.listen(
-      lexemeByIdProvider(lexemeId),
+    // Eagerly subscribe to the promoted form provider — this triggers
+    // both the child lexemeByIdProvider AND (once the child lexeme's
+    // derivedFromLexemeId resolves) the parent lexemeByIdProvider. One
+    // pump is not enough because the parent subscription happens on the
+    // second build; pump twice to settle both layers.
+    final pSub = container.listen(
+      promotedDerivedFormProvider(lexemeId),
       (_, _) {},
     );
-    addTearDown(lexSub.close);
+    addTearDown(pSub.close);
+    await pumpTicks();
     await pumpTicks();
     return container.read(promotedDerivedFormProvider(lexemeId));
   }
