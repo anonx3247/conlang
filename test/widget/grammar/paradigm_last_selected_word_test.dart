@@ -1,4 +1,4 @@
-// Regression tests for G-01 — paradigm viewer persists the per-POS
+// Regression tests for G-01 — paradigm host persists the per-POS
 // last-selected word via the `paradigm.last_selected_word.{posId}` key
 // in project_settings.
 //
@@ -7,19 +7,16 @@
 //   2. read helper returns null when no row exists.
 //   3. read helper parses a stored int back correctly.
 //   4. write helper upserts (insert then update → no duplicate row).
-//   5. ParadigmViewerPage mounts pre-selected POS + word from stored key.
-//   6. ParadigmViewerPage writes the key on word selection change.
-//   7. Per-POS scoping: switching POS reads that POS's stored word.
-//   8. Stale lexeme id falls back to the template default gracefully.
+//
+// Plan 04-13 note: the former ParadigmViewerPage integration group (tests
+// 5-8) was deleted along with paradigm_viewer_page.dart. The equivalent
+// integration coverage lives in inflections_page_test.dart (the successor
+// host for the paradigm rendering + last-selected-word persistence).
 
 import 'package:conlang_workbench/db/app_database.dart';
 import 'package:conlang_workbench/features/grammar/data/typology_providers.dart';
-import 'package:conlang_workbench/features/grammar/presentation/paradigm_viewer/paradigm_viewer_page.dart';
-import 'package:conlang_workbench/features/project/data/project_providers.dart';
 import 'package:drift/drift.dart' hide isNull, isNotNull, Column;
 import 'package:drift/native.dart';
-import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -77,169 +74,7 @@ void main() {
     });
   });
 
-  // --------------------------------------------------------------------
-  // Widget-level integration — page reads + writes the key
-  // --------------------------------------------------------------------
-
-  group('G-01 — ParadigmViewerPage integration', () {
-    late AppDatabase db;
-    late int nounPosId;
-    late int verbPosId;
-    late int katLexemeId;
-    late int luLexemeId;
-
-    setUp(() async {
-      db = AppDatabase(NativeDatabase.memory());
-      nounPosId = await db.into(db.partsOfSpeech).insert(
-            PartsOfSpeechCompanion.insert(name: 'Noun', abbreviation: 'N'),
-          );
-      verbPosId = await db.into(db.partsOfSpeech).insert(
-            PartsOfSpeechCompanion.insert(name: 'Verb', abbreviation: 'V'),
-          );
-      katLexemeId = await db.into(db.lexemes).insert(
-            LexemesCompanion.insert(
-              ipa: 'kat',
-              partOfSpeech: const Value('Noun'),
-            ),
-          );
-      luLexemeId = await db.into(db.lexemes).insert(
-            LexemesCompanion.insert(
-              ipa: 'lu',
-              partOfSpeech: const Value('Verb'),
-            ),
-          );
-    });
-
-    tearDown(() async {
-      await db.close();
-    });
-
-    Widget buildApp() => ProviderScope(
-          overrides: [
-            currentDatabaseProvider.overrideWithValue(db),
-          ],
-          child: const MaterialApp(
-            home: Scaffold(
-              body: SizedBox(
-                width: 1200,
-                height: 800,
-                child: ParadigmViewerPage(),
-              ),
-            ),
-          ),
-        );
-
-    Future<void> settle(WidgetTester tester) async {
-      for (var i = 0; i < 5; i++) {
-        await tester.pump();
-        await tester.runAsync(() async {
-          await Future<void>.delayed(const Duration(milliseconds: 50));
-        });
-        await tester.pump(const Duration(milliseconds: 20));
-      }
-    }
-
-    Future<void> teardownWidget(WidgetTester tester) async {
-      await tester.pumpWidget(const SizedBox.shrink());
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 10));
-    }
-
-    testWidgets(
-        'selecting a word writes paradigm.last_selected_word.{posId} '
-        'to project_settings',
-        (tester) async {
-      await tester.pumpWidget(buildApp());
-      await settle(tester);
-
-      // Open POS dropdown and pick Noun.
-      await tester.tap(find.text('Select a POS'));
-      await settle(tester);
-      await tester.tap(find.text('Noun').last);
-      await settle(tester);
-
-      // Open word picker (the only dropdown with an int? value) and pick kat.
-      await tester.tap(find.text('(template)'));
-      await settle(tester);
-      await tester.tap(find.text('kat').last);
-      await settle(tester);
-
-      // Key written with the Noun POS id and the kat lexeme id.
-      final stored =
-          await readParadigmLastSelectedWord(db, nounPosId);
-      expect(stored, equals(katLexemeId));
-
-      await teardownWidget(tester);
-    });
-
-    testWidgets(
-        'per-POS scoped writes — Noun then Verb store under different keys',
-        (tester) async {
-      await tester.pumpWidget(buildApp());
-      await settle(tester);
-
-      // Pick Noun → select kat.
-      await tester.tap(find.byType(DropdownButton<int>));
-      await settle(tester);
-      await tester.tap(find.text('Noun').last);
-      await settle(tester);
-      await tester.tap(find.text('(template)'));
-      await settle(tester);
-      await tester.tap(find.text('kat').last);
-      await settle(tester);
-
-      expect(
-        await readParadigmLastSelectedWord(db, nounPosId),
-        equals(katLexemeId),
-      );
-
-      // Switch to Verb → select lu.
-      await tester.tap(find.byType(DropdownButton<int>));
-      await settle(tester);
-      await tester.tap(find.text('Verb').last);
-      await settle(tester);
-      await tester.tap(find.text('(template)'));
-      await settle(tester);
-      await tester.tap(find.text('lu').last);
-      await settle(tester);
-
-      // Verb key was written.
-      expect(
-        await readParadigmLastSelectedWord(db, verbPosId),
-        equals(luLexemeId),
-      );
-      // Noun key is untouched by the Verb write.
-      expect(
-        await readParadigmLastSelectedWord(db, nounPosId),
-        equals(katLexemeId),
-      );
-
-      await teardownWidget(tester);
-    });
-
-    testWidgets(
-        'stale stored lexeme id falls back to the template default',
-        (tester) async {
-      // Store a lexeme id that does not exist in the Lexemes table.
-      await writeParadigmLastSelectedWord(
-        db,
-        posId: nounPosId,
-        lexemeId: 999999,
-      );
-
-      await tester.pumpWidget(buildApp());
-      await settle(tester);
-
-      await tester.tap(find.text('Select a POS'));
-      await settle(tester);
-      await tester.tap(find.text('Noun').last);
-      await settle(tester);
-
-      // Falls back to the '(template)' placeholder — the dropdown still
-      // renders it as the current value.
-      expect(find.text('(template)'), findsWidgets);
-
-      await teardownWidget(tester);
-    });
-  });
+  // Plan 04-13 — the former ParadigmViewerPage integration group was
+  // deleted along with the page. The paradigm host is now InflectionsPage
+  // and its G-01 coverage lives in inflections_page_test.dart.
 }

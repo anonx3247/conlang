@@ -4,12 +4,14 @@ import 'package:go_router/go_router.dart';
 /// Grammar sub-shell with a left sidebar for navigation.
 ///
 /// Mirrors the LexiconShell pattern exactly: 200px sidebar + VerticalDivider
-/// + Expanded content area. Four sidebar items for Phase 4:
+/// + Expanded content area. Plan 04-13 / D-48 collapsed the sidebar from
+/// 4 entries to 3 — `Paradigm Viewer` and `Inflectional Rules` have been
+/// merged into the single `Inflections` sub-tab with a stacked paradigm +
+/// rules layout. Final sidebar:
 ///
-///  1. POS & Dimensions — the relocated POS manager + dimension editor
-///  2. Inflectional Rules — kind='inflectional' rule editor (stub, filled by 04-05)
-///  3. Paradigm Viewer — generated paradigm tables (stub, filled by 04-06)
-///  4. Typology — alignment / word order / modality form
+///  1. POS & Dimensions — POS manager + dimension editor
+///  2. Inflections — stacked paradigm (top) + POS-scoped rules (bottom)
+///  3. Typology — alignment / word order / modality form
 class GrammarShell extends StatelessWidget {
   const GrammarShell({
     super.key,
@@ -25,14 +27,9 @@ class GrammarShell extends StatelessWidget {
       path: '/grammar/pos',
     ),
     _SidebarItem(
-      label: 'Inflectional Rules',
+      label: 'Inflections',
       icon: Icons.auto_fix_high_outlined,
-      path: '/grammar/inflectional',
-    ),
-    _SidebarItem(
-      label: 'Paradigm Viewer',
-      icon: Icons.table_chart_outlined,
-      path: '/grammar/paradigm',
+      path: '/grammar/inflections',
     ),
     _SidebarItem(
       label: 'Typology',

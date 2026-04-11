@@ -1,8 +1,7 @@
 import 'dart:io';
 
 import 'package:conlang_workbench/features/grammar/presentation/grammar_shell.dart';
-import 'package:conlang_workbench/features/grammar/presentation/inflectional_rules/inflectional_rules_page.dart';
-import 'package:conlang_workbench/features/grammar/presentation/paradigm_viewer/paradigm_viewer_page.dart';
+import 'package:conlang_workbench/features/grammar/presentation/inflections/inflections_page.dart';
 import 'package:conlang_workbench/features/grammar/presentation/pos_dimensions/pos_dimensions_page.dart';
 import 'package:conlang_workbench/features/grammar/presentation/typology/typology_page.dart';
 import 'package:flutter/material.dart';
@@ -10,23 +9,24 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
-/// Widget + source-level tests for the plan 04-04 router surgery.
+/// Widget + source-level tests for the Grammar router branch.
 ///
-/// The real app router lives in `lib/router/app_router.dart`, but pumping it
-/// requires a full ProviderScope + project selection + DB overrides. For the
-/// route smoke tests we build a minimal GoRouter that mirrors the Grammar
-/// branch shape (one `StatefulShellRoute.indexedStack` with four branches)
-/// so we can verify each sub-route resolves to the expected widget class.
+/// Plan 04-13 update: the router branch was collapsed from 4 sub-routes
+/// to 3. `/grammar/paradigm` and `/grammar/inflectional` are GONE — they
+/// now return a hard 404 via the errorBuilder (D-53). The new
+/// `/grammar/inflections` sub-tab hosts a stacked paradigm + rules layout.
+///
+/// The real app router lives in `lib/router/app_router.dart`, but pumping
+/// it requires a full ProviderScope + project selection + DB overrides.
+/// For the route smoke tests we build a minimal GoRouter that mirrors the
+/// Grammar branch shape so we can verify each sub-route resolves to the
+/// expected widget class.
 void main() {
   Widget buildApp(GoRouter router) => ProviderScope(
         child: MaterialApp.router(routerConfig: router),
       );
 
-  // In the real app, AppShell wraps the whole navigation shell in a Scaffold
-  // so every sub-route has an ambient Material ancestor. This minimal
-  // isolated router does the same by building an AppShell-substitute
-  // Scaffold around the GrammarShell so route pages that use Material
-  // widgets (DropdownButtonFormField in TypologyPage) find a Material.
+  // Minimal isolated router — mirrors the 3-sub-tab Grammar branch.
   GoRouter grammarOnlyRouter(String initial) => GoRouter(
         initialLocation: initial,
         routes: [
@@ -46,16 +46,8 @@ void main() {
               StatefulShellBranch(
                 routes: [
                   GoRoute(
-                    path: '/grammar/inflectional',
-                    builder: (_, _) => const InflectionalRulesPage(),
-                  ),
-                ],
-              ),
-              StatefulShellBranch(
-                routes: [
-                  GoRoute(
-                    path: '/grammar/paradigm',
-                    builder: (_, _) => const ParadigmViewerPage(),
+                    path: '/grammar/inflections',
+                    builder: (_, _) => const InflectionsPage(),
                   ),
                 ],
               ),
@@ -78,18 +70,12 @@ void main() {
     expect(find.byType(PosDimensionsPage), findsOneWidget);
   });
 
-  testWidgets('/grammar/inflectional renders InflectionalRulesPage',
+  testWidgets('/grammar/inflections renders InflectionsPage',
       (tester) async {
     await tester
-        .pumpWidget(buildApp(grammarOnlyRouter('/grammar/inflectional')));
+        .pumpWidget(buildApp(grammarOnlyRouter('/grammar/inflections')));
     await tester.pumpAndSettle();
-    expect(find.byType(InflectionalRulesPage), findsOneWidget);
-  });
-
-  testWidgets('/grammar/paradigm renders ParadigmViewerPage', (tester) async {
-    await tester.pumpWidget(buildApp(grammarOnlyRouter('/grammar/paradigm')));
-    await tester.pumpAndSettle();
-    expect(find.byType(ParadigmViewerPage), findsOneWidget);
+    expect(find.byType(InflectionsPage), findsOneWidget);
   });
 
   testWidgets('/grammar/typology renders TypologyPage', (tester) async {
@@ -99,15 +85,29 @@ void main() {
   });
 
   test(
-      'app_router.dart has no /morphology routes and has /grammar/* routes',
+      'app_router.dart has no /morphology routes and has the 3-sub-tab '
+      '/grammar branch (D-48)',
       () async {
     final file = await File('lib/router/app_router.dart').readAsString();
     expect(file.contains('/morphology'), isFalse,
         reason: 'All /morphology routes must be removed');
     expect(file.contains('/grammar/pos'), isTrue);
-    expect(file.contains('/grammar/inflectional'), isTrue);
-    expect(file.contains('/grammar/paradigm'), isTrue);
+    // D-53 — old routes physically removed from the router.
+    expect(
+      file.contains("'/grammar/paradigm'"),
+      isFalse,
+      reason: '/grammar/paradigm must be deleted (D-53 hard 404)',
+    );
+    expect(
+      file.contains("'/grammar/inflectional'"),
+      isFalse,
+      reason: '/grammar/inflectional must be deleted (D-53 hard 404)',
+    );
+    // D-48 — new sub-tab.
+    expect(file.contains("'/grammar/inflections'"), isTrue);
     expect(file.contains('/grammar/typology'), isTrue);
+    // D-53 — errorBuilder must be present for the hard 404 behavior.
+    expect(file.contains('errorBuilder'), isTrue);
   });
 
   test('app_shell.dart has Grammar tab enabled and no Morphology tab',
@@ -136,6 +136,36 @@ void main() {
       File('lib/features/morphology/presentation/pos/pos_page.dart')
           .existsSync(),
       isFalse,
+    );
+  });
+
+  test('inflectional_rules_page.dart has been physically deleted (plan 04-13)',
+      () async {
+    expect(
+      File('lib/features/grammar/presentation/inflectional_rules/'
+              'inflectional_rules_page.dart')
+          .existsSync(),
+      isFalse,
+    );
+  });
+
+  test('paradigm_viewer_page.dart has been physically deleted (plan 04-13)',
+      () async {
+    expect(
+      File('lib/features/grammar/presentation/paradigm_viewer/'
+              'paradigm_viewer_page.dart')
+          .existsSync(),
+      isFalse,
+    );
+  });
+
+  test('cell_override_dialog.dart is PRESERVED for Lexicon host (D-54)',
+      () async {
+    expect(
+      File('lib/features/grammar/presentation/paradigm_viewer/'
+              'cell_override_dialog.dart')
+          .existsSync(),
+      isTrue,
     );
   });
 }
