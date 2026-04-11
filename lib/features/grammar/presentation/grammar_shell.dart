@@ -1,13 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-/// Morphology sub-shell with a left sidebar for navigation.
+/// Grammar sub-shell with a left sidebar for navigation.
 ///
-/// Mirrors the PhonologyShell pattern without the persistent IPA chart panel.
-/// Later phases can add more sidebar items (e.g. "Derivation" for word
-/// derivation rules).
-class MorphologyShell extends StatelessWidget {
-  const MorphologyShell({
+/// Mirrors the LexiconShell pattern exactly: 200px sidebar + VerticalDivider
+/// + Expanded content area. Four sidebar items for Phase 4:
+///
+///  1. POS & Dimensions — the relocated POS manager + dimension editor
+///  2. Inflectional Rules — kind='inflectional' rule editor (stub, filled by 04-05)
+///  3. Paradigm Viewer — generated paradigm tables (stub, filled by 04-06)
+///  4. Typology — alignment / word order / modality form
+class GrammarShell extends StatelessWidget {
+  const GrammarShell({
     super.key,
     required this.navigationShell,
   });
@@ -16,11 +20,25 @@ class MorphologyShell extends StatelessWidget {
 
   static const _sidebarItems = [
     _SidebarItem(
-      label: 'Parts of Speech',
-      icon: Icons.category,
-      path: '/morphology/pos',
+      label: 'POS & Dimensions',
+      icon: Icons.category_outlined,
+      path: '/grammar/pos',
     ),
-    _SidebarItem(label: 'Rules', icon: Icons.rule, path: '/morphology/rules'),
+    _SidebarItem(
+      label: 'Inflectional Rules',
+      icon: Icons.auto_fix_high_outlined,
+      path: '/grammar/inflectional',
+    ),
+    _SidebarItem(
+      label: 'Paradigm Viewer',
+      icon: Icons.table_chart_outlined,
+      path: '/grammar/paradigm',
+    ),
+    _SidebarItem(
+      label: 'Typology',
+      icon: Icons.language_outlined,
+      path: '/grammar/typology',
+    ),
   ];
 
   void _onSidebarTap(BuildContext context, int index) {
@@ -37,7 +55,7 @@ class MorphologyShell extends StatelessWidget {
 
     return Row(
       children: [
-        // Left sidebar (~200px wide)
+        // Left sidebar (200px wide)
         SizedBox(
           width: 200,
           child: Material(
@@ -48,7 +66,7 @@ class MorphologyShell extends StatelessWidget {
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
                   child: Text(
-                    'MORPHOLOGY',
+                    'GRAMMAR',
                     style: theme.textTheme.labelSmall?.copyWith(
                       color: colorScheme.onSurface.withValues(alpha: 0.5),
                       letterSpacing: 1.2,
@@ -135,13 +153,16 @@ class _SidebarTile extends StatelessWidget {
                   : colorScheme.onSurface.withValues(alpha: 0.7),
             ),
             const SizedBox(width: 10),
-            Text(
-              item.label,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: isSelected
-                    ? colorScheme.onPrimaryContainer
-                    : colorScheme.onSurface.withValues(alpha: 0.85),
-                fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+            Expanded(
+              child: Text(
+                item.label,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: isSelected
+                      ? colorScheme.onPrimaryContainer
+                      : colorScheme.onSurface.withValues(alpha: 0.85),
+                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                ),
+                overflow: TextOverflow.ellipsis,
               ),
             ),
           ],

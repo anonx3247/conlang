@@ -20,11 +20,13 @@ class AppShell extends ConsumerWidget {
 
   final StatefulNavigationShell navigationShell;
 
+  // Phase 4 plan 04-04: Morphology tab removed, Grammar promoted to index 1
+  // and enabled. Branch indices in app_router.dart now match tab indices
+  // (0=Phonology, 1=Grammar, 2=Lexicon, 3=Culture).
   static const _tabs = [
     _TabItem(label: 'Phonology', icon: Icons.music_note, enabled: true, phase: null),
-    _TabItem(label: 'Morphology', icon: Icons.auto_fix_high, enabled: true, phase: null),
+    _TabItem(label: 'Grammar', icon: Icons.account_tree, enabled: true, phase: null),
     _TabItem(label: 'Lexicon', icon: Icons.menu_book, enabled: true, phase: null),
-    _TabItem(label: 'Grammar', icon: Icons.account_tree, enabled: false, phase: 'Phase 4'),
     _TabItem(label: 'Culture', icon: Icons.language, enabled: false, phase: 'Phase 5'),
   ];
 

@@ -2,13 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
+import '../features/grammar/presentation/grammar_shell.dart';
+import '../features/grammar/presentation/inflectional_rules/inflectional_rules_page.dart';
+import '../features/grammar/presentation/paradigm_viewer/paradigm_viewer_page.dart';
+import '../features/grammar/presentation/pos_dimensions/pos_dimensions_page.dart';
+import '../features/grammar/presentation/typology/typology_page.dart';
 import '../features/lexicon/presentation/dictionary/dictionary_page.dart';
 import '../features/lexicon/presentation/lexicon_shell.dart';
 import '../features/lexicon/presentation/swadesh/swadesh_page.dart';
 import '../features/lexicon/presentation/thesaurus/thesaurus_page.dart';
-import '../features/morphology/presentation/morphology_shell.dart';
-import '../features/morphology/presentation/pos/pos_page.dart';
-import '../features/morphology/presentation/rules/rules_page.dart';
 import '../features/phonology/presentation/inventory/inventory_page.dart';
 import '../features/phonology/presentation/phonology_shell.dart';
 import '../features/phonology/presentation/sound_rules/sound_rules_page.dart';
@@ -57,8 +59,13 @@ class _ComingSoonPage extends StatelessWidget {
 /// The root GoRouter, provided via Riverpod.
 ///
 /// Uses a two-level StatefulShellRoute architecture:
-///  - Outer: AppShell — top-level tab bar (Phonology, Lexicon, Grammar, Culture)
-///  - Inner: PhonologyShell — sidebar (Inventory, Sound Rules)
+///  - Outer: AppShell — top-level tab bar (Phonology, Grammar, Lexicon, Culture)
+///  - Inner: per-tab shells (PhonologyShell, GrammarShell, LexiconShell)
+///
+/// Phase 4 plan 04-04 surgery: the old Morphology branch (index 1) is
+/// replaced by the new Grammar branch, and the old placeholder Grammar
+/// branch is deleted. Final branch order matches the AppShell `_tabs`
+/// list: 0=Phonology, 1=Grammar, 2=Lexicon, 3=Culture.
 @riverpod
 GoRouter appRouter(Ref ref) {
   return GoRouter(
@@ -68,7 +75,7 @@ GoRouter appRouter(Ref ref) {
         builder: (context, state, navigationShell) =>
             AppShell(navigationShell: navigationShell),
         branches: [
-          // Branch 0: Phonology (active in Phase 1)
+          // Branch 0: Phonology (Phase 1)
           StatefulShellBranch(
             routes: [
               GoRoute(
@@ -100,30 +107,49 @@ GoRouter appRouter(Ref ref) {
             ],
           ),
 
-          // Branch 1: Morphology (Phase 2)
+          // Branch 1: Grammar (Phase 4)
+          //
+          // Four sub-routes in the order shown in GrammarShell's sidebar.
+          // The top-level `/grammar` path redirects to the first sub-route.
           StatefulShellBranch(
             routes: [
               GoRoute(
-                path: '/morphology',
-                redirect: (_, _) => '/morphology/pos',
+                path: '/grammar',
+                redirect: (_, _) => '/grammar/pos',
               ),
               StatefulShellRoute.indexedStack(
                 builder: (context, state, navigationShell) =>
-                    MorphologyShell(navigationShell: navigationShell),
+                    GrammarShell(navigationShell: navigationShell),
                 branches: [
                   StatefulShellBranch(
                     routes: [
                       GoRoute(
-                        path: '/morphology/pos',
-                        builder: (_, _) => const PosPage(),
+                        path: '/grammar/pos',
+                        builder: (_, _) => const PosDimensionsPage(),
                       ),
                     ],
                   ),
                   StatefulShellBranch(
                     routes: [
                       GoRoute(
-                        path: '/morphology/rules',
-                        builder: (_, _) => const RulesPage(),
+                        path: '/grammar/inflectional',
+                        builder: (_, _) => const InflectionalRulesPage(),
+                      ),
+                    ],
+                  ),
+                  StatefulShellBranch(
+                    routes: [
+                      GoRoute(
+                        path: '/grammar/paradigm',
+                        builder: (_, _) => const ParadigmViewerPage(),
+                      ),
+                    ],
+                  ),
+                  StatefulShellBranch(
+                    routes: [
+                      GoRoute(
+                        path: '/grammar/typology',
+                        builder: (_, _) => const TypologyPage(),
                       ),
                     ],
                   ),
@@ -177,17 +203,7 @@ GoRouter appRouter(Ref ref) {
             ],
           ),
 
-          // Branch 3: Grammar (Phase 4 placeholder)
-          StatefulShellBranch(
-            routes: [
-              GoRoute(
-                path: '/grammar',
-                builder: (_, _) => const _ComingSoonPage(section: 'Grammar'),
-              ),
-            ],
-          ),
-
-          // Branch 4: Culture (Phase 5 placeholder)
+          // Branch 3: Culture (Phase 5 placeholder)
           StatefulShellBranch(
             routes: [
               GoRoute(
