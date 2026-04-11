@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 // which is what the MorphologyEngine API expects. The Drift row was never
 // used in this file anyway — only `MorphologicalRuleException` is.
 import '../../../db/app_database.dart' hide MorphologicalRule;
+import '../../grammar/domain/rule_kind.dart';
 import '../../morphology/data/morphology_providers.dart';
 import '../../morphology/domain/morphology_dsl.dart';
 import '../../morphology/domain/morphology_engine.dart';
@@ -282,6 +283,11 @@ final computedDerivedFormsProvider =
 
   for (final dbRule in dbRules) {
     if (!dbRule.isActive) continue;
+    // Phase 4 plan 04-07 / pitfall #9: ignore inflectional rules — they
+    // belong to the paradigm viewer, not the lexicon derivation tree.
+    // Without this guard every inflectional cell would show up as a
+    // phantom "derived form" for paradigm-producing words.
+    if (dbRule.kind != RuleKind.derivational.dbString) continue;
     final parsed =
         parseMorphDsl(dbRule.source, id: dbRule.id, name: dbRule.name);
     if (!parsed.isValid || parsed.rule == null) continue;
