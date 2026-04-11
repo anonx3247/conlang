@@ -278,3 +278,40 @@ No todos matched Phase 4 (`todo match-phase 4` returned empty).
 
 *Phase: 04-grammar-morphology-revised*
 *Context gathered: 2026-04-10*
+
+---
+
+## Revision Addenda (2026-04-10 planning revision)
+
+These addenda were added during plan-check revision iteration 1/3 to reconcile locked CONTEXT decisions with research safety recommendations and scope pressure on plan 04-04.
+
+### D-19 addendum: `posIds` column kept-and-ignored in v8
+
+**Original decision text:** "Drop `posIds` CSV column in favor of unified `feature_bindings` JSON."
+
+**Addendum:** The functional intent of D-19 (unified `feature_bindings` model with no further reads of the legacy CSV column) is fully achieved by the v8 migration. However, the physical `posIds` column is **retained as dormant legacy** in v8 rather than physically dropped via `ALTER TABLE DROP COLUMN`. Rationale:
+
+- SQLite `DROP COLUMN` support is version-dependent across Drift/sqflite targets; a table-rebuild pattern would add migration risk for zero runtime benefit.
+- Research recommendation A9 explicitly advises deferring physical drop to a post-UAT v9 migration.
+- No code path in Phase 4 reads or writes `posIds`; the migration is write-once (data moved into `feature_bindings.pos[]`) and all downstream reads use the new field.
+
+**Plan impact:** Plan 04-01 Task 1 migrates `posIds` data into `feature_bindings` without calling `DROP COLUMN`. The Drift `MorphologicalRules` class keeps the `posIds` text column as a dormant nullable with default empty string. A v9 migration will drop it after Phase 4 UAT.
+
+Approved: 2026-04-10 (planning revision, option b of W1).
+
+### D-24 addendum: `morphology_shell.dart` physically deleted; `pos_page.dart` relocated
+
+**Original decision text:** "Morphology tab and its router branch are deleted. [...] `lib/features/morphology/presentation/morphology_shell.dart` is deleted; the sub-pages (`pos_page.dart`, `rules_page.dart`, `rule_editor_dialog.dart`, `preview_panel.dart`) are relocated — `pos_page.dart` into Grammar, `rules_page.dart` reused by both Grammar [...] and Lexicon > Derivations [...], `rule_editor_dialog.dart` becomes the shared editor."
+
+**Addendum (clarification, not a change):**
+
+- **`morphology_shell.dart` is physically deleted in plan 04-04 Task 1.** The file no longer exists after router surgery. A verification step asserts `test ! -f lib/features/morphology/presentation/morphology_shell.dart`.
+- **`pos_page.dart` is physically relocated.** The POS CRUD logic moves to `lib/features/grammar/presentation/pos_dimensions/pos_crud_dialog.dart` (extracting the dialog portion). The original `lib/features/morphology/presentation/pos/pos_page.dart` is deleted. Plan 04-04 asserts this.
+- **`rules_page.dart` and `rule_editor_dialog.dart` are parameterized in place** at their existing paths (`lib/features/morphology/presentation/rules/`) because they are actively consumed by both Grammar (inflectional) and Lexicon (derivational) and are genuine shared components. Relocating them would churn imports without benefit. The files remain under `lib/features/morphology/presentation/rules/` as shared widgets; the `features/morphology/presentation/` directory continues to exist solely to host these two shared files and is no longer a "feature" directory — it becomes a shared-widgets location co-located by history.
+- **`preview_panel.dart`** stays alongside `rule_editor_dialog.dart` as its sibling helper (same relocation reasoning).
+
+**Plan impact:** Plan 04-04 Task 1 performs: (1) delete `morphology_shell.dart`, (2) delete `lib/features/morphology/presentation/pos/pos_page.dart` and create `lib/features/grammar/presentation/pos_dimensions/pos_crud_dialog.dart` extracting the dialog logic, (3) leave `rules_page.dart`, `rule_editor_dialog.dart`, `preview_panel.dart` in place. The `lib/features/morphology/presentation/pos/` directory is deleted entirely (empty after pos_page.dart removal).
+
+Approved: 2026-04-10 (planning revision, option a of W2).
+
+---

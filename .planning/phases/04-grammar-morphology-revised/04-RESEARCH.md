@@ -917,39 +917,49 @@ Every claim below has been verified against the codebase, CONTEXT.md, UI-SPEC.md
 
 **None of these assumptions affect correctness of the locked CONTEXT.md decisions** — they are engineering choices within Claude's discretion and research-surfaced safety concerns.
 
-## Open Questions
+## Open Questions (RESOLVED)
+
+All seven research open questions were resolved during planning revision iteration 1/3 (2026-04-10).
+The resolutions below are locked; each maps to a specific plan and task.
 
 1. **Drop `posIds` physically, or keep-and-ignore?**
    - What we know: SQLite 3.35+ supports ALTER DROP COLUMN; bundled SQLite is recent enough. But the drop is irreversible.
    - What's unclear: whether the user wants a clean schema immediately or a safer gradual migration.
    - Recommendation: keep-and-ignore in v8, add a v9 drop after UAT. Surface in plan-check.
+   - **RESOLVED:** Keep-and-ignore. Plan 04-01 Task 1 migrates `posIds` CSV data into `feature_bindings.pos[]` JSON and leaves the legacy column as a dormant nullable text column in the Drift `MorphologicalRules` class. The functional intent of D-19 (unified feature_bindings model with no further reads of the CSV) is met; the physical column is deferred to a v9 cleanup migration after Phase 4 UAT. See `04-CONTEXT.md > Revision Addenda > D-19 addendum` for the approved rationale.
 
 2. **Per-cell override storage: `ParadigmCellOverrides` table vs reuse `MorphologicalRuleExceptions` with sentinel ruleId=0?**
    - What we know: D-22 defaults to reuse; D-28 and Claude's discretion leave the sentinel shape open.
    - What's unclear: user preference for schema cleanliness vs migration simplicity.
    - Recommendation: new table. Surface in plan-check.
+   - **RESOLVED:** New `ParadigmCellOverrides` table. Plan 04-01 Task 1 creates the table with columns `(id, lexeme_id, feature_set_json, override_romanization, override_ipa, notes)`. Plan 04-06 Task 1 adds `ParadigmCellOverrideDao` with `featureSetKey` canonical keying, `watchOverridesForLexeme`, `upsertOverride`, and `clearOverride`. This keeps `MorphologicalRuleExceptions` untouched for Phase 3 per-lexeme phonological exceptions and avoids sentinel ruleId overloading.
 
 3. **MorphNoMatch fall-through semantics.**
    - What we know: D-10/D-11 specify most-specific-wins but don't address what happens when the most-specific rule's DSL condition fails.
    - What's unclear: user's expectation — strict cell-uncovered vs try-less-specific.
    - Recommendation: strict. Surface in plan-check.
+   - **RESOLVED:** Strict cell-uncovered. Plan 04-03 Task 1 implements the feature-consumption algorithm with strict most-specific-wins semantics: when the most-specific matching rule's DSL condition fails (`MorphNoMatch`), the cell becomes `ParadigmUncovered` — the engine does NOT fall through to a less-specific rule. Rationale: matches D-12's explicit-error philosophy; silent fall-through would confuse users debugging their rules. This is locked in the `paradigm_engine_test.dart` unit tests.
 
 4. **Migration backup step.**
    - What we know: v8 is the first mutating migration; no current backup mechanism exists.
    - What's unclear: whether to add backup (scope cost) or rely on user's own file management.
    - Recommendation: add backup. Surface in plan-check.
+   - **RESOLVED:** Add backup. Plan 04-01 Task 2 creates `lib/features/project/data/project_backup.dart` with a `backupProjectDbIfNeeded` helper that copies `project.db` → `project.db.v7.bak` before the v8 migration opens the database. Called from the `AppDatabase.fromPath` path in `project_providers.dart` when the existing DB has `user_version < 8`. A unit test in `test/unit/project/project_backup_test.dart` verifies the backup file is created and is byte-identical to the source.
 
 5. **Per-word dim opt-out: column vs join table.**
    - What we know: D-07 leaves this open.
    - What's unclear: user preference.
    - Recommendation: JSON column (matches `Lexemes.ruleIds` pattern).
+   - **RESOLVED:** JSON column. Plan 04-01 Task 1 adds a nullable text column `Lexemes.skipped_dimensions_json` storing a JSON array of dimension IDs. Matches the existing `Lexemes.ruleIds` CSV/JSON pattern and avoids a join-table migration. The paradigm viewer (plan 04-06) filters out skipped dimensions before rendering cells.
 
 6. **`Lexemes.partOfSpeech` free-text vs FK.**
    - What we know: Lexemes currently uses free-text POS; Phase 2 added the PartsOfSpeech table but never FK'd Lexemes. Phase 4 needs POS→dimensions resolution per word.
    - What's unclear: whether to add the FK now or resolve by name match.
    - Recommendation: stay free-text + resolver helper. Defer FK to a future cleanup phase.
+   - **RESOLVED:** Stay free-text + resolver. Plan 04-02 Task 3 creates `lib/features/grammar/domain/pos_resolver.dart` with a `posForLexeme(Lexeme, List<PartsOfSpeechData>) -> PartsOfSpeechData?` helper that matches by name or abbreviation (case-insensitive). No FK migration in Phase 4. A future cleanup phase can add the FK if free-text match proves fragile under real usage.
 
 7. **Dimension level ID scheme** — per-dim unique integer (recommended) vs string keys vs globally unique. Surface during 04-01 plan-check so the TypeConverter spec is locked before implementation.
+   - **RESOLVED:** Per-dim unique integer. Plan 04-01 Task 0 locks the `DimensionLevel` domain type with `int id` scoped per-dimension (assigned by a `nextLevelId` helper on `GrammarDao` plan 04-02 Task 2) and persisted inside `Dimensions.levels_json`. Globally-unique would require a counter in `project_settings` or a separate `DimensionLevels` table — rejected for simplicity. The `FeatureBindings.dims` map uses `{dimensionId: levelId}` with both as ints scoped per-dimension (dimensionId is globally unique via the `Dimensions.id` primary key; levelId is local).
 
 ## Security Domain
 
