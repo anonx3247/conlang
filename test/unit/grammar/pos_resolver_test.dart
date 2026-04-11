@@ -13,6 +13,7 @@ Lexeme _lex(String? pos) => Lexeme(
       partOfSpeech: pos,
       isPhonologicalException: false,
       skippedDimensionsJson: null,
+      rootOnlyViaDerivations: false,
     );
 
 PartsOfSpeechData _pos(int id, String name, String abbr) =>

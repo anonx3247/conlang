@@ -421,8 +421,10 @@ void main() {
       });
       // Insert a marker via the typed Drift companion to prove the FeatureBindingsConverter
       // works on the Markers table as well (the mapping type from MorphologicalRules).
+      // NOTE: FeatureBindings JSON is FLAT — pos under "pos" key, dims as
+      // stringified dimension ids at the top level. See feature_bindings.dart.
       await db.customStatement(
-        "INSERT INTO markers (pos_id, feature_bindings) VALUES (1, '{\"pos\":[1],\"dims\":{\"5\":2}}')",
+        "INSERT INTO markers (pos_id, feature_bindings) VALUES (1, '{\"pos\":[1],\"5\":2}')",
       );
       final markers = await db.select(db.markers).get();
       expect(markers, hasLength(1));

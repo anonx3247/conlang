@@ -63,6 +63,7 @@ Lexeme makeLexeme({
     ruleIds: null,
     computedForm: null,
     isPhonologicalException: false,
+    rootOnlyViaDerivations: false,
   );
 }
 

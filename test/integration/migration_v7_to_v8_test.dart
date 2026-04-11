@@ -166,9 +166,13 @@ void main() {
       } catch (_) {}
     });
 
-    test('schemaVersion is 8', () async {
+    test('schemaVersion advances to current (>= 8)', () async {
       await seedAndOpen(seed: (_) async {});
-      expect(db.schemaVersion, equals(8));
+      // This v7->v8 test seeds a v7 shape and opens AppDatabase, so the
+      // resulting db reports the CURRENT schemaVersion (which advances as
+      // later plans bump it). The test's responsibility is to assert v7->v8
+      // migration logic ran; it should not hard-code the current version.
+      expect(db.schemaVersion, greaterThanOrEqualTo(8));
     });
 
     test(
