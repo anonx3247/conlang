@@ -57,3 +57,34 @@ width via `ConstrainedBox(maxWidth: 140)` + `isExpanded: true`, or shorten
 the `OpType` labels (e.g. "Whole-word" instead of "Whole-word override
 (irregular)"). Either approach drops the intrinsic width below the
 available 367px and eliminates the overflow.
+
+## From 04-12 (derivation data/engine layer)
+
+### Pre-existing compile failure: typology_providers_test
+
+**File:** `test/unit/grammar/typology_providers_test.dart`, via
+`lib/features/grammar/data/typology_providers.dart:391`
+
+**Failing reference:**
+```dart
+final markersAsync = ref.watch(markersForPosProvider(pos.id));
+                               ^^^^^^^^^^^^^^^^^^^^^
+```
+
+**Symptom:** Compilation fails because `markersForPosProvider` is not
+defined. The reference was added during plan 04-10 (markers data layer)
+but the matching `markersForPosProvider` declaration was not wired into
+`typology_providers.dart` imports / providers. Reproduced on the clean
+ddc1b96 base BEFORE any 04-12 changes, so this is a pre-existing gap
+from plan 04-10, not a regression introduced by 04-12.
+
+**Scope note:** Out of scope for plan 04-12, which only touches the
+derivation data/engine layer (LexemeDao, computedDerivedFormsProvider,
+promotedDerivedFormProvider, DerivationPromotionService, LexemeParentsDao).
+All 04-12 tests (24 lexicon + 7 grammar junction) pass; the only grammar
+suite failure is this pre-existing markers typology compile error.
+
+**Suggested owner:** Whoever finishes plan 04-10 / marker resolution in
+typology — wire `markersForPosProvider` (either via `MarkerDao.watchForPos`
+or import it from an existing provider file) so `typology_providers.dart`
+compiles cleanly.

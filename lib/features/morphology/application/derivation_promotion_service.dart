@@ -8,7 +8,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../db/app_database.dart';
 import '../../grammar/domain/pos_resolver.dart';
 import '../../grammar/domain/rule_kind.dart';
-import '../../lexicon/data/lexeme_dao.dart';
 import '../../project/data/project_providers.dart';
 
 /// D-59: reconcile service that materializes auto-apply derivational
