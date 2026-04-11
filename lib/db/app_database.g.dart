@@ -6214,6 +6214,9 @@ abstract class _$AppDatabase extends GeneratedDatabase {
       ParadigmCellOverrideDao(this as AppDatabase);
   late final InflectionalRulePOSDao inflectionalRulePOSDao =
       InflectionalRulePOSDao(this as AppDatabase);
+  late final LexemeParentsDao lexemeParentsDao = LexemeParentsDao(
+    this as AppDatabase,
+  );
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
