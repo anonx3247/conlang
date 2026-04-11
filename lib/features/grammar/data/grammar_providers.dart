@@ -2,8 +2,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../db/app_database.dart';
 import '../../project/data/project_providers.dart';
+import '../domain/marker.dart';
 import 'dimension_templates.dart';
 import 'grammar_dao.dart';
+import 'marker_dao.dart';
 
 // NOTE: plain Provider / StreamProvider (not @riverpod codegen) — per STATE
 // 01-05, riverpod_generator 3.x cannot resolve Drift part-file types at
@@ -33,6 +35,28 @@ final dimensionsForPosProvider =
   final dao = ref.watch(grammarDaoProvider);
   if (dao == null) return Stream.value(const []);
   return dao.watchDimensionsForPos(posId);
+});
+
+// ---------------------------------------------------------------------------
+// Markers providers (Phase 4 gap D-44, plan 04-10)
+// ---------------------------------------------------------------------------
+
+/// The [MarkerDao] scoped to the currently-open project database. Returns
+/// null when no project is open so call sites can short-circuit to an empty
+/// stream instead of tripping a null-pointer.
+final markerDaoProvider = Provider<MarkerDao?>((ref) {
+  final db = ref.watch(currentDatabaseProvider);
+  return db?.markerDao;
+});
+
+/// Watches the markers bound to a given POS. Emits the empty list when no
+/// project is open. Used by [computedInflectedParadigmProvider] to apply the
+/// D-45 resolution step 3 (marker lookup after the inflectional rule chain).
+final markersForPosProvider =
+    StreamProvider.family<List<MarkerDecl>, int>((ref, posId) {
+  final dao = ref.watch(markerDaoProvider);
+  if (dao == null) return Stream.value(const []);
+  return dao.watchMarkersForPos(posId);
 });
 
 // ---------------------------------------------------------------------------
