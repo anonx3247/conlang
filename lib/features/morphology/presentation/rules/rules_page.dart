@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../grammar/domain/rule_kind.dart';
 import '../../data/morphology_providers.dart';
 import 'morphology_preview_panel.dart';
 import 'rule_editor_dialog.dart';
@@ -11,8 +12,18 @@ import 'rule_editor_dialog.dart';
 /// panel on the right (modeled on the phonology word generator panel).
 ///
 /// Watches [morphologicalRuleListProvider] for reactive updates from Drift.
+///
+/// Plan 04-05: optionally parameterized with a [RuleKind] filter. When
+/// [kind] is non-null only rules of that kind are shown and newly-created
+/// rules inherit that kind (via [RuleEditorDialog]'s required `kind`
+/// parameter). When [kind] is null the page shows all rules and defaults
+/// new rules to [RuleKind.derivational] for backward-compat.
 class RulesPage extends ConsumerStatefulWidget {
-  const RulesPage({super.key});
+  const RulesPage({super.key, this.kind});
+
+  /// When non-null, scopes the page to a single rule kind. Backed by
+  /// [rulesByKindProvider] instead of [morphologicalRuleListProvider].
+  final RuleKind? kind;
 
   @override
   ConsumerState<RulesPage> createState() => _RulesPageState();
@@ -66,7 +77,11 @@ class _RulesPageState extends ConsumerState<RulesPage> {
       );
     }
 
-    final rulesAsync = ref.watch(morphologicalRuleListProvider);
+    // Plan 04-05: when widget.kind is non-null, filter to that kind via
+    // rulesByKindProvider. When null, show all rules (backward-compat).
+    final rulesAsync = widget.kind == null
+        ? ref.watch(morphologicalRuleListProvider)
+        : ref.watch(rulesByKindProvider(widget.kind!));
     final posAsync = ref.watch(posListProvider);
     final posList = posAsync.asData?.value ?? [];
 
@@ -270,9 +285,12 @@ class _RulesPageState extends ConsumerState<RulesPage> {
                                           onPressed: () async {
                                             await showDialog<void>(
                                               context: context,
-                                              builder: (_) =>
-                                                  RuleEditorDialog(
-                                                      existing: rule),
+                                              builder: (_) => RuleEditorDialog(
+                                                kind: widget.kind ??
+                                                    RuleKind.fromDbString(
+                                                        rule.kind),
+                                                existing: rule,
+                                              ),
                                             );
                                           },
                                         ),
@@ -328,7 +346,9 @@ class _RulesPageState extends ConsumerState<RulesPage> {
               onPressed: () async {
                 await showDialog<void>(
                   context: context,
-                  builder: (_) => const RuleEditorDialog(),
+                  builder: (_) => RuleEditorDialog(
+                    kind: widget.kind ?? RuleKind.derivational,
+                  ),
                 );
               },
               icon: const Icon(Icons.add),

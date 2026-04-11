@@ -3,6 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../db/app_database.dart' as db;
+import '../../../grammar/data/grammar_providers.dart';
+import '../../../grammar/domain/dimension_level.dart';
+import '../../../grammar/domain/feature_bindings.dart';
+import '../../../grammar/domain/inflectional_rule.dart';
+import '../../../grammar/domain/rule_kind.dart';
+import '../../../grammar/domain/tiebreak_detector.dart';
 import '../../../phonology/presentation/shared/ipa_keyboard/ipa_text_field.dart';
 import '../../data/morphology_providers.dart';
 import '../../domain/morphology_dsl.dart';
@@ -154,8 +160,22 @@ class _BranchState {
 ///
 /// Pass [existing] to open in edit mode (pre-populated from the Drift row);
 /// otherwise opens in create mode.
+///
+/// Plan 04-05: dialog is kind-aware. In inflectional mode it renders a
+/// "Target POS" dropdown + a row of FilterChips per grammatical dimension
+/// (feature-binding picker, D-42) plus a live tiebreak banner (D-12). In
+/// derivational mode it renders Input/Output POS dropdowns (D-38) and hides
+/// the chip rows.
 class RuleEditorDialog extends ConsumerStatefulWidget {
-  const RuleEditorDialog({super.key, this.existing});
+  const RuleEditorDialog({
+    super.key,
+    required this.kind,
+    this.existing,
+  });
+
+  /// Whether this dialog edits an inflectional or derivational rule.
+  /// Required — callers must explicitly choose the kind (D-40 / plan 04-05).
+  final RuleKind kind;
 
   /// Drift data row. When non-null, the dialog opens in edit mode.
   final db.MorphologicalRule? existing;
@@ -167,10 +187,34 @@ class RuleEditorDialog extends ConsumerStatefulWidget {
 class _RuleEditorDialogState extends ConsumerState<RuleEditorDialog> {
   final _nameCtrl = TextEditingController();
   final List<_BranchState> _branches = [];
-  /// Selected POS IDs. Empty set = applies to all.
+  /// Legacy selected POS IDs (derivational-era multi-POS filter). Kept so the
+  /// DSL preview path keeps working while we migrate to kind-aware bindings.
+  /// In inflectional mode this is the single selected "Target POS" (as a set
+  /// of one), in derivational mode this is empty and [_inputPosId] /
+  /// [_outputPosId] are used instead.
   Set<int> _selectedPosIds = {};
   String? _validationError;
   bool _saving = false;
+
+  // ---- Plan 04-05 kind-aware state -----------------------------------------
+
+  /// Inflectional mode — the single Target POS whose dimensions are offered
+  /// as chip rows. Null means no POS selected yet.
+  int? _selectedPosIdForChips;
+
+  /// Inflectional mode — selected level per dimension.
+  /// Key = dimensionId, value = levelId.
+  final Map<int, int> _featureBindings = {};
+
+  /// Derivational mode — source POS.
+  int? _inputPosId;
+
+  /// Derivational mode — target POS (defaults to [_inputPosId] on change).
+  int? _outputPosId;
+
+  /// Latest tiebreak computation result for inflectional mode. Null when
+  /// there's no conflict.
+  TiebreakConflict? _tiebreakConflict;
 
   @override
   void initState() {
@@ -181,21 +225,52 @@ class _RuleEditorDialogState extends ConsumerState<RuleEditorDialog> {
       // Default: one branch with one suffix op.
       _branches.add(_BranchState());
     }
+
+    // Schedule a post-frame tiebreak compute. This runs after the first
+    // build so Riverpod's stream providers have had a chance to listen.
+    if (widget.kind == RuleKind.inflectional) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          setState(() {
+            _recomputeTiebreak();
+          });
+        }
+      });
+    }
   }
 
   /// Populate form state from a Drift [db.MorphologicalRule] row.
   void _loadFromExisting(db.MorphologicalRule row) {
     _nameCtrl.text = row.name;
-    // Load multi-POS selection from posIds text column
-    if (row.posIds.isNotEmpty) {
-      _selectedPosIds = row.posIds
-          .split(',')
-          .map((s) => int.tryParse(s.trim()))
-          .whereType<int>()
-          .toSet();
-    } else if (row.posId != null) {
-      // Backward compat: migrate single posId
-      _selectedPosIds = {row.posId!};
+
+    // Seed kind-specific state from the row's featureBindings before we set
+    // up the legacy _selectedPosIds fallback.
+    final bindings = row.featureBindings;
+    if (widget.kind == RuleKind.inflectional) {
+      _featureBindings.addAll(bindings.dims);
+      if (bindings.pos.isNotEmpty) {
+        _selectedPosIdForChips = bindings.pos.first;
+        _selectedPosIds = {bindings.pos.first};
+      }
+    } else {
+      _inputPosId =
+          row.inputPosId ?? (bindings.pos.isNotEmpty ? bindings.pos.first : null);
+      _outputPosId = row.outputPosId ?? _inputPosId;
+    }
+
+    // Load multi-POS selection from posIds text column (legacy fallback —
+    // only used when the v8 bindings didn't provide a POS hint).
+    if (_selectedPosIds.isEmpty) {
+      if (row.posIds.isNotEmpty) {
+        _selectedPosIds = row.posIds
+            .split(',')
+            .map((s) => int.tryParse(s.trim()))
+            .whereType<int>()
+            .toSet();
+      } else if (row.posId != null) {
+        // Backward compat: migrate single posId
+        _selectedPosIds = {row.posId!};
+      }
     }
 
     // Parse DSL source into domain model.
@@ -313,6 +388,18 @@ class _RuleEditorDialogState extends ConsumerState<RuleEditorDialog> {
       return;
     }
 
+    // Inflectional rules MUST bind at least one dimension — D-13 + plan 04-05
+    // must-have. An empty-bindings inflectional rule would be effectively
+    // unbound and would fire on every cell.
+    if (widget.kind == RuleKind.inflectional && _featureBindings.isEmpty) {
+      setState(() {
+        _validationError =
+            'Inflectional rules must bind at least one feature. '
+            'Select at least one level chip above.';
+      });
+      return;
+    }
+
     final branches =
         _branches.map((b) => b.toBranch()).whereType<MorphBranch>().toList();
     if (branches.isEmpty) {
@@ -334,9 +421,32 @@ class _RuleEditorDialogState extends ConsumerState<RuleEditorDialog> {
       _validationError = null;
     });
 
-    final posIdsStr = _selectedPosIds.isEmpty
-        ? ''
-        : _selectedPosIds.toList().join(',');
+    // Build the kind-aware FeatureBindings payload.
+    final List<int> boundPos;
+    final Map<int, int> boundDims;
+    if (widget.kind == RuleKind.inflectional) {
+      boundPos = _selectedPosIdForChips == null
+          ? const <int>[]
+          : <int>[_selectedPosIdForChips!];
+      boundDims = Map<int, int>.from(_featureBindings);
+    } else {
+      boundPos = _inputPosId == null ? const <int>[] : <int>[_inputPosId!];
+      boundDims = const <int, int>{};
+    }
+    final featureBindings =
+        FeatureBindings(pos: boundPos, dims: boundDims);
+
+    // Legacy CSV stays in lockstep with the new bindings so the posIds column
+    // continues to mirror reality until it's physically dropped (A9).
+    final posIdsStr =
+        boundPos.isEmpty ? '' : boundPos.map((p) => '$p').join(',');
+
+    final companionInputPos = widget.kind == RuleKind.derivational
+        ? Value<int?>(_inputPosId)
+        : const Value<int?>.absent();
+    final companionOutputPos = widget.kind == RuleKind.derivational
+        ? Value<int?>(_outputPosId)
+        : const Value<int?>.absent();
 
     try {
       if (widget.existing != null) {
@@ -344,22 +454,310 @@ class _RuleEditorDialogState extends ConsumerState<RuleEditorDialog> {
           name: name,
           source: source,
           posIds: posIdsStr,
+          kind: widget.kind.dbString,
+          featureBindings: featureBindings,
+          inputPosId: widget.kind == RuleKind.derivational
+              ? Value<int?>(_inputPosId)
+              : const Value<int?>(null),
+          outputPosId: widget.kind == RuleKind.derivational
+              ? Value<int?>(_outputPosId)
+              : const Value<int?>(null),
         ));
       } else {
         final ordering = await dao.nextOrdering();
-        await dao.insertRule(
+        await dao.insertRuleWithKind(
           db.MorphologicalRulesCompanion(
             name: Value(name),
             source: Value(source),
             ordering: Value(ordering),
             posIds: Value(posIdsStr),
+            featureBindings: Value(featureBindings),
+            inputPosId: companionInputPos,
+            outputPosId: companionOutputPos,
           ),
+          widget.kind,
         );
       }
       if (mounted) Navigator.of(context).pop();
     } finally {
       if (mounted) setState(() => _saving = false);
     }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Tiebreak detection (inflectional mode, D-12)
+  // ---------------------------------------------------------------------------
+
+  void _recomputeTiebreak() {
+    if (widget.kind != RuleKind.inflectional || _featureBindings.isEmpty) {
+      _tiebreakConflict = null;
+      return;
+    }
+    final selfBindings = FeatureBindings(
+      pos: _selectedPosIdForChips == null
+          ? const <int>[]
+          : <int>[_selectedPosIdForChips!],
+      dims: Map<int, int>.from(_featureBindings),
+    );
+    final allInflectionalAsync =
+        ref.read(rulesByKindProvider(RuleKind.inflectional));
+    final allRows =
+        allInflectionalAsync.asData?.value ?? const <db.MorphologicalRule>[];
+    // Exclude the current rule (edit mode) so the editor never self-conflicts.
+    final others = allRows
+        .where((r) => r.id != widget.existing?.id)
+        .map(InflectionalRule.fromDbRow)
+        .toList();
+    // Synthetic view-model for the in-progress rule — the detector takes a
+    // plain list, so we pass [selfRule, ...others] and look for any conflict
+    // group that includes our synthetic id.
+    final selfRule = InflectionalRule(
+      id: widget.existing?.id ?? -1,
+      name: widget.existing?.name ?? '(this rule)',
+      source: _nameCtrl.text,
+      isActive: true,
+      bindings: selfBindings,
+    );
+    final conflicts =
+        findDuplicateSpecificityConflicts([selfRule, ...others]);
+    _tiebreakConflict = null;
+    for (final c in conflicts) {
+      if (c.rules.any((r) => r.id == selfRule.id)) {
+        _tiebreakConflict = c;
+        break;
+      }
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Dimension chip row builder (inflectional mode)
+  // ---------------------------------------------------------------------------
+
+  Widget _buildDimensionChipRow(db.Dimension dim, ThemeData theme) {
+    final levels = decodeLevelsJson(dim.levelsJson);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 100,
+            child: Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Text(dim.name, style: theme.textTheme.bodyMedium),
+            ),
+          ),
+          Expanded(
+            child: Wrap(
+              spacing: 6,
+              runSpacing: 4,
+              children: levels.map((l) {
+                final selected = _featureBindings[dim.id] == l.id;
+                return FilterChip(
+                  label: Text(l.abbr),
+                  selected: selected,
+                  visualDensity: VisualDensity.compact,
+                  onSelected: (sel) {
+                    setState(() {
+                      if (sel) {
+                        _featureBindings[dim.id] = l.id;
+                      } else {
+                        _featureBindings.remove(dim.id);
+                      }
+                      _recomputeTiebreak();
+                    });
+                  },
+                );
+              }).toList(),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // Tiebreak banner builder (inflectional mode, D-12 / UI-SPEC)
+  // ---------------------------------------------------------------------------
+
+  Widget _buildTiebreakBanner(
+      TiebreakConflict conflict, ThemeData theme, ColorScheme cs) {
+    final otherNames = conflict.rules
+        .where((r) => r.id != (widget.existing?.id ?? -1) && r.id != -1)
+        .map((r) => r.name)
+        .join(', ');
+    final display = otherNames.isEmpty ? '(unnamed rule)' : otherNames;
+    return Container(
+      padding: const EdgeInsets.all(12),
+      margin: const EdgeInsets.symmetric(vertical: 8),
+      decoration: BoxDecoration(
+        color: cs.errorContainer,
+        border: Border.all(color: cs.error),
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.warning_outlined, color: cs.error, size: 16),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              "Conflict: This rule has the same specificity as '$display' "
+              'and both match overlapping cells. '
+              'Add a distinguishing dimension binding to resolve.',
+              style:
+                  theme.textTheme.bodySmall?.copyWith(color: cs.onErrorContainer),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // Kind-aware top sections (plan 04-05)
+  // ---------------------------------------------------------------------------
+
+  /// Inflectional mode top: Target POS dropdown + chip rows per dimension +
+  /// validation hint + live tiebreak banner.
+  List<Widget> _buildInflectionalTop(
+    ThemeData theme,
+    ColorScheme cs,
+    List<db.PartsOfSpeechData> posList,
+  ) {
+    final widgets = <Widget>[];
+    widgets.add(Text(
+      'Applies to',
+      style: theme.textTheme.titleMedium,
+    ));
+    widgets.add(const SizedBox(height: 8));
+    widgets.add(
+      DropdownButtonFormField<int>(
+        initialValue: _selectedPosIdForChips,
+        decoration: const InputDecoration(
+          labelText: 'Target POS',
+          border: OutlineInputBorder(),
+          isDense: true,
+        ),
+        items: [
+          for (final pos in posList)
+            DropdownMenuItem<int>(
+              value: pos.id,
+              child: Text('${pos.name} (${pos.abbreviation})'),
+            ),
+        ],
+        onChanged: (v) {
+          if (v == null) return;
+          setState(() {
+            _selectedPosIdForChips = v;
+            _selectedPosIds = {v};
+            _featureBindings.clear();
+            _recomputeTiebreak();
+          });
+        },
+      ),
+    );
+    widgets.add(const SizedBox(height: 12));
+    if (_selectedPosIdForChips != null) {
+      widgets.add(Consumer(builder: (ctx, ref, _) {
+        final dimsAsync =
+            ref.watch(dimensionsForPosProvider(_selectedPosIdForChips!));
+        final dims = dimsAsync.asData?.value ?? const <db.Dimension>[];
+        if (dims.isEmpty) {
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Text(
+              'This POS has no dimensions yet. Add dimensions in '
+              'Grammar → POS & Dimensions to enable inflectional binding.',
+              style: theme.textTheme.bodySmall
+                  ?.copyWith(color: cs.onSurface.withValues(alpha: 0.6)),
+            ),
+          );
+        }
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [for (final dim in dims) _buildDimensionChipRow(dim, theme)],
+        );
+      }));
+    }
+    if (_featureBindings.isEmpty) {
+      widgets.add(const SizedBox(height: 4));
+      widgets.add(Text(
+        'Inflectional rules must bind at least one feature. '
+        'Select at least one level chip above.',
+        style: theme.textTheme.bodySmall?.copyWith(color: cs.error),
+      ));
+    }
+    if (_tiebreakConflict != null) {
+      widgets.add(_buildTiebreakBanner(_tiebreakConflict!, theme, cs));
+    }
+    return widgets;
+  }
+
+  /// Derivational mode top: Input POS + arrow + Output POS dropdowns (D-38).
+  List<Widget> _buildDerivationalTop(
+    ThemeData theme,
+    ColorScheme cs,
+    List<db.PartsOfSpeechData> posList,
+  ) {
+    return [
+      Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Expanded(
+            child: DropdownButtonFormField<int>(
+              initialValue: _inputPosId,
+              decoration: const InputDecoration(
+                labelText: 'Input POS',
+                border: OutlineInputBorder(),
+                isDense: true,
+              ),
+              items: [
+                for (final pos in posList)
+                  DropdownMenuItem<int>(
+                    value: pos.id,
+                    child: Text('${pos.name} (${pos.abbreviation})'),
+                  ),
+              ],
+              onChanged: (v) {
+                setState(() {
+                  _inputPosId = v;
+                  // Default output to input on change (D-38).
+                  _outputPosId ??= v;
+                  if (v != null) {
+                    _selectedPosIds = {v};
+                  }
+                });
+              },
+            ),
+          ),
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 8),
+            child: Icon(Icons.arrow_forward),
+          ),
+          Expanded(
+            child: DropdownButtonFormField<int>(
+              initialValue: _outputPosId,
+              decoration: const InputDecoration(
+                labelText: 'Output POS',
+                border: OutlineInputBorder(),
+                isDense: true,
+              ),
+              items: [
+                for (final pos in posList)
+                  DropdownMenuItem<int>(
+                    value: pos.id,
+                    child: Text('${pos.name} (${pos.abbreviation})'),
+                  ),
+              ],
+              onChanged: (v) {
+                setState(() => _outputPosId = v);
+              },
+            ),
+          ),
+        ],
+      ),
+    ];
   }
 
   // ---------------------------------------------------------------------------
@@ -429,44 +827,11 @@ class _RuleEditorDialogState extends ConsumerState<RuleEditorDialog> {
                           ),
                           const SizedBox(height: 12),
 
-                          // POS selector (multi-select chips)
-                          if (posList.isNotEmpty) ...[
-                            Text(
-                              'Applies to:',
-                              style: theme.textTheme.bodySmall?.copyWith(
-                                color: cs.onSurface.withValues(alpha: 0.6),
-                              ),
-                            ),
-                            const SizedBox(height: 6),
-                            Wrap(
-                              spacing: 6,
-                              runSpacing: 4,
-                              children: [
-                                FilterChip(
-                                  label: const Text('All'),
-                                  selected: _selectedPosIds.isEmpty,
-                                  onSelected: (_) =>
-                                      setState(() => _selectedPosIds = {}),
-                                  visualDensity: VisualDensity.compact,
-                                ),
-                                ...posList.map((pos) => FilterChip(
-                                      label: Text(pos.name),
-                                      selected:
-                                          _selectedPosIds.contains(pos.id),
-                                      onSelected: (selected) {
-                                        setState(() {
-                                          if (selected) {
-                                            _selectedPosIds.add(pos.id);
-                                          } else {
-                                            _selectedPosIds.remove(pos.id);
-                                          }
-                                        });
-                                      },
-                                      visualDensity: VisualDensity.compact,
-                                    )),
-                              ],
-                            ),
-                          ],
+                          // Kind-aware top section (plan 04-05).
+                          if (widget.kind == RuleKind.inflectional)
+                            ..._buildInflectionalTop(theme, cs, posList)
+                          else
+                            ..._buildDerivationalTop(theme, cs, posList),
                           const SizedBox(height: 16),
 
                           // Branches

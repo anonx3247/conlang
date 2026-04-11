@@ -1,42 +1,33 @@
 import 'package:flutter/material.dart';
 
-/// Inflectional rules page — Phase 4 plan 04-04 stub.
+import '../../../morphology/presentation/rules/rules_page.dart';
+import '../../domain/rule_kind.dart';
+import '../shared/migration_banner.dart';
+
+/// Inflectional rules page — plan 04-05 real implementation.
 ///
-/// Real implementation lands in plan 04-05 (Inflectional Rule Editor).
-/// For 04-04 we ship a centered placeholder so the Grammar router resolves
-/// and the tab is navigable.
+/// Mounts the shared MigrationBanner (so users who are upgrading from v7
+/// have a clear explanation of why their existing rules are now classified
+/// as derivational) above a [RulesPage] filtered to
+/// [RuleKind.inflectional].
+///
+/// The stub that plan 04-04 shipped (a placeholder Center + Icon) has been
+/// replaced by this widget — see plan 04-05 Task 1 step 5.
 class InflectionalRulesPage extends StatelessWidget {
   const InflectionalRulesPage({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final cs = theme.colorScheme;
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.auto_fix_high_outlined,
-            size: 64,
-            color: cs.onSurface.withValues(alpha: 0.25),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'Inflectional Rules',
-            style: theme.textTheme.headlineSmall?.copyWith(
-              color: cs.onSurface.withValues(alpha: 0.5),
-            ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            'Coming in plan 04-05.',
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: cs.onSurface.withValues(alpha: 0.35),
-            ),
-          ),
-        ],
-      ),
+    return const Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        MigrationBanner(
+          settingsKey: 'ui.migration_v8_banner_dismissed.inflectional',
+        ),
+        Expanded(
+          child: RulesPage(kind: RuleKind.inflectional),
+        ),
+      ],
     );
   }
 }
