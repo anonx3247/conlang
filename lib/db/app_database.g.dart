@@ -6212,6 +6212,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final GrammarDao grammarDao = GrammarDao(this as AppDatabase);
   late final ParadigmCellOverrideDao paradigmCellOverrideDao =
       ParadigmCellOverrideDao(this as AppDatabase);
+  late final MarkerDao markerDao = MarkerDao(this as AppDatabase);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
