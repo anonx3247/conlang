@@ -356,9 +356,13 @@ void main() {
         posId: ids.posId,
         axes: ParadigmAxes(rows: ids.numberDimId, cols: ids.genderDimId),
       );
+      // Plan 04-13 D-52: the default clickMode is now ruleEditor. The
+      // Lexicon word-detail host pins its embed to wordOverride — this
+      // test locks that branch by explicitly passing wordOverride.
       await tester.pumpWidget(buildApp(ParadigmTableWidget(
         lexemeId: ids.lexemeId,
         posId: ids.posId,
+        clickMode: ParadigmClickMode.wordOverride,
       )));
       await settle(tester);
 

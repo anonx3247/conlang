@@ -796,6 +796,11 @@ class WordDetailParadigmSection extends ConsumerWidget {
                 child: ParadigmTableWidget(
                   lexemeId: word.id,
                   posId: pos.id,
+                  // D-54 / plan 04-13: Lexicon word-detail host routes cell
+                  // clicks to CellOverrideDialog for per-word rom/ipa
+                  // overrides. The Grammar > Inflections host uses the
+                  // default ruleEditor mode instead.
+                  clickMode: ParadigmClickMode.wordOverride,
                 ),
               ),
             ],

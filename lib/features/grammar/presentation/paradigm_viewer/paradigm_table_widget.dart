@@ -5,6 +5,8 @@ import '../../../../db/app_database.dart';
 import '../../../../shared/widgets/violation_text.dart';
 import '../../../lexicon/data/lexeme_providers.dart';
 import '../../../lexicon/data/phonotactic_validation_provider.dart';
+import '../../../morphology/data/morphology_providers.dart';
+import '../../../morphology/presentation/rules/rule_editor_dialog.dart';
 import '../../../phonology/data/romanization_providers.dart';
 import '../../../phonology/domain/word_generator.dart';
 import '../../../project/data/project_providers.dart';
@@ -14,7 +16,22 @@ import '../../data/typology_providers.dart';
 import '../../domain/dimension_level.dart';
 import '../../domain/paradigm_axes.dart';
 import '../../domain/paradigm_cell.dart';
+import '../../domain/rule_kind.dart';
 import 'cell_override_dialog.dart';
+
+/// D-52 / plan 04-13 — Controls what happens when a user taps a paradigm
+/// cell. Two host contexts consume [ParadigmTableWidget]:
+///
+/// - [ParadigmClickMode.ruleEditor] — Grammar > Inflections sub-tab host
+///   (D-51). Tapping any cell opens [RuleEditorDialog] with the cell's
+///   feature bindings pre-filled. Empty cells create a new rule; filled
+///   cells open the topmost rule in the chain for edit.
+///
+/// - [ParadigmClickMode.wordOverride] — Lexicon word-detail paradigm
+///   embed host (D-54). Tapping a cell opens [CellOverrideDialog] for a
+///   per-word rom/ipa override. This is the pre-plan-04-13 click behavior,
+///   now scoped to a single host context.
+enum ParadigmClickMode { ruleEditor, wordOverride }
 
 /// Shared paradigm table widget (D-25, D-28, D-29, D-30).
 ///
@@ -41,10 +58,17 @@ class ParadigmTableWidget extends ConsumerWidget {
     super.key,
     required this.lexemeId,
     required this.posId,
+    this.clickMode = ParadigmClickMode.ruleEditor,
   });
 
   final int lexemeId;
   final int posId;
+
+  /// D-52 — Determines the click handler branch for paradigm cells.
+  /// Defaults to [ParadigmClickMode.ruleEditor] since the Grammar host
+  /// is the primary consumer post-plan-04-13. The Lexicon word-detail
+  /// embed explicitly passes [ParadigmClickMode.wordOverride].
+  final ParadigmClickMode clickMode;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -282,6 +306,7 @@ class ParadigmTableWidget extends ConsumerWidget {
                         colDim.id: col.id,
                         ...sliceKey,
                       }),
+                      clickMode: clickMode,
                     ),
                 ],
               ),
@@ -317,11 +342,13 @@ class _ParadigmCellWidget extends ConsumerWidget {
     required this.lexemeId,
     required this.featureSet,
     required this.cell,
+    required this.clickMode,
   });
 
   final int lexemeId;
   final Map<int, int> featureSet;
   final ParadigmCell? cell;
+  final ParadigmClickMode clickMode;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -335,15 +362,49 @@ class _ParadigmCellWidget extends ConsumerWidget {
     final override = overrides[key];
 
     void openDialog() {
-      showDialog<void>(
-        context: context,
-        builder: (_) => CellOverrideDialog(
-          lexemeId: lexemeId,
-          featureSet: featureSet,
-          currentCell: cell,
-          existingOverride: override,
-        ),
-      );
+      switch (clickMode) {
+        case ParadigmClickMode.wordOverride:
+          // D-54: Lexicon word-detail host — preserve the per-word rom/ipa
+          // override flow (the pre-plan-04-13 click behavior).
+          showDialog<void>(
+            context: context,
+            builder: (_) => CellOverrideDialog(
+              lexemeId: lexemeId,
+              featureSet: featureSet,
+              currentCell: cell,
+              existingOverride: override,
+            ),
+          );
+          break;
+        case ParadigmClickMode.ruleEditor:
+          // D-51: Grammar > Inflections host — open RuleEditorDialog with
+          // the cell's bindings pre-filled. Filled cells try to resolve
+          // the topmost rule in the chain so the dialog opens in edit
+          // mode; empty cells open in create mode with preFilledBindings.
+          MorphologicalRule? existingRule;
+          final localCell = cell;
+          if (localCell is ParadigmFilled && localCell.ruleChain.isNotEmpty) {
+            final topRuleId = localCell.ruleChain.first.id;
+            final rules =
+                ref.read(morphologicalRuleListProvider).asData?.value ??
+                    const <MorphologicalRule>[];
+            for (final r in rules) {
+              if (r.id == topRuleId) {
+                existingRule = r;
+                break;
+              }
+            }
+          }
+          showDialog<void>(
+            context: context,
+            builder: (_) => RuleEditorDialog(
+              kind: RuleKind.inflectional,
+              existing: existingRule,
+              preFilledBindings: existingRule == null ? featureSet : null,
+            ),
+          );
+          break;
+      }
     }
 
     if (override != null) {
