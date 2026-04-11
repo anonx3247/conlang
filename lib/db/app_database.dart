@@ -175,6 +175,14 @@ class MorphologicalRules extends Table {
   /// v8+ — output POS for derivational rules (D-20). Defaults to inputPosId on migration.
   IntColumn get outputPosId =>
       integer().nullable().references(PartsOfSpeech, #id)();
+
+  /// v9+ — Phase 4 gap D-59. When true, the derivational rule automatically
+  /// promotes every matching-POS word's derived form to a full Lexeme row with
+  /// a templated gloss `"{parentLexeme.meaning} ({rule.name})"`. When false
+  /// (default), the rule is a suggestion chip (D-60) in word detail UI.
+  /// Unused for kind='inflectional' rows.
+  BoolColumn get autoApply =>
+      boolean().withDefault(const Constant(false))();
 }
 
 /// Per-lexeme exceptions overriding a morphological rule with an irregular form.
@@ -210,6 +218,84 @@ class ParadigmCellOverrides extends Table {
   TextColumn get notes => text().nullable()();
 }
 
+/// Unmarked-cell declarations for inflectional paradigms (Phase 4 gap D-44).
+///
+/// A marker asserts that a feature-binding set produces NO form change — the
+/// root IS the form at that cell (standard zero-morpheme / zero-marker pattern
+/// in natural languages). Parallel in shape to [MorphologicalRules] but:
+///  - no DSL / no form output
+///  - no [kind] column (all markers are inflectional-scoped)
+///  - [featureBindings] reuses D-19's JSON format via FeatureBindingsConverter
+///
+/// Resolution order (D-45): per-word override -> inflectional rule -> marker
+/// -> uncovered. Marker-vs-rule ties at identical specificity: rules win
+/// (D-46) because rules carry an explicit form while markers assert absence.
+class Markers extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  IntColumn get posId =>
+      integer().references(PartsOfSpeech, #id, onDelete: KeyAction.cascade)();
+  TextColumn get featureBindings => text()
+      .map(const FeatureBindingsConverter())
+      .withDefault(const Constant('{}'))();
+}
+
+/// Multi-POS junction for inflectional morphological rules (Phase 4 gap D-55).
+///
+/// A single inflectional rule can apply to multiple parts of speech (e.g. a
+/// suffix that marks plural on both Noun and Adjective). Post-v9, the
+/// legacy [MorphologicalRules.inputPosId] is no longer consulted for
+/// `kind='inflectional'` rows — callers read the junction instead. The
+/// legacy column is kept as a convenience cache but may be null-or-stale;
+/// do not rely on it for inflectional rules in v9+.
+///
+/// Backfill on v9 migration: one row per existing inflectional
+/// MorphologicalRules row using its current `input_pos_id` (derivational
+/// rules are NOT backfilled per D-55).
+@DataClassName('InflectionalRulePOSRow')
+class InflectionalRulePOS extends Table {
+  IntColumn get ruleId =>
+      integer().references(MorphologicalRules, #id, onDelete: KeyAction.cascade)();
+  IntColumn get posId =>
+      integer().references(PartsOfSpeech, #id, onDelete: KeyAction.cascade)();
+
+  @override
+  Set<Column> get primaryKey => {ruleId, posId};
+
+  /// Drift's auto-snake converter mangles the all-caps "POS" suffix into
+  /// `inflectional_rule_p_o_s`. Override the generated table name so that
+  /// the migration SQL (`INSERT OR IGNORE INTO inflectional_rule_pos ...`)
+  /// and the beforeOpen safety net (`CREATE TABLE IF NOT EXISTS
+  /// inflectional_rule_pos ...`) match the physical table Drift creates.
+  @override
+  String get tableName => 'inflectional_rule_pos';
+}
+
+/// Manual parent/etymology links between lexemes (Phase 4 gap D-62).
+///
+/// Supports:
+///  - Multiple parents per child (compounds: sun + flower -> sunflower)
+///  - Optional free-text [relationship] label (e.g. "from", "via", "cognate with")
+///  - Optional per-link [notes]
+///  - Distinct from rule-linked derivations: [Lexemes.derivedFromLexemeId] +
+///    [Lexemes.derivedViaRuleId] store the rule-linked case (D-57). A lexeme
+///    can have BOTH an auto-derived-via-rule parent AND additional manual
+///    parents in this table for mixed etymologies.
+///
+/// Tree queries (for the deferred etymology tree UI) walk the union of
+/// rule-derived links and this table's manual links.
+@DataClassName('LexemeParentRow')
+class LexemeParents extends Table {
+  IntColumn get childLexemeId =>
+      integer().references(Lexemes, #id, onDelete: KeyAction.cascade)();
+  IntColumn get parentLexemeId =>
+      integer().references(Lexemes, #id, onDelete: KeyAction.cascade)();
+  TextColumn get relationship => text().nullable()();
+  TextColumn get notes => text().nullable()();
+
+  @override
+  Set<Column> get primaryKey => {childLexemeId, parentLexemeId};
+}
+
 /// The lexeme table — supports derivation-aware morphology (Phase 2).
 ///
 /// - [ipa]: the underlying IPA representation of the word
@@ -242,6 +328,31 @@ class Lexemes extends Table {
   /// this word explicitly skips (e.g. mass nouns skip number). Null = no skips.
   /// Added in schema v8.
   TextColumn get skippedDimensionsJson => text().nullable()();
+
+  /// v9+ — Phase 4 gap D-57. Parent lexeme id for rule-linked derivations.
+  /// NULL for root words and for lexemes linked only via [LexemeParents].
+  /// When non-null and [derivedViaRuleId] is also non-null, this row is a
+  /// "promoted derivation" (D-57, D-58): its display form is computed at
+  /// render time from the rule + parent unless rom/ipa have been explicitly
+  /// edited (which nulls derivedViaRuleId — the implicit detach gesture).
+  IntColumn get derivedFromLexemeId =>
+      integer().nullable().references(Lexemes, #id)();
+
+  /// v9+ — Phase 4 gap D-57 / D-58. The derivational rule that produces
+  /// this lexeme's form from its [derivedFromLexemeId] parent. NULL means
+  /// either: (a) this is a root word, (b) this is a manual-parent-only
+  /// derivation, or (c) the user edited rom/ipa and implicitly detached
+  /// from the rule.
+  IntColumn get derivedViaRuleId =>
+      integer().nullable().references(MorphologicalRules, #id)();
+
+  /// v9+ — Phase 4 gap D-63. When true, this lexeme is rendered in muted
+  /// gray in the main Dictionary sidebar list (NOT hidden — still findable
+  /// via search, still present in Swadesh/Thesaurus, still openable for
+  /// editing). Signals "this root only exists through its derivations" —
+  /// e.g. a bound root that never surfaces as a standalone word.
+  BoolColumn get rootOnlyViaDerivations =>
+      boolean().withDefault(const Constant(false))();
 }
 
 // ---------------------------------------------------------------------------
@@ -263,6 +374,9 @@ class Lexemes extends Table {
     MorphologicalRuleExceptions,
     Dimensions,
     ParadigmCellOverrides,
+    Markers, // v9
+    InflectionalRulePOS, // v9
+    LexemeParents, // v9
   ],
   daos: [PhonemeDao, NaturalClassDao, RomanizationDao, PhonotacticDao, RewriteRuleDao, MorphologyDao, LexemeDao, GrammarDao, ParadigmCellOverrideDao],
 )
@@ -274,7 +388,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase(super.e);
 
   @override
-  int get schemaVersion => 8;
+  int get schemaVersion => 9;
 
   @override
   MigrationStrategy get migration {
@@ -358,6 +472,41 @@ class AppDatabase extends _$AppDatabase {
               inputPosId: Value(firstPos),
               outputPosId: Value(firstPos),
             ));
+          }
+        }
+        if (from < 9) {
+          // v9: Markers table for unmarked-cell declarations (D-44)
+          await m.createTable(markers);
+          // v9: InflectionalRulePOS junction for multi-POS inflectional rules (D-55)
+          await m.createTable(inflectionalRulePOS);
+          // v9: LexemeParents junction for manual etymology links (D-62)
+          await m.createTable(lexemeParents);
+          // v9: MorphologicalRules.autoApply for derivational auto-promote (D-59)
+          await m.addColumn(morphologicalRules, morphologicalRules.autoApply);
+          // v9: Lexemes promoted-derivation + root-only filter columns (D-57, D-58, D-63)
+          await m.addColumn(lexemes, lexemes.derivedFromLexemeId);
+          await m.addColumn(lexemes, lexemes.derivedViaRuleId);
+          await m.addColumn(lexemes, lexemes.rootOnlyViaDerivations);
+
+          // Backfill InflectionalRulePOS: one row per existing inflectional
+          // rule using its current input_pos_id (D-55). Derivational rules are
+          // NOT backfilled — the junction is scoped to inflectional per D-55.
+          //
+          // Uses raw customSelect rather than typed select to be robust
+          // against any v8-row / v9-class shape mismatch during migration
+          // (same pattern the v8 backfill used — see 04-01-SUMMARY.md
+          // §Migration Data-Mutation Summary).
+          final inflectionalRows = await customSelect(
+            "SELECT id, input_pos_id FROM morphological_rules "
+            "WHERE kind = 'inflectional' AND input_pos_id IS NOT NULL",
+          ).get();
+          for (final row in inflectionalRows) {
+            final ruleId = row.read<int>('id');
+            final posId = row.read<int>('input_pos_id');
+            await customStatement(
+              'INSERT OR IGNORE INTO inflectional_rule_pos (rule_id, pos_id) VALUES (?, ?)',
+              [ruleId, posId],
+            );
           }
         }
       },
@@ -485,6 +634,62 @@ class AppDatabase extends _$AppDatabase {
           await customStatement(
             'ALTER TABLE lexemes ADD COLUMN '
             '"skipped_dimensions_json" TEXT',
+          );
+        } catch (_) {}
+        // v9 safety net: new tables
+        try {
+          await customStatement(
+            'CREATE TABLE IF NOT EXISTS markers ('
+            '"id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, '
+            '"pos_id" INTEGER NOT NULL REFERENCES parts_of_speech(id) ON DELETE CASCADE, '
+            '"feature_bindings" TEXT NOT NULL DEFAULT \'{}\''
+            ')',
+          );
+        } catch (_) {}
+        try {
+          await customStatement(
+            'CREATE TABLE IF NOT EXISTS inflectional_rule_pos ('
+            '"rule_id" INTEGER NOT NULL REFERENCES morphological_rules(id) ON DELETE CASCADE, '
+            '"pos_id" INTEGER NOT NULL REFERENCES parts_of_speech(id) ON DELETE CASCADE, '
+            'PRIMARY KEY ("rule_id", "pos_id")'
+            ')',
+          );
+        } catch (_) {}
+        try {
+          await customStatement(
+            'CREATE TABLE IF NOT EXISTS lexeme_parents ('
+            '"child_lexeme_id" INTEGER NOT NULL REFERENCES lexemes(id) ON DELETE CASCADE, '
+            '"parent_lexeme_id" INTEGER NOT NULL REFERENCES lexemes(id) ON DELETE CASCADE, '
+            '"relationship" TEXT, '
+            '"notes" TEXT, '
+            'PRIMARY KEY ("child_lexeme_id", "parent_lexeme_id")'
+            ')',
+          );
+        } catch (_) {}
+        // v9 safety net: MorphologicalRules.auto_apply
+        try {
+          await customStatement(
+            'ALTER TABLE morphological_rules ADD COLUMN '
+            '"auto_apply" INTEGER NOT NULL DEFAULT 0',
+          );
+        } catch (_) {}
+        // v9 safety net: Lexemes promoted-derivation + root-only columns
+        try {
+          await customStatement(
+            'ALTER TABLE lexemes ADD COLUMN '
+            '"derived_from_lexeme_id" INTEGER REFERENCES lexemes(id)',
+          );
+        } catch (_) {}
+        try {
+          await customStatement(
+            'ALTER TABLE lexemes ADD COLUMN '
+            '"derived_via_rule_id" INTEGER REFERENCES morphological_rules(id)',
+          );
+        } catch (_) {}
+        try {
+          await customStatement(
+            'ALTER TABLE lexemes ADD COLUMN '
+            '"root_only_via_derivations" INTEGER NOT NULL DEFAULT 0',
           );
         } catch (_) {}
       },
