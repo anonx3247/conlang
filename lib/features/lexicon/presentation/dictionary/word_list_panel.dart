@@ -407,7 +407,14 @@ class _WordListPanelState extends ConsumerState<WordListPanel> {
           deromanize,
         );
 
-        return Material(
+        // D-63 / G-16 (plan 04-14): rootOnlyViaDerivations lexemes render
+        // muted (reduced opacity) but remain findable and clickable. The
+        // Opacity wraps the Material so the selection highlight + tap
+        // target stay functional.
+        final muted = lexeme.rootOnlyViaDerivations;
+        return Opacity(
+          opacity: muted ? 0.45 : 1.0,
+          child: Material(
           color: isSelected ? cs.primaryContainer : Colors.transparent,
           child: InkWell(
             onTap: () => widget.onWordSelected(lexeme.id),
@@ -538,6 +545,7 @@ class _WordListPanelState extends ConsumerState<WordListPanel> {
               ),
             ),
           ),
+        ),
         );
       },
     );

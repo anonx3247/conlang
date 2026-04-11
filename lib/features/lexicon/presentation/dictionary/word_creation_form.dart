@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../db/app_database.dart';
+import '../../../grammar/data/grammar_providers.dart';
 import '../../../morphology/data/morphology_providers.dart';
 import '../../../phonology/data/romanization_providers.dart';
 import '../../data/lexeme_providers.dart';
@@ -45,6 +46,15 @@ class _WordCreationFormState extends ConsumerState<WordCreationForm> {
   String? _selectedPos;
   bool _saving = false;
   String? _ipaError;
+
+  /// Plan 04-14 D-63: new lexeme gets marked as "this root only exists
+  /// through derivations" — rendered muted in the Dictionary sidebar but
+  /// still findable via search / exports.
+  bool _rootOnlyViaDerivations = false;
+
+  /// Plan 04-14 D-62: selected parent lexeme ids for the multi-select
+  /// etymology picker. Committed via LexemeParentsDao on save.
+  final Set<int> _selectedParents = <int>{};
 
   /// True once the user has typed directly in the IPA field. Until then,
   /// the IPA field is auto-populated from the romanization field via
@@ -118,7 +128,7 @@ class _WordCreationFormState extends ConsumerState<WordCreationForm> {
       final dao = ref.read(lexemeDaoProvider);
       if (dao == null) return;
 
-      await dao.insertLexeme(
+      final newId = await dao.insertLexeme(
         LexemesCompanion(
           ipa: Value(ipa),
           romanization: Value(_romanizationController.text.trim().isEmpty
@@ -128,8 +138,23 @@ class _WordCreationFormState extends ConsumerState<WordCreationForm> {
               ? null
               : _meaningController.text.trim()),
           partOfSpeech: Value(_selectedPos),
+          // D-63 / G-16 (plan 04-14): persist the muted-root flag.
+          rootOnlyViaDerivations: Value(_rootOnlyViaDerivations),
         ),
       );
+
+      // D-62 / G-17 (plan 04-14): write parent links via LexemeParentsDao.
+      // Insert is idempotent (InsertMode.insertOrIgnore) so repeated saves
+      // on the same child won't duplicate rows.
+      final parentsDao = ref.read(lexemeParentsDaoProvider);
+      if (parentsDao != null && _selectedParents.isNotEmpty) {
+        for (final parentId in _selectedParents) {
+          await parentsDao.insertParent(
+            childLexemeId: newId,
+            parentLexemeId: parentId,
+          );
+        }
+      }
       widget.onSaved();
     } finally {
       if (mounted) setState(() => _saving = false);
@@ -262,6 +287,71 @@ class _WordCreationFormState extends ConsumerState<WordCreationForm> {
                         ),
                       ),
                     ),
+
+                  // ---- D-63 rootOnlyViaDerivations checkbox -----------
+                  const SizedBox(height: 12),
+                  CheckboxListTile(
+                    value: _rootOnlyViaDerivations,
+                    onChanged: (v) =>
+                        setState(() => _rootOnlyViaDerivations = v ?? false),
+                    title: const Text(
+                        'This root only exists through derivations'),
+                    subtitle: const Text(
+                      "The word won't appear standalone in the dictionary "
+                      "list — it's shown muted and still findable via search",
+                    ),
+                    controlAffinity: ListTileControlAffinity.leading,
+                    contentPadding: EdgeInsets.zero,
+                    dense: true,
+                  ),
+
+                  // ---- D-62 Parents (etymology) multi-select --------
+                  const SizedBox(height: 12),
+                  Text(
+                    'Parents (etymology)',
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Consumer(
+                    builder: (context, innerRef, _) {
+                      final all = innerRef
+                              .watch(allLexemeListProvider)
+                              .asData
+                              ?.value ??
+                          const <Lexeme>[];
+                      if (all.isEmpty) {
+                        return Text(
+                          'No existing lexemes to link as parents.',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            fontSize: 11,
+                            color: cs.onSurface.withValues(alpha: 0.5),
+                          ),
+                        );
+                      }
+                      return Wrap(
+                        spacing: 6,
+                        runSpacing: 6,
+                        children: [
+                          for (final lx in all)
+                            FilterChip(
+                              label: Text(lx.romanization ?? lx.ipa),
+                              tooltip: lx.meaning,
+                              selected: _selectedParents.contains(lx.id),
+                              onSelected: (on) => setState(() {
+                                if (on) {
+                                  _selectedParents.add(lx.id);
+                                } else {
+                                  _selectedParents.remove(lx.id);
+                                }
+                              }),
+                            ),
+                        ],
+                      );
+                    },
+                  ),
 
                   const SizedBox(height: 24),
 
