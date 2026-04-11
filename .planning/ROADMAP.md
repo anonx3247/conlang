@@ -138,16 +138,23 @@ Plans:
   5. User can record language-level typology choices (alignment, word order, modality expression strategy)
   6. The standalone Morphology tab is removed; its rule editor UI is reused within Grammar (inflectional) and Lexicon (derivational)
   7. Existing morphology rules are migrated to lexicon derivational rules; derivational rules appear in a "Derivations" tab within Lexicon with romanization for all derived forms
-**Plans:** 7 plans in 7 waves (split during plan-check revision — the original monolithic 04-04 Grammar UI plan was subdivided into 04-04/04-05/04-06 for scope; original 04-05 Lexicon Derivations renumbered to 04-07)
+**Plans:** 14 plans (7 shipped + 7 gap-closure plans for 19 UAT gaps / 23 D-43..D-65 decisions)
 
 Plans:
-- [ ] 04-01-PLAN.md — Schema v8 migration: Dimensions + ParadigmCellOverrides tables, kind/featureBindings/input/outputPosId columns, file-level v7 backup, FeatureBindings TypeConverter
-- [ ] 04-02-PLAN.md — Grammar data layer: dimension template catalog (20+), GrammarDao for Dimensions CRUD, kind-aware MorphologyDao extensions, posForLexeme resolver
-- [ ] 04-03-PLAN.md — Paradigm engine: feature-consumption algorithm (D-10/D-11), tiebreak detector, typology + paradigm-axes providers, computedInflectedParadigmProvider
-- [ ] 04-04-PLAN.md — Grammar shell + POS page + Typology: router surgery (delete Morphology tab), Grammar shell with 4 sub-tabs, POS+Dimensions master-detail page with template picker, migration banner, Typology form
-- [ ] 04-05-PLAN.md — Inflectional rule editor: kind-aware RuleEditorDialog with FilterChip dimension picker, mandatory live tiebreak banner integration test, InflectionalRulesPage filter
-- [ ] 04-06-PLAN.md — Paradigm Viewer: ParadigmTableWidget with D-25 tabs/dropdown affordance for 3+ dimension POS, per-cell ViolationText wiring, amber override rendering, CellOverrideDialog, CoverageMatrixPanel, ParadigmCellOverrideDao, AxisConfigBar
-- [ ] 04-07-PLAN.md — Lexicon Derivations: 4th sidebar tab, DerivationsPage reusing RulesPage(kind=derivational), computedDerivedFormsProvider kind filter (pitfall #9), word detail paradigm embed
+- [x] 04-01-PLAN.md — Schema v8 migration: Dimensions + ParadigmCellOverrides tables, kind/featureBindings/input/outputPosId columns, file-level v7 backup, FeatureBindings TypeConverter
+- [x] 04-02-PLAN.md — Grammar data layer: dimension template catalog (20+), GrammarDao for Dimensions CRUD, kind-aware MorphologyDao extensions, posForLexeme resolver
+- [x] 04-03-PLAN.md — Paradigm engine: feature-consumption algorithm (D-10/D-11), tiebreak detector, typology + paradigm-axes providers, computedInflectedParadigmProvider
+- [x] 04-04-PLAN.md — Grammar shell + POS page + Typology: router surgery (delete Morphology tab), Grammar shell with 4 sub-tabs, POS+Dimensions master-detail page with template picker, migration banner, Typology form
+- [x] 04-05-PLAN.md — Inflectional rule editor: kind-aware RuleEditorDialog with FilterChip dimension picker, mandatory live tiebreak banner integration test, InflectionalRulesPage filter
+- [x] 04-06-PLAN.md — Paradigm Viewer: ParadigmTableWidget with D-25 tabs/dropdown affordance for 3+ dimension POS, per-cell ViolationText wiring, amber override rendering, CellOverrideDialog, CoverageMatrixPanel, ParadigmCellOverrideDao, AxisConfigBar
+- [x] 04-07-PLAN.md — Lexicon Derivations: 4th sidebar tab, DerivationsPage reusing RulesPage(kind=derivational), computedDerivedFormsProvider kind filter (pitfall #9), word detail paradigm embed
+- [ ] 04-08-PLAN.md — [GAP, Wave 1 BLOCKING] Schema v9 migration: Markers + InflectionalRulePOS + LexemeParents tables; MorphologicalRules.autoApply; Lexemes.derivedFromLexemeId/derivedViaRuleId/rootOnlyViaDerivations; v8->v9 onUpgrade with InflectionalRulePOS backfill; v9 beforeOpen safety net
+- [ ] 04-09-PLAN.md — [GAP, Wave 2] Pure bug fixes + trivial UI: G-01 per-POS last-selected-word persistence, G-02 template picker rendering audit, G-04 paradigm cell rom-primary render (D-29), G-08 phonology rewrite pipeline on inflected forms, G-11 dimension rename UI, G-12 single Custom entry in template picker, G-65 lexicon toolbar rename `Add root` -> `New word`
+- [ ] 04-10-PLAN.md — [GAP, Wave 3] Unmarked cells (G-03): MarkerDao + providers, paradigm engine markers resolution (D-45 override->rule->marker->uncovered, D-46 rules-win-on-tie), ParadigmUnmarked sealed variant + widget render (D-47 bare root + ∅ badge in muted gray)
+- [ ] 04-11-PLAN.md — [GAP, Wave 3] Multi-POS inflectional rules (G-05, G-09): InflectionalRulePOSDao, MorphologyDao JOIN-based query, RuleEditorDialog multi-POS FilterChip picker + junction write, rules_page POS-set grouping (D-56)
+- [ ] 04-12-PLAN.md — [GAP, Wave 4] Derivation data/engine (G-13, G-14/G-17/G-18/G-19 data): D-61 strict POS filter on computedDerivedFormsProvider (keyed by lexemeId), D-57 promoted-derivation path, D-58 implicit-detach / 100-lexeme rule-edit reactivity, D-59 autoApply reconcile service with exact templated-gloss format, D-62 LexemeParentsDao
+- [ ] 04-13-PLAN.md — [GAP, Wave 5] Inflections sub-tab restructure (G-06, G-07, G-10): Grammar sidebar 4->3 entries (D-48), new Inflections stacked paradigm+rules page (D-49, D-50), ParadigmClickMode enum on ParadigmTableWidget (D-52), RuleEditorDialog.preFilledBindings (D-51), router hard 404 on /grammar/paradigm and /grammar/inflectional (D-53), CellOverrideDialog preserved in Lexicon host only (D-54)
+- [ ] 04-14-PLAN.md — [GAP, Wave 5] Derivation overhaul UI (G-14/G-15/G-16/G-17/G-18/G-19): D-60 suggestion chips, D-62 parents/etymology section + multi-select picker, D-63 rootOnlyViaDerivations checkbox + muted Dictionary render, D-64 POS abbreviation badges, D-59 autoApply checkbox in derivational RuleEditorDialog, D-57/D-58 per-derivation meaning field with promote/demote + implicit-detach warning
 
 ### Phase 5: Culture Wiki
 **Goal**: Users can document the world and culture behind their conlang in a structured wiki with Markdown formatting and navigable internal links between pages
