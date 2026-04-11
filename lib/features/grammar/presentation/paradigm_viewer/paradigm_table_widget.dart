@@ -371,6 +371,13 @@ class _ParadigmCellWidget extends ConsumerWidget {
             Icon(Icons.error_outline, color: cs.error, size: 16),
           ParadigmFilled(:final form) =>
             _FilledCell(form: form, lexemeId: lexemeId),
+          // D-47: bare root in muted gray with trailing ∅ badge. Click
+          // handler intentionally reuses the existing openDialog() path
+          // in this plan — plan 04-13 replaces the entire ParadigmTable
+          // click flow per D-51/D-52 (clicking any cell opens
+          // RuleEditorDialog; unmarked cells open a Marker tab there).
+          ParadigmUnmarked(:final root) =>
+            _UnmarkedCell(root: root, lexemeId: lexemeId),
         },
       ),
     );
@@ -463,6 +470,104 @@ class _FilledCell extends ConsumerWidget {
             ),
         ],
       ),
+    );
+  }
+}
+
+/// D-47 render: bare root in muted gray with a trailing ∅ badge.
+///
+/// Visually distinct from:
+///   - [_FilledCell] — normal rom+IPA two-line layout at full opacity
+///   - [_ParadigmCellWidget._uncoveredCell] — em-dash `—` placeholder
+///   - [_OverrideCell] — amber background + warning icon
+///
+/// The muted gray treatment is `cs.onSurface.withValues(alpha: 0.45)` on
+/// the primary text and `alpha: 0.35` on the IPA bottom line. The trailing
+/// ∅ badge sits in the top-right of the cell as a small labelSmall glyph
+/// at `alpha: 0.55` so it reads as a subtle annotation rather than a
+/// warning (which is the visual role reserved for override cells).
+///
+/// Click handler is intentionally left to the parent [_ParadigmCellWidget]
+/// — plan 04-13 replaces the entire cell click flow per D-51/D-52.
+class _UnmarkedCell extends ConsumerWidget {
+  const _UnmarkedCell({required this.root, required this.lexemeId});
+
+  final String root;
+  final int lexemeId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+
+    final romanize = ref.watch(romanizeProvider);
+    final validate = ref.watch(phonotacticValidatorProvider);
+    final lexemeAsync = ref.watch(lexemeByIdProvider(lexemeId));
+    final lexeme = lexemeAsync.asData?.value;
+    final isException = lexeme?.isPhonologicalException ?? false;
+
+    final romText = romanize(root);
+    // D-29 parity with _FilledCell: only show rom as a separate primary
+    // line when it actually differs from the IPA form — avoids double
+    // rendering when no romanization mapping is configured.
+    final showRom = romText.isNotEmpty && romText != root;
+    final ValidationResult result = isException
+        ? const ValidationResult(violations: [])
+        : validate(word: root);
+
+    return Stack(
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 2),
+          child: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                if (showRom) ...[
+                  // Muted rom top line with violation underlines.
+                  DefaultTextStyle.merge(
+                    style: theme.textTheme.bodyMedium!.copyWith(
+                      color: cs.onSurface.withValues(alpha: 0.45),
+                    ),
+                    child: ViolationText(
+                      text: romText,
+                      violations: result.violations,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    '[$root]',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: cs.onSurface.withValues(alpha: 0.35),
+                    ),
+                  ),
+                ] else
+                  // No distinct romanization — single IPA-only dimmed line
+                  // so the cell never double-renders identical text.
+                  ViolationText(
+                    text: '[$root]',
+                    violations: result.violations,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: cs.onSurface.withValues(alpha: 0.45),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ),
+        // D-47 trailing ∅ badge in the top-right.
+        Positioned(
+          top: 2,
+          right: 2,
+          child: Text(
+            '∅',
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: cs.onSurface.withValues(alpha: 0.55),
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
