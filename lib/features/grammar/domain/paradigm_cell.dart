@@ -1,4 +1,5 @@
 import 'inflectional_rule.dart';
+import 'marker.dart';
 
 /// Result of computing a single paradigm cell via the feature-consumption
 /// algorithm (Phase 4 CONTEXT.md D-10).
@@ -43,4 +44,32 @@ class ParadigmAmbiguous extends ParadigmCell {
   const ParadigmAmbiguous(this.tiedRules);
 
   final List<InflectionalRule> tiedRules;
+}
+
+/// The cell resolves to an unmarked (zero-morpheme) form — the root itself
+/// IS the form (Phase 4 gap D-47 render spec, plan 04-10).
+///
+/// Returned by [computeParadigmCell] when the D-45 resolution order reaches
+/// step 3: the rule chain produced no output, but a [MarkerDecl] declared
+/// on the POS matches the target feature set. The [root] field holds the
+/// bare (uninflected) root form; the [source] field holds the winning
+/// marker for downstream click-to-edit UI.
+///
+/// Rendered distinctly from:
+///   - [ParadigmFilled] — a non-trivial form (rom + IPA two-line layout)
+///   - [ParadigmUncovered] — em-dash `—` (no rule AND no marker matched)
+///
+/// Per D-46, rules beat markers on exact ties: if both a rule and a marker
+/// match at the same specificity on the same binding dims, the engine
+/// returns [ParadigmFilled] (the rule's output), not [ParadigmUnmarked].
+class ParadigmUnmarked extends ParadigmCell {
+  const ParadigmUnmarked({required this.root, required this.source});
+
+  /// The bare root form — rendered as the cell text in muted gray.
+  final String root;
+
+  /// The marker declaration that matched. Held so the paradigm widget can
+  /// open a "Marker" editor when the cell is clicked (plan 04-13 wires the
+  /// click flow).
+  final MarkerDecl source;
 }

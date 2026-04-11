@@ -5,6 +5,7 @@ import '../../phonology/domain/phonotactic_dsl.dart'
 import '../../phonology/domain/word_generator.dart'
     show PhonemeInventory, WordGenerator;
 import 'inflectional_rule.dart';
+import 'marker.dart';
 import 'paradigm_cell.dart';
 
 /// The feature set identifying one paradigm cell.
@@ -48,6 +49,7 @@ ParadigmCell computeParadigmCell({
   required List<InflectionalRule> rules,
   required PhonemeInventory inventory,
   List<PhonologicalRewriteRule> rewriteRules = const [],
+  List<MarkerDecl> markers = const [],
   MorphologyEngine engine = const MorphologyEngine(),
 }) {
   // D-13: only active inflectional rules are eligible. Derivational rules
@@ -61,13 +63,31 @@ ParadigmCell computeParadigmCell({
   final remaining = Map<int, int>.from(target);
   final chain = <InflectionalRule>[];
 
+  /// D-45 step 3 fall-back: when the inflectional rule loop would return
+  /// ParadigmUncovered because no chain was produced, consult [markers]
+  /// instead. A marker whose binding dims are a subset of the ORIGINAL
+  /// `target` (not the post-consumption `remaining`, which is identical
+  /// here because `chain.isEmpty` implies no consumption occurred) asserts
+  /// "no form change at this cell" — the root IS the form, so we return
+  /// ParadigmUnmarked. On ties, the highest-specificity marker wins; on
+  /// equal specificity, the first marker in list order wins (stable,
+  /// deterministic — marker ties are NOT surfaced as ambiguous because
+  /// asserting absence is non-contradictory, unlike rule ambiguity D-12).
+  ParadigmCell markerOrUncovered(String reason) {
+    if (markers.isEmpty) return ParadigmUncovered(reason);
+    final matching = markers.where((m) => m.matches(target)).toList();
+    if (matching.isEmpty) return ParadigmUncovered(reason);
+    matching.sort((a, b) => b.specificity.compareTo(a.specificity));
+    return ParadigmUnmarked(root: root, source: matching.first);
+  }
+
   while (remaining.isNotEmpty) {
     final candidates =
         active.where((r) => _isSubset(r.bindings.dims, remaining)).toList();
 
     if (candidates.isEmpty) {
       if (chain.isEmpty) {
-        return const ParadigmUncovered(
+        return markerOrUncovered(
           'No inflectional rule binds the requested feature set.',
         );
       }
@@ -122,7 +142,7 @@ ParadigmCell computeParadigmCell({
     if (winner == null) {
       // Strict most-specific: do NOT fall through to lower specificity.
       if (chain.isEmpty) {
-        return ParadigmUncovered(
+        return markerOrUncovered(
           failureReason ?? 'All candidate rules failed.',
         );
       }

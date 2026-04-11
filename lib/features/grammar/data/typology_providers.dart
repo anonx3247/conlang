@@ -14,6 +14,7 @@ import '../../phonology/domain/word_generator.dart' show PhonemeInventory;
 import '../../project/data/project_providers.dart';
 import '../domain/dimension_level.dart';
 import '../domain/inflectional_rule.dart';
+import '../domain/marker.dart';
 import '../domain/paradigm_axes.dart';
 import '../domain/paradigm_cell.dart';
 import '../domain/paradigm_engine.dart';
@@ -265,6 +266,7 @@ ParadigmChart generateParadigm({
   required List<InflectionalRule> rules,
   required PhonemeInventory inventory,
   List<PhonologicalRewriteRule> rewriteRules = const [],
+  List<MarkerDecl> markers = const [],
   Set<int> skippedDimensionIds = const {},
 }) {
   final activeDims =
@@ -280,6 +282,7 @@ ParadigmChart generateParadigm({
       rules: rules,
       inventory: inventory,
       rewriteRules: rewriteRules,
+      markers: markers,
     );
     entries[featureSetKey(featureSet)] =
         ParadigmChartEntry(featureSet: featureSet, cell: cell);
@@ -381,12 +384,20 @@ final computedInflectedParadigmProvider =
   // phonological surface as root words elsewhere in the app (D-29).
   final rewriteRules = ref.watch(parsedRewriteRulesProvider);
 
+  // D-44 / D-45: markers bound to this POS feed the paradigm engine's
+  // step-3 resolution (override -> rule -> marker -> uncovered). Empty
+  // markers list preserves the existing "uncovered em-dash" behavior —
+  // no regression when no markers are declared.
+  final markersAsync = ref.watch(markersForPosProvider(pos.id));
+  final markers = markersAsync.asData?.value ?? const <MarkerDecl>[];
+
   return generateParadigm(
     root: lexeme.ipa,
     dimensions: dims,
     rules: rules,
     inventory: inventory,
     rewriteRules: rewriteRules,
+    markers: markers,
     skippedDimensionIds:
         decodeSkippedDimensionIds(lexeme.skippedDimensionsJson),
   );
