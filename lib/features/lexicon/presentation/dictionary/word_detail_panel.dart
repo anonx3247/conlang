@@ -4,6 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../db/app_database.dart';
 import '../../../../shared/widgets/violation_text.dart';
+import '../../../grammar/data/grammar_providers.dart';
+import '../../../grammar/domain/pos_resolver.dart';
+import '../../../grammar/presentation/paradigm_viewer/paradigm_table_widget.dart';
 import '../../../morphology/data/morphology_providers.dart';
 import '../../data/phonotactic_validation_provider.dart';
 import '../../../phonology/data/romanization_providers.dart';
@@ -545,6 +548,15 @@ class _WordDetailPanelState extends ConsumerState<WordDetailPanel> {
             ),
           ),
 
+          // ---- Paradigm section (Phase 4 plan 04-07) -------------------
+          //
+          // Read-only reflection of the Grammar → Paradigm Viewer's axis
+          // config (D-27). Only renders when the lexeme's partOfSpeech
+          // resolves to a POS row AND that POS has ≥1 dimension. Wired
+          // through an extracted public widget so widget tests can mount
+          // it directly without pumping the whole WordDetailPanel stack.
+          WordDetailParadigmSection(word: lexeme),
+
           const Divider(height: 1),
           const SizedBox(height: 16),
 
@@ -721,6 +733,74 @@ class _WordDetailPanelState extends ConsumerState<WordDetailPanel> {
             ],
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Phase 4 plan 04-07 — read-only paradigm embed mounted in the word
+/// detail panel below the derivation tree.
+///
+/// Renders only when `posForLexeme(word, posList)` returns a non-null
+/// [PartsOfSpeechData] AND that POS has at least one dimension. In all
+/// other cases (null partOfSpeech, unmatched text, POS with zero
+/// dimensions) the widget collapses to `SizedBox.shrink()` so the
+/// detail panel does not show an empty Paradigm card.
+///
+/// Per D-27 the embed is strictly read-only: no AxisConfigBar (the axis
+/// config is set in Grammar → Paradigm Viewer and this widget reflects
+/// it) and no CoverageMatrixPanel (the coverage matrix belongs only to
+/// the Grammar tab). Only [ParadigmTableWidget] is mounted.
+///
+/// Extracted as a public widget so widget tests can pump it in
+/// isolation without standing up the rest of WordDetailPanel's provider
+/// graph (romanization, phonotactic, morphology, etc.).
+class WordDetailParadigmSection extends ConsumerWidget {
+  const WordDetailParadigmSection({super.key, required this.word});
+
+  final Lexeme word;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+
+    final posListAsync = ref.watch(posListProvider);
+    final posList =
+        posListAsync.asData?.value ?? const <PartsOfSpeechData>[];
+    final pos = posForLexeme(word, posList);
+    if (pos == null) return const SizedBox.shrink();
+
+    final dimsAsync = ref.watch(dimensionsForPosProvider(pos.id));
+    final dims = dimsAsync.asData?.value ?? const <Dimension>[];
+    if (dims.isEmpty) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 8, bottom: 24),
+      child: Card(
+        margin: EdgeInsets.zero,
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Paradigm',
+                style: theme.textTheme.titleMedium,
+              ),
+              const SizedBox(height: 8),
+              // Fixed height so the inner tabs/table can lay out inside
+              // the outer SingleChildScrollView of WordDetailPanel.
+              // Read-only: no AxisConfigBar, no CoverageMatrixPanel (D-27).
+              SizedBox(
+                height: 320,
+                child: ParadigmTableWidget(
+                  lexemeId: word.id,
+                  posId: pos.id,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
