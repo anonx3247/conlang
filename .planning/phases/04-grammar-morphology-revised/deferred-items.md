@@ -88,3 +88,25 @@ suite failure is this pre-existing markers typology compile error.
 typology — wire `markersForPosProvider` (either via `MarkerDao.watchForPos`
 or import it from an existing provider file) so `typology_providers.dart`
 compiles cleanly.
+
+### Pre-existing compile failure: marker_dao_test
+
+**File:** `test/unit/grammar/marker_dao_test.dart` line 16
+```dart
+dao = db.markerDao;
+    ^^^^^^^^^^^^ getter not defined on AppDatabase
+```
+
+**Status:** Pre-existing since plan 04-10 (`a30a938`). The plan added
+`MarkerDao` to the `@DriftDatabase` daos list and wrote the test, but
+never added a `MarkerDao get markerDao => MarkerDao(this);` accessor on
+`AppDatabase`. Drift's generated code exposes an accessor variant, but
+the test writes `db.markerDao` which maps to the hand-written getter
+that was never authored. Out of scope for plan 04-12.
+
+**Suggested fix:** Either add
+```dart
+MarkerDao get markerDao => MarkerDao(this);
+```
+to `lib/db/app_database.dart` next to `lexemeDao`, or update the test
+to instantiate `MarkerDao(db)` directly.
