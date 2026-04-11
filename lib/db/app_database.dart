@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart';
 import 'package:drift_flutter/drift_flutter.dart';
 
+import '../features/grammar/domain/feature_bindings.dart';
 import '../features/lexicon/data/lexeme_dao.dart';
 import '../features/morphology/data/morphology_dao.dart';
 import '../features/phonology/data/natural_class_dao.dart';
@@ -106,6 +107,35 @@ class PartsOfSpeech extends Table {
   TextColumn get abbreviation => text()(); // e.g. "N", "V", "ADJ"
 }
 
+/// Grammatical dimensions attached to a part of speech (Phase 4 D-01).
+///
+/// Each dimension represents one axis of grammatical variation for the POS
+/// (e.g. "Gender", "Number", "Case"). The levels of the dimension
+/// (e.g. Singular, Plural) are stored inline as a JSON array in [levelsJson]
+/// rather than in a separate table — the "hybrid storage" shape from
+/// CONTEXT.md D-01 / D-A6.
+///
+/// levelsJson format:
+/// ```
+/// [
+///   {"id": 1, "name": "Singular", "abbr": "SG", "ordering": 0},
+///   {"id": 2, "name": "Plural", "abbr": "PL", "ordering": 1}
+/// ]
+/// ```
+/// Level ids are integers unique within this dimension row.
+///
+/// [templateId] is the catalog key of the dimension template used when this
+/// dimension was first created (nullable; null means custom-from-scratch).
+class Dimensions extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  IntColumn get posId =>
+      integer().references(PartsOfSpeech, #id, onDelete: KeyAction.cascade)();
+  TextColumn get name => text()();
+  IntColumn get ordering => integer().withDefault(const Constant(0))();
+  TextColumn get levelsJson => text()();
+  TextColumn get templateId => text().nullable()();
+}
+
 /// Morphological rules (e.g. "Plural", "Agentive -er") in a pattern DSL.
 ///
 /// [source] stores the raw DSL string verbatim for round-tripping.
@@ -120,9 +150,29 @@ class MorphologicalRules extends Table {
   BoolColumn get isActive => boolean().withDefault(const Constant(true))();
   IntColumn get posId =>
       integer().nullable().references(PartsOfSpeech, #id)();
-  /// Comma-separated POS IDs (e.g. "1,3,5") for multi-POS assignment.
-  /// Null or empty = applies to all. Supersedes [posId] for filtering.
+  /// Legacy v6 column. Comma-separated POS IDs (e.g. "1,3,5") — preserved
+  /// for migration safety per Phase 4 research recommendation A9
+  /// (keep-and-ignore). Do NOT write in v8+; replaced by [featureBindings]
+  /// `{pos: [...]}`.
   TextColumn get posIds => text().withDefault(const Constant(''))();
+
+  /// v8+ — Phase 4 CONTEXT.md D-17. 'inflectional' | 'derivational'.
+  /// Default 'derivational' matches the v7→v8 silent reclassification (D-18).
+  TextColumn get kind =>
+      text().withDefault(const Constant('derivational'))();
+
+  /// v8+ — Phase 4 CONTEXT.md D-09 / D-19. JSON of [FeatureBindings].
+  TextColumn get featureBindings => text()
+      .map(const FeatureBindingsConverter())
+      .withDefault(const Constant('{}'))();
+
+  /// v8+ — source POS for derivational rules (D-20). Nullable for inflectional.
+  IntColumn get inputPosId =>
+      integer().nullable().references(PartsOfSpeech, #id)();
+
+  /// v8+ — output POS for derivational rules (D-20). Defaults to inputPosId on migration.
+  IntColumn get outputPosId =>
+      integer().nullable().references(PartsOfSpeech, #id)();
 }
 
 /// Per-lexeme exceptions overriding a morphological rule with an irregular form.
@@ -137,6 +187,25 @@ class MorphologicalRuleExceptions extends Table {
   IntColumn get ruleId => integer()(); // FK to MorphologicalRules
   TextColumn get overrideForm => text()(); // The irregular form
   TextColumn get ruleSourceSnapshot => text()(); // source at time of exception creation
+}
+
+/// Per-cell manual overrides in a paradigm table (Phase 4 D-22 / D-28 option B).
+///
+/// Keyed by `(lexemeId, featureSetJson)` — the feature set JSON identifies
+/// exactly which paradigm cell (e.g. `{"5":2,"7":4}` = dim5=level2, dim7=level4).
+/// This is cleaner than the sentinel-ruleId approach because a cell can be
+/// overridden even when NO inflectional rule would have filled it (uncovered cells).
+///
+/// [overrideIpa] is the primary stored form. [overrideRomanization] is optional
+/// and filled in when the user types romanization first (per D-28).
+class ParadigmCellOverrides extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  IntColumn get lexemeId =>
+      integer().references(Lexemes, #id, onDelete: KeyAction.cascade)();
+  TextColumn get featureSetJson => text()();
+  TextColumn get overrideIpa => text()();
+  TextColumn get overrideRomanization => text().nullable()();
+  TextColumn get notes => text().nullable()();
 }
 
 /// The lexeme table — supports derivation-aware morphology (Phase 2).
@@ -166,6 +235,11 @@ class Lexemes extends Table {
   /// Defaults to false. Added in schema v7.
   BoolColumn get isPhonologicalException =>
       boolean().withDefault(const Constant(false))();
+
+  /// Phase 4 D-07 — per-word dimension opt-out. JSON array of dimension ids
+  /// this word explicitly skips (e.g. mass nouns skip number). Null = no skips.
+  /// Added in schema v8.
+  TextColumn get skippedDimensionsJson => text().nullable()();
 }
 
 // ---------------------------------------------------------------------------
@@ -185,6 +259,8 @@ class Lexemes extends Table {
     PartsOfSpeech,
     MorphologicalRules,
     MorphologicalRuleExceptions,
+    Dimensions,
+    ParadigmCellOverrides,
   ],
   daos: [PhonemeDao, NaturalClassDao, RomanizationDao, PhonotacticDao, RewriteRuleDao, MorphologyDao, LexemeDao],
 )
@@ -196,7 +272,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase(super.e);
 
   @override
-  int get schemaVersion => 7;
+  int get schemaVersion => 8;
 
   @override
   MigrationStrategy get migration {
@@ -232,6 +308,55 @@ class AppDatabase extends _$AppDatabase {
         if (from < 7) {
           // v7: add isPhonologicalException column to lexemes
           await m.addColumn(lexemes, lexemes.isPhonologicalException);
+        }
+        if (from < 8) {
+          // v8: new Dimensions table for POS-dimensional feature systems (D-01, D-21)
+          await m.createTable(dimensions);
+          // v8: new ParadigmCellOverrides table for per-cell manual overrides (D-22)
+          await m.createTable(paradigmCellOverrides);
+          // v8: extend MorphologicalRules with kind, feature_bindings, input_pos_id, output_pos_id (D-17, D-19, D-20)
+          await m.addColumn(morphologicalRules, morphologicalRules.kind);
+          await m.addColumn(
+              morphologicalRules, morphologicalRules.featureBindings);
+          await m.addColumn(
+              morphologicalRules, morphologicalRules.inputPosId);
+          await m.addColumn(
+              morphologicalRules, morphologicalRules.outputPosId);
+          // v8: extend Lexemes with skippedDimensionsJson for per-word dim opt-out (D-07)
+          await m.addColumn(lexemes, lexemes.skippedDimensionsJson);
+
+          // Data migration (D-18): silently reclassify every existing rule
+          // as derivational. Parse legacy pos_ids CSV → FeatureBindings(pos: [...]).
+          //
+          // Use raw SQL to read the legacy pos_ids column rather than the Drift
+          // typed select API — at this point in the migration the row still has
+          // the v7 shape, and Drift's generated row class is the v8 shape, so
+          // querying via select(morphologicalRules) would attempt to read columns
+          // that exist in code but may not be populated yet on legacy rows.
+          final rows = await customSelect(
+            'SELECT id, pos_ids FROM morphological_rules',
+          ).get();
+          for (final row in rows) {
+            final ruleId = row.read<int>('id');
+            final posIdsCsv = row.read<String>('pos_ids');
+            final parsedPos = posIdsCsv.isEmpty
+                ? const <int>[]
+                : posIdsCsv
+                    .split(',')
+                    .map((s) => int.tryParse(s.trim()))
+                    .whereType<int>()
+                    .toList();
+            final bindings = FeatureBindings(pos: parsedPos, dims: const {});
+            final firstPos = parsedPos.isNotEmpty ? parsedPos.first : null;
+            await (update(morphologicalRules)
+                  ..where((t) => t.id.equals(ruleId)))
+                .write(MorphologicalRulesCompanion(
+              kind: const Value('derivational'),
+              featureBindings: Value(bindings),
+              inputPosId: Value(firstPos),
+              outputPosId: Value(firstPos),
+            ));
+          }
         }
       },
       beforeOpen: (details) async {
@@ -301,6 +426,63 @@ class AppDatabase extends _$AppDatabase {
           await customStatement(
             'ALTER TABLE lexemes ADD COLUMN '
             '"is_phonological_exception" INTEGER NOT NULL DEFAULT 0',
+          );
+        } catch (_) {}
+        // v8 safety net: new tables
+        try {
+          await customStatement(
+            'CREATE TABLE IF NOT EXISTS dimensions ('
+            '"id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, '
+            '"pos_id" INTEGER NOT NULL REFERENCES parts_of_speech(id) ON DELETE CASCADE, '
+            '"name" TEXT NOT NULL, '
+            '"ordering" INTEGER NOT NULL DEFAULT 0, '
+            '"levels_json" TEXT NOT NULL, '
+            '"template_id" TEXT'
+            ')',
+          );
+        } catch (_) {}
+        try {
+          await customStatement(
+            'CREATE TABLE IF NOT EXISTS paradigm_cell_overrides ('
+            '"id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, '
+            '"lexeme_id" INTEGER NOT NULL REFERENCES lexemes(id) ON DELETE CASCADE, '
+            '"feature_set_json" TEXT NOT NULL, '
+            '"override_ipa" TEXT NOT NULL, '
+            '"override_romanization" TEXT, '
+            '"notes" TEXT'
+            ')',
+          );
+        } catch (_) {}
+        // v8 safety net: new MorphologicalRules columns
+        try {
+          await customStatement(
+            'ALTER TABLE morphological_rules ADD COLUMN '
+            '"kind" TEXT NOT NULL DEFAULT \'derivational\'',
+          );
+        } catch (_) {}
+        try {
+          await customStatement(
+            'ALTER TABLE morphological_rules ADD COLUMN '
+            '"feature_bindings" TEXT NOT NULL DEFAULT \'{}\'',
+          );
+        } catch (_) {}
+        try {
+          await customStatement(
+            'ALTER TABLE morphological_rules ADD COLUMN '
+            '"input_pos_id" INTEGER REFERENCES parts_of_speech(id)',
+          );
+        } catch (_) {}
+        try {
+          await customStatement(
+            'ALTER TABLE morphological_rules ADD COLUMN '
+            '"output_pos_id" INTEGER REFERENCES parts_of_speech(id)',
+          );
+        } catch (_) {}
+        // v8 safety net: Lexemes.skipped_dimensions_json
+        try {
+          await customStatement(
+            'ALTER TABLE lexemes ADD COLUMN '
+            '"skipped_dimensions_json" TEXT',
           );
         } catch (_) {}
       },

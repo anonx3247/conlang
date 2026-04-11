@@ -1898,6 +1898,17 @@ class $LexemesTable extends Lexemes with TableInfo<$LexemesTable, Lexeme> {
         ),
         defaultValue: const Constant(false),
       );
+  static const VerificationMeta _skippedDimensionsJsonMeta =
+      const VerificationMeta('skippedDimensionsJson');
+  @override
+  late final GeneratedColumn<String> skippedDimensionsJson =
+      GeneratedColumn<String>(
+        'skipped_dimensions_json',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+      );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -1909,6 +1920,7 @@ class $LexemesTable extends Lexemes with TableInfo<$LexemesTable, Lexeme> {
     meaning,
     partOfSpeech,
     isPhonologicalException,
+    skippedDimensionsJson,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -1987,6 +1999,15 @@ class $LexemesTable extends Lexemes with TableInfo<$LexemesTable, Lexeme> {
         ),
       );
     }
+    if (data.containsKey('skipped_dimensions_json')) {
+      context.handle(
+        _skippedDimensionsJsonMeta,
+        skippedDimensionsJson.isAcceptableOrUnknown(
+          data['skipped_dimensions_json']!,
+          _skippedDimensionsJsonMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -2032,6 +2053,10 @@ class $LexemesTable extends Lexemes with TableInfo<$LexemesTable, Lexeme> {
         DriftSqlType.bool,
         data['${effectivePrefix}is_phonological_exception'],
       )!,
+      skippedDimensionsJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}skipped_dimensions_json'],
+      ),
     );
   }
 
@@ -2054,6 +2079,11 @@ class Lexeme extends DataClass implements Insertable<Lexeme> {
   /// Marks this word as exempt from phonotactic violation highlighting.
   /// Defaults to false. Added in schema v7.
   final bool isPhonologicalException;
+
+  /// Phase 4 D-07 — per-word dimension opt-out. JSON array of dimension ids
+  /// this word explicitly skips (e.g. mass nouns skip number). Null = no skips.
+  /// Added in schema v8.
+  final String? skippedDimensionsJson;
   const Lexeme({
     required this.id,
     required this.ipa,
@@ -2064,6 +2094,7 @@ class Lexeme extends DataClass implements Insertable<Lexeme> {
     this.meaning,
     this.partOfSpeech,
     required this.isPhonologicalException,
+    this.skippedDimensionsJson,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -2089,6 +2120,9 @@ class Lexeme extends DataClass implements Insertable<Lexeme> {
       map['part_of_speech'] = Variable<String>(partOfSpeech);
     }
     map['is_phonological_exception'] = Variable<bool>(isPhonologicalException);
+    if (!nullToAbsent || skippedDimensionsJson != null) {
+      map['skipped_dimensions_json'] = Variable<String>(skippedDimensionsJson);
+    }
     return map;
   }
 
@@ -2115,6 +2149,9 @@ class Lexeme extends DataClass implements Insertable<Lexeme> {
           ? const Value.absent()
           : Value(partOfSpeech),
       isPhonologicalException: Value(isPhonologicalException),
+      skippedDimensionsJson: skippedDimensionsJson == null && nullToAbsent
+          ? const Value.absent()
+          : Value(skippedDimensionsJson),
     );
   }
 
@@ -2135,6 +2172,9 @@ class Lexeme extends DataClass implements Insertable<Lexeme> {
       isPhonologicalException: serializer.fromJson<bool>(
         json['isPhonologicalException'],
       ),
+      skippedDimensionsJson: serializer.fromJson<String?>(
+        json['skippedDimensionsJson'],
+      ),
     );
   }
   @override
@@ -2152,6 +2192,9 @@ class Lexeme extends DataClass implements Insertable<Lexeme> {
       'isPhonologicalException': serializer.toJson<bool>(
         isPhonologicalException,
       ),
+      'skippedDimensionsJson': serializer.toJson<String?>(
+        skippedDimensionsJson,
+      ),
     };
   }
 
@@ -2165,6 +2208,7 @@ class Lexeme extends DataClass implements Insertable<Lexeme> {
     Value<String?> meaning = const Value.absent(),
     Value<String?> partOfSpeech = const Value.absent(),
     bool? isPhonologicalException,
+    Value<String?> skippedDimensionsJson = const Value.absent(),
   }) => Lexeme(
     id: id ?? this.id,
     ipa: ipa ?? this.ipa,
@@ -2176,6 +2220,9 @@ class Lexeme extends DataClass implements Insertable<Lexeme> {
     partOfSpeech: partOfSpeech.present ? partOfSpeech.value : this.partOfSpeech,
     isPhonologicalException:
         isPhonologicalException ?? this.isPhonologicalException,
+    skippedDimensionsJson: skippedDimensionsJson.present
+        ? skippedDimensionsJson.value
+        : this.skippedDimensionsJson,
   );
   Lexeme copyWithCompanion(LexemesCompanion data) {
     return Lexeme(
@@ -2196,6 +2243,9 @@ class Lexeme extends DataClass implements Insertable<Lexeme> {
       isPhonologicalException: data.isPhonologicalException.present
           ? data.isPhonologicalException.value
           : this.isPhonologicalException,
+      skippedDimensionsJson: data.skippedDimensionsJson.present
+          ? data.skippedDimensionsJson.value
+          : this.skippedDimensionsJson,
     );
   }
 
@@ -2210,7 +2260,8 @@ class Lexeme extends DataClass implements Insertable<Lexeme> {
           ..write('romanization: $romanization, ')
           ..write('meaning: $meaning, ')
           ..write('partOfSpeech: $partOfSpeech, ')
-          ..write('isPhonologicalException: $isPhonologicalException')
+          ..write('isPhonologicalException: $isPhonologicalException, ')
+          ..write('skippedDimensionsJson: $skippedDimensionsJson')
           ..write(')'))
         .toString();
   }
@@ -2226,6 +2277,7 @@ class Lexeme extends DataClass implements Insertable<Lexeme> {
     meaning,
     partOfSpeech,
     isPhonologicalException,
+    skippedDimensionsJson,
   );
   @override
   bool operator ==(Object other) =>
@@ -2239,7 +2291,8 @@ class Lexeme extends DataClass implements Insertable<Lexeme> {
           other.romanization == this.romanization &&
           other.meaning == this.meaning &&
           other.partOfSpeech == this.partOfSpeech &&
-          other.isPhonologicalException == this.isPhonologicalException);
+          other.isPhonologicalException == this.isPhonologicalException &&
+          other.skippedDimensionsJson == this.skippedDimensionsJson);
 }
 
 class LexemesCompanion extends UpdateCompanion<Lexeme> {
@@ -2252,6 +2305,7 @@ class LexemesCompanion extends UpdateCompanion<Lexeme> {
   final Value<String?> meaning;
   final Value<String?> partOfSpeech;
   final Value<bool> isPhonologicalException;
+  final Value<String?> skippedDimensionsJson;
   const LexemesCompanion({
     this.id = const Value.absent(),
     this.ipa = const Value.absent(),
@@ -2262,6 +2316,7 @@ class LexemesCompanion extends UpdateCompanion<Lexeme> {
     this.meaning = const Value.absent(),
     this.partOfSpeech = const Value.absent(),
     this.isPhonologicalException = const Value.absent(),
+    this.skippedDimensionsJson = const Value.absent(),
   });
   LexemesCompanion.insert({
     this.id = const Value.absent(),
@@ -2273,6 +2328,7 @@ class LexemesCompanion extends UpdateCompanion<Lexeme> {
     this.meaning = const Value.absent(),
     this.partOfSpeech = const Value.absent(),
     this.isPhonologicalException = const Value.absent(),
+    this.skippedDimensionsJson = const Value.absent(),
   }) : ipa = Value(ipa);
   static Insertable<Lexeme> custom({
     Expression<int>? id,
@@ -2284,6 +2340,7 @@ class LexemesCompanion extends UpdateCompanion<Lexeme> {
     Expression<String>? meaning,
     Expression<String>? partOfSpeech,
     Expression<bool>? isPhonologicalException,
+    Expression<String>? skippedDimensionsJson,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -2296,6 +2353,8 @@ class LexemesCompanion extends UpdateCompanion<Lexeme> {
       if (partOfSpeech != null) 'part_of_speech': partOfSpeech,
       if (isPhonologicalException != null)
         'is_phonological_exception': isPhonologicalException,
+      if (skippedDimensionsJson != null)
+        'skipped_dimensions_json': skippedDimensionsJson,
     });
   }
 
@@ -2309,6 +2368,7 @@ class LexemesCompanion extends UpdateCompanion<Lexeme> {
     Value<String?>? meaning,
     Value<String?>? partOfSpeech,
     Value<bool>? isPhonologicalException,
+    Value<String?>? skippedDimensionsJson,
   }) {
     return LexemesCompanion(
       id: id ?? this.id,
@@ -2321,6 +2381,8 @@ class LexemesCompanion extends UpdateCompanion<Lexeme> {
       partOfSpeech: partOfSpeech ?? this.partOfSpeech,
       isPhonologicalException:
           isPhonologicalException ?? this.isPhonologicalException,
+      skippedDimensionsJson:
+          skippedDimensionsJson ?? this.skippedDimensionsJson,
     );
   }
 
@@ -2356,6 +2418,11 @@ class LexemesCompanion extends UpdateCompanion<Lexeme> {
         isPhonologicalException.value,
       );
     }
+    if (skippedDimensionsJson.present) {
+      map['skipped_dimensions_json'] = Variable<String>(
+        skippedDimensionsJson.value,
+      );
+    }
     return map;
   }
 
@@ -2370,7 +2437,8 @@ class LexemesCompanion extends UpdateCompanion<Lexeme> {
           ..write('romanization: $romanization, ')
           ..write('meaning: $meaning, ')
           ..write('partOfSpeech: $partOfSpeech, ')
-          ..write('isPhonologicalException: $isPhonologicalException')
+          ..write('isPhonologicalException: $isPhonologicalException, ')
+          ..write('skippedDimensionsJson: $skippedDimensionsJson')
           ..write(')'))
         .toString();
   }
@@ -3211,6 +3279,57 @@ class $MorphologicalRulesTable extends MorphologicalRules
     requiredDuringInsert: false,
     defaultValue: const Constant(''),
   );
+  static const VerificationMeta _kindMeta = const VerificationMeta('kind');
+  @override
+  late final GeneratedColumn<String> kind = GeneratedColumn<String>(
+    'kind',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('derivational'),
+  );
+  @override
+  late final GeneratedColumnWithTypeConverter<FeatureBindings, String>
+  featureBindings =
+      GeneratedColumn<String>(
+        'feature_bindings',
+        aliasedName,
+        false,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+        defaultValue: const Constant('{}'),
+      ).withConverter<FeatureBindings>(
+        $MorphologicalRulesTable.$converterfeatureBindings,
+      );
+  static const VerificationMeta _inputPosIdMeta = const VerificationMeta(
+    'inputPosId',
+  );
+  @override
+  late final GeneratedColumn<int> inputPosId = GeneratedColumn<int>(
+    'input_pos_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES parts_of_speech (id)',
+    ),
+  );
+  static const VerificationMeta _outputPosIdMeta = const VerificationMeta(
+    'outputPosId',
+  );
+  @override
+  late final GeneratedColumn<int> outputPosId = GeneratedColumn<int>(
+    'output_pos_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES parts_of_speech (id)',
+    ),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -3220,6 +3339,10 @@ class $MorphologicalRulesTable extends MorphologicalRules
     isActive,
     posId,
     posIds,
+    kind,
+    featureBindings,
+    inputPosId,
+    outputPosId,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -3276,6 +3399,30 @@ class $MorphologicalRulesTable extends MorphologicalRules
         posIds.isAcceptableOrUnknown(data['pos_ids']!, _posIdsMeta),
       );
     }
+    if (data.containsKey('kind')) {
+      context.handle(
+        _kindMeta,
+        kind.isAcceptableOrUnknown(data['kind']!, _kindMeta),
+      );
+    }
+    if (data.containsKey('input_pos_id')) {
+      context.handle(
+        _inputPosIdMeta,
+        inputPosId.isAcceptableOrUnknown(
+          data['input_pos_id']!,
+          _inputPosIdMeta,
+        ),
+      );
+    }
+    if (data.containsKey('output_pos_id')) {
+      context.handle(
+        _outputPosIdMeta,
+        outputPosId.isAcceptableOrUnknown(
+          data['output_pos_id']!,
+          _outputPosIdMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -3313,6 +3460,25 @@ class $MorphologicalRulesTable extends MorphologicalRules
         DriftSqlType.string,
         data['${effectivePrefix}pos_ids'],
       )!,
+      kind: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}kind'],
+      )!,
+      featureBindings: $MorphologicalRulesTable.$converterfeatureBindings
+          .fromSql(
+            attachedDatabase.typeMapping.read(
+              DriftSqlType.string,
+              data['${effectivePrefix}feature_bindings'],
+            )!,
+          ),
+      inputPosId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}input_pos_id'],
+      ),
+      outputPosId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}output_pos_id'],
+      ),
     );
   }
 
@@ -3320,6 +3486,9 @@ class $MorphologicalRulesTable extends MorphologicalRules
   $MorphologicalRulesTable createAlias(String alias) {
     return $MorphologicalRulesTable(attachedDatabase, alias);
   }
+
+  static JsonTypeConverter2<FeatureBindings, String, Map<String, dynamic>>
+  $converterfeatureBindings = const FeatureBindingsConverter();
 }
 
 class MorphologicalRule extends DataClass
@@ -3331,9 +3500,24 @@ class MorphologicalRule extends DataClass
   final bool isActive;
   final int? posId;
 
-  /// Comma-separated POS IDs (e.g. "1,3,5") for multi-POS assignment.
-  /// Null or empty = applies to all. Supersedes [posId] for filtering.
+  /// Legacy v6 column. Comma-separated POS IDs (e.g. "1,3,5") — preserved
+  /// for migration safety per Phase 4 research recommendation A9
+  /// (keep-and-ignore). Do NOT write in v8+; replaced by [featureBindings]
+  /// `{pos: [...]}`.
   final String posIds;
+
+  /// v8+ — Phase 4 CONTEXT.md D-17. 'inflectional' | 'derivational'.
+  /// Default 'derivational' matches the v7→v8 silent reclassification (D-18).
+  final String kind;
+
+  /// v8+ — Phase 4 CONTEXT.md D-09 / D-19. JSON of [FeatureBindings].
+  final FeatureBindings featureBindings;
+
+  /// v8+ — source POS for derivational rules (D-20). Nullable for inflectional.
+  final int? inputPosId;
+
+  /// v8+ — output POS for derivational rules (D-20). Defaults to inputPosId on migration.
+  final int? outputPosId;
   const MorphologicalRule({
     required this.id,
     required this.name,
@@ -3342,6 +3526,10 @@ class MorphologicalRule extends DataClass
     required this.isActive,
     this.posId,
     required this.posIds,
+    required this.kind,
+    required this.featureBindings,
+    this.inputPosId,
+    this.outputPosId,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -3355,6 +3543,20 @@ class MorphologicalRule extends DataClass
       map['pos_id'] = Variable<int>(posId);
     }
     map['pos_ids'] = Variable<String>(posIds);
+    map['kind'] = Variable<String>(kind);
+    {
+      map['feature_bindings'] = Variable<String>(
+        $MorphologicalRulesTable.$converterfeatureBindings.toSql(
+          featureBindings,
+        ),
+      );
+    }
+    if (!nullToAbsent || inputPosId != null) {
+      map['input_pos_id'] = Variable<int>(inputPosId);
+    }
+    if (!nullToAbsent || outputPosId != null) {
+      map['output_pos_id'] = Variable<int>(outputPosId);
+    }
     return map;
   }
 
@@ -3369,6 +3571,14 @@ class MorphologicalRule extends DataClass
           ? const Value.absent()
           : Value(posId),
       posIds: Value(posIds),
+      kind: Value(kind),
+      featureBindings: Value(featureBindings),
+      inputPosId: inputPosId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(inputPosId),
+      outputPosId: outputPosId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(outputPosId),
     );
   }
 
@@ -3385,6 +3595,13 @@ class MorphologicalRule extends DataClass
       isActive: serializer.fromJson<bool>(json['isActive']),
       posId: serializer.fromJson<int?>(json['posId']),
       posIds: serializer.fromJson<String>(json['posIds']),
+      kind: serializer.fromJson<String>(json['kind']),
+      featureBindings: $MorphologicalRulesTable.$converterfeatureBindings
+          .fromJson(
+            serializer.fromJson<Map<String, dynamic>>(json['featureBindings']),
+          ),
+      inputPosId: serializer.fromJson<int?>(json['inputPosId']),
+      outputPosId: serializer.fromJson<int?>(json['outputPosId']),
     );
   }
   @override
@@ -3398,6 +3615,14 @@ class MorphologicalRule extends DataClass
       'isActive': serializer.toJson<bool>(isActive),
       'posId': serializer.toJson<int?>(posId),
       'posIds': serializer.toJson<String>(posIds),
+      'kind': serializer.toJson<String>(kind),
+      'featureBindings': serializer.toJson<Map<String, dynamic>>(
+        $MorphologicalRulesTable.$converterfeatureBindings.toJson(
+          featureBindings,
+        ),
+      ),
+      'inputPosId': serializer.toJson<int?>(inputPosId),
+      'outputPosId': serializer.toJson<int?>(outputPosId),
     };
   }
 
@@ -3409,6 +3634,10 @@ class MorphologicalRule extends DataClass
     bool? isActive,
     Value<int?> posId = const Value.absent(),
     String? posIds,
+    String? kind,
+    FeatureBindings? featureBindings,
+    Value<int?> inputPosId = const Value.absent(),
+    Value<int?> outputPosId = const Value.absent(),
   }) => MorphologicalRule(
     id: id ?? this.id,
     name: name ?? this.name,
@@ -3417,6 +3646,10 @@ class MorphologicalRule extends DataClass
     isActive: isActive ?? this.isActive,
     posId: posId.present ? posId.value : this.posId,
     posIds: posIds ?? this.posIds,
+    kind: kind ?? this.kind,
+    featureBindings: featureBindings ?? this.featureBindings,
+    inputPosId: inputPosId.present ? inputPosId.value : this.inputPosId,
+    outputPosId: outputPosId.present ? outputPosId.value : this.outputPosId,
   );
   MorphologicalRule copyWithCompanion(MorphologicalRulesCompanion data) {
     return MorphologicalRule(
@@ -3427,6 +3660,16 @@ class MorphologicalRule extends DataClass
       isActive: data.isActive.present ? data.isActive.value : this.isActive,
       posId: data.posId.present ? data.posId.value : this.posId,
       posIds: data.posIds.present ? data.posIds.value : this.posIds,
+      kind: data.kind.present ? data.kind.value : this.kind,
+      featureBindings: data.featureBindings.present
+          ? data.featureBindings.value
+          : this.featureBindings,
+      inputPosId: data.inputPosId.present
+          ? data.inputPosId.value
+          : this.inputPosId,
+      outputPosId: data.outputPosId.present
+          ? data.outputPosId.value
+          : this.outputPosId,
     );
   }
 
@@ -3439,14 +3682,29 @@ class MorphologicalRule extends DataClass
           ..write('ordering: $ordering, ')
           ..write('isActive: $isActive, ')
           ..write('posId: $posId, ')
-          ..write('posIds: $posIds')
+          ..write('posIds: $posIds, ')
+          ..write('kind: $kind, ')
+          ..write('featureBindings: $featureBindings, ')
+          ..write('inputPosId: $inputPosId, ')
+          ..write('outputPosId: $outputPosId')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode =>
-      Object.hash(id, name, source, ordering, isActive, posId, posIds);
+  int get hashCode => Object.hash(
+    id,
+    name,
+    source,
+    ordering,
+    isActive,
+    posId,
+    posIds,
+    kind,
+    featureBindings,
+    inputPosId,
+    outputPosId,
+  );
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -3457,7 +3715,11 @@ class MorphologicalRule extends DataClass
           other.ordering == this.ordering &&
           other.isActive == this.isActive &&
           other.posId == this.posId &&
-          other.posIds == this.posIds);
+          other.posIds == this.posIds &&
+          other.kind == this.kind &&
+          other.featureBindings == this.featureBindings &&
+          other.inputPosId == this.inputPosId &&
+          other.outputPosId == this.outputPosId);
 }
 
 class MorphologicalRulesCompanion extends UpdateCompanion<MorphologicalRule> {
@@ -3468,6 +3730,10 @@ class MorphologicalRulesCompanion extends UpdateCompanion<MorphologicalRule> {
   final Value<bool> isActive;
   final Value<int?> posId;
   final Value<String> posIds;
+  final Value<String> kind;
+  final Value<FeatureBindings> featureBindings;
+  final Value<int?> inputPosId;
+  final Value<int?> outputPosId;
   const MorphologicalRulesCompanion({
     this.id = const Value.absent(),
     this.name = const Value.absent(),
@@ -3476,6 +3742,10 @@ class MorphologicalRulesCompanion extends UpdateCompanion<MorphologicalRule> {
     this.isActive = const Value.absent(),
     this.posId = const Value.absent(),
     this.posIds = const Value.absent(),
+    this.kind = const Value.absent(),
+    this.featureBindings = const Value.absent(),
+    this.inputPosId = const Value.absent(),
+    this.outputPosId = const Value.absent(),
   });
   MorphologicalRulesCompanion.insert({
     this.id = const Value.absent(),
@@ -3485,6 +3755,10 @@ class MorphologicalRulesCompanion extends UpdateCompanion<MorphologicalRule> {
     this.isActive = const Value.absent(),
     this.posId = const Value.absent(),
     this.posIds = const Value.absent(),
+    this.kind = const Value.absent(),
+    this.featureBindings = const Value.absent(),
+    this.inputPosId = const Value.absent(),
+    this.outputPosId = const Value.absent(),
   }) : name = Value(name),
        source = Value(source);
   static Insertable<MorphologicalRule> custom({
@@ -3495,6 +3769,10 @@ class MorphologicalRulesCompanion extends UpdateCompanion<MorphologicalRule> {
     Expression<bool>? isActive,
     Expression<int>? posId,
     Expression<String>? posIds,
+    Expression<String>? kind,
+    Expression<String>? featureBindings,
+    Expression<int>? inputPosId,
+    Expression<int>? outputPosId,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -3504,6 +3782,10 @@ class MorphologicalRulesCompanion extends UpdateCompanion<MorphologicalRule> {
       if (isActive != null) 'is_active': isActive,
       if (posId != null) 'pos_id': posId,
       if (posIds != null) 'pos_ids': posIds,
+      if (kind != null) 'kind': kind,
+      if (featureBindings != null) 'feature_bindings': featureBindings,
+      if (inputPosId != null) 'input_pos_id': inputPosId,
+      if (outputPosId != null) 'output_pos_id': outputPosId,
     });
   }
 
@@ -3515,6 +3797,10 @@ class MorphologicalRulesCompanion extends UpdateCompanion<MorphologicalRule> {
     Value<bool>? isActive,
     Value<int?>? posId,
     Value<String>? posIds,
+    Value<String>? kind,
+    Value<FeatureBindings>? featureBindings,
+    Value<int?>? inputPosId,
+    Value<int?>? outputPosId,
   }) {
     return MorphologicalRulesCompanion(
       id: id ?? this.id,
@@ -3524,6 +3810,10 @@ class MorphologicalRulesCompanion extends UpdateCompanion<MorphologicalRule> {
       isActive: isActive ?? this.isActive,
       posId: posId ?? this.posId,
       posIds: posIds ?? this.posIds,
+      kind: kind ?? this.kind,
+      featureBindings: featureBindings ?? this.featureBindings,
+      inputPosId: inputPosId ?? this.inputPosId,
+      outputPosId: outputPosId ?? this.outputPosId,
     );
   }
 
@@ -3551,6 +3841,22 @@ class MorphologicalRulesCompanion extends UpdateCompanion<MorphologicalRule> {
     if (posIds.present) {
       map['pos_ids'] = Variable<String>(posIds.value);
     }
+    if (kind.present) {
+      map['kind'] = Variable<String>(kind.value);
+    }
+    if (featureBindings.present) {
+      map['feature_bindings'] = Variable<String>(
+        $MorphologicalRulesTable.$converterfeatureBindings.toSql(
+          featureBindings.value,
+        ),
+      );
+    }
+    if (inputPosId.present) {
+      map['input_pos_id'] = Variable<int>(inputPosId.value);
+    }
+    if (outputPosId.present) {
+      map['output_pos_id'] = Variable<int>(outputPosId.value);
+    }
     return map;
   }
 
@@ -3563,7 +3869,11 @@ class MorphologicalRulesCompanion extends UpdateCompanion<MorphologicalRule> {
           ..write('ordering: $ordering, ')
           ..write('isActive: $isActive, ')
           ..write('posId: $posId, ')
-          ..write('posIds: $posIds')
+          ..write('posIds: $posIds, ')
+          ..write('kind: $kind, ')
+          ..write('featureBindings: $featureBindings, ')
+          ..write('inputPosId: $inputPosId, ')
+          ..write('outputPosId: $outputPosId')
           ..write(')'))
         .toString();
   }
@@ -3944,6 +4254,841 @@ class MorphologicalRuleExceptionsCompanion
   }
 }
 
+class $DimensionsTable extends Dimensions
+    with TableInfo<$DimensionsTable, Dimension> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $DimensionsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _posIdMeta = const VerificationMeta('posId');
+  @override
+  late final GeneratedColumn<int> posId = GeneratedColumn<int>(
+    'pos_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES parts_of_speech (id) ON DELETE CASCADE',
+    ),
+  );
+  static const VerificationMeta _nameMeta = const VerificationMeta('name');
+  @override
+  late final GeneratedColumn<String> name = GeneratedColumn<String>(
+    'name',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _orderingMeta = const VerificationMeta(
+    'ordering',
+  );
+  @override
+  late final GeneratedColumn<int> ordering = GeneratedColumn<int>(
+    'ordering',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _levelsJsonMeta = const VerificationMeta(
+    'levelsJson',
+  );
+  @override
+  late final GeneratedColumn<String> levelsJson = GeneratedColumn<String>(
+    'levels_json',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _templateIdMeta = const VerificationMeta(
+    'templateId',
+  );
+  @override
+  late final GeneratedColumn<String> templateId = GeneratedColumn<String>(
+    'template_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    posId,
+    name,
+    ordering,
+    levelsJson,
+    templateId,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'dimensions';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<Dimension> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('pos_id')) {
+      context.handle(
+        _posIdMeta,
+        posId.isAcceptableOrUnknown(data['pos_id']!, _posIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_posIdMeta);
+    }
+    if (data.containsKey('name')) {
+      context.handle(
+        _nameMeta,
+        name.isAcceptableOrUnknown(data['name']!, _nameMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_nameMeta);
+    }
+    if (data.containsKey('ordering')) {
+      context.handle(
+        _orderingMeta,
+        ordering.isAcceptableOrUnknown(data['ordering']!, _orderingMeta),
+      );
+    }
+    if (data.containsKey('levels_json')) {
+      context.handle(
+        _levelsJsonMeta,
+        levelsJson.isAcceptableOrUnknown(data['levels_json']!, _levelsJsonMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_levelsJsonMeta);
+    }
+    if (data.containsKey('template_id')) {
+      context.handle(
+        _templateIdMeta,
+        templateId.isAcceptableOrUnknown(data['template_id']!, _templateIdMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  Dimension map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return Dimension(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      posId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}pos_id'],
+      )!,
+      name: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}name'],
+      )!,
+      ordering: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}ordering'],
+      )!,
+      levelsJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}levels_json'],
+      )!,
+      templateId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}template_id'],
+      ),
+    );
+  }
+
+  @override
+  $DimensionsTable createAlias(String alias) {
+    return $DimensionsTable(attachedDatabase, alias);
+  }
+}
+
+class Dimension extends DataClass implements Insertable<Dimension> {
+  final int id;
+  final int posId;
+  final String name;
+  final int ordering;
+  final String levelsJson;
+  final String? templateId;
+  const Dimension({
+    required this.id,
+    required this.posId,
+    required this.name,
+    required this.ordering,
+    required this.levelsJson,
+    this.templateId,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['pos_id'] = Variable<int>(posId);
+    map['name'] = Variable<String>(name);
+    map['ordering'] = Variable<int>(ordering);
+    map['levels_json'] = Variable<String>(levelsJson);
+    if (!nullToAbsent || templateId != null) {
+      map['template_id'] = Variable<String>(templateId);
+    }
+    return map;
+  }
+
+  DimensionsCompanion toCompanion(bool nullToAbsent) {
+    return DimensionsCompanion(
+      id: Value(id),
+      posId: Value(posId),
+      name: Value(name),
+      ordering: Value(ordering),
+      levelsJson: Value(levelsJson),
+      templateId: templateId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(templateId),
+    );
+  }
+
+  factory Dimension.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return Dimension(
+      id: serializer.fromJson<int>(json['id']),
+      posId: serializer.fromJson<int>(json['posId']),
+      name: serializer.fromJson<String>(json['name']),
+      ordering: serializer.fromJson<int>(json['ordering']),
+      levelsJson: serializer.fromJson<String>(json['levelsJson']),
+      templateId: serializer.fromJson<String?>(json['templateId']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'posId': serializer.toJson<int>(posId),
+      'name': serializer.toJson<String>(name),
+      'ordering': serializer.toJson<int>(ordering),
+      'levelsJson': serializer.toJson<String>(levelsJson),
+      'templateId': serializer.toJson<String?>(templateId),
+    };
+  }
+
+  Dimension copyWith({
+    int? id,
+    int? posId,
+    String? name,
+    int? ordering,
+    String? levelsJson,
+    Value<String?> templateId = const Value.absent(),
+  }) => Dimension(
+    id: id ?? this.id,
+    posId: posId ?? this.posId,
+    name: name ?? this.name,
+    ordering: ordering ?? this.ordering,
+    levelsJson: levelsJson ?? this.levelsJson,
+    templateId: templateId.present ? templateId.value : this.templateId,
+  );
+  Dimension copyWithCompanion(DimensionsCompanion data) {
+    return Dimension(
+      id: data.id.present ? data.id.value : this.id,
+      posId: data.posId.present ? data.posId.value : this.posId,
+      name: data.name.present ? data.name.value : this.name,
+      ordering: data.ordering.present ? data.ordering.value : this.ordering,
+      levelsJson: data.levelsJson.present
+          ? data.levelsJson.value
+          : this.levelsJson,
+      templateId: data.templateId.present
+          ? data.templateId.value
+          : this.templateId,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('Dimension(')
+          ..write('id: $id, ')
+          ..write('posId: $posId, ')
+          ..write('name: $name, ')
+          ..write('ordering: $ordering, ')
+          ..write('levelsJson: $levelsJson, ')
+          ..write('templateId: $templateId')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(id, posId, name, ordering, levelsJson, templateId);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is Dimension &&
+          other.id == this.id &&
+          other.posId == this.posId &&
+          other.name == this.name &&
+          other.ordering == this.ordering &&
+          other.levelsJson == this.levelsJson &&
+          other.templateId == this.templateId);
+}
+
+class DimensionsCompanion extends UpdateCompanion<Dimension> {
+  final Value<int> id;
+  final Value<int> posId;
+  final Value<String> name;
+  final Value<int> ordering;
+  final Value<String> levelsJson;
+  final Value<String?> templateId;
+  const DimensionsCompanion({
+    this.id = const Value.absent(),
+    this.posId = const Value.absent(),
+    this.name = const Value.absent(),
+    this.ordering = const Value.absent(),
+    this.levelsJson = const Value.absent(),
+    this.templateId = const Value.absent(),
+  });
+  DimensionsCompanion.insert({
+    this.id = const Value.absent(),
+    required int posId,
+    required String name,
+    this.ordering = const Value.absent(),
+    required String levelsJson,
+    this.templateId = const Value.absent(),
+  }) : posId = Value(posId),
+       name = Value(name),
+       levelsJson = Value(levelsJson);
+  static Insertable<Dimension> custom({
+    Expression<int>? id,
+    Expression<int>? posId,
+    Expression<String>? name,
+    Expression<int>? ordering,
+    Expression<String>? levelsJson,
+    Expression<String>? templateId,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (posId != null) 'pos_id': posId,
+      if (name != null) 'name': name,
+      if (ordering != null) 'ordering': ordering,
+      if (levelsJson != null) 'levels_json': levelsJson,
+      if (templateId != null) 'template_id': templateId,
+    });
+  }
+
+  DimensionsCompanion copyWith({
+    Value<int>? id,
+    Value<int>? posId,
+    Value<String>? name,
+    Value<int>? ordering,
+    Value<String>? levelsJson,
+    Value<String?>? templateId,
+  }) {
+    return DimensionsCompanion(
+      id: id ?? this.id,
+      posId: posId ?? this.posId,
+      name: name ?? this.name,
+      ordering: ordering ?? this.ordering,
+      levelsJson: levelsJson ?? this.levelsJson,
+      templateId: templateId ?? this.templateId,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (posId.present) {
+      map['pos_id'] = Variable<int>(posId.value);
+    }
+    if (name.present) {
+      map['name'] = Variable<String>(name.value);
+    }
+    if (ordering.present) {
+      map['ordering'] = Variable<int>(ordering.value);
+    }
+    if (levelsJson.present) {
+      map['levels_json'] = Variable<String>(levelsJson.value);
+    }
+    if (templateId.present) {
+      map['template_id'] = Variable<String>(templateId.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('DimensionsCompanion(')
+          ..write('id: $id, ')
+          ..write('posId: $posId, ')
+          ..write('name: $name, ')
+          ..write('ordering: $ordering, ')
+          ..write('levelsJson: $levelsJson, ')
+          ..write('templateId: $templateId')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $ParadigmCellOverridesTable extends ParadigmCellOverrides
+    with TableInfo<$ParadigmCellOverridesTable, ParadigmCellOverride> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $ParadigmCellOverridesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _lexemeIdMeta = const VerificationMeta(
+    'lexemeId',
+  );
+  @override
+  late final GeneratedColumn<int> lexemeId = GeneratedColumn<int>(
+    'lexeme_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES lexemes (id) ON DELETE CASCADE',
+    ),
+  );
+  static const VerificationMeta _featureSetJsonMeta = const VerificationMeta(
+    'featureSetJson',
+  );
+  @override
+  late final GeneratedColumn<String> featureSetJson = GeneratedColumn<String>(
+    'feature_set_json',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _overrideIpaMeta = const VerificationMeta(
+    'overrideIpa',
+  );
+  @override
+  late final GeneratedColumn<String> overrideIpa = GeneratedColumn<String>(
+    'override_ipa',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _overrideRomanizationMeta =
+      const VerificationMeta('overrideRomanization');
+  @override
+  late final GeneratedColumn<String> overrideRomanization =
+      GeneratedColumn<String>(
+        'override_romanization',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _notesMeta = const VerificationMeta('notes');
+  @override
+  late final GeneratedColumn<String> notes = GeneratedColumn<String>(
+    'notes',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    lexemeId,
+    featureSetJson,
+    overrideIpa,
+    overrideRomanization,
+    notes,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'paradigm_cell_overrides';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<ParadigmCellOverride> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('lexeme_id')) {
+      context.handle(
+        _lexemeIdMeta,
+        lexemeId.isAcceptableOrUnknown(data['lexeme_id']!, _lexemeIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_lexemeIdMeta);
+    }
+    if (data.containsKey('feature_set_json')) {
+      context.handle(
+        _featureSetJsonMeta,
+        featureSetJson.isAcceptableOrUnknown(
+          data['feature_set_json']!,
+          _featureSetJsonMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_featureSetJsonMeta);
+    }
+    if (data.containsKey('override_ipa')) {
+      context.handle(
+        _overrideIpaMeta,
+        overrideIpa.isAcceptableOrUnknown(
+          data['override_ipa']!,
+          _overrideIpaMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_overrideIpaMeta);
+    }
+    if (data.containsKey('override_romanization')) {
+      context.handle(
+        _overrideRomanizationMeta,
+        overrideRomanization.isAcceptableOrUnknown(
+          data['override_romanization']!,
+          _overrideRomanizationMeta,
+        ),
+      );
+    }
+    if (data.containsKey('notes')) {
+      context.handle(
+        _notesMeta,
+        notes.isAcceptableOrUnknown(data['notes']!, _notesMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  ParadigmCellOverride map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return ParadigmCellOverride(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      lexemeId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}lexeme_id'],
+      )!,
+      featureSetJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}feature_set_json'],
+      )!,
+      overrideIpa: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}override_ipa'],
+      )!,
+      overrideRomanization: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}override_romanization'],
+      ),
+      notes: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}notes'],
+      ),
+    );
+  }
+
+  @override
+  $ParadigmCellOverridesTable createAlias(String alias) {
+    return $ParadigmCellOverridesTable(attachedDatabase, alias);
+  }
+}
+
+class ParadigmCellOverride extends DataClass
+    implements Insertable<ParadigmCellOverride> {
+  final int id;
+  final int lexemeId;
+  final String featureSetJson;
+  final String overrideIpa;
+  final String? overrideRomanization;
+  final String? notes;
+  const ParadigmCellOverride({
+    required this.id,
+    required this.lexemeId,
+    required this.featureSetJson,
+    required this.overrideIpa,
+    this.overrideRomanization,
+    this.notes,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['lexeme_id'] = Variable<int>(lexemeId);
+    map['feature_set_json'] = Variable<String>(featureSetJson);
+    map['override_ipa'] = Variable<String>(overrideIpa);
+    if (!nullToAbsent || overrideRomanization != null) {
+      map['override_romanization'] = Variable<String>(overrideRomanization);
+    }
+    if (!nullToAbsent || notes != null) {
+      map['notes'] = Variable<String>(notes);
+    }
+    return map;
+  }
+
+  ParadigmCellOverridesCompanion toCompanion(bool nullToAbsent) {
+    return ParadigmCellOverridesCompanion(
+      id: Value(id),
+      lexemeId: Value(lexemeId),
+      featureSetJson: Value(featureSetJson),
+      overrideIpa: Value(overrideIpa),
+      overrideRomanization: overrideRomanization == null && nullToAbsent
+          ? const Value.absent()
+          : Value(overrideRomanization),
+      notes: notes == null && nullToAbsent
+          ? const Value.absent()
+          : Value(notes),
+    );
+  }
+
+  factory ParadigmCellOverride.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return ParadigmCellOverride(
+      id: serializer.fromJson<int>(json['id']),
+      lexemeId: serializer.fromJson<int>(json['lexemeId']),
+      featureSetJson: serializer.fromJson<String>(json['featureSetJson']),
+      overrideIpa: serializer.fromJson<String>(json['overrideIpa']),
+      overrideRomanization: serializer.fromJson<String?>(
+        json['overrideRomanization'],
+      ),
+      notes: serializer.fromJson<String?>(json['notes']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'lexemeId': serializer.toJson<int>(lexemeId),
+      'featureSetJson': serializer.toJson<String>(featureSetJson),
+      'overrideIpa': serializer.toJson<String>(overrideIpa),
+      'overrideRomanization': serializer.toJson<String?>(overrideRomanization),
+      'notes': serializer.toJson<String?>(notes),
+    };
+  }
+
+  ParadigmCellOverride copyWith({
+    int? id,
+    int? lexemeId,
+    String? featureSetJson,
+    String? overrideIpa,
+    Value<String?> overrideRomanization = const Value.absent(),
+    Value<String?> notes = const Value.absent(),
+  }) => ParadigmCellOverride(
+    id: id ?? this.id,
+    lexemeId: lexemeId ?? this.lexemeId,
+    featureSetJson: featureSetJson ?? this.featureSetJson,
+    overrideIpa: overrideIpa ?? this.overrideIpa,
+    overrideRomanization: overrideRomanization.present
+        ? overrideRomanization.value
+        : this.overrideRomanization,
+    notes: notes.present ? notes.value : this.notes,
+  );
+  ParadigmCellOverride copyWithCompanion(ParadigmCellOverridesCompanion data) {
+    return ParadigmCellOverride(
+      id: data.id.present ? data.id.value : this.id,
+      lexemeId: data.lexemeId.present ? data.lexemeId.value : this.lexemeId,
+      featureSetJson: data.featureSetJson.present
+          ? data.featureSetJson.value
+          : this.featureSetJson,
+      overrideIpa: data.overrideIpa.present
+          ? data.overrideIpa.value
+          : this.overrideIpa,
+      overrideRomanization: data.overrideRomanization.present
+          ? data.overrideRomanization.value
+          : this.overrideRomanization,
+      notes: data.notes.present ? data.notes.value : this.notes,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ParadigmCellOverride(')
+          ..write('id: $id, ')
+          ..write('lexemeId: $lexemeId, ')
+          ..write('featureSetJson: $featureSetJson, ')
+          ..write('overrideIpa: $overrideIpa, ')
+          ..write('overrideRomanization: $overrideRomanization, ')
+          ..write('notes: $notes')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    lexemeId,
+    featureSetJson,
+    overrideIpa,
+    overrideRomanization,
+    notes,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ParadigmCellOverride &&
+          other.id == this.id &&
+          other.lexemeId == this.lexemeId &&
+          other.featureSetJson == this.featureSetJson &&
+          other.overrideIpa == this.overrideIpa &&
+          other.overrideRomanization == this.overrideRomanization &&
+          other.notes == this.notes);
+}
+
+class ParadigmCellOverridesCompanion
+    extends UpdateCompanion<ParadigmCellOverride> {
+  final Value<int> id;
+  final Value<int> lexemeId;
+  final Value<String> featureSetJson;
+  final Value<String> overrideIpa;
+  final Value<String?> overrideRomanization;
+  final Value<String?> notes;
+  const ParadigmCellOverridesCompanion({
+    this.id = const Value.absent(),
+    this.lexemeId = const Value.absent(),
+    this.featureSetJson = const Value.absent(),
+    this.overrideIpa = const Value.absent(),
+    this.overrideRomanization = const Value.absent(),
+    this.notes = const Value.absent(),
+  });
+  ParadigmCellOverridesCompanion.insert({
+    this.id = const Value.absent(),
+    required int lexemeId,
+    required String featureSetJson,
+    required String overrideIpa,
+    this.overrideRomanization = const Value.absent(),
+    this.notes = const Value.absent(),
+  }) : lexemeId = Value(lexemeId),
+       featureSetJson = Value(featureSetJson),
+       overrideIpa = Value(overrideIpa);
+  static Insertable<ParadigmCellOverride> custom({
+    Expression<int>? id,
+    Expression<int>? lexemeId,
+    Expression<String>? featureSetJson,
+    Expression<String>? overrideIpa,
+    Expression<String>? overrideRomanization,
+    Expression<String>? notes,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (lexemeId != null) 'lexeme_id': lexemeId,
+      if (featureSetJson != null) 'feature_set_json': featureSetJson,
+      if (overrideIpa != null) 'override_ipa': overrideIpa,
+      if (overrideRomanization != null)
+        'override_romanization': overrideRomanization,
+      if (notes != null) 'notes': notes,
+    });
+  }
+
+  ParadigmCellOverridesCompanion copyWith({
+    Value<int>? id,
+    Value<int>? lexemeId,
+    Value<String>? featureSetJson,
+    Value<String>? overrideIpa,
+    Value<String?>? overrideRomanization,
+    Value<String?>? notes,
+  }) {
+    return ParadigmCellOverridesCompanion(
+      id: id ?? this.id,
+      lexemeId: lexemeId ?? this.lexemeId,
+      featureSetJson: featureSetJson ?? this.featureSetJson,
+      overrideIpa: overrideIpa ?? this.overrideIpa,
+      overrideRomanization: overrideRomanization ?? this.overrideRomanization,
+      notes: notes ?? this.notes,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (lexemeId.present) {
+      map['lexeme_id'] = Variable<int>(lexemeId.value);
+    }
+    if (featureSetJson.present) {
+      map['feature_set_json'] = Variable<String>(featureSetJson.value);
+    }
+    if (overrideIpa.present) {
+      map['override_ipa'] = Variable<String>(overrideIpa.value);
+    }
+    if (overrideRomanization.present) {
+      map['override_romanization'] = Variable<String>(
+        overrideRomanization.value,
+      );
+    }
+    if (notes.present) {
+      map['notes'] = Variable<String>(notes.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ParadigmCellOverridesCompanion(')
+          ..write('id: $id, ')
+          ..write('lexemeId: $lexemeId, ')
+          ..write('featureSetJson: $featureSetJson, ')
+          ..write('overrideIpa: $overrideIpa, ')
+          ..write('overrideRomanization: $overrideRomanization, ')
+          ..write('notes: $notes')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -3965,6 +5110,9 @@ abstract class _$AppDatabase extends GeneratedDatabase {
       $MorphologicalRulesTable(this);
   late final $MorphologicalRuleExceptionsTable morphologicalRuleExceptions =
       $MorphologicalRuleExceptionsTable(this);
+  late final $DimensionsTable dimensions = $DimensionsTable(this);
+  late final $ParadigmCellOverridesTable paradigmCellOverrides =
+      $ParadigmCellOverridesTable(this);
   late final PhonemeDao phonemeDao = PhonemeDao(this as AppDatabase);
   late final NaturalClassDao naturalClassDao = NaturalClassDao(
     this as AppDatabase,
@@ -3996,7 +5144,26 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     partsOfSpeech,
     morphologicalRules,
     morphologicalRuleExceptions,
+    dimensions,
+    paradigmCellOverrides,
   ];
+  @override
+  StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules([
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'parts_of_speech',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('dimensions', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'lexemes',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('paradigm_cell_overrides', kind: UpdateKind.delete)],
+    ),
+  ]);
 }
 
 typedef $$PhonemesTableCreateCompanionBuilder =
@@ -5041,6 +6208,7 @@ typedef $$LexemesTableCreateCompanionBuilder =
       Value<String?> meaning,
       Value<String?> partOfSpeech,
       Value<bool> isPhonologicalException,
+      Value<String?> skippedDimensionsJson,
     });
 typedef $$LexemesTableUpdateCompanionBuilder =
     LexemesCompanion Function({
@@ -5053,7 +6221,41 @@ typedef $$LexemesTableUpdateCompanionBuilder =
       Value<String?> meaning,
       Value<String?> partOfSpeech,
       Value<bool> isPhonologicalException,
+      Value<String?> skippedDimensionsJson,
     });
+
+final class $$LexemesTableReferences
+    extends BaseReferences<_$AppDatabase, $LexemesTable, Lexeme> {
+  $$LexemesTableReferences(super.$_db, super.$_table, super.$_typedResult);
+
+  static MultiTypedResultKey<
+    $ParadigmCellOverridesTable,
+    List<ParadigmCellOverride>
+  >
+  _paradigmCellOverridesRefsTable(_$AppDatabase db) =>
+      MultiTypedResultKey.fromTable(
+        db.paradigmCellOverrides,
+        aliasName: $_aliasNameGenerator(
+          db.lexemes.id,
+          db.paradigmCellOverrides.lexemeId,
+        ),
+      );
+
+  $$ParadigmCellOverridesTableProcessedTableManager
+  get paradigmCellOverridesRefs {
+    final manager = $$ParadigmCellOverridesTableTableManager(
+      $_db,
+      $_db.paradigmCellOverrides,
+    ).filter((f) => f.lexemeId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _paradigmCellOverridesRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+}
 
 class $$LexemesTableFilterComposer
     extends Composer<_$AppDatabase, $LexemesTable> {
@@ -5108,6 +6310,37 @@ class $$LexemesTableFilterComposer
     column: $table.isPhonologicalException,
     builder: (column) => ColumnFilters(column),
   );
+
+  ColumnFilters<String> get skippedDimensionsJson => $composableBuilder(
+    column: $table.skippedDimensionsJson,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  Expression<bool> paradigmCellOverridesRefs(
+    Expression<bool> Function($$ParadigmCellOverridesTableFilterComposer f) f,
+  ) {
+    final $$ParadigmCellOverridesTableFilterComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.paradigmCellOverrides,
+          getReferencedColumn: (t) => t.lexemeId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$ParadigmCellOverridesTableFilterComposer(
+                $db: $db,
+                $table: $db.paradigmCellOverrides,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
 }
 
 class $$LexemesTableOrderingComposer
@@ -5163,6 +6396,11 @@ class $$LexemesTableOrderingComposer
     column: $table.isPhonologicalException,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<String> get skippedDimensionsJson => $composableBuilder(
+    column: $table.skippedDimensionsJson,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$LexemesTableAnnotationComposer
@@ -5208,6 +6446,37 @@ class $$LexemesTableAnnotationComposer
     column: $table.isPhonologicalException,
     builder: (column) => column,
   );
+
+  GeneratedColumn<String> get skippedDimensionsJson => $composableBuilder(
+    column: $table.skippedDimensionsJson,
+    builder: (column) => column,
+  );
+
+  Expression<T> paradigmCellOverridesRefs<T extends Object>(
+    Expression<T> Function($$ParadigmCellOverridesTableAnnotationComposer a) f,
+  ) {
+    final $$ParadigmCellOverridesTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.paradigmCellOverrides,
+          getReferencedColumn: (t) => t.lexemeId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$ParadigmCellOverridesTableAnnotationComposer(
+                $db: $db,
+                $table: $db.paradigmCellOverrides,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
 }
 
 class $$LexemesTableTableManager
@@ -5221,9 +6490,9 @@ class $$LexemesTableTableManager
           $$LexemesTableAnnotationComposer,
           $$LexemesTableCreateCompanionBuilder,
           $$LexemesTableUpdateCompanionBuilder,
-          (Lexeme, BaseReferences<_$AppDatabase, $LexemesTable, Lexeme>),
+          (Lexeme, $$LexemesTableReferences),
           Lexeme,
-          PrefetchHooks Function()
+          PrefetchHooks Function({bool paradigmCellOverridesRefs})
         > {
   $$LexemesTableTableManager(_$AppDatabase db, $LexemesTable table)
     : super(
@@ -5247,6 +6516,7 @@ class $$LexemesTableTableManager
                 Value<String?> meaning = const Value.absent(),
                 Value<String?> partOfSpeech = const Value.absent(),
                 Value<bool> isPhonologicalException = const Value.absent(),
+                Value<String?> skippedDimensionsJson = const Value.absent(),
               }) => LexemesCompanion(
                 id: id,
                 ipa: ipa,
@@ -5257,6 +6527,7 @@ class $$LexemesTableTableManager
                 meaning: meaning,
                 partOfSpeech: partOfSpeech,
                 isPhonologicalException: isPhonologicalException,
+                skippedDimensionsJson: skippedDimensionsJson,
               ),
           createCompanionCallback:
               ({
@@ -5269,6 +6540,7 @@ class $$LexemesTableTableManager
                 Value<String?> meaning = const Value.absent(),
                 Value<String?> partOfSpeech = const Value.absent(),
                 Value<bool> isPhonologicalException = const Value.absent(),
+                Value<String?> skippedDimensionsJson = const Value.absent(),
               }) => LexemesCompanion.insert(
                 id: id,
                 ipa: ipa,
@@ -5279,11 +6551,47 @@ class $$LexemesTableTableManager
                 meaning: meaning,
                 partOfSpeech: partOfSpeech,
                 isPhonologicalException: isPhonologicalException,
+                skippedDimensionsJson: skippedDimensionsJson,
               ),
           withReferenceMapper: (p0) => p0
-              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$LexemesTableReferences(db, table, e),
+                ),
+              )
               .toList(),
-          prefetchHooksCallback: null,
+          prefetchHooksCallback: ({paradigmCellOverridesRefs = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [
+                if (paradigmCellOverridesRefs) db.paradigmCellOverrides,
+              ],
+              addJoins: null,
+              getPrefetchedDataCallback: (items) async {
+                return [
+                  if (paradigmCellOverridesRefs)
+                    await $_getPrefetchedData<
+                      Lexeme,
+                      $LexemesTable,
+                      ParadigmCellOverride
+                    >(
+                      currentTable: table,
+                      referencedTable: $$LexemesTableReferences
+                          ._paradigmCellOverridesRefsTable(db),
+                      managerFromTypedResult: (p0) => $$LexemesTableReferences(
+                        db,
+                        table,
+                        p0,
+                      ).paradigmCellOverridesRefs,
+                      referencedItemsForCurrentItem: (item, referencedItems) =>
+                          referencedItems.where((e) => e.lexemeId == item.id),
+                      typedResults: items,
+                    ),
+                ];
+              },
+            );
+          },
         ),
       );
 }
@@ -5298,9 +6606,9 @@ typedef $$LexemesTableProcessedTableManager =
       $$LexemesTableAnnotationComposer,
       $$LexemesTableCreateCompanionBuilder,
       $$LexemesTableUpdateCompanionBuilder,
-      (Lexeme, BaseReferences<_$AppDatabase, $LexemesTable, Lexeme>),
+      (Lexeme, $$LexemesTableReferences),
       Lexeme,
-      PrefetchHooks Function()
+      PrefetchHooks Function({bool paradigmCellOverridesRefs})
     >;
 typedef $$RewriteRulesTableCreateCompanionBuilder =
     RewriteRulesCompanion Function({
@@ -5638,25 +6946,19 @@ final class $$PartsOfSpeechTableReferences
     super.$_typedResult,
   );
 
-  static MultiTypedResultKey<$MorphologicalRulesTable, List<MorphologicalRule>>
-  _morphologicalRulesRefsTable(_$AppDatabase db) =>
-      MultiTypedResultKey.fromTable(
-        db.morphologicalRules,
-        aliasName: $_aliasNameGenerator(
-          db.partsOfSpeech.id,
-          db.morphologicalRules.posId,
-        ),
-      );
+  static MultiTypedResultKey<$DimensionsTable, List<Dimension>>
+  _dimensionsRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.dimensions,
+    aliasName: $_aliasNameGenerator(db.partsOfSpeech.id, db.dimensions.posId),
+  );
 
-  $$MorphologicalRulesTableProcessedTableManager get morphologicalRulesRefs {
-    final manager = $$MorphologicalRulesTableTableManager(
+  $$DimensionsTableProcessedTableManager get dimensionsRefs {
+    final manager = $$DimensionsTableTableManager(
       $_db,
-      $_db.morphologicalRules,
+      $_db.dimensions,
     ).filter((f) => f.posId.id.sqlEquals($_itemColumn<int>('id')!));
 
-    final cache = $_typedResult.readTableOrNull(
-      _morphologicalRulesRefsTable($_db),
-    );
+    final cache = $_typedResult.readTableOrNull(_dimensionsRefsTable($_db));
     return ProcessedTableManager(
       manager.$state.copyWith(prefetchedData: cache),
     );
@@ -5687,22 +6989,22 @@ class $$PartsOfSpeechTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
-  Expression<bool> morphologicalRulesRefs(
-    Expression<bool> Function($$MorphologicalRulesTableFilterComposer f) f,
+  Expression<bool> dimensionsRefs(
+    Expression<bool> Function($$DimensionsTableFilterComposer f) f,
   ) {
-    final $$MorphologicalRulesTableFilterComposer composer = $composerBuilder(
+    final $$DimensionsTableFilterComposer composer = $composerBuilder(
       composer: this,
       getCurrentColumn: (t) => t.id,
-      referencedTable: $db.morphologicalRules,
+      referencedTable: $db.dimensions,
       getReferencedColumn: (t) => t.posId,
       builder:
           (
             joinBuilder, {
             $addJoinBuilderToRootComposer,
             $removeJoinBuilderFromRootComposer,
-          }) => $$MorphologicalRulesTableFilterComposer(
+          }) => $$DimensionsTableFilterComposer(
             $db: $db,
-            $table: $db.morphologicalRules,
+            $table: $db.dimensions,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -5758,29 +7060,28 @@ class $$PartsOfSpeechTableAnnotationComposer
     builder: (column) => column,
   );
 
-  Expression<T> morphologicalRulesRefs<T extends Object>(
-    Expression<T> Function($$MorphologicalRulesTableAnnotationComposer a) f,
+  Expression<T> dimensionsRefs<T extends Object>(
+    Expression<T> Function($$DimensionsTableAnnotationComposer a) f,
   ) {
-    final $$MorphologicalRulesTableAnnotationComposer composer =
-        $composerBuilder(
-          composer: this,
-          getCurrentColumn: (t) => t.id,
-          referencedTable: $db.morphologicalRules,
-          getReferencedColumn: (t) => t.posId,
-          builder:
-              (
-                joinBuilder, {
-                $addJoinBuilderToRootComposer,
+    final $$DimensionsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.dimensions,
+      getReferencedColumn: (t) => t.posId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$DimensionsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.dimensions,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
                 $removeJoinBuilderFromRootComposer,
-              }) => $$MorphologicalRulesTableAnnotationComposer(
-                $db: $db,
-                $table: $db.morphologicalRules,
-                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-                joinBuilder: joinBuilder,
-                $removeJoinBuilderFromRootComposer:
-                    $removeJoinBuilderFromRootComposer,
-              ),
-        );
+          ),
+    );
     return f(composer);
   }
 }
@@ -5798,7 +7099,7 @@ class $$PartsOfSpeechTableTableManager
           $$PartsOfSpeechTableUpdateCompanionBuilder,
           (PartsOfSpeechData, $$PartsOfSpeechTableReferences),
           PartsOfSpeechData,
-          PrefetchHooks Function({bool morphologicalRulesRefs})
+          PrefetchHooks Function({bool dimensionsRefs})
         > {
   $$PartsOfSpeechTableTableManager(_$AppDatabase db, $PartsOfSpeechTable table)
     : super(
@@ -5839,30 +7140,28 @@ class $$PartsOfSpeechTableTableManager
                 ),
               )
               .toList(),
-          prefetchHooksCallback: ({morphologicalRulesRefs = false}) {
+          prefetchHooksCallback: ({dimensionsRefs = false}) {
             return PrefetchHooks(
               db: db,
-              explicitlyWatchedTables: [
-                if (morphologicalRulesRefs) db.morphologicalRules,
-              ],
+              explicitlyWatchedTables: [if (dimensionsRefs) db.dimensions],
               addJoins: null,
               getPrefetchedDataCallback: (items) async {
                 return [
-                  if (morphologicalRulesRefs)
+                  if (dimensionsRefs)
                     await $_getPrefetchedData<
                       PartsOfSpeechData,
                       $PartsOfSpeechTable,
-                      MorphologicalRule
+                      Dimension
                     >(
                       currentTable: table,
                       referencedTable: $$PartsOfSpeechTableReferences
-                          ._morphologicalRulesRefsTable(db),
+                          ._dimensionsRefsTable(db),
                       managerFromTypedResult: (p0) =>
                           $$PartsOfSpeechTableReferences(
                             db,
                             table,
                             p0,
-                          ).morphologicalRulesRefs,
+                          ).dimensionsRefs,
                       referencedItemsForCurrentItem: (item, referencedItems) =>
                           referencedItems.where((e) => e.posId == item.id),
                       typedResults: items,
@@ -5887,7 +7186,7 @@ typedef $$PartsOfSpeechTableProcessedTableManager =
       $$PartsOfSpeechTableUpdateCompanionBuilder,
       (PartsOfSpeechData, $$PartsOfSpeechTableReferences),
       PartsOfSpeechData,
-      PrefetchHooks Function({bool morphologicalRulesRefs})
+      PrefetchHooks Function({bool dimensionsRefs})
     >;
 typedef $$MorphologicalRulesTableCreateCompanionBuilder =
     MorphologicalRulesCompanion Function({
@@ -5898,6 +7197,10 @@ typedef $$MorphologicalRulesTableCreateCompanionBuilder =
       Value<bool> isActive,
       Value<int?> posId,
       Value<String> posIds,
+      Value<String> kind,
+      Value<FeatureBindings> featureBindings,
+      Value<int?> inputPosId,
+      Value<int?> outputPosId,
     });
 typedef $$MorphologicalRulesTableUpdateCompanionBuilder =
     MorphologicalRulesCompanion Function({
@@ -5908,6 +7211,10 @@ typedef $$MorphologicalRulesTableUpdateCompanionBuilder =
       Value<bool> isActive,
       Value<int?> posId,
       Value<String> posIds,
+      Value<String> kind,
+      Value<FeatureBindings> featureBindings,
+      Value<int?> inputPosId,
+      Value<int?> outputPosId,
     });
 
 final class $$MorphologicalRulesTableReferences
@@ -5936,6 +7243,50 @@ final class $$MorphologicalRulesTableReferences
       $_db.partsOfSpeech,
     ).filter((f) => f.id.sqlEquals($_column));
     final item = $_typedResult.readTableOrNull(_posIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static $PartsOfSpeechTable _inputPosIdTable(_$AppDatabase db) =>
+      db.partsOfSpeech.createAlias(
+        $_aliasNameGenerator(
+          db.morphologicalRules.inputPosId,
+          db.partsOfSpeech.id,
+        ),
+      );
+
+  $$PartsOfSpeechTableProcessedTableManager? get inputPosId {
+    final $_column = $_itemColumn<int>('input_pos_id');
+    if ($_column == null) return null;
+    final manager = $$PartsOfSpeechTableTableManager(
+      $_db,
+      $_db.partsOfSpeech,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_inputPosIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static $PartsOfSpeechTable _outputPosIdTable(_$AppDatabase db) =>
+      db.partsOfSpeech.createAlias(
+        $_aliasNameGenerator(
+          db.morphologicalRules.outputPosId,
+          db.partsOfSpeech.id,
+        ),
+      );
+
+  $$PartsOfSpeechTableProcessedTableManager? get outputPosId {
+    final $_column = $_itemColumn<int>('output_pos_id');
+    if ($_column == null) return null;
+    final manager = $$PartsOfSpeechTableTableManager(
+      $_db,
+      $_db.partsOfSpeech,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_outputPosIdTable($_db));
     if (item == null) return manager;
     return ProcessedTableManager(
       manager.$state.copyWith(prefetchedData: [item]),
@@ -5982,10 +7333,67 @@ class $$MorphologicalRulesTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
+  ColumnFilters<String> get kind => $composableBuilder(
+    column: $table.kind,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnWithTypeConverterFilters<FeatureBindings, FeatureBindings, String>
+  get featureBindings => $composableBuilder(
+    column: $table.featureBindings,
+    builder: (column) => ColumnWithTypeConverterFilters(column),
+  );
+
   $$PartsOfSpeechTableFilterComposer get posId {
     final $$PartsOfSpeechTableFilterComposer composer = $composerBuilder(
       composer: this,
       getCurrentColumn: (t) => t.posId,
+      referencedTable: $db.partsOfSpeech,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$PartsOfSpeechTableFilterComposer(
+            $db: $db,
+            $table: $db.partsOfSpeech,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$PartsOfSpeechTableFilterComposer get inputPosId {
+    final $$PartsOfSpeechTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.inputPosId,
+      referencedTable: $db.partsOfSpeech,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$PartsOfSpeechTableFilterComposer(
+            $db: $db,
+            $table: $db.partsOfSpeech,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$PartsOfSpeechTableFilterComposer get outputPosId {
+    final $$PartsOfSpeechTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.outputPosId,
       referencedTable: $db.partsOfSpeech,
       getReferencedColumn: (t) => t.id,
       builder:
@@ -6045,10 +7453,66 @@ class $$MorphologicalRulesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get kind => $composableBuilder(
+    column: $table.kind,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get featureBindings => $composableBuilder(
+    column: $table.featureBindings,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   $$PartsOfSpeechTableOrderingComposer get posId {
     final $$PartsOfSpeechTableOrderingComposer composer = $composerBuilder(
       composer: this,
       getCurrentColumn: (t) => t.posId,
+      referencedTable: $db.partsOfSpeech,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$PartsOfSpeechTableOrderingComposer(
+            $db: $db,
+            $table: $db.partsOfSpeech,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$PartsOfSpeechTableOrderingComposer get inputPosId {
+    final $$PartsOfSpeechTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.inputPosId,
+      referencedTable: $db.partsOfSpeech,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$PartsOfSpeechTableOrderingComposer(
+            $db: $db,
+            $table: $db.partsOfSpeech,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$PartsOfSpeechTableOrderingComposer get outputPosId {
+    final $$PartsOfSpeechTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.outputPosId,
       referencedTable: $db.partsOfSpeech,
       getReferencedColumn: (t) => t.id,
       builder:
@@ -6096,10 +7560,65 @@ class $$MorphologicalRulesTableAnnotationComposer
   GeneratedColumn<String> get posIds =>
       $composableBuilder(column: $table.posIds, builder: (column) => column);
 
+  GeneratedColumn<String> get kind =>
+      $composableBuilder(column: $table.kind, builder: (column) => column);
+
+  GeneratedColumnWithTypeConverter<FeatureBindings, String>
+  get featureBindings => $composableBuilder(
+    column: $table.featureBindings,
+    builder: (column) => column,
+  );
+
   $$PartsOfSpeechTableAnnotationComposer get posId {
     final $$PartsOfSpeechTableAnnotationComposer composer = $composerBuilder(
       composer: this,
       getCurrentColumn: (t) => t.posId,
+      referencedTable: $db.partsOfSpeech,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$PartsOfSpeechTableAnnotationComposer(
+            $db: $db,
+            $table: $db.partsOfSpeech,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$PartsOfSpeechTableAnnotationComposer get inputPosId {
+    final $$PartsOfSpeechTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.inputPosId,
+      referencedTable: $db.partsOfSpeech,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$PartsOfSpeechTableAnnotationComposer(
+            $db: $db,
+            $table: $db.partsOfSpeech,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$PartsOfSpeechTableAnnotationComposer get outputPosId {
+    final $$PartsOfSpeechTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.outputPosId,
       referencedTable: $db.partsOfSpeech,
       getReferencedColumn: (t) => t.id,
       builder:
@@ -6133,7 +7652,11 @@ class $$MorphologicalRulesTableTableManager
           $$MorphologicalRulesTableUpdateCompanionBuilder,
           (MorphologicalRule, $$MorphologicalRulesTableReferences),
           MorphologicalRule,
-          PrefetchHooks Function({bool posId})
+          PrefetchHooks Function({
+            bool posId,
+            bool inputPosId,
+            bool outputPosId,
+          })
         > {
   $$MorphologicalRulesTableTableManager(
     _$AppDatabase db,
@@ -6160,6 +7683,10 @@ class $$MorphologicalRulesTableTableManager
                 Value<bool> isActive = const Value.absent(),
                 Value<int?> posId = const Value.absent(),
                 Value<String> posIds = const Value.absent(),
+                Value<String> kind = const Value.absent(),
+                Value<FeatureBindings> featureBindings = const Value.absent(),
+                Value<int?> inputPosId = const Value.absent(),
+                Value<int?> outputPosId = const Value.absent(),
               }) => MorphologicalRulesCompanion(
                 id: id,
                 name: name,
@@ -6168,6 +7695,10 @@ class $$MorphologicalRulesTableTableManager
                 isActive: isActive,
                 posId: posId,
                 posIds: posIds,
+                kind: kind,
+                featureBindings: featureBindings,
+                inputPosId: inputPosId,
+                outputPosId: outputPosId,
               ),
           createCompanionCallback:
               ({
@@ -6178,6 +7709,10 @@ class $$MorphologicalRulesTableTableManager
                 Value<bool> isActive = const Value.absent(),
                 Value<int?> posId = const Value.absent(),
                 Value<String> posIds = const Value.absent(),
+                Value<String> kind = const Value.absent(),
+                Value<FeatureBindings> featureBindings = const Value.absent(),
+                Value<int?> inputPosId = const Value.absent(),
+                Value<int?> outputPosId = const Value.absent(),
               }) => MorphologicalRulesCompanion.insert(
                 id: id,
                 name: name,
@@ -6186,6 +7721,10 @@ class $$MorphologicalRulesTableTableManager
                 isActive: isActive,
                 posId: posId,
                 posIds: posIds,
+                kind: kind,
+                featureBindings: featureBindings,
+                inputPosId: inputPosId,
+                outputPosId: outputPosId,
               ),
           withReferenceMapper: (p0) => p0
               .map(
@@ -6195,49 +7734,80 @@ class $$MorphologicalRulesTableTableManager
                 ),
               )
               .toList(),
-          prefetchHooksCallback: ({posId = false}) {
-            return PrefetchHooks(
-              db: db,
-              explicitlyWatchedTables: [],
-              addJoins:
-                  <
-                    T extends TableManagerState<
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic
-                    >
-                  >(state) {
-                    if (posId) {
-                      state =
-                          state.withJoin(
-                                currentTable: table,
-                                currentColumn: table.posId,
-                                referencedTable:
-                                    $$MorphologicalRulesTableReferences
-                                        ._posIdTable(db),
-                                referencedColumn:
-                                    $$MorphologicalRulesTableReferences
-                                        ._posIdTable(db)
-                                        .id,
-                              )
-                              as T;
-                    }
+          prefetchHooksCallback:
+              ({posId = false, inputPosId = false, outputPosId = false}) {
+                return PrefetchHooks(
+                  db: db,
+                  explicitlyWatchedTables: [],
+                  addJoins:
+                      <
+                        T extends TableManagerState<
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic
+                        >
+                      >(state) {
+                        if (posId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.posId,
+                                    referencedTable:
+                                        $$MorphologicalRulesTableReferences
+                                            ._posIdTable(db),
+                                    referencedColumn:
+                                        $$MorphologicalRulesTableReferences
+                                            ._posIdTable(db)
+                                            .id,
+                                  )
+                                  as T;
+                        }
+                        if (inputPosId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.inputPosId,
+                                    referencedTable:
+                                        $$MorphologicalRulesTableReferences
+                                            ._inputPosIdTable(db),
+                                    referencedColumn:
+                                        $$MorphologicalRulesTableReferences
+                                            ._inputPosIdTable(db)
+                                            .id,
+                                  )
+                                  as T;
+                        }
+                        if (outputPosId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.outputPosId,
+                                    referencedTable:
+                                        $$MorphologicalRulesTableReferences
+                                            ._outputPosIdTable(db),
+                                    referencedColumn:
+                                        $$MorphologicalRulesTableReferences
+                                            ._outputPosIdTable(db)
+                                            .id,
+                                  )
+                                  as T;
+                        }
 
-                    return state;
+                        return state;
+                      },
+                  getPrefetchedDataCallback: (items) async {
+                    return [];
                   },
-              getPrefetchedDataCallback: (items) async {
-                return [];
+                );
               },
-            );
-          },
         ),
       );
 }
@@ -6254,7 +7824,7 @@ typedef $$MorphologicalRulesTableProcessedTableManager =
       $$MorphologicalRulesTableUpdateCompanionBuilder,
       (MorphologicalRule, $$MorphologicalRulesTableReferences),
       MorphologicalRule,
-      PrefetchHooks Function({bool posId})
+      PrefetchHooks Function({bool posId, bool inputPosId, bool outputPosId})
     >;
 typedef $$MorphologicalRuleExceptionsTableCreateCompanionBuilder =
     MorphologicalRuleExceptionsCompanion Function({
@@ -6473,6 +8043,702 @@ typedef $$MorphologicalRuleExceptionsTableProcessedTableManager =
       MorphologicalRuleException,
       PrefetchHooks Function()
     >;
+typedef $$DimensionsTableCreateCompanionBuilder =
+    DimensionsCompanion Function({
+      Value<int> id,
+      required int posId,
+      required String name,
+      Value<int> ordering,
+      required String levelsJson,
+      Value<String?> templateId,
+    });
+typedef $$DimensionsTableUpdateCompanionBuilder =
+    DimensionsCompanion Function({
+      Value<int> id,
+      Value<int> posId,
+      Value<String> name,
+      Value<int> ordering,
+      Value<String> levelsJson,
+      Value<String?> templateId,
+    });
+
+final class $$DimensionsTableReferences
+    extends BaseReferences<_$AppDatabase, $DimensionsTable, Dimension> {
+  $$DimensionsTableReferences(super.$_db, super.$_table, super.$_typedResult);
+
+  static $PartsOfSpeechTable _posIdTable(_$AppDatabase db) =>
+      db.partsOfSpeech.createAlias(
+        $_aliasNameGenerator(db.dimensions.posId, db.partsOfSpeech.id),
+      );
+
+  $$PartsOfSpeechTableProcessedTableManager get posId {
+    final $_column = $_itemColumn<int>('pos_id')!;
+
+    final manager = $$PartsOfSpeechTableTableManager(
+      $_db,
+      $_db.partsOfSpeech,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_posIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$DimensionsTableFilterComposer
+    extends Composer<_$AppDatabase, $DimensionsTable> {
+  $$DimensionsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get ordering => $composableBuilder(
+    column: $table.ordering,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get levelsJson => $composableBuilder(
+    column: $table.levelsJson,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get templateId => $composableBuilder(
+    column: $table.templateId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$PartsOfSpeechTableFilterComposer get posId {
+    final $$PartsOfSpeechTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.posId,
+      referencedTable: $db.partsOfSpeech,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$PartsOfSpeechTableFilterComposer(
+            $db: $db,
+            $table: $db.partsOfSpeech,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$DimensionsTableOrderingComposer
+    extends Composer<_$AppDatabase, $DimensionsTable> {
+  $$DimensionsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get ordering => $composableBuilder(
+    column: $table.ordering,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get levelsJson => $composableBuilder(
+    column: $table.levelsJson,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get templateId => $composableBuilder(
+    column: $table.templateId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$PartsOfSpeechTableOrderingComposer get posId {
+    final $$PartsOfSpeechTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.posId,
+      referencedTable: $db.partsOfSpeech,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$PartsOfSpeechTableOrderingComposer(
+            $db: $db,
+            $table: $db.partsOfSpeech,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$DimensionsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $DimensionsTable> {
+  $$DimensionsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumn<int> get ordering =>
+      $composableBuilder(column: $table.ordering, builder: (column) => column);
+
+  GeneratedColumn<String> get levelsJson => $composableBuilder(
+    column: $table.levelsJson,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get templateId => $composableBuilder(
+    column: $table.templateId,
+    builder: (column) => column,
+  );
+
+  $$PartsOfSpeechTableAnnotationComposer get posId {
+    final $$PartsOfSpeechTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.posId,
+      referencedTable: $db.partsOfSpeech,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$PartsOfSpeechTableAnnotationComposer(
+            $db: $db,
+            $table: $db.partsOfSpeech,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$DimensionsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $DimensionsTable,
+          Dimension,
+          $$DimensionsTableFilterComposer,
+          $$DimensionsTableOrderingComposer,
+          $$DimensionsTableAnnotationComposer,
+          $$DimensionsTableCreateCompanionBuilder,
+          $$DimensionsTableUpdateCompanionBuilder,
+          (Dimension, $$DimensionsTableReferences),
+          Dimension,
+          PrefetchHooks Function({bool posId})
+        > {
+  $$DimensionsTableTableManager(_$AppDatabase db, $DimensionsTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$DimensionsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$DimensionsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$DimensionsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<int> posId = const Value.absent(),
+                Value<String> name = const Value.absent(),
+                Value<int> ordering = const Value.absent(),
+                Value<String> levelsJson = const Value.absent(),
+                Value<String?> templateId = const Value.absent(),
+              }) => DimensionsCompanion(
+                id: id,
+                posId: posId,
+                name: name,
+                ordering: ordering,
+                levelsJson: levelsJson,
+                templateId: templateId,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required int posId,
+                required String name,
+                Value<int> ordering = const Value.absent(),
+                required String levelsJson,
+                Value<String?> templateId = const Value.absent(),
+              }) => DimensionsCompanion.insert(
+                id: id,
+                posId: posId,
+                name: name,
+                ordering: ordering,
+                levelsJson: levelsJson,
+                templateId: templateId,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$DimensionsTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({posId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (posId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.posId,
+                                referencedTable: $$DimensionsTableReferences
+                                    ._posIdTable(db),
+                                referencedColumn: $$DimensionsTableReferences
+                                    ._posIdTable(db)
+                                    .id,
+                              )
+                              as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$DimensionsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $DimensionsTable,
+      Dimension,
+      $$DimensionsTableFilterComposer,
+      $$DimensionsTableOrderingComposer,
+      $$DimensionsTableAnnotationComposer,
+      $$DimensionsTableCreateCompanionBuilder,
+      $$DimensionsTableUpdateCompanionBuilder,
+      (Dimension, $$DimensionsTableReferences),
+      Dimension,
+      PrefetchHooks Function({bool posId})
+    >;
+typedef $$ParadigmCellOverridesTableCreateCompanionBuilder =
+    ParadigmCellOverridesCompanion Function({
+      Value<int> id,
+      required int lexemeId,
+      required String featureSetJson,
+      required String overrideIpa,
+      Value<String?> overrideRomanization,
+      Value<String?> notes,
+    });
+typedef $$ParadigmCellOverridesTableUpdateCompanionBuilder =
+    ParadigmCellOverridesCompanion Function({
+      Value<int> id,
+      Value<int> lexemeId,
+      Value<String> featureSetJson,
+      Value<String> overrideIpa,
+      Value<String?> overrideRomanization,
+      Value<String?> notes,
+    });
+
+final class $$ParadigmCellOverridesTableReferences
+    extends
+        BaseReferences<
+          _$AppDatabase,
+          $ParadigmCellOverridesTable,
+          ParadigmCellOverride
+        > {
+  $$ParadigmCellOverridesTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static $LexemesTable _lexemeIdTable(_$AppDatabase db) =>
+      db.lexemes.createAlias(
+        $_aliasNameGenerator(db.paradigmCellOverrides.lexemeId, db.lexemes.id),
+      );
+
+  $$LexemesTableProcessedTableManager get lexemeId {
+    final $_column = $_itemColumn<int>('lexeme_id')!;
+
+    final manager = $$LexemesTableTableManager(
+      $_db,
+      $_db.lexemes,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_lexemeIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$ParadigmCellOverridesTableFilterComposer
+    extends Composer<_$AppDatabase, $ParadigmCellOverridesTable> {
+  $$ParadigmCellOverridesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get featureSetJson => $composableBuilder(
+    column: $table.featureSetJson,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get overrideIpa => $composableBuilder(
+    column: $table.overrideIpa,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get overrideRomanization => $composableBuilder(
+    column: $table.overrideRomanization,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get notes => $composableBuilder(
+    column: $table.notes,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$LexemesTableFilterComposer get lexemeId {
+    final $$LexemesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.lexemeId,
+      referencedTable: $db.lexemes,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$LexemesTableFilterComposer(
+            $db: $db,
+            $table: $db.lexemes,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$ParadigmCellOverridesTableOrderingComposer
+    extends Composer<_$AppDatabase, $ParadigmCellOverridesTable> {
+  $$ParadigmCellOverridesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get featureSetJson => $composableBuilder(
+    column: $table.featureSetJson,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get overrideIpa => $composableBuilder(
+    column: $table.overrideIpa,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get overrideRomanization => $composableBuilder(
+    column: $table.overrideRomanization,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get notes => $composableBuilder(
+    column: $table.notes,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$LexemesTableOrderingComposer get lexemeId {
+    final $$LexemesTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.lexemeId,
+      referencedTable: $db.lexemes,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$LexemesTableOrderingComposer(
+            $db: $db,
+            $table: $db.lexemes,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$ParadigmCellOverridesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $ParadigmCellOverridesTable> {
+  $$ParadigmCellOverridesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get featureSetJson => $composableBuilder(
+    column: $table.featureSetJson,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get overrideIpa => $composableBuilder(
+    column: $table.overrideIpa,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get overrideRomanization => $composableBuilder(
+    column: $table.overrideRomanization,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get notes =>
+      $composableBuilder(column: $table.notes, builder: (column) => column);
+
+  $$LexemesTableAnnotationComposer get lexemeId {
+    final $$LexemesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.lexemeId,
+      referencedTable: $db.lexemes,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$LexemesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.lexemes,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$ParadigmCellOverridesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $ParadigmCellOverridesTable,
+          ParadigmCellOverride,
+          $$ParadigmCellOverridesTableFilterComposer,
+          $$ParadigmCellOverridesTableOrderingComposer,
+          $$ParadigmCellOverridesTableAnnotationComposer,
+          $$ParadigmCellOverridesTableCreateCompanionBuilder,
+          $$ParadigmCellOverridesTableUpdateCompanionBuilder,
+          (ParadigmCellOverride, $$ParadigmCellOverridesTableReferences),
+          ParadigmCellOverride,
+          PrefetchHooks Function({bool lexemeId})
+        > {
+  $$ParadigmCellOverridesTableTableManager(
+    _$AppDatabase db,
+    $ParadigmCellOverridesTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$ParadigmCellOverridesTableFilterComposer(
+                $db: db,
+                $table: table,
+              ),
+          createOrderingComposer: () =>
+              $$ParadigmCellOverridesTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$ParadigmCellOverridesTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<int> lexemeId = const Value.absent(),
+                Value<String> featureSetJson = const Value.absent(),
+                Value<String> overrideIpa = const Value.absent(),
+                Value<String?> overrideRomanization = const Value.absent(),
+                Value<String?> notes = const Value.absent(),
+              }) => ParadigmCellOverridesCompanion(
+                id: id,
+                lexemeId: lexemeId,
+                featureSetJson: featureSetJson,
+                overrideIpa: overrideIpa,
+                overrideRomanization: overrideRomanization,
+                notes: notes,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required int lexemeId,
+                required String featureSetJson,
+                required String overrideIpa,
+                Value<String?> overrideRomanization = const Value.absent(),
+                Value<String?> notes = const Value.absent(),
+              }) => ParadigmCellOverridesCompanion.insert(
+                id: id,
+                lexemeId: lexemeId,
+                featureSetJson: featureSetJson,
+                overrideIpa: overrideIpa,
+                overrideRomanization: overrideRomanization,
+                notes: notes,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$ParadigmCellOverridesTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({lexemeId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (lexemeId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.lexemeId,
+                                referencedTable:
+                                    $$ParadigmCellOverridesTableReferences
+                                        ._lexemeIdTable(db),
+                                referencedColumn:
+                                    $$ParadigmCellOverridesTableReferences
+                                        ._lexemeIdTable(db)
+                                        .id,
+                              )
+                              as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$ParadigmCellOverridesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $ParadigmCellOverridesTable,
+      ParadigmCellOverride,
+      $$ParadigmCellOverridesTableFilterComposer,
+      $$ParadigmCellOverridesTableOrderingComposer,
+      $$ParadigmCellOverridesTableAnnotationComposer,
+      $$ParadigmCellOverridesTableCreateCompanionBuilder,
+      $$ParadigmCellOverridesTableUpdateCompanionBuilder,
+      (ParadigmCellOverride, $$ParadigmCellOverridesTableReferences),
+      ParadigmCellOverride,
+      PrefetchHooks Function({bool lexemeId})
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -6506,4 +8772,8 @@ class $AppDatabaseManager {
         _db,
         _db.morphologicalRuleExceptions,
       );
+  $$DimensionsTableTableManager get dimensions =>
+      $$DimensionsTableTableManager(_db, _db.dimensions);
+  $$ParadigmCellOverridesTableTableManager get paradigmCellOverrides =>
+      $$ParadigmCellOverridesTableTableManager(_db, _db.paradigmCellOverrides);
 }
