@@ -1,7 +1,7 @@
 import 'package:conlang_workbench/db/app_database.dart';
 import 'package:conlang_workbench/features/grammar/data/typology_providers.dart';
 import 'package:conlang_workbench/features/grammar/domain/paradigm_axes.dart';
-import 'package:drift/drift.dart';
+import 'package:drift/drift.dart' hide isNull;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 

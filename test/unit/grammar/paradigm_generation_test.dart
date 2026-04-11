@@ -48,10 +48,8 @@ void main() {
           ],
         ),
       ];
-      final result = cartesianFeatureSets(dims).toList();
-      expect(result.length, equals(2));
-      expect(result, contains(<int, int>{10: 1}));
-      expect(result, contains(<int, int>{10: 2}));
+      final keys = cartesianFeatureSets(dims).map(featureSetKey).toSet();
+      expect(keys, equals({'10:1', '10:2'}));
     });
 
     test('2 dims × 2 levels each yields 4 feature sets', () {
@@ -73,14 +71,12 @@ void main() {
           ],
         ),
       ];
-      final result = cartesianFeatureSets(dims).toList();
-      expect(result.length, equals(4));
-      expect(result.toSet(), equals({
-        {10: 1, 11: 1},
-        {10: 1, 11: 2},
-        {10: 2, 11: 1},
-        {10: 2, 11: 2},
-      }));
+      final keys = cartesianFeatureSets(dims).map(featureSetKey).toSet();
+      expect(keys.length, equals(4));
+      expect(
+        keys,
+        equals({'10:1,11:1', '10:1,11:2', '10:2,11:1', '10:2,11:2'}),
+      );
     });
   });
 
@@ -116,19 +112,22 @@ void main() {
       );
       expect(chart.length, equals(4));
       // M.SG: no rule matches -> ParadigmUncovered
-      expect(chart[const {10: 1, 11: 2}], isA<ParadigmUncovered>());
+      expect(
+        chart.cellFor(const {10: 1, 11: 2}),
+        isA<ParadigmUncovered>(),
+      );
       // F.SG: only -a matches -> ParadigmFilled('kata', [-a])
-      final fSg = chart[const {10: 2, 11: 2}];
+      final fSg = chart.cellFor(const {10: 2, 11: 2});
       expect(fSg, isA<ParadigmFilled>());
-      expect((fSg as ParadigmFilled).form, equals('kata'));
+      expect((fSg! as ParadigmFilled).form, equals('kata'));
       // M.PL: only -s matches -> ParadigmFilled('kats', [-s])
-      final mPl = chart[const {10: 1, 11: 1}];
+      final mPl = chart.cellFor(const {10: 1, 11: 1});
       expect(mPl, isA<ParadigmFilled>());
-      expect((mPl as ParadigmFilled).form, equals('kats'));
+      expect((mPl! as ParadigmFilled).form, equals('kats'));
       // F.PL: both -s and -a match, different bindings, both fire
-      final fPl = chart[const {10: 2, 11: 1}];
+      final fPl = chart.cellFor(const {10: 2, 11: 1});
       expect(fPl, isA<ParadigmFilled>());
-      final fPlFilled = fPl as ParadigmFilled;
+      final fPlFilled = fPl! as ParadigmFilled;
       expect(fPlFilled.ruleChain.length, equals(2));
       expect(
         fPlFilled.ruleChain.map((r) => r.name).toSet(),
@@ -167,10 +166,9 @@ void main() {
       );
       // Only the Gender axis remains: 2 cells.
       expect(chart.length, equals(2));
-      expect(chart.keys.toSet(), equals({
-        {10: 1},
-        {10: 2},
-      }));
+      final keys =
+          chart.entries.map((e) => featureSetKey(e.featureSet)).toSet();
+      expect(keys, equals({'10:1', '10:2'}));
     });
 
     test('all dims skipped yields empty chart', () {
@@ -240,7 +238,10 @@ void main() {
       );
       // 2 dims × 2 levels = 4 cells; no rules -> all ParadigmUncovered.
       expect(chart.length, equals(4));
-      expect(chart.values.every((c) => c is ParadigmUncovered), isTrue);
+      expect(
+        chart.entries.every((e) => e.cell is ParadigmUncovered),
+        isTrue,
+      );
     });
   });
 }
