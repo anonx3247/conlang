@@ -213,8 +213,10 @@ class _NewProjectDialogState extends State<_NewProjectDialog> {
 
       final project = await registry.createProject(name);
 
-      // Open the newly created project.
-      widget.ref.read(currentProjectIdProvider.notifier).open(project.id);
+      // Open the newly created project. Awaited so Phase 4's pre-open
+      // backup step (no-op for brand-new dbs but symmetric with the
+      // selector dialog path) completes before the project goes live.
+      await widget.ref.read(currentProjectIdProvider.notifier).open(project.id);
 
       // Update lastOpened in registry.
       await registry.updateLastOpened(project.id);

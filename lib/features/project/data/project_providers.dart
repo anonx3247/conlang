@@ -3,6 +3,7 @@ import 'package:path/path.dart' as p;
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../../db/app_database.dart';
+import 'project_backup.dart';
 import 'project_registry.dart';
 
 part 'project_providers.g.dart';
@@ -35,10 +36,35 @@ class CurrentProjectId extends _$CurrentProjectId {
   String? build() => null;
 
   /// Opens (or switches to) the project with the given [id].
-  void open(String id) => state = id;
+  ///
+  /// Phase 4: Before flipping state we run [prepareProjectDb] which
+  /// transparently copies project.db to project.db.v7.bak if the file
+  /// is at a pre-v8 schema. This must happen BEFORE the projectDatabase
+  /// family provider materialises an [AppDatabase] for [id], otherwise
+  /// Drift's onUpgrade would mutate rows we have not backed up yet.
+  Future<void> open(String id) async {
+    final docsDir = await ref.read(appDocsDirProvider.future);
+    final dbPath = p.join(docsDir, id, 'project.db');
+    await prepareProjectDb(dbPath);
+    state = id;
+  }
+
+  /// Synchronous open used by tests / hot-reload paths that already
+  /// guarantee the v8 backup ran. Prefer [open] in production code.
+  void openWithoutBackup(String id) => state = id;
 
   /// Closes the current project, returning to the empty state.
   void close() => state = null;
+}
+
+/// Prepares a project database file for opening by performing any pre-open
+/// migrations safety steps. Currently:
+///   - Phase 4: backs up pre-v8 project.db files to project.db.v7.bak
+///     (see [backupProjectDbIfNeeded]).
+///
+/// Idempotent — safe to call multiple times for the same [dbPath].
+Future<void> prepareProjectDb(String dbPath) async {
+  await backupProjectDbIfNeeded(dbPath);
 }
 
 // ---------------------------------------------------------------------------

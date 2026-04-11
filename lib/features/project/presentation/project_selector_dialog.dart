@@ -54,8 +54,10 @@ class _ProjectSelectorDialogState extends State<ProjectSelectorDialog> {
   Future<void> _openProject(Project project) async {
     Navigator.of(context).pop();
 
-    // Switch to the selected project.
-    widget.ref.read(currentProjectIdProvider.notifier).open(project.id);
+    // Switch to the selected project. Awaited because Phase 4 introduced
+    // a pre-open backup step (.v7.bak) that must complete before the
+    // projectDatabase provider materialises an AppDatabase for this id.
+    await widget.ref.read(currentProjectIdProvider.notifier).open(project.id);
 
     // Update lastOpened in registry (fire-and-forget; UI updates via provider).
     try {

@@ -100,7 +100,7 @@ final class CurrentProjectIdProvider
   }
 }
 
-String _$currentProjectIdHash() => r'50b336f39bb39d0eacd8085306e6e8adc9591546';
+String _$currentProjectIdHash() => r'c0e76859bff832d037fa1e54c738bc770993a986';
 
 /// Holds the ID of the currently open project, or null when no project is open.
 ///
