@@ -1,6 +1,9 @@
 import '../../morphology/domain/morphology_dsl.dart';
 import '../../morphology/domain/morphology_engine.dart';
-import '../../phonology/domain/word_generator.dart' show PhonemeInventory;
+import '../../phonology/domain/phonotactic_dsl.dart'
+    show PhonologicalRewriteRule;
+import '../../phonology/domain/word_generator.dart'
+    show PhonemeInventory, WordGenerator;
 import 'inflectional_rule.dart';
 import 'paradigm_cell.dart';
 
@@ -44,6 +47,7 @@ ParadigmCell computeParadigmCell({
   required FeatureSet target,
   required List<InflectionalRule> rules,
   required PhonemeInventory inventory,
+  List<PhonologicalRewriteRule> rewriteRules = const [],
   MorphologyEngine engine = const MorphologyEngine(),
 }) {
   // D-13: only active inflectional rules are eligible. Derivational rules
@@ -133,7 +137,22 @@ ParadigmCell computeParadigmCell({
     }
   }
 
-  return ParadigmFilled(form: working, ruleChain: chain);
+  // G-08: after the inflectional chain completes, run the phonology
+  // rewrite pipeline ONCE on the final form. D-29 requires paradigm cells
+  // to reflect the same phonological surface as root words — rewrite rules
+  // applied to roots must also apply after inflectional affixation. The
+  // rewrite is only invoked for the ParadigmFilled success path; the
+  // ParadigmUncovered and ParadigmAmbiguous returns earlier in this
+  // function deliberately skip it.
+  final finalForm = rewriteRules.isEmpty
+      ? working
+      : WordGenerator().applyRewriteRules(
+          word: working,
+          rules: rewriteRules,
+          inventory: inventory,
+        );
+
+  return ParadigmFilled(form: finalForm, ruleChain: chain);
 }
 
 /// True iff every entry in [sub] is present in [sup] with the same value.

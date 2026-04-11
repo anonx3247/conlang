@@ -7,7 +7,9 @@ import '../../../db/app_database.dart';
 import '../../lexicon/data/lexeme_providers.dart';
 import '../../morphology/data/morphology_providers.dart';
 import '../../phonology/data/phonotactic_providers.dart'
-    show phonemeInventoryProvider;
+    show parsedRewriteRulesProvider, phonemeInventoryProvider;
+import '../../phonology/domain/phonotactic_dsl.dart'
+    show PhonologicalRewriteRule;
 import '../../phonology/domain/word_generator.dart' show PhonemeInventory;
 import '../../project/data/project_providers.dart';
 import '../domain/dimension_level.dart';
@@ -227,6 +229,7 @@ ParadigmChart generateParadigm({
   required List<Dimension> dimensions,
   required List<InflectionalRule> rules,
   required PhonemeInventory inventory,
+  List<PhonologicalRewriteRule> rewriteRules = const [],
   Set<int> skippedDimensionIds = const {},
 }) {
   final activeDims =
@@ -241,6 +244,7 @@ ParadigmChart generateParadigm({
       target: featureSet,
       rules: rules,
       inventory: inventory,
+      rewriteRules: rewriteRules,
     );
     entries[featureSetKey(featureSet)] =
         ParadigmChartEntry(featureSet: featureSet, cell: cell);
@@ -337,11 +341,17 @@ final computedInflectedParadigmProvider =
 
   final inventory = ref.watch(phonemeInventoryProvider);
 
+  // G-08: pass the current project's phonology rewrite rules into the
+  // paradigm engine so the final inflected form reflects the same
+  // phonological surface as root words elsewhere in the app (D-29).
+  final rewriteRules = ref.watch(parsedRewriteRulesProvider);
+
   return generateParadigm(
     root: lexeme.ipa,
     dimensions: dims,
     rules: rules,
     inventory: inventory,
+    rewriteRules: rewriteRules,
     skippedDimensionIds:
         decodeSkippedDimensionIds(lexeme.skippedDimensionsJson),
   );
