@@ -30,6 +30,15 @@ class LexiconShell extends StatelessWidget {
       icon: Icons.category,
       path: '/lexicon/thesaurus',
     ),
+    // Phase 4 plan 04-07: 4th sub-tab — derivational rules relocated from
+    // the old Morphology tab per D-24 / D-36. Linked route is
+    // /lexicon/derivations, backed by DerivationsPage which reuses
+    // RulesPage(kind: RuleKind.derivational).
+    _SidebarItem(
+      label: 'Derivations',
+      icon: Icons.transform,
+      path: '/lexicon/derivations',
+    ),
   ];
 
   void _onSidebarTap(BuildContext context, int index) {
@@ -144,13 +153,24 @@ class _SidebarTile extends StatelessWidget {
                   : colorScheme.onSurface.withValues(alpha: 0.7),
             ),
             const SizedBox(width: 10),
-            Text(
-              item.label,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: isSelected
-                    ? colorScheme.onPrimaryContainer
-                    : colorScheme.onSurface.withValues(alpha: 0.85),
-                fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+            // Expanded + ellipsis defensive pattern (matches GrammarShell's
+            // _SidebarTile, plan 04-04). Phase 4 plan 04-07 introduced the
+            // 4th 'Derivations' entry alongside the existing 'Swadesh List'
+            // label. Under the widget-test viewport the 200px sidebar's
+            // tile Row is constrained to ~152px, which is not enough for
+            // the intrinsic Text width of longer labels → RenderFlex
+            // overflow assertions. Wrap in Expanded and ellipsis-clip so
+            // the tile always fits its parent regardless of label length.
+            Expanded(
+              child: Text(
+                item.label,
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: isSelected
+                      ? colorScheme.onPrimaryContainer
+                      : colorScheme.onSurface.withValues(alpha: 0.85),
+                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                ),
               ),
             ),
           ],

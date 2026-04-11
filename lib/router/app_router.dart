@@ -7,6 +7,7 @@ import '../features/grammar/presentation/inflectional_rules/inflectional_rules_p
 import '../features/grammar/presentation/paradigm_viewer/paradigm_viewer_page.dart';
 import '../features/grammar/presentation/pos_dimensions/pos_dimensions_page.dart';
 import '../features/grammar/presentation/typology/typology_page.dart';
+import '../features/lexicon/presentation/derivations/derivations_page.dart';
 import '../features/lexicon/presentation/dictionary/dictionary_page.dart';
 import '../features/lexicon/presentation/lexicon_shell.dart';
 import '../features/lexicon/presentation/swadesh/swadesh_page.dart';
@@ -195,6 +196,17 @@ GoRouter appRouter(Ref ref) {
                       GoRoute(
                         path: '/lexicon/thesaurus',
                         builder: (_, __) => const ThesaurusPage(),
+                      ),
+                    ],
+                  ),
+                  // Phase 4 plan 04-07: 4th sub-route — derivational rules
+                  // relocated into the Lexicon per D-36 / D-37. Reuses
+                  // RulesPage with the derivational kind filter.
+                  StatefulShellBranch(
+                    routes: [
+                      GoRoute(
+                        path: '/lexicon/derivations',
+                        builder: (_, __) => const DerivationsPage(),
                       ),
                     ],
                   ),
