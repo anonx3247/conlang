@@ -428,23 +428,39 @@ class _FilledCell extends ConsumerWidget {
     final ValidationResult result =
         isException ? const ValidationResult(violations: []) : validate(word: form);
 
+    // G-04 / D-29: show romanization as the primary top line ONLY when it
+    // actually differs from the IPA form. Mirrors the "showRomanizedRoot"
+    // idiom in derivation_tree_widget.dart:41-42 so users never see the
+    // same glyphs duplicated when no romanization mapping is configured.
+    final showRom = romText.isNotEmpty && romText != form;
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 2),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          // D-29: romanization on top via ViolationText so the per-cell
-          // phonotactic violation highlighting is consistent with the
-          // lexicon word list (D-30).
-          ViolationText(text: romText, violations: result.violations),
-          const SizedBox(height: 2),
-          // D-29: IPA on bottom, dimmed.
-          Text(
-            '[$form]',
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: cs.onSurface.withValues(alpha: 0.6),
+          if (showRom) ...[
+            // D-29 top line: rom primary, ViolationText-wrapped for
+            // per-cell phonotactic underlines (D-30).
+            ViolationText(text: romText, violations: result.violations),
+            const SizedBox(height: 2),
+            // D-29 bottom line: IPA dimmed.
+            Text(
+              '[$form]',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: cs.onSurface.withValues(alpha: 0.6),
+              ),
             ),
-          ),
+          ] else
+            // No distinct romanization: single IPA-only dimmed line so
+            // the cell doesn't double-render identical text.
+            ViolationText(
+              text: '[$form]',
+              violations: result.violations,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: cs.onSurface.withValues(alpha: 0.6),
+              ),
+            ),
         ],
       ),
     );
