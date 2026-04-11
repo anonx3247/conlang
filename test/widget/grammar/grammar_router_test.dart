@@ -22,12 +22,18 @@ void main() {
         child: MaterialApp.router(routerConfig: router),
       );
 
+  // In the real app, AppShell wraps the whole navigation shell in a Scaffold
+  // so every sub-route has an ambient Material ancestor. This minimal
+  // isolated router does the same by building an AppShell-substitute
+  // Scaffold around the GrammarShell so route pages that use Material
+  // widgets (DropdownButtonFormField in TypologyPage) find a Material.
   GoRouter grammarOnlyRouter(String initial) => GoRouter(
         initialLocation: initial,
         routes: [
           StatefulShellRoute.indexedStack(
-            builder: (context, state, shell) =>
-                GrammarShell(navigationShell: shell),
+            builder: (context, state, shell) => Scaffold(
+              body: GrammarShell(navigationShell: shell),
+            ),
             branches: [
               StatefulShellBranch(
                 routes: [
