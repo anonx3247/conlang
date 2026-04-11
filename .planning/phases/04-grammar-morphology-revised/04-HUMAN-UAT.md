@@ -1,174 +1,143 @@
 ---
-status: failed
+status: partial
 phase: 04-grammar-morphology-revised
 source: [04-VERIFICATION.md]
-started: 2026-04-11T00:00:00Z
+started: 2026-04-10T00:00:00Z
 updated: 2026-04-11T00:00:00Z
 ---
 
 ## Current Test
 
-[all 8 structural tests passed; 19 separate issues recorded as gaps]
+[awaiting human testing of 10 re-verification items + 3 wave 3a-bis hot-fix items]
 
 ## Tests
 
-### 1. POS and dimension creation flow
-expected: POS + dimension creation via template picker works end-to-end.
-result: passed
+### Original structural tests (2026-04-10) — 8 passed
 
-### 2. Live tiebreak banner on identical inflectional bindings
-expected: Live banner on duplicate specificity.
-result: passed
+1. POS and dimension creation flow — **passed**
+2. Live tiebreak banner on identical inflectional bindings — **passed**
+3. Paradigm viewer for 3+ dimension POS — **passed**
+4. Cell override dialog — auto-derive + reactive render — **passed**
+5. Typology auto-save + reload across app restart — **passed**
+6. Lexicon Derivations sub-tab — **passed**
+7. Word detail paradigm embed — **passed**
+8. v7→v8 migration on a real legacy project.db — **passed**
 
-### 3. Paradigm viewer for 3+ dimension POS
-expected: TabBar/Dropdown threshold, ViolationText, amber overrides, coverage matrix.
-result: passed
+### Re-verification items (2026-04-11, from v2 VERIFICATION.md — 14-plan scope)
 
-### 4. Cell override dialog — auto-derive + reactive render
-expected: Auto-derive, amber after save, clear override reverts.
-result: passed
+### 9. Inflections sub-tab stacked layout + cell-to-rule edit flow
+expected: Top pane (~55%) shows ParadigmTableWidget with clickMode.ruleEditor; bottom pane (~45%) shows RulesPage filtered to the selected POS. Clicking any cell opens RuleEditorDialog with feature bindings pre-filled from the cell's axis position; clicking a filled cell edits the existing rule.
+result: [pending]
 
-### 5. Typology auto-save + reload across app restart
-expected: Persisted via project_settings.
-result: passed
+### 10. Multi-POS inflectional rule create + POS-set grouping
+expected: RuleEditorDialog shows a multi-POS FilterChip picker (not a single Target POS dropdown). After saving, the rule appears EXACTLY ONCE in the POS-set grouped rules list under its {Noun, Adjective} group — not duplicated under each constituent POS. v9 junction table backfill survives a migrating v8 project.
+result: [pending]
 
-### 6. Lexicon Derivations sub-tab
-expected: 4th sidebar entry, derivational-only editor.
-result: passed
+### 11. Hard 404 on retired routes + "Back to Grammar" button
+expected: Both `/grammar/paradigm` and `/grammar/inflectional` render a hard 404 (no redirect). Page shows "Page not found" + the URL + a "Back to Grammar" button routing to `/grammar/pos`.
+result: [pending]
 
-### 7. Word detail paradigm embed
-expected: Embedded paradigm table below derivation tree.
-result: passed
+### 12. Derivation suggestion chips in word detail
+expected: For a word whose POS has ≥1 derivational rule with autoApply=false, word detail shows a Suggestions section with clickable chips. Clicking a chip creates a promoted Lexeme row; the chip disappears on the next rebuild.
+result: [pending]
 
-### 8. v7→v8 migration on a real legacy project.db
-expected: .v7.bak + silent reclassification + rules under Derivations.
-result: passed
+### 13. Per-derivation meaning field + promote/demote + implicit-detach warning
+expected: Typing into a computed derivation row's meaning field confirms a promotion. Clearing the meaning demotes. Editing rom/ipa on a promoted row triggers a warning dialog before detaching. Editing meaning/notes does NOT trigger the warning.
+result: [pending]
+
+### 14. Auto-apply derivational rule + reconcile
+expected: When autoApply=true, every matching-POS parent gets a promoted Lexeme row automatically with gloss `"{parentMeaning} ({rule.name})"`. Parents with no meaning defer promotion. Editing the rule's source updates all dependent lexemes reactively.
+result: [pending]
+
+### 15. rootOnlyViaDerivations checkbox + Parents picker + muted Dictionary render
+expected: Checkbox persists `rootOnlyViaDerivations`. Parents multi-select writes LexemeParents rows. Dictionary sidebar renders muted/italic. Lexeme remains findable, clickable, editable.
+result: [pending]
+
+### 16. ParadigmUnmarked render (bare root + ∅ badge)
+expected: Cell whose feature set matches a Marker row renders as bare root in muted gray with trailing ∅ badge — distinct from uncovered em-dash and from normal derived cells. Resolution order override → rule → marker → uncovered respected.
+result: [pending]
+
+### 17. v8→v9 migration on a real v8 project
+expected: No user-visible errors. InflectionalRulePOS junction backfilled from inflectional rules' input_pos_id (derivational rows skipped). Markers and LexemeParents tables exist and empty. MorphologicalRules.autoApply defaults to 0. New Lexemes columns default to NULL/false.
+result: [pending]
+
+### 18. v7→v8→v9 migration chain on a real v7 project
+expected: `project.db.v7.bak` snapshot next to project.db. v8 migration reclassifies existing rules to kind='derivational'. v9 migration runs with empty InflectionalRulePOS. Migrated rules appear under Lexicon → Derivations; migration banner visible on first open.
+result: [pending]
+
+### Wave 3a-bis hot-fix validation (2026-04-11, user-reported during execution)
+
+### 19. G-66 — ablaut class resolution fires on actual words
+expected: A rule with `AblautOp(from='V', to='o', direction=fromEnd, count=1)` applied to a vowel-final word replaces only the last vowel (e.g. `sana → sano`, NOT `sana → sana`). Same fix applies to inflectional + derivational rules. Regression test in `morphology_engine_test.dart`.
+result: [pending]
+
+### 20. G-67 — multi-POS inflectional rule fires on every attached POS
+expected: A single inflectional rule attached to both Noun and Descriptor produces inflected cells for BOTH paradigm viewers, not just the first-sorted POS. Class/level name matching translates bindings at read time (no user-visible change in the editor — just "it now works"). Regression test in `binding_translator_test.dart`.
+result: [pending]
+
+### 21. G-68 — promoted derivation displays the derived form everywhere
+expected: A promoted derivation (via Suggestions chip or meaning entry) shows the DERIVED form in: dictionary list view, dictionary data-table view, word detail header, word detail IPA sub-label, paradigm viewer cells (inflected FROM the derived form, not the root). The phonotactic-violation highlight should apply to the derived form, not the root. The "IPA manual override" flag should NEVER fire on a promoted row.
+result: [pending]
 
 ## Summary
 
-total: 8
+total: 21
 passed: 8
 issues: 0
-pending: 0
+pending: 13
 skipped: 0
 blocked: 0
 
 ## Gaps
 
-Separate issues reported by user during UAT. These are current-phase work (per feedback_uat_items_are_requirements.md) and must be closed via `/gsd-plan-phase 04 --gaps`.
+### Original 19 gaps from 2026-04-10 UAT — ALL CLOSED by wave 1 execution (plans 04-08..04-14)
 
-### G-01: Paradigm viewer — selected word not persisted
-status: failed
-area: ui, persistence
-The currently selected word in the paradigm viewer doesn't persist across tab switches / app restart. Need per-POS "last selected word" stored in project_settings or similar.
+All G-01 through G-19 were planned and executed during the 2026-04-10 → 2026-04-11 gap-closure waves. Each maps to a plan and a committed SUMMARY.md. Resolved status confirmed by 04-VERIFICATION.md v2 goal-backward analysis.
 
-### G-02: Dimension templates render as "-" (broken)
-status: failed
-area: ui, bug
-The dimension template picker shows literal "-" characters instead of dimension/level names. Template payload is not being unpacked correctly — likely a rendering bug in `dimension_template_picker.dart` or the template data itself.
+| Gap | Plan | Status |
+|---|---|---|
+| G-01 — last-selected word persistence | 04-09 | resolved |
+| G-02 — dimension templates render as "-" | 04-09 | resolved |
+| G-03 — unmarked cells | 04-10 | resolved |
+| G-04 — paradigm viewer rom primary | 04-09 | resolved |
+| G-05 — multi-POS inflectional rules | 04-11 | resolved |
+| G-06 — paradigm viewer rename | 04-13 (subsumed into Inflections tab) | resolved |
+| G-07 — cell click → new rule dialog | 04-13 (ParadigmClickMode.ruleEditor + preFilledBindings) | resolved |
+| G-08 — phonology rewrite on inflected forms | 04-09 | resolved |
+| G-09 — group rules by POS set | 04-11 | resolved |
+| G-10 — Grammar 4→3 tabs (Inflections merge) | 04-13 | resolved |
+| G-11 — dimension rename | 04-09 | resolved |
+| G-12 — single Custom entry in template picker | 04-09 | resolved |
+| G-13 — derivation POS filter | 04-12 | resolved |
+| G-14 — per-derivation meaning | 04-12 + 04-14 | resolved |
+| G-15 — POS abbreviation badge | 04-14 | resolved |
+| G-16 — "New word" rename + rootOnlyViaDerivations | 04-09 + 04-14 | resolved |
+| G-17 — manual parent selection (etymology) | 04-12 + 04-14 | resolved |
+| G-18 — autoApply flag on rules | 04-08 + 04-12 + 04-14 | resolved |
+| G-19 — non-auto derivations as suggestion chips | 04-14 | resolved |
 
-### G-03: "Unmarked / unchanged" cell state without a rule
-status: failed
-area: semantics, ui
-Users need to mark a feature-set combination as producing no form change, without having to create a blank/identity rule. Requires either a tri-state cell (derived / unmarked / override) or an explicit "marker" table. Paradigm viewer should render unmarked cells distinctly from uncovered cells.
+### New wave 3a-bis hot-fix gaps (2026-04-11) — all FIXED inline during re-verification
 
-### G-04: Paradigm viewer shows IPA, should show romanization
-status: failed
-area: ui, bug
-D-29 says romanization + IPA stacked with romanization primary. Currently IPA appears to be shown as primary (or only form). Bug in `paradigm_table_widget.dart` cell renderer — rom and IPA may be swapped or rom is missing.
+| Gap | Symptom | Fix commit | Validation test |
+|---|---|---|---|
+| G-66 — ablaut class resolution no-op | `applyAblaut from='V'` silently failed | `36ea4d8` | item #19 above |
+| G-67 — multi-POS rule only fired on first POS | Rule attached to Noun+Descriptor only worked on one | `85de247` | item #20 above |
+| G-68 — promoted row displayed root phonemes | Derived words showed root in dictionary + paradigm | `d129b78` + `408bdc4` | item #21 above |
 
-### G-05: Inflectional rules should support multiple POS
-status: failed
-area: schema, semantics
-A single rule should be assignable to multiple POS (e.g. a rule that applies to both Noun and Adjective). Currently rules are tied to one POS. Schema already has a legacy `posIds` CSV column (kept-and-ignored per research A9) that can be repurposed, or we switch to a dedicated junction table.
+### Deferred to future plans (out of scope for this phase)
 
-### G-06: Paradigm viewer needs a better name
-status: failed
-area: ui, naming
-The name "Paradigm Viewer" is unclear. Related to G-10 (merge with rules into "Inflections" tab).
-
-### G-07: Clicking a paradigm cell should open new-rule dialog directly
-status: failed
-area: ui, semantics
-Currently clicking a cell opens CellOverrideDialog (rom + IPA editing). User wants:
-- Click on empty/uncovered cell → open new inflectional rule dialog with feature bindings pre-filled from the cell's axis position
-- Per-word rom + IPA overrides should move to the Lexicon word detail (not paradigm viewer), because those are word-specific exceptions
-This removes CellOverrideDialog's current purpose and splits concerns.
-
-### G-08: Phonetic rewrite rules not applied to inflected forms
-status: failed
-area: pipeline, bug
-Phonology rewrite rules are not applied to inflected forms in the paradigm output. The rewrite pipeline apparently stops at the root / derivational output and doesn't re-run after inflectional rule application. Separate from pitfall #9 (kind filter) — this is a pipeline ordering bug.
-
-### G-09: Group inflectional rules by POS in list
-status: failed
-area: ui
-The rules page should group rules by POS. Multi-POS rules (after G-05) get their own category (e.g. "Noun + Adj").
-
-### G-10: Merge Paradigm Viewer + Rules tabs into "Inflections" tab
-status: failed
-area: router, ui
-The global morphology preview is useless (popup previews are enough). Restructure:
-- Delete the global morphology preview
-- Grammar tab goes from 4 sub-tabs to 3: **POS & Dimensions**, **Inflections**, **Typology**
-- The new **Inflections** tab merges paradigm viewer (top) + rules list (bottom, filterable by POS)
-Touches: app_router.dart, grammar_shell.dart, inflectional_rules_page.dart, paradigm_viewer_page.dart.
-
-### G-11: Dimensions can't be renamed
-status: failed
-area: ui
-DimensionEditorPanel missing rename UI. GrammarDao already supports update — just missing the edit affordance.
-
-### G-12: Multiple "Custom" buttons in template picker
-status: failed
-area: ui, bug
-Template picker renders multiple "Custom" entries (one per group). Should render exactly one "Custom" button (or one per group by design — clarify).
-
-### G-13: Derivations applied irrespective of source/target POS
-status: failed
-area: pipeline, bug
-`computedDerivedFormsProvider` filters to `kind='derivational'` (fixed in 04-07) but does NOT filter by input POS. A derivation rule with inputPosId=Noun is currently applied to all words including Verbs. Need POS filter in the provider.
-
-### G-14: Derived words should be assignable a meaning
-status: failed
-area: schema, ui
-Each derived form needs its own gloss / definition. Currently the derived form is just a string. Requires a new `DerivedWordMeanings` table or a column on Lexemes to store per-derivation glosses.
-
-### G-15: POS abbreviation next to derived words
-status: failed
-area: ui
-In the word detail derivation tree, show each derived form's output POS abbreviation next to the form.
-
-### G-16: "+New word" button + root-only-via-derivations toggle
-status: failed
-area: ui, schema
-- Rename "+New root" → "+New word" in the lexicon toolbar
-- Add a toggle on Lexemes: "This root only exists through derivations" (no standalone entry in the dictionary)
-- Filter the dictionary to hide root-only-via-derivations entries when not drilled into their derivation tree
-
-### G-17: Manual word derivation with parent selection (etymology trees)
-status: failed
-area: schema, ui
-When creating a new word that derives from another without an existing rule, allow selecting "parent" lexemes. Store parent relationships for future etymology tree rendering. Requires a new `LexemeParents` junction table or a `parentLexemeIds` JSON column.
-
-### G-18: Derivation rules — "apply to all words" toggle
-status: failed
-area: schema, semantics
-Add a `autoApply: bool` column to MorphologicalRules (or `applyToAll`). When true, the rule creates derived forms for every matching-POS word by default. When false, the rule is only a suggestion (see G-19).
-
-### G-19: Non-auto derivations shown as suggestions in word UI
-status: failed
-area: ui
-In the word detail panel, show all applicable non-auto derivational rules as clickable "suggestion" chips. Clicking creates a new word from that derivation (which the user can then edit / confirm).
+| Issue | Target plan |
+|---|---|
+| Notation-layer unification (rom vs phonemic vs surface; retire `romanize()`) | 04-15 |
+| Rules list UX — show all rules when no POS selected | 04-16 (a) |
+| Per-level rename in dimension editor | 04-16 (b) |
+| Add-new-level affordance in dimension editor | 04-16 (c) |
+| Non-existent-phoneme highlighting in rule editor (G-69) | 04-16 (d) |
+| Intrinsic-per-POS dimensions with standard-form patterns | 04-17 |
 
 ## Notes
 
-- All 19 gaps are current-phase work per memory feedback (`UAT feedback is current-phase work`).
-- Several gaps cluster together and should be planned as a unit:
-  - G-05 + G-09 (multi-POS rules)
-  - G-02 + G-11 + G-12 (dimension/template UI bugs)
-  - G-04 + G-08 (romanization + rewrite pipeline)
-  - G-06 + G-07 + G-10 (Inflections tab restructure — biggest change)
-  - G-13 + G-14 + G-15 + G-16 + G-17 + G-18 + G-19 (derivation overhaul)
-- G-03 (unmarked cells) is semantically subtle and should be discussed before planning.
-- Estimated: 4–6 gap plans, probably schema v9.
+- Re-verification pass (2026-04-11, v2) expanded scope from 7 plans (04-01..04-07) to 14 plans (04-01..04-14), adding the gap-closure wave.
+- All automated invariants in 04-VERIFICATION.md v2 PASS: 14/14 plans shipped, 7/7 roadmap truths verified, 497/499 tests green (2 pre-existing unrelated failures documented in deferred-items.md).
+- The user chose option A+C for G-68: workaround by updating their IPA inventory and rule replacement targets in the running app; defer the architectural fix to plan 04-15.
+- Items 19-21 are lightweight sanity-checks — their regression tests already lock the fix in CI, so "pending" here mostly means "confirm the running app behaves as described once the user finishes their inventory workaround".
