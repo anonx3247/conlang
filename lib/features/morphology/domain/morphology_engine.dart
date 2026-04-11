@@ -358,10 +358,16 @@ String applyInfix(
   return before + affix + after;
 }
 
-/// Replaces occurrences of [from] token with [to] in [root].
+/// Replaces occurrences of [from] with [to] in [root].
+///
+/// [from] may be a literal phoneme (e.g. `a`) OR a phoneme class reference
+/// (e.g. `V`, `C`, `[nasal]`). Class references are resolved via
+/// [resolvePhonemeClass] against [inventory]; if resolution yields a
+/// non-empty set, any token in that set is a match. Otherwise [from] is
+/// treated as a literal token and matched by exact equality.
 ///
 /// [count] controls how many occurrences to replace (null = all).
-/// [direction] controls from which end to start replacing.
+/// [direction] controls from which end to start counting replacements.
 String applyAblaut(
   String root,
   String from,
@@ -371,24 +377,29 @@ String applyAblaut(
   AblautDirection direction = AblautDirection.fromStart,
 }) {
   final tokens = tokenizeIpa(root, inventory);
+
+  // Bare [class] wrapper is tolerated so UI that stores `[stop]` still works.
+  final classRef = (from.startsWith('[') && from.endsWith(']') && from.length >= 3)
+      ? from.substring(1, from.length - 1)
+      : from;
+  final resolved = resolvePhonemeClass(classRef, inventory);
+  final matchSet = resolved.isNotEmpty ? resolved.toSet() : <String>{from};
+  bool matches(String token) => matchSet.contains(token);
+
   if (count == null) {
-    // Replace all
-    return tokens.map((t) => t == from ? to : t).join();
+    return tokens.map((t) => matches(t) ? to : t).join();
   }
 
-  // Find all indices matching `from`
   final matchIndices = <int>[];
   for (var i = 0; i < tokens.length; i++) {
-    if (tokens[i] == from) matchIndices.add(i);
+    if (matches(tokens[i])) matchIndices.add(i);
   }
 
-  // Select which indices to replace based on direction and count
   final Set<int> toReplace;
   if (direction == AblautDirection.fromStart) {
     toReplace = matchIndices.take(count).toSet();
   } else {
-    final reversed = matchIndices.reversed.take(count).toSet();
-    toReplace = reversed;
+    toReplace = matchIndices.reversed.take(count).toSet();
   }
 
   return List.generate(tokens.length,

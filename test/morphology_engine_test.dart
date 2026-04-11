@@ -106,6 +106,61 @@ void main() {
     expect((result as MorphSuccess).form, equals('banene'));
   });
 
+  // Regression for UAT repro: class `V` must resolve to user vowels, and
+  // fromEnd+count=1 must replace only the last vowel. Before the fix,
+  // applyAblaut compared tokens to the literal string "V" and never matched.
+  test('AblautOp from="V" fromEnd count=1 replaces only the last vowel', () {
+    final rule = simpleRule([
+      const AblautOp(
+        from: 'V',
+        to: 'o',
+        count: 1,
+        direction: AblautDirection.fromEnd,
+      ),
+    ]);
+    final result = engine.applyRule(rule, 'sana', testInventory);
+    expect(result, isA<MorphSuccess>());
+    expect((result as MorphSuccess).form, equals('sano'));
+  });
+
+  test('AblautOp from="V" replaces all vowels when count is null', () {
+    final rule = simpleRule([const AblautOp(from: 'V', to: 'o')]);
+    final result = engine.applyRule(rule, 'sana', testInventory);
+    expect(result, isA<MorphSuccess>());
+    expect((result as MorphSuccess).form, equals('sono'));
+  });
+
+  test('AblautOp from="C" fromStart count=1 replaces only the first consonant', () {
+    final rule = simpleRule([
+      const AblautOp(
+        from: 'C',
+        to: 't',
+        count: 1,
+        direction: AblautDirection.fromStart,
+      ),
+    ]);
+    final result = engine.applyRule(rule, 'kabel', testInventory);
+    expect(result, isA<MorphSuccess>());
+    // kabel: C at 0 (k), 2 (b), 4 (l) — replace first -> tabel
+    expect((result as MorphSuccess).form, equals('tabel'));
+  });
+
+  test('AblautOp with named natural class [nasal] resolves via inventory', () {
+    final rule = simpleRule([const AblautOp(from: '[nasal]', to: 'l')]);
+    final result = engine.applyRule(rule, 'mana', testInventory);
+    expect(result, isA<MorphSuccess>());
+    // nasal = {m, n} -> both replaced
+    expect((result as MorphSuccess).form, equals('lala'));
+  });
+
+  test('AblautOp with literal phoneme still matches by exact equality', () {
+    // Literal `a` (not a class) must behave exactly as before.
+    final rule = simpleRule([const AblautOp(from: 'a', to: 'e', count: 1)]);
+    final result = engine.applyRule(rule, 'banana', testInventory);
+    expect(result, isA<MorphSuccess>());
+    expect((result as MorphSuccess).form, equals('benana'));
+  });
+
   // -------------------------------------------------------------------------
   // 5. Template
   // -------------------------------------------------------------------------
