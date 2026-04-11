@@ -181,7 +181,8 @@ void main() {
     );
 
     testWidgets(
-      'template picker renders a "Custom" entry in every visible group',
+      'template picker renders exactly ONE "Custom (start blank)" entry '
+      '(G-12: single bottom-of-list Custom, not per-group)',
       (tester) async {
         await tester.pumpWidget(buildApp(const PosDimensionsPage()));
         await settle(tester);
@@ -191,9 +192,24 @@ void main() {
         await tester.tap(find.text('Add Dimension'));
         await settle(tester);
 
-        // Every visible group appends a Custom template, so there is at
-        // least one Custom entry per group header.
-        expect(find.text('Custom'), findsWidgets);
+        // Post-G-12: exactly one Custom entry lives at the very bottom of
+        // the picker list, outside any group header. It may be off-screen
+        // below the ListView fold so we scroll the picker's ListView
+        // (descendant of the Dialog) until it's built. PosDimensionsPage
+        // itself has a ListView for the POS rail on the left, so the
+        // byType finder alone is ambiguous.
+        final custom = find.text('Custom (start blank)');
+        final pickerList = find
+            .descendant(of: find.byType(Dialog), matching: find.byType(ListView))
+            .first;
+        for (var i = 0; i < 20; i++) {
+          if (tester.any(custom)) break;
+          await tester.drag(pickerList, const Offset(0, -400));
+          await tester.pumpAndSettle();
+        }
+        expect(custom, findsOneWidget);
+        // No stale bare 'Custom' label from the pre-G-12 per-group loop.
+        expect(find.text('Custom'), findsNothing);
 
         await teardownWidget(tester);
       },

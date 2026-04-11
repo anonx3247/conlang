@@ -117,6 +117,22 @@ class DimensionEditorPanel extends ConsumerWidget {
     );
   }
 
+  Future<void> _showRenameDialog(
+    BuildContext ctx,
+    WidgetRef ref,
+    Dimension dim,
+  ) async {
+    final newName = await showDialog<String>(
+      context: ctx,
+      builder: (dlgCtx) => _RenameDimensionDialog(initialName: dim.name),
+    );
+    if (newName == null || newName.isEmpty) return;
+    if (newName == dim.name) return;
+    final dao = ref.read(grammarDaoProvider);
+    if (dao == null) return;
+    await dao.updateDimension(dim.copyWith(name: newName));
+  }
+
   Widget _dimensionCard(
     BuildContext ctx,
     WidgetRef ref,
@@ -144,6 +160,14 @@ class DimensionEditorPanel extends ConsumerWidget {
                     dim.name,
                     style: theme.textTheme.titleMedium,
                   ),
+                ),
+                // G-11: rename affordance — opens a dialog with the current
+                // name pre-filled, rejects empty input, and calls
+                // GrammarDao.updateDimension on save.
+                IconButton(
+                  icon: const Icon(Icons.edit_outlined),
+                  tooltip: 'Rename dimension',
+                  onPressed: () => _showRenameDialog(ctx, ref, dim),
                 ),
                 IconButton(
                   icon: const Icon(Icons.delete_outline),
@@ -180,6 +204,72 @@ class DimensionEditorPanel extends ConsumerWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Stateful dialog body for the rename-dimension flow (G-11). Owns its
+/// own [TextEditingController] so the controller lifecycle matches the
+/// dialog's State lifecycle — avoids "used after dispose" errors from
+/// the in-build callback chain that fires when the dialog is popped.
+class _RenameDimensionDialog extends StatefulWidget {
+  const _RenameDimensionDialog({required this.initialName});
+
+  final String initialName;
+
+  @override
+  State<_RenameDimensionDialog> createState() =>
+      _RenameDimensionDialogState();
+}
+
+class _RenameDimensionDialogState extends State<_RenameDimensionDialog> {
+  late final TextEditingController _controller;
+  String? _errorText;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.initialName);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _onSave() {
+    final name = _controller.text.trim();
+    if (name.isEmpty) {
+      setState(() => _errorText = 'Name cannot be empty');
+      return;
+    }
+    Navigator.of(context).pop(name);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Rename dimension'),
+      content: TextField(
+        controller: _controller,
+        autofocus: true,
+        onSubmitted: (_) => _onSave(),
+        decoration: InputDecoration(
+          labelText: 'Dimension name',
+          errorText: _errorText,
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
+        ElevatedButton(
+          onPressed: _onSave,
+          child: const Text('Save'),
+        ),
+      ],
     );
   }
 }
