@@ -110,3 +110,22 @@ MarkerDao get markerDao => MarkerDao(this);
 ```
 to `lib/db/app_database.dart` next to `lexemeDao`, or update the test
 to instantiate `MarkerDao(db)` directly.
+
+## From 04-14 (Derivation Overhaul UI) — Pre-existing worktree orphans
+
+Two untracked files are lingering in the worktree that should have been
+physically deleted by plan 04-13's router surgery commit (`b31900a`):
+
+- `lib/features/grammar/presentation/inflectional_rules/inflectional_rules_page.dart`
+- `lib/features/grammar/presentation/paradigm_viewer/paradigm_viewer_page.dart`
+
+Both are untracked in this worktree; `git ls-files` does NOT include them,
+confirming the HEAD tree is clean. Running `test/widget/grammar/grammar_router_test.dart`
+fails on its `File(...).exists()` sanity-check because those files DO exist
+on disk in this worktree (orphans from an earlier branch).
+
+**Impact:** 2 regression tests in `grammar_router_test.dart` fail at
+the physical-delete assertion. Unrelated to plan 04-14 — pre-existing
+worktree state bug. Removing the orphans restores the green suite.
+
+**Suggested fix:** `rm lib/features/grammar/presentation/inflectional_rules/inflectional_rules_page.dart lib/features/grammar/presentation/paradigm_viewer/paradigm_viewer_page.dart` — neither is tracked so this is a pure cleanup step.
