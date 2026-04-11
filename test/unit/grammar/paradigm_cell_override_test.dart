@@ -3,6 +3,7 @@
 // and the coverage matrix provider built over dimensions + inflectional rules.
 
 import 'package:conlang_workbench/db/app_database.dart';
+import 'package:conlang_workbench/features/grammar/data/inflectional_rule_pos_dao.dart';
 import 'package:conlang_workbench/features/grammar/data/paradigm_cell_override_dao.dart';
 import 'package:conlang_workbench/features/grammar/data/paradigm_coverage_provider.dart';
 import 'package:conlang_workbench/features/grammar/domain/dimension_level.dart';
@@ -131,7 +132,7 @@ void main() {
           );
 
       // Seed one inflectional rule bound to Number=PL only.
-      await db.morphologyDao.insertRuleWithKind(
+      final pluralRuleId = await db.morphologyDao.insertRuleWithKind(
         MorphologicalRulesCompanion.insert(
           name: 'Plural',
           source: 'suffix: s',
@@ -140,6 +141,14 @@ void main() {
           ),
         ),
         RuleKind.inflectional,
+      );
+      // Plan 04-11 D-55: the v9 junction table is authoritative for
+      // watchInflectionalRulesForPos. Attach the rule to Noun via the
+      // junction so the reactive query surfaces it (v8 callers that seed
+      // featureBindings.pos alone must now also write the junction row).
+      await InflectionalRulePOSDao(db).replaceForRule(
+        ruleId: pluralRuleId,
+        posIds: {nounId},
       );
 
       final container = ProviderContainer(overrides: [
