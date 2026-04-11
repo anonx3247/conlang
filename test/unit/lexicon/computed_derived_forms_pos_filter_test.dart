@@ -87,7 +87,17 @@ void main() {
 
   /// Waits a few real ticks so Drift stream emits reach the Riverpod
   /// providers, then returns the derived-form result for [lexemeId].
+  ///
+  /// Eagerly subscribes to `lexemeByIdProvider(lexemeId)` (the family is
+  /// lazy — the first `container.read(computedDerivedFormsProvider(id))`
+  /// would otherwise see AsyncLoading for the lexeme and short-circuit
+  /// with an empty list before the stream emits its first value).
   Future<List<DerivedFormResult>> readDerivedFor(int lexemeId) async {
+    final lexSub = container.listen(
+      lexemeByIdProvider(lexemeId),
+      (_, _) {},
+    );
+    addTearDown(lexSub.close);
     for (var i = 0; i < 4; i++) {
       await Future<void>.delayed(const Duration(milliseconds: 20));
     }

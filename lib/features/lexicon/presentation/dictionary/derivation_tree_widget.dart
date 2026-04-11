@@ -29,7 +29,7 @@ class DerivationTreeWidget extends ConsumerWidget {
     final cs = theme.colorScheme;
 
     final romanize = ref.watch(romanizeProvider);
-    final derivedForms = ref.watch(computedDerivedFormsProvider(rootIpa));
+    final derivedForms = ref.watch(computedDerivedFormsProvider(rootId));
     final exceptionsAsync = ref.watch(exceptionsForLexemeProvider(rootId));
     final exceptions = exceptionsAsync.asData?.value ?? [];
 

@@ -7,6 +7,13 @@
 // inflectional rules would pollute the lexicon derivation tree with
 // bogus "derived" forms for every paradigm cell. These tests lock in
 // the fix: the provider must skip any rule whose kind != 'derivational'.
+//
+// Plan 04-12 Task 1 adaptation: the provider was re-keyed from
+// `String rootIpa` to `int lexemeId` to support the D-61 POS filter.
+// This file now seeds a Noun lexeme (or Verb, where relevant) and calls
+// the provider with the lexeme id. The kind-filter assertions are
+// unchanged in spirit — they still verify inflectional rules never
+// appear in the derivation tree.
 
 import 'package:conlang_workbench/db/app_database.dart';
 import 'package:conlang_workbench/features/grammar/domain/rule_kind.dart';
@@ -35,7 +42,17 @@ void main() {
       morphologicalRuleListProvider,
       (_, _) {},
     );
+    final posSub = container.listen(
+      posListProvider,
+      (_, _) {},
+    );
+    final lexemesSub = container.listen(
+      allLexemeListProvider,
+      (_, _) {},
+    );
     addTearDown(ruleSub.close);
+    addTearDown(posSub.close);
+    addTearDown(lexemesSub.close);
   });
 
   tearDown(() async {
@@ -43,15 +60,39 @@ void main() {
     await db.close();
   });
 
+  /// Seeds a lexeme with the given [ipa] and [partOfSpeech] free-text label
+  /// and returns its id.
+  Future<int> seedLexeme({
+    required String ipa,
+    required String partOfSpeech,
+  }) {
+    return db.into(db.lexemes).insert(
+          LexemesCompanion.insert(
+            ipa: ipa,
+            partOfSpeech: Value(partOfSpeech),
+          ),
+        );
+  }
+
   /// Waits for the ruleListProvider to emit its first event after a DB
-  /// write, then returns the provider result for the given IPA root.
-  Future<List<DerivedFormResult>> readDerivedFor(String rootIpa) async {
+  /// write, then returns the provider result for the given lexeme id.
+  ///
+  /// Eagerly subscribes to `lexemeByIdProvider(lexemeId)` so its first
+  /// stream event has landed before `computedDerivedFormsProvider` reads
+  /// its value (otherwise the provider would see AsyncLoading and
+  /// short-circuit with an empty list).
+  Future<List<DerivedFormResult>> readDerivedFor(int lexemeId) async {
+    final lexSub = container.listen(
+      lexemeByIdProvider(lexemeId),
+      (_, _) {},
+    );
+    addTearDown(lexSub.close);
     // Drift schedules stream emits via microtask-driven Timer.run, so we
     // need a real async tick for the new rows to show up in the provider.
     for (var i = 0; i < 4; i++) {
       await Future<void>.delayed(const Duration(milliseconds: 20));
     }
-    return container.read(computedDerivedFormsProvider(rootIpa));
+    return container.read(computedDerivedFormsProvider(lexemeId));
   }
 
   group('computedDerivedFormsProvider kind filter (pitfall #9)', () {
@@ -59,8 +100,6 @@ void main() {
       'Test 1 — with 1 derivational + 1 inflectional rule, only the '
       'derivational rule contributes a derived form',
       () async {
-        // Seed a POS so featureBindings.pos is non-empty (not required
-        // for derivation evaluation but keeps the test realistic).
         final nounPosId = await db.into(db.partsOfSpeech).insert(
               PartsOfSpeechCompanion.insert(name: 'Noun', abbreviation: 'N'),
             );
@@ -70,7 +109,8 @@ void main() {
           MorphologicalRulesCompanion.insert(
             name: 'Agent',
             source: '+er',
-            posIds: Value('$nounPosId'),
+            inputPosId: Value(nounPosId),
+            outputPosId: Value(nounPosId),
           ),
           RuleKind.derivational,
         );
@@ -79,12 +119,14 @@ void main() {
           MorphologicalRulesCompanion.insert(
             name: 'Plural',
             source: '+s',
-            posIds: Value('$nounPosId'),
+            inputPosId: Value(nounPosId),
+            outputPosId: Value(nounPosId),
           ),
           RuleKind.inflectional,
         );
 
-        final derived = await readDerivedFor('kat');
+        final katId = await seedLexeme(ipa: 'kat', partOfSpeech: 'Noun');
+        final derived = await readDerivedFor(katId);
 
         // Exactly one derived form should be produced — the derivational
         // Agent rule. The inflectional Plural rule must NOT appear.
@@ -114,7 +156,8 @@ void main() {
           MorphologicalRulesCompanion.insert(
             name: 'Plural',
             source: '+s',
-            posIds: Value('$nounPosId'),
+            inputPosId: Value(nounPosId),
+            outputPosId: Value(nounPosId),
           ),
           RuleKind.inflectional,
         );
@@ -122,12 +165,14 @@ void main() {
           MorphologicalRulesCompanion.insert(
             name: 'Diminutive Infl',
             source: '+ito',
-            posIds: Value('$nounPosId'),
+            inputPosId: Value(nounPosId),
+            outputPosId: Value(nounPosId),
           ),
           RuleKind.inflectional,
         );
 
-        final derived = await readDerivedFor('kat');
+        final katId = await seedLexeme(ipa: 'kat', partOfSpeech: 'Noun');
+        final derived = await readDerivedFor(katId);
         expect(derived, isEmpty,
             reason:
                 'When every rule is inflectional the derivation tree must be empty');
@@ -145,7 +190,8 @@ void main() {
           MorphologicalRulesCompanion.insert(
             name: 'Agent',
             source: '+er',
-            posIds: Value('$verbPosId'),
+            inputPosId: Value(verbPosId),
+            outputPosId: Value(verbPosId),
           ),
           RuleKind.derivational,
         );
@@ -153,12 +199,14 @@ void main() {
           MorphologicalRulesCompanion.insert(
             name: 'Action-noun',
             source: '+ing',
-            posIds: Value('$verbPosId'),
+            inputPosId: Value(verbPosId),
+            outputPosId: Value(verbPosId),
           ),
           RuleKind.derivational,
         );
 
-        final derived = await readDerivedFor('teach');
+        final teachId = await seedLexeme(ipa: 'teach', partOfSpeech: 'Verb');
+        final derived = await readDerivedFor(teachId);
 
         expect(derived.length, 2);
         final names = derived.map((r) => r.ruleName).toSet();
@@ -180,7 +228,8 @@ void main() {
           MorphologicalRulesCompanion.insert(
             name: 'Agent',
             source: '+er',
-            posIds: Value('$nounPosId'),
+            inputPosId: Value(nounPosId),
+            outputPosId: Value(nounPosId),
           ),
           RuleKind.derivational,
         );
@@ -190,13 +239,15 @@ void main() {
           MorphologicalRulesCompanion.insert(
             name: 'Dormant',
             source: '+zzz',
-            posIds: Value('$nounPosId'),
+            inputPosId: Value(nounPosId),
+            outputPosId: Value(nounPosId),
             isActive: const Value(false),
           ),
           RuleKind.derivational,
         );
 
-        final derived = await readDerivedFor('kat');
+        final katId = await seedLexeme(ipa: 'kat', partOfSpeech: 'Noun');
+        final derived = await readDerivedFor(katId);
         expect(derived.length, 1);
         expect(derived.single.ruleName, 'Agent');
       },
