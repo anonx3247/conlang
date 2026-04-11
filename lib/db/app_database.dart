@@ -2,6 +2,7 @@ import 'package:drift/drift.dart';
 import 'package:drift_flutter/drift_flutter.dart';
 
 import '../features/grammar/data/grammar_dao.dart';
+import '../features/grammar/data/paradigm_cell_override_dao.dart';
 import '../features/grammar/domain/feature_bindings.dart';
 import '../features/lexicon/data/lexeme_dao.dart';
 import '../features/morphology/data/morphology_dao.dart';
@@ -263,7 +264,7 @@ class Lexemes extends Table {
     Dimensions,
     ParadigmCellOverrides,
   ],
-  daos: [PhonemeDao, NaturalClassDao, RomanizationDao, PhonotacticDao, RewriteRuleDao, MorphologyDao, LexemeDao, GrammarDao],
+  daos: [PhonemeDao, NaturalClassDao, RomanizationDao, PhonotacticDao, RewriteRuleDao, MorphologyDao, LexemeDao, GrammarDao, ParadigmCellOverrideDao],
 )
 class AppDatabase extends _$AppDatabase {
   /// Creates an AppDatabase with an injected [QueryExecutor].
