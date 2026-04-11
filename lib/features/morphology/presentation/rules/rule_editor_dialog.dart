@@ -188,23 +188,36 @@ class _RuleEditorDialogState extends ConsumerState<RuleEditorDialog> {
   final _nameCtrl = TextEditingController();
   final List<_BranchState> _branches = [];
   /// Legacy selected POS IDs (derivational-era multi-POS filter). Kept so the
-  /// DSL preview path keeps working while we migrate to kind-aware bindings.
-  /// In inflectional mode this is the single selected "Target POS" (as a set
-  /// of one), in derivational mode this is empty and [_inputPosId] /
-  /// [_outputPosId] are used instead.
+  /// DSL preview path and the legacy `posIds` text column keep working while
+  /// we migrate to kind-aware bindings. In inflectional mode this mirrors
+  /// [_inflectionalPosSet] on every change; in derivational mode it's the
+  /// single-element set of [_inputPosId].
   Set<int> _selectedPosIds = {};
   String? _validationError;
   bool _saving = false;
 
   // ---- Plan 04-05 kind-aware state -----------------------------------------
 
-  /// Inflectional mode — the single Target POS whose dimensions are offered
-  /// as chip rows. Null means no POS selected yet.
-  int? _selectedPosIdForChips;
+  /// Inflectional mode — the full POS set this rule applies to (plan 04-11
+  /// D-55). Multiple POS can be selected; dimension chip rows render the
+  /// intersection of dims across the selected set. An empty set is a
+  /// validation error on save.
+  final Set<int> _inflectionalPosSet = <int>{};
+
+  /// The first POS id in [_inflectionalPosSet], used as the "chip host" for
+  /// single-POS rendering and as the convenience cache in
+  /// [MorphologicalRules.inputPosId] on save. Null when no POS is selected.
+  int? get _selectedPosIdForChips =>
+      _inflectionalPosSet.isEmpty ? null : _inflectionalPosSet.first;
 
   /// Inflectional mode — selected level per dimension.
   /// Key = dimensionId, value = levelId.
   final Map<int, int> _featureBindings = {};
+
+  /// When non-null, an async hydration from `posSetForRuleProvider` has
+  /// populated [_inflectionalPosSet] for this rule id — guards against
+  /// re-hydrating on every build.
+  int? _hydratedPosSetForRuleId;
 
   /// Derivational mode — source POS.
   int? _inputPosId;
@@ -238,9 +251,18 @@ class _RuleEditorDialogState extends ConsumerState<RuleEditorDialog> {
     final bindings = row.featureBindings;
     if (widget.kind == RuleKind.inflectional) {
       _featureBindings.addAll(bindings.dims);
+      // v9 plan 04-11: the junction table is authoritative for POS set.
+      // Seed with the legacy v8 shape (featureBindings.pos OR inputPosId) so
+      // the form has something to render immediately, then let the async
+      // `posSetForRuleProvider` hydration path overwrite once the stream
+      // resolves in build().
       if (bindings.pos.isNotEmpty) {
-        _selectedPosIdForChips = bindings.pos.first;
-        _selectedPosIds = {bindings.pos.first};
+        _inflectionalPosSet.addAll(bindings.pos);
+      } else if (row.inputPosId != null) {
+        _inflectionalPosSet.add(row.inputPosId!);
+      }
+      if (_inflectionalPosSet.isNotEmpty) {
+        _selectedPosIds = Set<int>.from(_inflectionalPosSet);
       }
     } else {
       _inputPosId =
@@ -378,6 +400,17 @@ class _RuleEditorDialogState extends ConsumerState<RuleEditorDialog> {
       return;
     }
 
+    // Plan 04-11 D-55: inflectional rules must attach to at least one POS.
+    // An inflectional rule with no POS set would be unreachable via the
+    // junction-driven watchInflectionalRulesForPos query.
+    if (widget.kind == RuleKind.inflectional && _inflectionalPosSet.isEmpty) {
+      setState(() {
+        _validationError =
+            'At least one POS must be selected for inflectional rules.';
+      });
+      return;
+    }
+
     // Inflectional rules MUST bind at least one dimension — D-13 + plan 04-05
     // must-have. An empty-bindings inflectional rule would be effectively
     // unbound and would fire on every cell.
@@ -415,9 +448,11 @@ class _RuleEditorDialogState extends ConsumerState<RuleEditorDialog> {
     final List<int> boundPos;
     final Map<int, int> boundDims;
     if (widget.kind == RuleKind.inflectional) {
-      boundPos = _selectedPosIdForChips == null
-          ? const <int>[]
-          : <int>[_selectedPosIdForChips!];
+      // Plan 04-11 D-55: featureBindings.pos carries the full multi-POS set
+      // for inflectional rules as a convenience cache. The inflectional_rule_pos
+      // junction is authoritative — both reads AND writes go through it
+      // below via replaceForRule.
+      boundPos = _inflectionalPosSet.toList()..sort();
       boundDims = Map<int, int>.from(_featureBindings);
     } else {
       boundPos = _inputPosId == null ? const <int>[] : <int>[_inputPosId!];
@@ -431,15 +466,28 @@ class _RuleEditorDialogState extends ConsumerState<RuleEditorDialog> {
     final posIdsStr =
         boundPos.isEmpty ? '' : boundPos.map((p) => '$p').join(',');
 
+    // Plan 04-11 D-55: for inflectional rules, populate input_pos_id with the
+    // FIRST selected POS as a convenience cache so any v8 caller that still
+    // reads the legacy column gets a sensible value. The junction table is
+    // authoritative for lookups (Task 2).
+    final firstInflPosId = widget.kind == RuleKind.inflectional &&
+            _inflectionalPosSet.isNotEmpty
+        ? _inflectionalPosSet.first
+        : null;
+
     final companionInputPos = widget.kind == RuleKind.derivational
         ? Value<int?>(_inputPosId)
-        : const Value<int?>.absent();
+        : Value<int?>(firstInflPosId);
     final companionOutputPos = widget.kind == RuleKind.derivational
         ? Value<int?>(_outputPosId)
         : const Value<int?>.absent();
 
+    final junctionDao = ref.read(inflectionalRulePOSDaoProvider);
+
     try {
+      int ruleIdForJunction;
       if (widget.existing != null) {
+        ruleIdForJunction = widget.existing!.id;
         await dao.updateRule(widget.existing!.copyWith(
           name: name,
           source: source,
@@ -448,14 +496,14 @@ class _RuleEditorDialogState extends ConsumerState<RuleEditorDialog> {
           featureBindings: featureBindings,
           inputPosId: widget.kind == RuleKind.derivational
               ? Value<int?>(_inputPosId)
-              : const Value<int?>(null),
+              : Value<int?>(firstInflPosId),
           outputPosId: widget.kind == RuleKind.derivational
               ? Value<int?>(_outputPosId)
               : const Value<int?>(null),
         ));
       } else {
         final ordering = await dao.nextOrdering();
-        await dao.insertRuleWithKind(
+        ruleIdForJunction = await dao.insertRuleWithKind(
           db.MorphologicalRulesCompanion(
             name: Value(name),
             source: Value(source),
@@ -468,6 +516,17 @@ class _RuleEditorDialogState extends ConsumerState<RuleEditorDialog> {
           widget.kind,
         );
       }
+
+      // Plan 04-11 D-55: write the POS set to the junction for inflectional
+      // rules. This is the authoritative source of "which POS does this rule
+      // apply to" in v9+.
+      if (widget.kind == RuleKind.inflectional && junctionDao != null) {
+        await junctionDao.replaceForRule(
+          ruleId: ruleIdForJunction,
+          posIds: Set<int>.from(_inflectionalPosSet),
+        );
+      }
+
       if (mounted) Navigator.of(context).pop();
     } finally {
       if (mounted) setState(() => _saving = false);
@@ -614,8 +673,14 @@ class _RuleEditorDialogState extends ConsumerState<RuleEditorDialog> {
   // Kind-aware top sections (plan 04-05)
   // ---------------------------------------------------------------------------
 
-  /// Inflectional mode top: Target POS dropdown + chip rows per dimension +
-  /// validation hint + live tiebreak banner.
+  /// Inflectional mode top: multi-POS FilterChip picker (plan 04-11 D-55)
+  /// + chip rows per intersected dimension + validation hint + live
+  /// tiebreak banner.
+  ///
+  /// The "Target POS" column was replaced with a FilterChip row: tapping a
+  /// chip adds/removes that POS from [_inflectionalPosSet]. Dimension chip
+  /// rows render the INTERSECTION (by name) of dimensions across every
+  /// selected POS so the user can only bind to dims that exist in all.
   List<Widget> _buildInflectionalTop(
     ThemeData theme,
     ColorScheme cs,
@@ -627,49 +692,83 @@ class _RuleEditorDialogState extends ConsumerState<RuleEditorDialog> {
       style: theme.textTheme.titleMedium,
     ));
     widgets.add(const SizedBox(height: 8));
+
+    // Multi-POS picker (plan 04-11 D-55). Replaces the single "Target POS"
+    // dropdown. An empty set is a save-time validation error.
     widgets.add(
-      DropdownButtonFormField<int>(
-        initialValue: _selectedPosIdForChips,
-        decoration: const InputDecoration(
-          labelText: 'Target POS',
-          border: OutlineInputBorder(),
-          isDense: true,
-          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        ),
-        isExpanded: true,
-        items: [
+      Wrap(
+        key: const ValueKey('inflectionalPosPickerWrap'),
+        spacing: 6,
+        runSpacing: 4,
+        children: [
           for (final pos in posList)
-            DropdownMenuItem<int>(
-              value: pos.id,
-              child: Text(
-                '${pos.name} (${pos.abbreviation})',
-                overflow: TextOverflow.ellipsis,
-              ),
+            FilterChip(
+              label: Text('${pos.name} (${pos.abbreviation})'),
+              tooltip: pos.name,
+              selected: _inflectionalPosSet.contains(pos.id),
+              onSelected: (on) {
+                setState(() {
+                  if (on) {
+                    _inflectionalPosSet.add(pos.id);
+                  } else {
+                    _inflectionalPosSet.remove(pos.id);
+                    // Drop any dim bindings whose dim id is no longer in the
+                    // intersection (best-effort — the build-time intersection
+                    // filter will surface the mismatch too).
+                  }
+                  _selectedPosIds = Set<int>.from(_inflectionalPosSet);
+                  _recomputeTiebreak(_cachedInflectionalRows);
+                });
+              },
             ),
         ],
-        onChanged: (v) {
-          if (v == null) return;
-          setState(() {
-            _selectedPosIdForChips = v;
-            _selectedPosIds = {v};
-            _featureBindings.clear();
-            _recomputeTiebreak(_cachedInflectionalRows);
-          });
-        },
       ),
     );
+    if (_inflectionalPosSet.isEmpty) {
+      widgets.add(const SizedBox(height: 4));
+      widgets.add(Text(
+        'Select at least one POS above.',
+        style: theme.textTheme.bodySmall?.copyWith(color: cs.error),
+      ));
+    }
     widgets.add(const SizedBox(height: 12));
-    if (_selectedPosIdForChips != null) {
+
+    // Dimension chip rows — only rendered when at least one POS is selected.
+    // For a single-POS selection we show that POS's dimensions directly.
+    // For multi-POS selection we show the intersection (by dimension name).
+    if (_inflectionalPosSet.isNotEmpty) {
       widgets.add(Consumer(builder: (ctx, ref, _) {
-        final dimsAsync =
-            ref.watch(dimensionsForPosProvider(_selectedPosIdForChips!));
-        final dims = dimsAsync.asData?.value ?? const <db.Dimension>[];
+        // Watch every selected POS's dimension stream.
+        final perPosDims = <List<db.Dimension>>[];
+        for (final posId in _inflectionalPosSet) {
+          final async = ref.watch(dimensionsForPosProvider(posId));
+          perPosDims.add(async.asData?.value ?? const <db.Dimension>[]);
+        }
+        // Intersect by dimension NAME — dimensions are per-POS rows (D-02)
+        // that share names across POS but not ids. Render the FIRST POS's
+        // dimension row for any name that appears in every other POS's set.
+        final List<db.Dimension> dims;
+        if (perPosDims.any((l) => l.isEmpty)) {
+          dims = const <db.Dimension>[];
+        } else if (perPosDims.length == 1) {
+          dims = perPosDims.first;
+        } else {
+          final names = perPosDims.first.map((d) => d.name).toSet();
+          for (final list in perPosDims.skip(1)) {
+            names.retainAll(list.map((d) => d.name));
+          }
+          dims = perPosDims.first.where((d) => names.contains(d.name)).toList();
+        }
         if (dims.isEmpty) {
           return Padding(
             padding: const EdgeInsets.only(bottom: 8),
             child: Text(
-              'This POS has no dimensions yet. Add dimensions in '
-              'Grammar → POS & Dimensions to enable inflectional binding.',
+              _inflectionalPosSet.length > 1
+                  ? 'These POS share no common dimensions — rule cannot '
+                      'bind any features.'
+                  : 'This POS has no dimensions yet. Add dimensions in '
+                      'Grammar → POS & Dimensions to enable inflectional '
+                      'binding.',
               style: theme.textTheme.bodySmall
                   ?.copyWith(color: cs.onSurface.withValues(alpha: 0.6)),
             ),
@@ -801,6 +900,33 @@ class _RuleEditorDialogState extends ConsumerState<RuleEditorDialog> {
       // build in the banner render path below, so mutating _tiebreakConflict
       // here is safe (no concurrent setState).
       _recomputeTiebreak(allRows);
+
+      // Plan 04-11 D-55: hydrate the POS set from the junction table when
+      // editing an existing rule. Done once per rule id — subsequent taps on
+      // the FilterChip row remain the user's authoritative intent and must
+      // not be overwritten by the stream on every rebuild.
+      final existingId = widget.existing?.id;
+      if (existingId != null && _hydratedPosSetForRuleId != existingId) {
+        final async = ref.watch(posSetForRuleProvider(existingId));
+        final fromJunction = async.asData?.value;
+        if (fromJunction != null) {
+          _hydratedPosSetForRuleId = existingId;
+          if (fromJunction.isNotEmpty) {
+            // Overwrite the legacy seed from _loadFromExisting with the
+            // authoritative junction set.
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (!mounted) return;
+              setState(() {
+                _inflectionalPosSet
+                  ..clear()
+                  ..addAll(fromJunction);
+                _selectedPosIds = Set<int>.from(_inflectionalPosSet);
+                _recomputeTiebreak(_cachedInflectionalRows);
+              });
+            });
+          }
+        }
+      }
     }
 
     return Dialog(

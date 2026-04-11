@@ -130,10 +130,9 @@ void main() {
         );
         await settle(tester);
 
-        // Select the Target POS so the chip rows are rendered.
-        await tester.tap(find.text('Target POS'));
-        await settle(tester);
-        await tester.tap(find.text('Noun (N)').last);
+        // Plan 04-11: "Target POS" single-dropdown was replaced with a
+        // multi-POS FilterChip picker. Tap the Noun chip to select it.
+        await tester.tap(find.widgetWithText(FilterChip, 'Noun (N)'));
         await settle(tester);
 
         expect(find.text('Applies to'), findsOneWidget);
@@ -216,10 +215,9 @@ void main() {
         );
         await settle(tester);
 
-        // Select the Target POS so the Number dimension chips render.
-        await tester.tap(find.text('Target POS'));
-        await settle(tester);
-        await tester.tap(find.text('Noun (N)').last);
+        // Plan 04-11: "Target POS" single-dropdown was replaced with a
+        // multi-POS FilterChip picker. Tap the Noun chip to select it.
+        await tester.tap(find.widgetWithText(FilterChip, 'Noun (N)'));
         await settle(tester);
 
         // Fill in a rule name.
