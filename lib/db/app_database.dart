@@ -4,6 +4,7 @@ import 'package:drift_flutter/drift_flutter.dart';
 import '../features/grammar/data/grammar_dao.dart';
 import '../features/grammar/data/inflectional_rule_pos_dao.dart';
 import '../features/grammar/data/lexeme_parents_dao.dart';
+import '../features/grammar/data/marker_dao.dart';
 import '../features/grammar/data/paradigm_cell_override_dao.dart';
 import '../features/grammar/domain/feature_bindings.dart';
 import '../features/lexicon/data/lexeme_dao.dart';
@@ -392,6 +393,7 @@ class Lexemes extends Table {
     ParadigmCellOverrideDao,
     InflectionalRulePOSDao, // v9 gap D-55
     LexemeParentsDao, // v9 gap D-62
+    MarkerDao, // v9 gap D-44 (re-registered after 04-11 regression)
   ],
 )
 class AppDatabase extends _$AppDatabase {
