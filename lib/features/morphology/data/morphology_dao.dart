@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart';
 
 import '../../../db/app_database.dart';
+import '../../grammar/domain/rule_kind.dart';
 
 part 'morphology_dao.g.dart';
 
@@ -23,6 +24,46 @@ class MorphologyDao extends DatabaseAccessor<AppDatabase>
       (select(morphologicalRules)
             ..orderBy([(t) => OrderingTerm.asc(t.ordering)]))
           .watch();
+
+  /// Watches morphological rules of a given [kind] (inflectional or
+  /// derivational). Filters on the `kind` column added in schema v8.
+  ///
+  /// Ordered by [ordering] ascending so consumers see the same priority
+  /// sequence the overall rules list uses.
+  Stream<List<MorphologicalRule>> watchRulesByKind(RuleKind kind) {
+    return (select(morphologicalRules)
+          ..where((t) => t.kind.equals(kind.dbString))
+          ..orderBy([(t) => OrderingTerm.asc(t.ordering)]))
+        .watch();
+  }
+
+  /// Watches inflectional rules that apply to the given [posId].
+  ///
+  /// A rule applies to [posId] iff `kind='inflectional'` AND either
+  /// `featureBindings.pos` is empty (applies to all POS) or contains
+  /// [posId]. Filtering on `featureBindings` is done in Dart because the
+  /// column is a JSON [TypeConverter] and the subset check is not expressible
+  /// in SQL.
+  Stream<List<MorphologicalRule>> watchInflectionalRulesForPos(int posId) {
+    return watchRulesByKind(RuleKind.inflectional).map((rules) {
+      return rules.where((r) {
+        final pos = r.featureBindings.pos;
+        return pos.isEmpty || pos.contains(posId);
+      }).toList();
+    });
+  }
+
+  /// Inserts a rule and guarantees its `kind` column matches [kind].
+  ///
+  /// Any `kind` value in [companion] is overridden — this method is the
+  /// canonical entry point for callers that know which kind they're writing.
+  Future<int> insertRuleWithKind(
+    MorphologicalRulesCompanion companion,
+    RuleKind kind,
+  ) {
+    return into(morphologicalRules)
+        .insert(companion.copyWith(kind: Value(kind.dbString)));
+  }
 
   // ---------------------------------------------------------------------------
   // Rules — CRUD

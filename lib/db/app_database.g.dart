@@ -5128,6 +5128,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   );
   late final MorphologyDao morphologyDao = MorphologyDao(this as AppDatabase);
   late final LexemeDao lexemeDao = LexemeDao(this as AppDatabase);
+  late final GrammarDao grammarDao = GrammarDao(this as AppDatabase);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();

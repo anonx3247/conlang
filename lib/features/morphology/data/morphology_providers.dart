@@ -1,6 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../db/app_database.dart';
+import '../../grammar/domain/inflectional_rule.dart';
+import '../../grammar/domain/rule_kind.dart';
 import '../../project/data/project_providers.dart';
 import 'morphology_dao.dart';
 
@@ -61,4 +63,38 @@ final morphRuleExceptionsProvider =
   final dao = ref.watch(morphologyDaoProvider);
   if (dao == null) return Stream.value([]);
   return dao.watchExceptionsForRule(ruleId);
+});
+
+// ---------------------------------------------------------------------------
+// Kind-aware rule providers (Phase 4)
+// ---------------------------------------------------------------------------
+
+/// Streams morphological rules filtered by [RuleKind] (inflectional or
+/// derivational). Backed by `MorphologyDao.watchRulesByKind`.
+///
+/// Emits an empty list when no project is open.
+final rulesByKindProvider =
+    StreamProvider.family<List<MorphologicalRule>, RuleKind>((ref, kind) {
+  final dao = ref.watch(morphologyDaoProvider);
+  if (dao == null) return Stream.value(const []);
+  return dao.watchRulesByKind(kind);
+});
+
+/// Streams ACTIVE inflectional rules that apply to the given POS, converted
+/// to [InflectionalRule] view-models ready for the paradigm engine.
+///
+/// Inactive rules are filtered out here — the paradigm engine should never
+/// evaluate them.
+///
+/// Emits an empty list when no project is open.
+final inflectionalRulesForPosProvider =
+    StreamProvider.family<List<InflectionalRule>, int>((ref, posId) {
+  final dao = ref.watch(morphologyDaoProvider);
+  if (dao == null) return Stream.value(const []);
+  return dao.watchInflectionalRulesForPos(posId).map(
+        (rows) => rows
+            .where((r) => r.isActive)
+            .map(InflectionalRule.fromDbRow)
+            .toList(),
+      );
 });
