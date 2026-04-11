@@ -225,18 +225,8 @@ class _RuleEditorDialogState extends ConsumerState<RuleEditorDialog> {
       // Default: one branch with one suffix op.
       _branches.add(_BranchState());
     }
-
-    // Schedule a post-frame tiebreak compute. This runs after the first
-    // build so Riverpod's stream providers have had a chance to listen.
-    if (widget.kind == RuleKind.inflectional) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) {
-          setState(() {
-            _recomputeTiebreak();
-          });
-        }
-      });
-    }
+    // Tiebreak is recomputed inside build() from the live Riverpod stream,
+    // so initState doesn't need to schedule a post-frame callback.
   }
 
   /// Populate form state from a Drift [db.MorphologicalRule] row.
@@ -488,7 +478,11 @@ class _RuleEditorDialogState extends ConsumerState<RuleEditorDialog> {
   // Tiebreak detection (inflectional mode, D-12)
   // ---------------------------------------------------------------------------
 
-  void _recomputeTiebreak() {
+  /// Recomputes [_tiebreakConflict] against [allInflectionalRows], which the
+  /// build method obtains by `ref.watch(rulesByKindProvider(inflectional))`.
+  /// Passing the list in keeps `_recomputeTiebreak` callable from setState()
+  /// handlers without needing `ref.read` inside state setters.
+  void _recomputeTiebreak(List<db.MorphologicalRule> allInflectionalRows) {
     if (widget.kind != RuleKind.inflectional || _featureBindings.isEmpty) {
       _tiebreakConflict = null;
       return;
@@ -499,12 +493,8 @@ class _RuleEditorDialogState extends ConsumerState<RuleEditorDialog> {
           : <int>[_selectedPosIdForChips!],
       dims: Map<int, int>.from(_featureBindings),
     );
-    final allInflectionalAsync =
-        ref.read(rulesByKindProvider(RuleKind.inflectional));
-    final allRows =
-        allInflectionalAsync.asData?.value ?? const <db.MorphologicalRule>[];
     // Exclude the current rule (edit mode) so the editor never self-conflicts.
-    final others = allRows
+    final others = allInflectionalRows
         .where((r) => r.id != widget.existing?.id)
         .map(InflectionalRule.fromDbRow)
         .toList();
@@ -528,6 +518,12 @@ class _RuleEditorDialogState extends ConsumerState<RuleEditorDialog> {
       }
     }
   }
+
+  /// The inflectional rules currently visible to the tiebreak detector,
+  /// cached from the latest `ref.watch` in [build]. Used by setState handlers
+  /// (chip toggles, POS change) to recompute without re-reading Riverpod.
+  List<db.MorphologicalRule> _cachedInflectionalRows =
+      const <db.MorphologicalRule>[];
 
   // ---------------------------------------------------------------------------
   // Dimension chip row builder (inflectional mode)
@@ -564,7 +560,7 @@ class _RuleEditorDialogState extends ConsumerState<RuleEditorDialog> {
                       } else {
                         _featureBindings.remove(dim.id);
                       }
-                      _recomputeTiebreak();
+                      _recomputeTiebreak(_cachedInflectionalRows);
                     });
                   },
                 );
@@ -638,12 +634,17 @@ class _RuleEditorDialogState extends ConsumerState<RuleEditorDialog> {
           labelText: 'Target POS',
           border: OutlineInputBorder(),
           isDense: true,
+          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         ),
+        isExpanded: true,
         items: [
           for (final pos in posList)
             DropdownMenuItem<int>(
               value: pos.id,
-              child: Text('${pos.name} (${pos.abbreviation})'),
+              child: Text(
+                '${pos.name} (${pos.abbreviation})',
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
         ],
         onChanged: (v) {
@@ -652,7 +653,7 @@ class _RuleEditorDialogState extends ConsumerState<RuleEditorDialog> {
             _selectedPosIdForChips = v;
             _selectedPosIds = {v};
             _featureBindings.clear();
-            _recomputeTiebreak();
+            _recomputeTiebreak(_cachedInflectionalRows);
           });
         },
       ),
@@ -701,61 +702,71 @@ class _RuleEditorDialogState extends ConsumerState<RuleEditorDialog> {
     List<db.PartsOfSpeechData> posList,
   ) {
     return [
-      Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Expanded(
-            child: DropdownButtonFormField<int>(
-              initialValue: _inputPosId,
-              decoration: const InputDecoration(
-                labelText: 'Input POS',
-                border: OutlineInputBorder(),
-                isDense: true,
+      // Stacked, not side-by-side, so the labels always fit inside the
+      // cramped left column of the editor dialog (pre-existing maxWidth:820
+      // constraint). Plan 04-05 Task 1 accepted this layout tweak after the
+      // row variant overflowed the column by 9.5px in widget tests.
+      Text('Input POS', style: theme.textTheme.bodySmall),
+      const SizedBox(height: 4),
+      DropdownButtonFormField<int>(
+        initialValue: _inputPosId,
+        decoration: const InputDecoration(
+          border: OutlineInputBorder(),
+          isDense: true,
+          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        ),
+        isExpanded: true,
+        items: [
+          for (final pos in posList)
+            DropdownMenuItem<int>(
+              value: pos.id,
+              child: Text(
+                '${pos.name} (${pos.abbreviation})',
+                overflow: TextOverflow.ellipsis,
               ),
-              items: [
-                for (final pos in posList)
-                  DropdownMenuItem<int>(
-                    value: pos.id,
-                    child: Text('${pos.name} (${pos.abbreviation})'),
-                  ),
-              ],
-              onChanged: (v) {
-                setState(() {
-                  _inputPosId = v;
-                  // Default output to input on change (D-38).
-                  _outputPosId ??= v;
-                  if (v != null) {
-                    _selectedPosIds = {v};
-                  }
-                });
-              },
             ),
-          ),
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 8),
-            child: Icon(Icons.arrow_forward),
-          ),
-          Expanded(
-            child: DropdownButtonFormField<int>(
-              initialValue: _outputPosId,
-              decoration: const InputDecoration(
-                labelText: 'Output POS',
-                border: OutlineInputBorder(),
-                isDense: true,
-              ),
-              items: [
-                for (final pos in posList)
-                  DropdownMenuItem<int>(
-                    value: pos.id,
-                    child: Text('${pos.name} (${pos.abbreviation})'),
-                  ),
-              ],
-              onChanged: (v) {
-                setState(() => _outputPosId = v);
-              },
-            ),
-          ),
         ],
+        onChanged: (v) {
+          setState(() {
+            _inputPosId = v;
+            // Default output to input on change (D-38).
+            _outputPosId ??= v;
+            if (v != null) {
+              _selectedPosIds = {v};
+            }
+          });
+        },
+      ),
+      const SizedBox(height: 8),
+      Row(
+        children: [
+          const Icon(Icons.arrow_downward, size: 16),
+          const SizedBox(width: 6),
+          Text('Output POS', style: theme.textTheme.bodySmall),
+        ],
+      ),
+      const SizedBox(height: 4),
+      DropdownButtonFormField<int>(
+        initialValue: _outputPosId,
+        decoration: const InputDecoration(
+          border: OutlineInputBorder(),
+          isDense: true,
+          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        ),
+        isExpanded: true,
+        items: [
+          for (final pos in posList)
+            DropdownMenuItem<int>(
+              value: pos.id,
+              child: Text(
+                '${pos.name} (${pos.abbreviation})',
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+        ],
+        onChanged: (v) {
+          setState(() => _outputPosId = v);
+        },
       ),
     ];
   }
@@ -775,6 +786,22 @@ class _RuleEditorDialogState extends ConsumerState<RuleEditorDialog> {
     // POS list for selector
     final posAsync = ref.watch(posListProvider);
     final posList = posAsync.asData?.value ?? [];
+
+    // Plan 04-05: keep the tiebreak detector in sync with the live
+    // inflectional rules stream. Watching here ensures the provider stays
+    // subscribed and the banner updates when rules are added/edited in
+    // another tab while the editor is open.
+    if (widget.kind == RuleKind.inflectional) {
+      final allInflectionalAsync =
+          ref.watch(rulesByKindProvider(RuleKind.inflectional));
+      final allRows = allInflectionalAsync.asData?.value ??
+          const <db.MorphologicalRule>[];
+      _cachedInflectionalRows = allRows;
+      // Recompute synchronously inside build — the result is only read after
+      // build in the banner render path below, so mutating _tiebreakConflict
+      // here is safe (no concurrent setState).
+      _recomputeTiebreak(allRows);
+    }
 
     return Dialog(
       insetPadding: const EdgeInsets.symmetric(horizontal: 40, vertical: 32),
@@ -1114,17 +1141,31 @@ class _RuleEditorDialogState extends ConsumerState<RuleEditorDialog> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          // Type dropdown
-          DropdownButton<OpType>(
-            value: op.type,
-            isDense: true,
-            items: OpType.values
-                .map((t) => DropdownMenuItem(value: t, child: Text(t.label)))
-                .toList(),
-            onChanged: (v) {
-              if (v == null) return;
-              setState(() => op.type = v);
-            },
+          // Type dropdown. Wrapped in a SizedBox(width: 120) so the intrinsic
+          // width of the longest label ("Whole-word override (irregular)")
+          // doesn't blow past the dialog's left-column budget — plan 04-05
+          // Rule 3 fix (widget tests revealed a 165px overflow at 820px
+          // dialog width).
+          SizedBox(
+            width: 120,
+            child: DropdownButton<OpType>(
+              value: op.type,
+              isDense: true,
+              isExpanded: true,
+              items: OpType.values
+                  .map((t) => DropdownMenuItem(
+                        value: t,
+                        child: Text(
+                          t.label,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ))
+                  .toList(),
+              onChanged: (v) {
+                if (v == null) return;
+                setState(() => op.type = v);
+              },
+            ),
           ),
 
           const SizedBox(width: 8),
