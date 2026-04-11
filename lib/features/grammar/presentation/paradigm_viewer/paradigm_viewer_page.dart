@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../db/app_database.dart';
 import '../../../lexicon/data/lexeme_providers.dart';
 import '../../../morphology/data/morphology_providers.dart';
+import '../../../project/data/project_providers.dart';
+import '../../data/typology_providers.dart';
 import '../../domain/pos_resolver.dart';
 import 'axis_config_bar.dart';
 import 'coverage_matrix_panel.dart';
@@ -39,6 +41,50 @@ class _ParadigmViewerPageState extends ConsumerState<ParadigmViewerPage> {
   int? _selectedPosId;
   int? _selectedLexemeId;
 
+  /// G-01: restore the per-POS last-selected lexeme from project_settings
+  /// when a POS is picked (either by user action or initial auto-select on
+  /// first build). Falls back to leaving `_selectedLexemeId` null (which
+  /// keeps the "(template)" picker default) when no stored value exists or
+  /// the stored lexeme has been deleted since.
+  Future<void> _restoreLastSelectedWord(int posId) async {
+    final db = ref.read(currentDatabaseProvider);
+    if (db == null) return;
+    final stored = await readParadigmLastSelectedWord(db, posId);
+    if (!mounted || _selectedPosId != posId) return;
+    if (stored == null) {
+      setState(() => _selectedLexemeId = null);
+      return;
+    }
+    // Confirm the lexeme still exists (could have been deleted since the
+    // last session) — gracefully fall back to the template default if not.
+    final lex = await (db.select(db.lexemes)
+          ..where((t) => t.id.equals(stored)))
+        .getSingleOrNull();
+    if (!mounted || _selectedPosId != posId) return;
+    setState(() => _selectedLexemeId = lex == null ? null : stored);
+  }
+
+  void _onPosChanged(int? posId) {
+    setState(() {
+      _selectedPosId = posId;
+      _selectedLexemeId = null;
+    });
+    if (posId != null) {
+      // Fire-and-forget — no await so the picker stays responsive.
+      _restoreLastSelectedWord(posId);
+    }
+  }
+
+  void _onWordChanged(int? lexemeId) {
+    setState(() => _selectedLexemeId = lexemeId);
+    final posId = _selectedPosId;
+    if (posId == null || lexemeId == null) return;
+    final db = ref.read(currentDatabaseProvider);
+    if (db == null) return;
+    // Fire-and-forget write.
+    writeParadigmLastSelectedWord(db, posId: posId, lexemeId: lexemeId);
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -63,10 +109,7 @@ class _ParadigmViewerPageState extends ConsumerState<ParadigmViewerPage> {
                     .map((p) =>
                         DropdownMenuItem(value: p.id, child: Text(p.name)))
                     .toList(),
-                onChanged: (v) => setState(() {
-                  _selectedPosId = v;
-                  _selectedLexemeId = null;
-                }),
+                onChanged: _onPosChanged,
               ),
               const SizedBox(width: 24),
               if (_selectedPosId != null) _buildWordPicker(posList),
@@ -136,7 +179,7 @@ class _ParadigmViewerPageState extends ConsumerState<ParadigmViewerPage> {
           for (final l in filtered)
             DropdownMenuItem<int?>(value: l.id, child: Text(l.ipa)),
         ],
-        onChanged: (v) => setState(() => _selectedLexemeId = v),
+        onChanged: _onWordChanged,
       ),
     );
   }

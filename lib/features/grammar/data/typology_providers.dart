@@ -79,6 +79,11 @@ const String _kModalityKey = 'typology.modality';
 
 String paradigmAxesKey(int posId) => 'typology.paradigm_axes.$posId';
 
+/// project_settings key storing the per-POS "last selected word" in the
+/// paradigm viewer (G-01). Value is the stringified lexeme id.
+String paradigmLastSelectedWordKey(int posId) =>
+    'paradigm.last_selected_word.$posId';
+
 // ---------------------------------------------------------------------------
 // Pure-DB helpers (directly callable from tests + provider bodies)
 // ---------------------------------------------------------------------------
@@ -150,6 +155,36 @@ Future<void> writeParadigmAxes(
   required ParadigmAxes axes,
 }) async {
   await writeTypologyKey(db, paradigmAxesKey(posId), axes.toJsonString());
+}
+
+/// G-01: reads the last-selected lexeme id for [posId] from project_settings.
+/// Returns null when no value exists or the stored value can't be parsed.
+Future<int?> readParadigmLastSelectedWord(
+  AppDatabase db,
+  int posId,
+) async {
+  final key = paradigmLastSelectedWordKey(posId);
+  final row = await (db.select(db.projectSettings)
+        ..where((t) => t.key.equals(key)))
+      .getSingleOrNull();
+  if (row == null) return null;
+  return int.tryParse(row.value);
+}
+
+/// G-01: upserts the last-selected lexeme id for [posId] into
+/// project_settings. Uses the same update-then-insert idiom as
+/// [writeTypologyKey] because Drift's insertOnConflictUpdate targets
+/// primary keys, not the unique `key` column.
+Future<void> writeParadigmLastSelectedWord(
+  AppDatabase db, {
+  required int posId,
+  required int lexemeId,
+}) async {
+  await writeTypologyKey(
+    db,
+    paradigmLastSelectedWordKey(posId),
+    lexemeId.toString(),
+  );
 }
 
 // ---------------------------------------------------------------------------
