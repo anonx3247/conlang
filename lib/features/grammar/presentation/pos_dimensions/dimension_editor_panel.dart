@@ -209,6 +209,40 @@ class DimensionEditorPanel extends ConsumerWidget {
     await dao.updateDimensionLevels(dim.id, updated);
   }
 
+  /// D-85 — 04-17. Confirm + execute the stale intrinsic-level purge.
+  Future<void> _onPurgeStale(
+    BuildContext ctx,
+    WidgetRef ref,
+    Dimension dim,
+    int count,
+  ) async {
+    final confirmed = await showDialog<bool>(
+      context: ctx,
+      builder: (dlgCtx) => AlertDialog(
+        title: const Text('Purge stale intrinsic levels'),
+        content: Text(
+          'This will remove the intrinsic level entry for '
+          "'${dim.name}' from $count lexemes. This cannot be undone.",
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dlgCtx).pop(false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(dlgCtx).pop(true),
+            child: const Text('Purge'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    final dao = ref.read(grammarDaoProvider);
+    if (dao == null) return;
+    await dao.purgeIntrinsicLevelEntries(dim.id);
+    ref.invalidate(staleIntrinsicEntryCountProvider(dim.id));
+  }
+
   Widget _dimensionCard(
     BuildContext ctx,
     WidgetRef ref,
@@ -216,6 +250,11 @@ class DimensionEditorPanel extends ConsumerWidget {
     Dimension dim,
   ) {
     final levels = decodeLevelsJson(dim.levelsJson);
+    // D-85 — 04-17. Stale intrinsic entry count drives the purge affordance
+    // visibility when the dim is NOT currently intrinsic but still carries
+    // residual entries in lexeme rows.
+    final staleAsync = ref.watch(staleIntrinsicEntryCountProvider(dim.id));
+    final staleCount = staleAsync.asData?.value ?? 0;
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       child: Padding(
@@ -256,6 +295,45 @@ class DimensionEditorPanel extends ConsumerWidget {
                 ),
               ],
             ),
+            // D-82 / D-84 / D-85 — 04-17. Intrinsic toggle row. On
+            // false→true the DAO backfills every matching-POS lexeme with
+            // the dim's first level id and writes a banner-pending row the
+            // Inflections sub-tab consumes. On true→false the flag flips
+            // only; lexeme rows are left untouched and the purge
+            // affordance surfaces when staleCount > 0.
+            Row(
+              children: [
+                Checkbox(
+                  value: dim.intrinsic,
+                  onChanged: (v) async {
+                    final dao = ref.read(grammarDaoProvider);
+                    if (dao == null) return;
+                    await dao.setDimensionIntrinsic(dim.id, v ?? false);
+                    ref.invalidate(
+                        staleIntrinsicEntryCountProvider(dim.id));
+                    ref.invalidate(intrinsicBackfillBannerProvider);
+                  },
+                ),
+                Expanded(
+                  child: Text(
+                    'Intrinsic — words of this POS have a fixed level '
+                    '(not inflected)',
+                    style: theme.textTheme.bodySmall,
+                  ),
+                ),
+              ],
+            ),
+            if (!dim.intrinsic && staleCount > 0)
+              Padding(
+                padding: const EdgeInsets.only(top: 4, bottom: 4),
+                child: TextButton.icon(
+                  icon: const Icon(Icons.cleaning_services_outlined),
+                  label: Text(
+                    'Purge stale intrinsic levels for $staleCount words',
+                  ),
+                  onPressed: () => _onPurgeStale(ctx, ref, dim, staleCount),
+                ),
+              ),
             const SizedBox(height: 8),
             Wrap(
               spacing: 8,
