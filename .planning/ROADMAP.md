@@ -213,7 +213,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4. Phases 5 and 6 depend only on
 | 4. Grammar & Morphology | 25/25 | Complete | 2026-04-12 |
 | 5. Culture Wiki | 3/4 | Gap closure | - |
 | 6. Reference Glossary | 2/2 | Complete | 2026-04-12 |
-| 7. Polish & Refactor | 0/? | Not started | - |
+| 7. Polish & Refactor | 0/3 | Planning | - |
 
 ### Phase 7: Polish & Refactor
 **Goal**: Fix all outstanding UI nits (phonology layout, abbreviation formatting, natural classes tab), clean up dead code from culture wiki removal, refactor oversized files (rule_editor_dialog.dart), and address code quality concerns from codebase audit
@@ -226,4 +226,9 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4. Phases 5 and 6 depend only on
   4. Abbreviations are case-insensitive and display with trailing period (e.g. v.)
   5. Dead code from culture wiki removal is cleaned up (no orphaned imports, providers, or references)
   6. rule_editor_dialog.dart split into smaller focused files (<500 lines each)
-**Plans**: TBD
+**Plans:** 3 plans in 2 waves
+
+Plans:
+- [ ] 07-01-PLAN.md — Phonology tab restructure: extract natural classes to own sub-tab, inline romanization below inventory, rom-primary phoneme display replacing alt-key toggle
+- [ ] 07-02-PLAN.md — Abbreviation formatting (lowercase + trailing period) + draggable panel separator widget for all shells
+- [ ] 07-03-PLAN.md — Dead code cleanup, getSingle() safety fixes, rule_editor_dialog.dart refactor into rule_editor/ subdirectory
