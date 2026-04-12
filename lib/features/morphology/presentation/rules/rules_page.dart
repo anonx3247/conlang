@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../db/app_database.dart';
 import '../../../grammar/data/grammar_providers.dart';
+import '../../../grammar/domain/dimension_level.dart';
 import '../../../grammar/domain/feature_bindings.dart';
 import '../../../grammar/domain/marker.dart';
 import '../../../grammar/domain/rule_kind.dart';
@@ -525,15 +526,28 @@ class _RulesPageState extends ConsumerState<RulesPage> {
       }
     }
 
-    // Helper: produce a human-readable binding summary from a MarkerDecl,
-    // e.g. "2sg · present" by joining level abbreviations.
+    // Build level-id -> abbreviation map across all POS dimensions so that
+    // bindingSummary can resolve "lv42" → "PRS" etc. Uses already-cached
+    // provider data; no extra DB queries per build.
+    final levelAbbrMap = <int, String>{};
+    for (final pos in posList) {
+      final dimsAsync = ref.watch(dimensionsForPosProvider(pos.id));
+      final dims = dimsAsync.asData?.value ?? const [];
+      for (final dim in dims) {
+        final levels = decodeLevelsJson(dim.levelsJson);
+        for (final lvl in levels) {
+          levelAbbrMap[lvl.id] = lvl.abbr;
+        }
+      }
+    }
+
+    // Helper: produce a human-readable binding summary from a FeatureBindings,
+    // e.g. "PRS · PFV" by resolving level IDs to abbreviations.
     String bindingSummary(FeatureBindings bindings) {
-      // We only have dim->levelId pairs; resolve level abbrs from posList dims.
-      // As a lightweight approach, just show the level ids — a richer summary
-      // would require loading dimension data, which is overkill for a list row.
-      // The binding chip picker in the dialog shows the full detail.
       if (bindings.dims.isEmpty) return '';
-      return bindings.dims.values.map((id) => 'lv$id').join(' · ');
+      return bindings.dims.values
+          .map((id) => levelAbbrMap[id] ?? 'lv$id')
+          .join(' \u00B7 ');
     }
 
     // Flatten groups into a list of items (headers + rule+marker cards). Each
@@ -587,11 +601,23 @@ class _RulesPageState extends ConsumerState<RulesPage> {
               child: Row(
                 children: [
                   Expanded(
-                    child: Text(
-                      rule.name,
-                      style: theme.textTheme.bodyLarge?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          rule.name,
+                          style: theme.textTheme.bodyLarge?.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        if (rule.featureBindings.dims.isNotEmpty)
+                          Text(
+                            bindingSummary(rule.featureBindings),
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: cs.onSurface.withValues(alpha: 0.45),
+                            ),
+                          ),
+                      ],
                     ),
                   ),
                   // D-81 plan 04-16 / G-69: subtle warning icon appears
@@ -694,7 +720,7 @@ class _RulesPageState extends ConsumerState<RulesPage> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Unmarked',
+                            marker.name,
                             style: theme.textTheme.bodyLarge?.copyWith(
                               color: cs.onSurface.withValues(alpha: 0.6),
                             ),
