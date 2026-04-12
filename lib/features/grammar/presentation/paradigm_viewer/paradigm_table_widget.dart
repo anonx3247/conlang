@@ -12,6 +12,7 @@ import '../../../phonology/domain/word_generator.dart';
 import '../../../project/data/project_providers.dart';
 import '../../data/grammar_providers.dart';
 import '../../data/paradigm_cell_override_dao.dart';
+import '../../data/standard_form_validation_provider.dart';
 import '../../data/typology_providers.dart';
 import '../../domain/dimension_level.dart';
 import '../../domain/paradigm_axes.dart';
@@ -77,6 +78,26 @@ class ParadigmTableWidget extends ConsumerWidget {
 
     final dimsAsync = ref.watch(dimensionsForPosProvider(posId));
     final dims = dimsAsync.asData?.value ?? const <Dimension>[];
+
+    // D-94 — 04-17. Check for intrinsic dimensions. If present, render
+    // stacked slices (one section per intrinsic combination) instead of
+    // the single-table layout.
+    final hasIntrinsic = dims.any((d) => d.intrinsic);
+    if (hasIntrinsic) {
+      return _buildStackedIntrinsicSlices(context, ref, theme, cs, dims);
+    }
+
+    return _buildSingleParadigmTable(context, ref, theme, cs, dims);
+  }
+
+  /// Non-intrinsic POS: the original single-table render path.
+  Widget _buildSingleParadigmTable(
+    BuildContext context,
+    WidgetRef ref,
+    ThemeData theme,
+    ColorScheme cs,
+    List<Dimension> dims,
+  ) {
     final axesAsync = ref.watch(paradigmAxesProvider(posId));
     final axes = axesAsync.asData?.value ?? const ParadigmAxes();
 
@@ -115,10 +136,17 @@ class ParadigmTableWidget extends ConsumerWidget {
         extraDims.map((d) => decodeLevelsJson(d.levelsJson)).toList();
     final slices = _cartesianSlices(extraDims, extraLevelLists);
 
+    // D-95 — 04-17. Default to first matching lexeme when no explicit
+    // selection. For non-intrinsic POSes, first-matching applies at the
+    // top level.
+    final effectiveLexemeId = lexemeId != -1
+        ? lexemeId
+        : (ref.watch(firstMatchingLexemeForPosProvider(posId))?.id ?? -1);
+
     // Compute the paradigm for the current lexeme (may be synthetic / -1
     // for the template case — computedInflectedParadigmProvider then returns
     // an empty chart which is still a valid render target).
-    final chart = ref.watch(computedInflectedParadigmProvider(lexemeId));
+    final chart = ref.watch(computedInflectedParadigmProvider(effectiveLexemeId));
 
     // Resolve a single unified cell lookup function so the nested cell
     // builders don't need to know about the ParadigmChart structure.
@@ -134,6 +162,7 @@ class ParadigmTableWidget extends ConsumerWidget {
         colDim: colDim,
         sliceKey: slices.first,
         cellFor: cellFor,
+        activeLexemeId: effectiveLexemeId,
       );
     }
 
@@ -161,6 +190,7 @@ class ParadigmTableWidget extends ConsumerWidget {
                           colDim: colDim!,
                           sliceKey: s,
                           cellFor: cellFor,
+                          activeLexemeId: effectiveLexemeId,
                         ))
                     .toList(),
               ),
@@ -183,9 +213,74 @@ class ParadigmTableWidget extends ConsumerWidget {
         colDim: colDim!,
         sliceKey: sliceKey,
         cellFor: cellFor,
+        activeLexemeId: effectiveLexemeId,
       ),
       labelFor: (s) => _sliceLabel(extraDims, extraLevelLists, s),
     );
+  }
+
+  /// D-94 — 04-17. Stacked intrinsic slice rendering. Enumerates the
+  /// Cartesian product of intrinsic combinations and renders one section
+  /// per combination (even for empty buckets — show the hint).
+  Widget _buildStackedIntrinsicSlices(
+    BuildContext context,
+    WidgetRef ref,
+    ThemeData theme,
+    ColorScheme cs,
+    List<Dimension> dims,
+  ) {
+    final intrinsicDims = dims.where((d) => d.intrinsic).toList();
+    final nonIntrinsicDims = dims.where((d) => !d.intrinsic).toList();
+
+    // Build all possible intrinsic combinations.
+    List<Map<int, int>> combinations = [<int, int>{}];
+    for (final d in intrinsicDims) {
+      final levels = decodeLevelsJson(d.levelsJson);
+      combinations = [
+        for (final partial in combinations)
+          for (final lv in levels) {...partial, d.id: lv.id},
+      ];
+    }
+
+    // Lookup grouped lexemes.
+    final grouped = ref.watch(lexemesByIntrinsicCombinationProvider(posId));
+
+    if (nonIntrinsicDims.length < 2) {
+      return Center(
+        child: Text(
+          'This POS needs at least 2 non-intrinsic dimensions to render a paradigm.',
+          style: theme.textTheme.bodyMedium,
+        ),
+      );
+    }
+
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          for (final combo in combinations)
+            _IntrinsicSliceSection(
+              posId: posId,
+              combination: combo,
+              intrinsicDims: intrinsicDims,
+              allDims: dims,
+              pool: _lookupPool(grouped, combo, intrinsicDims),
+              clickMode: clickMode,
+            ),
+        ],
+      ),
+    );
+  }
+
+  /// Look up the pool of lexemes for an intrinsic combination from the
+  /// grouped map (which uses string keys for identity equality).
+  static List<Lexeme> _lookupPool(
+    Map<String, List<Lexeme>> grouped,
+    Map<int, int> combo,
+    List<Dimension> intrinsicDims,
+  ) {
+    final keyStr = combo.entries.map((e) => '${e.key}:${e.value}').join(',');
+    return grouped[keyStr] ?? const [];
   }
 
   // -------------------------------------------------------------------------
@@ -249,6 +344,7 @@ class ParadigmTableWidget extends ConsumerWidget {
     required Dimension colDim,
     required Map<int, int> sliceKey,
     required ParadigmCell? Function(Map<int, int>) cellFor,
+    int activeLexemeId = -1,
   }) {
     final rowLevels = decodeLevelsJson(rowDim.levelsJson);
     final colLevels = decodeLevelsJson(colDim.levelsJson);
@@ -295,7 +391,7 @@ class ParadigmTableWidget extends ConsumerWidget {
                   ),
                   for (final col in colLevels)
                     _ParadigmCellWidget(
-                      lexemeId: lexemeId,
+                      lexemeId: activeLexemeId,
                       featureSet: {
                         rowDim.id: row.id,
                         colDim.id: col.id,
@@ -693,6 +789,328 @@ class _OverrideCell extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// D-94 — 04-17. Per-intrinsic-combination section with its own lexeme picker.
+// ---------------------------------------------------------------------------
+
+class _IntrinsicSliceSection extends ConsumerStatefulWidget {
+  const _IntrinsicSliceSection({
+    required this.posId,
+    required this.combination,
+    required this.intrinsicDims,
+    required this.allDims,
+    required this.pool,
+    required this.clickMode,
+  });
+
+  final int posId;
+  final Map<int, int> combination;
+  final List<Dimension> intrinsicDims;
+  final List<Dimension> allDims;
+  final List<Lexeme> pool;
+  final ParadigmClickMode clickMode;
+
+  @override
+  ConsumerState<_IntrinsicSliceSection> createState() =>
+      _IntrinsicSliceSectionState();
+}
+
+class _IntrinsicSliceSectionState
+    extends ConsumerState<_IntrinsicSliceSection> {
+  int? _selectedLexemeId;
+
+  String _combinationLabel() {
+    final parts = <String>[];
+    for (final d in widget.intrinsicDims) {
+      final levelId = widget.combination[d.id];
+      if (levelId == null) continue;
+      final levels = decodeLevelsJson(d.levelsJson);
+      final level = levels.where((l) => l.id == levelId).firstOrNull;
+      if (level != null) {
+        parts.add('${d.name}: ${level.name}');
+      }
+    }
+    return parts.join(', ');
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final label = _combinationLabel();
+
+    // Default selection = pool.first.id (D-95 per-slice first-matching).
+    final effectiveId =
+        _selectedLexemeId ?? (widget.pool.isNotEmpty ? widget.pool.first.id : null);
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Section header with intrinsic combination label.
+          Row(
+            children: [
+              Text(
+                label,
+                style: theme.textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              if (widget.pool.isNotEmpty) ...[
+                const SizedBox(width: 16),
+                DropdownButton<int>(
+                  value: effectiveId,
+                  items: [
+                    for (final lex in widget.pool)
+                      DropdownMenuItem(value: lex.id, child: Text(lex.ipa)),
+                  ],
+                  onChanged: (v) => setState(() => _selectedLexemeId = v),
+                ),
+                // D-99 -- 04-17: base-form standard-form violations (base form only).
+                if (effectiveId != null) ...[
+                  const SizedBox(width: 8),
+                  _BaseFormViolationBadge(lexemeId: effectiveId),
+                ],
+              ],
+            ],
+          ),
+          const SizedBox(height: 4),
+          if (widget.pool.isEmpty)
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Text(
+                'No word with [$label] intrinsic levels yet. '
+                'Create one to view this paradigm.',
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: cs.onSurface.withValues(alpha: 0.6),
+                ),
+              ),
+            )
+          else
+            _IntrinsicSliceTable(
+              posId: widget.posId,
+              lexemeId: effectiveId!,
+              allDims: widget.allDims,
+              clickMode: widget.clickMode,
+            ),
+          const Divider(),
+        ],
+      ),
+    );
+  }
+}
+
+/// Renders the paradigm table for a single intrinsic slice, using only
+/// non-intrinsic dimensions as axes.
+class _IntrinsicSliceTable extends ConsumerWidget {
+  const _IntrinsicSliceTable({
+    required this.posId,
+    required this.lexemeId,
+    required this.allDims,
+    required this.clickMode,
+  });
+
+  final int posId;
+  final int lexemeId;
+  final List<Dimension> allDims;
+  final ParadigmClickMode clickMode;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final nonIntrinsicDims = allDims.where((d) => !d.intrinsic).toList();
+    final axesAsync = ref.watch(paradigmAxesProvider(posId));
+    final axes = axesAsync.asData?.value ?? const ParadigmAxes();
+
+    // Resolve row/col from non-intrinsic dims only.
+    Dimension? rowDim = nonIntrinsicDims
+        .where((d) => d.id == axes.rows)
+        .cast<Dimension?>()
+        .firstOrNull;
+    Dimension? colDim = nonIntrinsicDims
+        .where((d) => d.id == axes.cols)
+        .cast<Dimension?>()
+        .firstOrNull;
+    if (rowDim == null || colDim == null) {
+      if (nonIntrinsicDims.length >= 2) {
+        rowDim ??= nonIntrinsicDims[0];
+        colDim ??= nonIntrinsicDims[1];
+      } else {
+        return const Center(child: Text('Need 2+ non-intrinsic dimensions.'));
+      }
+    }
+
+    final extraDims = nonIntrinsicDims
+        .where((d) => d.id != rowDim!.id && d.id != colDim!.id)
+        .toList();
+    final extraLevelLists =
+        extraDims.map((d) => decodeLevelsJson(d.levelsJson)).toList();
+
+    // Single slice for this sub-table (extra non-intrinsic dims).
+    var slices = <Map<int, int>>[const {}];
+    if (extraDims.isNotEmpty) {
+      var acc = <Map<int, int>>[{}];
+      for (var i = 0; i < extraDims.length; i++) {
+        final dim = extraDims[i];
+        final levels = extraLevelLists[i];
+        final next = <Map<int, int>>[];
+        for (final a in acc) {
+          for (final l in levels) {
+            next.add({...a, dim.id: l.id});
+          }
+        }
+        acc = next;
+      }
+      slices = acc;
+    }
+
+    final chart = ref.watch(computedInflectedParadigmProvider(lexemeId));
+    ParadigmCell? cellFor(Map<int, int> featureSet) =>
+        chart.cellFor(featureSet);
+
+    final rowLevels = decodeLevelsJson(rowDim.levelsJson);
+    final colLevels = decodeLevelsJson(colDim.levelsJson);
+
+    // For simplicity, render the first slice (or the only slice).
+    // Multi-slice sub-tables within intrinsic slices would need tabs,
+    // but for now render sequentially.
+    return Column(
+      children: [
+        for (final sliceKey in slices) ...[
+          if (slices.length > 1)
+            Padding(
+              padding: const EdgeInsets.only(top: 4, bottom: 2),
+              child: Text(
+                extraDims
+                    .map((d) {
+                      final levels = decodeLevelsJson(d.levelsJson);
+                      final lid = sliceKey[d.id];
+                      final level =
+                          levels.where((l) => l.id == lid).firstOrNull;
+                      return level?.abbr ?? '?';
+                    })
+                    .join(' · '),
+                style: theme.textTheme.labelSmall,
+              ),
+            ),
+          _buildSliceTable(
+            context, ref, theme, cs, rowDim, colDim, rowLevels, colLevels,
+            sliceKey, cellFor,
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildSliceTable(
+    BuildContext context,
+    WidgetRef ref,
+    ThemeData theme,
+    ColorScheme cs,
+    Dimension rowDim,
+    Dimension colDim,
+    List<DimensionLevel> rowLevels,
+    List<DimensionLevel> colLevels,
+    Map<int, int> sliceKey,
+    ParadigmCell? Function(Map<int, int>) cellFor,
+  ) {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const SizedBox(width: 80),
+              for (final col in colLevels)
+                Container(
+                  width: 80,
+                  height: 32,
+                  alignment: Alignment.center,
+                  color: cs.surfaceContainerLow,
+                  child: Text(
+                    col.abbr,
+                    style: theme.textTheme.labelSmall
+                        ?.copyWith(fontWeight: FontWeight.w600),
+                  ),
+                ),
+            ],
+          ),
+          for (final row in rowLevels)
+            Row(
+              children: [
+                Container(
+                  width: 80,
+                  height: 64,
+                  alignment: Alignment.center,
+                  color: cs.surfaceContainerLow,
+                  child: Text(
+                    row.abbr,
+                    style: theme.textTheme.labelSmall
+                        ?.copyWith(fontWeight: FontWeight.w600),
+                  ),
+                ),
+                for (final col in colLevels)
+                  _ParadigmCellWidget(
+                    lexemeId: lexemeId,
+                    featureSet: {
+                      rowDim.id: row.id,
+                      colDim.id: col.id,
+                      ...sliceKey,
+                    },
+                    cell: cellFor({
+                      rowDim.id: row.id,
+                      colDim.id: col.id,
+                      ...sliceKey,
+                    }),
+                    clickMode: clickMode,
+                  ),
+              ],
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// D-99 -- 04-17. Base-form violation badge for the paradigm viewer header.
+// Shows combined phonotactic + standard-form violations for the selected
+// lexeme's IPA (base form only, NOT inflected cells).
+// ---------------------------------------------------------------------------
+
+class _BaseFormViolationBadge extends ConsumerWidget {
+  const _BaseFormViolationBadge({required this.lexemeId});
+
+  final int lexemeId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final lexemeAsync = ref.watch(lexemeByIdProvider(lexemeId));
+    final lexeme = lexemeAsync.asData?.value;
+    if (lexeme == null) return const SizedBox.shrink();
+    if (lexeme.isPhonologicalException) return const SizedBox.shrink();
+
+    final validate = ref.watch(phonotacticValidatorProvider);
+    final phonoResult = validate(word: lexeme.ipa);
+    final sfViolations =
+        ref.watch(standardFormViolationsProvider(lexemeId)).asData?.value ??
+            const [];
+    final combined = [...phonoResult.violations, ...sfViolations];
+    if (combined.isEmpty) return const SizedBox.shrink();
+
+    return ViolationText(
+      text: '[${lexeme.ipa}]',
+      violations: combined,
+      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+            color: Theme.of(context).colorScheme.error,
+          ),
     );
   }
 }

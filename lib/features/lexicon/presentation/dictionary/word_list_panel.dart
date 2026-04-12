@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../features/morphology/data/morphology_providers.dart';
 import '../../../../shared/widgets/violation_text.dart';
+import '../../../grammar/data/standard_form_validation_provider.dart';
 import '../../../phonology/data/romanization_providers.dart';
 import '../../data/lexeme_providers.dart';
 
@@ -397,8 +398,13 @@ class _WordListPanelState extends ConsumerState<WordListPanel> {
             .length;
 
         // Violations for this specific lexeme (null if it's an exception).
+        // D-99 -- 04-17: combine phonotactic + standard-form violations.
         final lexemeViolation = violations[lexeme.id];
-        final itemViolations = lexemeViolation?.violations ?? [];
+        final sfViolations = ref.watch(standardFormViolationsProvider(lexeme.id)).asData?.value ?? const [];
+        final itemViolations = [
+          ...lexemeViolation?.violations ?? [],
+          ...sfViolations,
+        ];
         // G-68 (wave 3a-bis): promoted derivations store `ipa = parent.ipa`
         // as a placeholder and compute the real rom/ipa via
         // `promotedDerivedFormProvider`. Resolve effective display values
@@ -650,7 +656,12 @@ class _WordListPanelState extends ConsumerState<WordListPanel> {
               ? widget.selectedForExport.contains(lexeme.id)
               : widget.selectedLexemeId == lexeme.id;
           final lexemeViolation = violations[lexeme.id];
-          final itemViolations = lexemeViolation?.violations ?? [];
+          // D-99 -- 04-17: combine phonotactic + standard-form violations.
+          final sfViolations2 = ref.watch(standardFormViolationsProvider(lexeme.id)).asData?.value ?? const [];
+          final itemViolations = [
+            ...lexemeViolation?.violations ?? [],
+            ...sfViolations2,
+          ];
           // G-68 (wave 3a-bis): resolve display forms via the promoted
           // provider so derived rows render their computed rom/ipa
           // instead of the parent placeholder stored at promotion time.

@@ -153,6 +153,9 @@ class _InflectionsPageState extends ConsumerState<InflectionsPage> {
         ),
         Divider(height: 1, color: cs.outlineVariant),
         // ---- Middle: paradigm table (~55% of remaining space) ----------
+        // D-95 — 04-17. When no explicit word is selected, fall back to
+        // first-matching-lexeme for the POS (lowest id). The -1 sentinel
+        // is only passed when firstMatchingLexeme is also null (no words).
         Expanded(
           flex: 55,
           child: _selectedPosId == null
@@ -164,12 +167,20 @@ class _InflectionsPageState extends ConsumerState<InflectionsPage> {
                 )
               : Padding(
                   padding: const EdgeInsets.all(8),
-                  child: ParadigmTableWidget(
-                    lexemeId: _selectedLexemeId ?? -1,
-                    posId: _selectedPosId!,
-                    // D-52 Grammar host: cell clicks open RuleEditorDialog
-                    // with pre-filled bindings (D-51).
-                    clickMode: ParadigmClickMode.ruleEditor,
+                  child: Builder(
+                    builder: (context) {
+                      final effectiveLexemeId = _selectedLexemeId ??
+                          ref.watch(firstMatchingLexemeForPosProvider(
+                              _selectedPosId!))?.id ??
+                          -1;
+                      return ParadigmTableWidget(
+                        lexemeId: effectiveLexemeId,
+                        posId: _selectedPosId!,
+                        // D-52 Grammar host: cell clicks open RuleEditorDialog
+                        // with pre-filled bindings (D-51).
+                        clickMode: ParadigmClickMode.ruleEditor,
+                      );
+                    },
                   ),
                 ),
         ),

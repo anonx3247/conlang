@@ -6,12 +6,14 @@ import '../../../../db/app_database.dart';
 import '../../../../shared/widgets/violation_text.dart';
 import '../../../grammar/data/grammar_providers.dart';
 import '../../../grammar/data/intrinsic_levels_codec.dart';
+import '../../../grammar/data/standard_form_validation_provider.dart';
 import '../../../grammar/domain/dimension_level.dart';
 import '../../../grammar/domain/pos_resolver.dart';
 import '../../../grammar/presentation/paradigm_viewer/paradigm_table_widget.dart';
 import '../../../morphology/data/morphology_providers.dart';
 import '../../data/phonotactic_validation_provider.dart';
 import '../../../phonology/data/romanization_providers.dart';
+import '../../../phonology/domain/word_generator.dart' show ValidationResult;
 import '../../../phonology/presentation/shared/ipa_keyboard/ipa_text_field.dart';
 import '../../data/lexeme_providers.dart';
 import 'derivation_tree_widget.dart';
@@ -423,8 +425,14 @@ class _WordDetailPanelState extends ConsumerState<WordDetailPanel> {
 
     // Phonotactic validation against the displayed form (derived for promoted
     // rows, stored otherwise) so violations match what the user actually sees.
+    // D-99 -- 04-17: combine phonotactic + standard-form violations.
     final validate = ref.watch(phonotacticValidatorProvider);
-    final validation = validate(word: display.ipa);
+    final phonoValidation = validate(word: display.ipa);
+    final sfViolations = ref.watch(standardFormViolationsProvider(lexeme.id)).asData?.value ?? const [];
+    final validation = ValidationResult(violations: [
+      ...phonoValidation.violations,
+      ...sfViolations,
+    ]);
     final hasViolations = !validation.isValid;
 
     // Visual flag: IPA is a manual override if it diverges from what

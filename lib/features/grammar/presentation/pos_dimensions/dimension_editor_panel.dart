@@ -9,6 +9,7 @@ import '../../data/grammar_providers.dart';
 import '../../domain/dimension_level.dart';
 import '../../domain/level_deletion_report.dart';
 import 'dimension_template_picker.dart';
+import 'standard_form_pattern_dialog.dart';
 
 /// Right-pane dimension editor for the POS & Dimensions master-detail page.
 ///
@@ -342,16 +343,11 @@ class DimensionEditorPanel extends ConsumerWidget {
               children: [
                 for (final l in levels)
                   InputChip(
-                    // D-79 plan 04-16: each level chip gains a left-edge
-                    // edit icon that opens a name+abbr dialog. The chip
-                    // label is wrapped in a Row so the edit affordance
-                    // sits inside the chip alongside the level name.
-                    // BLOCKER-2 slot marker: 04-17 Task 10 will add its
-                    // standard-form icon to the right of this Text when
-                    // dim.intrinsic == true.
+                    // BLOCKER-2 slot order: [edit-04-16] [text] [standard-form-04-17-if-intrinsic]
                     label: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
+                        // LEFT slot: D-79 plan 04-16 level rename affordance.
                         InkWell(
                           onTap: () => _onEditLevel(ctx, ref, dim, l),
                           child: Icon(
@@ -362,7 +358,30 @@ class DimensionEditorPanel extends ConsumerWidget {
                           ),
                         ),
                         const SizedBox(width: 4),
+                        // CENTER slot: level label text.
                         Text('${l.name} (${l.abbr})'),
+                        // RIGHT slot: D-98 plan 04-17 standard-form pattern
+                        // affordance, only shown when dim is intrinsic.
+                        if (dim.intrinsic) ...[
+                          const SizedBox(width: 4),
+                          IconButton(
+                            icon: const Icon(Icons.text_snippet_outlined, size: 16),
+                            tooltip: 'Edit standard form pattern',
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                            onPressed: () {
+                              showDialog(
+                                context: ctx,
+                                builder: (_) => StandardFormPatternDialog(
+                                  dimId: dim.id,
+                                  dimName: dim.name,
+                                  levelId: l.id,
+                                  levelName: l.name,
+                                ),
+                              );
+                            },
+                          ),
+                        ],
                       ],
                     ),
                     onDeleted: () async {
