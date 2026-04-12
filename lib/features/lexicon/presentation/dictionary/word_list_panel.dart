@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../features/morphology/data/morphology_providers.dart';
 import '../../../../shared/widgets/violation_text.dart';
+import '../../../phonology/domain/word_generator.dart' show Violation;
 import '../../../grammar/data/standard_form_validation_provider.dart';
 import '../../../phonology/data/romanization_providers.dart';
 import '../../data/lexeme_providers.dart';
@@ -401,7 +402,7 @@ class _WordListPanelState extends ConsumerState<WordListPanel> {
         // D-99 -- 04-17: combine phonotactic + standard-form violations.
         final lexemeViolation = violations[lexeme.id];
         final sfViolations = ref.watch(standardFormViolationsProvider(lexeme.id)).asData?.value ?? const [];
-        final itemViolations = [
+        final itemViolations = <Violation>[
           ...lexemeViolation?.violations ?? [],
           ...sfViolations,
         ];
@@ -658,7 +659,7 @@ class _WordListPanelState extends ConsumerState<WordListPanel> {
           final lexemeViolation = violations[lexeme.id];
           // D-99 -- 04-17: combine phonotactic + standard-form violations.
           final sfViolations2 = ref.watch(standardFormViolationsProvider(lexeme.id)).asData?.value ?? const [];
-          final itemViolations = [
+          final itemViolations = <Violation>[
             ...lexemeViolation?.violations ?? [],
             ...sfViolations2,
           ];
