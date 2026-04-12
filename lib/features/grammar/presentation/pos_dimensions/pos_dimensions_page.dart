@@ -179,14 +179,30 @@ class _PosDimensionsPageState extends ConsumerState<PosDimensionsPage> {
                               selectedTileColor: cs.primaryContainer,
                               onTap: () =>
                                   setState(() => _selectedPosId = pos.id),
-                              trailing: IconButton(
-                                icon: Icon(
-                                  Icons.delete_outline,
-                                  size: 18,
-                                  color: cs.error,
-                                ),
-                                tooltip: 'Delete POS',
-                                onPressed: () => _deletePos(context, pos, posList),
+                              trailing: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  IconButton(
+                                    icon: const Icon(
+                                      Icons.edit_outlined,
+                                      size: 18,
+                                    ),
+                                    tooltip: 'Edit POS',
+                                    onPressed: () =>
+                                        showPosCrudDialog(context, ref,
+                                            existing: pos),
+                                  ),
+                                  IconButton(
+                                    icon: Icon(
+                                      Icons.delete_outline,
+                                      size: 18,
+                                      color: cs.error,
+                                    ),
+                                    tooltip: 'Delete POS',
+                                    onPressed: () =>
+                                        _deletePos(context, pos, posList),
+                                  ),
+                                ],
                               ),
                             );
                           },
