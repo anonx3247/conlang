@@ -248,6 +248,7 @@ class Markers extends Table {
   IntColumn get id => integer().autoIncrement()();
   IntColumn get posId =>
       integer().references(PartsOfSpeech, #id, onDelete: KeyAction.cascade)();
+  TextColumn get name => text().withDefault(const Constant('Unmarked'))();
   TextColumn get featureBindings => text()
       .map(const FeatureBindingsConverter())
       .withDefault(const Constant('{}'))();
@@ -440,7 +441,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase(super.e);
 
   @override
-  int get schemaVersion => 10;
+  int get schemaVersion => 11;
 
   @override
   MigrationStrategy get migration {
@@ -639,6 +640,10 @@ class AppDatabase extends _$AppDatabase {
             "VALUES ('notation_migration_v10', ?)",
             [logJson],
           );
+        }
+        if (from < 11) {
+          // v11: Markers.name for user-given marker labels (gap #6 from 04-18-VERIFICATION)
+          await m.addColumn(markers, markers.name);
         }
       },
       beforeOpen: (details) async {
@@ -846,6 +851,13 @@ class AppDatabase extends _$AppDatabase {
             '"branches_json" TEXT NOT NULL, '
             'PRIMARY KEY ("dimension_id", "level_id")'
             ')',
+          );
+        } catch (_) {}
+        // v11 safety net: Markers.name for user-given marker labels (gap #6 from 04-18-VERIFICATION)
+        try {
+          await customStatement(
+            'ALTER TABLE markers ADD COLUMN '
+            '"name" TEXT NOT NULL DEFAULT \'Unmarked\'',
           );
         } catch (_) {}
       },

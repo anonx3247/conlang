@@ -40,6 +40,7 @@ class MarkerDao extends DatabaseAccessor<AppDatabase> with _$MarkerDaoMixin {
                   id: r.id,
                   posId: r.posId,
                   bindings: r.featureBindings,
+                  name: r.name,
                 ),
               )
               .toList(),
@@ -55,19 +56,21 @@ class MarkerDao extends DatabaseAccessor<AppDatabase> with _$MarkerDaoMixin {
   Future<int> insertMarker({
     required int posId,
     required FeatureBindings bindings,
+    required String name,
   }) {
     return into(markers).insert(
       MarkersCompanion.insert(
         posId: posId,
         featureBindings: Value(bindings),
+        name: Value(name),
       ),
     );
   }
 
-  /// Replaces the feature-binding set on an existing marker row.
-  Future<void> updateMarker(int id, FeatureBindings bindings) async {
+  /// Replaces the feature-binding set and name on an existing marker row.
+  Future<void> updateMarker(int id, FeatureBindings bindings, String name) async {
     await (update(markers)..where((t) => t.id.equals(id))).write(
-      MarkersCompanion(featureBindings: Value(bindings)),
+      MarkersCompanion(featureBindings: Value(bindings), name: Value(name)),
     );
   }
 

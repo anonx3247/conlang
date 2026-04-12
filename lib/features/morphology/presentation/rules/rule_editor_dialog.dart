@@ -846,12 +846,16 @@ class _RuleEditorDialogState extends ConsumerState<RuleEditorDialog> {
       );
       final posId = _inflectionalPosSet.first;
 
+      final markerName = _nameController.text.trim().isEmpty
+          ? 'Unmarked'
+          : _nameController.text.trim();
+
       if (widget.markerId != null) {
         // Edit existing marker.
-        await dao.updateMarker(widget.markerId!, bindings);
+        await dao.updateMarker(widget.markerId!, bindings, markerName);
       } else {
         // Create new marker.
-        await dao.insertMarker(posId: posId, bindings: bindings);
+        await dao.insertMarker(posId: posId, bindings: bindings, name: markerName);
       }
 
       if (mounted) Navigator.of(context).pop();

@@ -22,11 +22,17 @@ class MarkerDecl {
     required this.id,
     required this.posId,
     required this.bindings,
+    required this.name,
   });
 
   final int id;
   final int posId;
   final FeatureBindings bindings;
+
+  /// The user-given label for this marker (e.g. 'Indicative', 'Masculine SG').
+  /// Persisted in [Markers.name] (schema v11). Defaults to 'Unmarked' for
+  /// markers created before v11 or when no name is provided.
+  final String name;
 
   /// D-10 step 3 — specificity for the marker-vs-rule contest in the
   /// paradigm engine. Mirrors [InflectionalRule.specificity].

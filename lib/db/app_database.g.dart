@@ -5494,6 +5494,16 @@ class $MarkersTable extends Markers with TableInfo<$MarkersTable, Marker> {
       'REFERENCES parts_of_speech (id) ON DELETE CASCADE',
     ),
   );
+  static const VerificationMeta _nameMeta = const VerificationMeta('name');
+  @override
+  late final GeneratedColumn<String> name = GeneratedColumn<String>(
+    'name',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('Unmarked'),
+  );
   @override
   late final GeneratedColumnWithTypeConverter<FeatureBindings, String>
   featureBindings = GeneratedColumn<String>(
@@ -5505,7 +5515,7 @@ class $MarkersTable extends Markers with TableInfo<$MarkersTable, Marker> {
     defaultValue: const Constant('{}'),
   ).withConverter<FeatureBindings>($MarkersTable.$converterfeatureBindings);
   @override
-  List<GeneratedColumn> get $columns => [id, posId, featureBindings];
+  List<GeneratedColumn> get $columns => [id, posId, name, featureBindings];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -5529,6 +5539,12 @@ class $MarkersTable extends Markers with TableInfo<$MarkersTable, Marker> {
     } else if (isInserting) {
       context.missing(_posIdMeta);
     }
+    if (data.containsKey('name')) {
+      context.handle(
+        _nameMeta,
+        name.isAcceptableOrUnknown(data['name']!, _nameMeta),
+      );
+    }
     return context;
   }
 
@@ -5545,6 +5561,10 @@ class $MarkersTable extends Markers with TableInfo<$MarkersTable, Marker> {
       posId: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}pos_id'],
+      )!,
+      name: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}name'],
       )!,
       featureBindings: $MarkersTable.$converterfeatureBindings.fromSql(
         attachedDatabase.typeMapping.read(
@@ -5567,10 +5587,12 @@ class $MarkersTable extends Markers with TableInfo<$MarkersTable, Marker> {
 class Marker extends DataClass implements Insertable<Marker> {
   final int id;
   final int posId;
+  final String name;
   final FeatureBindings featureBindings;
   const Marker({
     required this.id,
     required this.posId,
+    required this.name,
     required this.featureBindings,
   });
   @override
@@ -5578,6 +5600,7 @@ class Marker extends DataClass implements Insertable<Marker> {
     final map = <String, Expression>{};
     map['id'] = Variable<int>(id);
     map['pos_id'] = Variable<int>(posId);
+    map['name'] = Variable<String>(name);
     {
       map['feature_bindings'] = Variable<String>(
         $MarkersTable.$converterfeatureBindings.toSql(featureBindings),
@@ -5590,6 +5613,7 @@ class Marker extends DataClass implements Insertable<Marker> {
     return MarkersCompanion(
       id: Value(id),
       posId: Value(posId),
+      name: Value(name),
       featureBindings: Value(featureBindings),
     );
   }
@@ -5602,6 +5626,7 @@ class Marker extends DataClass implements Insertable<Marker> {
     return Marker(
       id: serializer.fromJson<int>(json['id']),
       posId: serializer.fromJson<int>(json['posId']),
+      name: serializer.fromJson<String>(json['name']),
       featureBindings: $MarkersTable.$converterfeatureBindings.fromJson(
         serializer.fromJson<Map<String, dynamic>>(json['featureBindings']),
       ),
@@ -5613,22 +5638,29 @@ class Marker extends DataClass implements Insertable<Marker> {
     return <String, dynamic>{
       'id': serializer.toJson<int>(id),
       'posId': serializer.toJson<int>(posId),
+      'name': serializer.toJson<String>(name),
       'featureBindings': serializer.toJson<Map<String, dynamic>>(
         $MarkersTable.$converterfeatureBindings.toJson(featureBindings),
       ),
     };
   }
 
-  Marker copyWith({int? id, int? posId, FeatureBindings? featureBindings}) =>
-      Marker(
-        id: id ?? this.id,
-        posId: posId ?? this.posId,
-        featureBindings: featureBindings ?? this.featureBindings,
-      );
+  Marker copyWith({
+    int? id,
+    int? posId,
+    String? name,
+    FeatureBindings? featureBindings,
+  }) => Marker(
+    id: id ?? this.id,
+    posId: posId ?? this.posId,
+    name: name ?? this.name,
+    featureBindings: featureBindings ?? this.featureBindings,
+  );
   Marker copyWithCompanion(MarkersCompanion data) {
     return Marker(
       id: data.id.present ? data.id.value : this.id,
       posId: data.posId.present ? data.posId.value : this.posId,
+      name: data.name.present ? data.name.value : this.name,
       featureBindings: data.featureBindings.present
           ? data.featureBindings.value
           : this.featureBindings,
@@ -5640,44 +5672,51 @@ class Marker extends DataClass implements Insertable<Marker> {
     return (StringBuffer('Marker(')
           ..write('id: $id, ')
           ..write('posId: $posId, ')
+          ..write('name: $name, ')
           ..write('featureBindings: $featureBindings')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(id, posId, featureBindings);
+  int get hashCode => Object.hash(id, posId, name, featureBindings);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       (other is Marker &&
           other.id == this.id &&
           other.posId == this.posId &&
+          other.name == this.name &&
           other.featureBindings == this.featureBindings);
 }
 
 class MarkersCompanion extends UpdateCompanion<Marker> {
   final Value<int> id;
   final Value<int> posId;
+  final Value<String> name;
   final Value<FeatureBindings> featureBindings;
   const MarkersCompanion({
     this.id = const Value.absent(),
     this.posId = const Value.absent(),
+    this.name = const Value.absent(),
     this.featureBindings = const Value.absent(),
   });
   MarkersCompanion.insert({
     this.id = const Value.absent(),
     required int posId,
+    this.name = const Value.absent(),
     this.featureBindings = const Value.absent(),
   }) : posId = Value(posId);
   static Insertable<Marker> custom({
     Expression<int>? id,
     Expression<int>? posId,
+    Expression<String>? name,
     Expression<String>? featureBindings,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
       if (posId != null) 'pos_id': posId,
+      if (name != null) 'name': name,
       if (featureBindings != null) 'feature_bindings': featureBindings,
     });
   }
@@ -5685,11 +5724,13 @@ class MarkersCompanion extends UpdateCompanion<Marker> {
   MarkersCompanion copyWith({
     Value<int>? id,
     Value<int>? posId,
+    Value<String>? name,
     Value<FeatureBindings>? featureBindings,
   }) {
     return MarkersCompanion(
       id: id ?? this.id,
       posId: posId ?? this.posId,
+      name: name ?? this.name,
       featureBindings: featureBindings ?? this.featureBindings,
     );
   }
@@ -5702,6 +5743,9 @@ class MarkersCompanion extends UpdateCompanion<Marker> {
     }
     if (posId.present) {
       map['pos_id'] = Variable<int>(posId.value);
+    }
+    if (name.present) {
+      map['name'] = Variable<String>(name.value);
     }
     if (featureBindings.present) {
       map['feature_bindings'] = Variable<String>(
@@ -5716,6 +5760,7 @@ class MarkersCompanion extends UpdateCompanion<Marker> {
     return (StringBuffer('MarkersCompanion(')
           ..write('id: $id, ')
           ..write('posId: $posId, ')
+          ..write('name: $name, ')
           ..write('featureBindings: $featureBindings')
           ..write(')'))
         .toString();
@@ -11142,12 +11187,14 @@ typedef $$MarkersTableCreateCompanionBuilder =
     MarkersCompanion Function({
       Value<int> id,
       required int posId,
+      Value<String> name,
       Value<FeatureBindings> featureBindings,
     });
 typedef $$MarkersTableUpdateCompanionBuilder =
     MarkersCompanion Function({
       Value<int> id,
       Value<int> posId,
+      Value<String> name,
       Value<FeatureBindings> featureBindings,
     });
 
@@ -11184,6 +11231,11 @@ class $$MarkersTableFilterComposer
   });
   ColumnFilters<int> get id => $composableBuilder(
     column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get name => $composableBuilder(
+    column: $table.name,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -11231,6 +11283,11 @@ class $$MarkersTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get featureBindings => $composableBuilder(
     column: $table.featureBindings,
     builder: (column) => ColumnOrderings(column),
@@ -11271,6 +11328,9 @@ class $$MarkersTableAnnotationComposer
   });
   GeneratedColumn<int> get id =>
       $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => column);
 
   GeneratedColumnWithTypeConverter<FeatureBindings, String>
   get featureBindings => $composableBuilder(
@@ -11332,20 +11392,24 @@ class $$MarkersTableTableManager
               ({
                 Value<int> id = const Value.absent(),
                 Value<int> posId = const Value.absent(),
+                Value<String> name = const Value.absent(),
                 Value<FeatureBindings> featureBindings = const Value.absent(),
               }) => MarkersCompanion(
                 id: id,
                 posId: posId,
+                name: name,
                 featureBindings: featureBindings,
               ),
           createCompanionCallback:
               ({
                 Value<int> id = const Value.absent(),
                 required int posId,
+                Value<String> name = const Value.absent(),
                 Value<FeatureBindings> featureBindings = const Value.absent(),
               }) => MarkersCompanion.insert(
                 id: id,
                 posId: posId,
+                name: name,
                 featureBindings: featureBindings,
               ),
           withReferenceMapper: (p0) => p0
