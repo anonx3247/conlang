@@ -37,7 +37,7 @@ class _CultureShellState extends ConsumerState<CultureShell> {
 
   void _onPageSelected(int pageId) {
     _pageHistory.push(pageId);
-    ref.read(selectedCulturePageIdProvider.notifier).state = pageId;
+    ref.read(selectedCulturePageIdProvider.notifier).set(pageId);
   }
 
   Future<void> _createRootPage() async {
@@ -124,8 +124,7 @@ class _CultureShellState extends ConsumerState<CultureShell> {
               BackForwardBar(
                 history: _pageHistory,
                 onNavigate: (pageId) {
-                  ref.read(selectedCulturePageIdProvider.notifier).state =
-                      pageId;
+                  ref.read(selectedCulturePageIdProvider.notifier).set(pageId);
                 },
               ),
 

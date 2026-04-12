@@ -58,7 +58,7 @@ class _CulturePageViewState extends ConsumerState<CulturePageView> {
       final titleIndex = ref.read(pageTitleIndexProvider);
       final pageId = titleIndex[title];
       if (pageId != null) {
-        ref.read(selectedCulturePageIdProvider.notifier).state = pageId;
+        ref.read(selectedCulturePageIdProvider.notifier).set(pageId);
       }
     } else {
       // Per D-11: show "Create this page?" dialog
@@ -85,7 +85,7 @@ class _CulturePageViewState extends ConsumerState<CulturePageView> {
         if (db == null) return;
         final newId = await db.cultureDao.createPage(title: title);
         if (mounted) {
-          ref.read(selectedCulturePageIdProvider.notifier).state = newId;
+          ref.read(selectedCulturePageIdProvider.notifier).set(newId);
         }
       }
     }

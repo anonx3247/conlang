@@ -36,8 +36,22 @@ final cultureChildPagesProvider =
   return db.cultureDao.watchChildren(parentId);
 });
 
+/// Notifier backing [selectedCulturePageIdProvider].
+///
+/// StateProvider was removed in flutter_riverpod 3.x — use NotifierProvider.
+class _SelectedCulturePageId extends Notifier<int?> {
+  @override
+  int? build() => null;
+
+  /// Updates the selected culture page id.
+  void set(int? id) => state = id;
+}
+
 /// Currently selected culture page id (ephemeral UI state).
-final selectedCulturePageIdProvider = StateProvider<int?>((ref) => null);
+final selectedCulturePageIdProvider =
+    NotifierProvider<_SelectedCulturePageId, int?>(
+  _SelectedCulturePageId.new,
+);
 
 /// Watch a single culture page by id.
 final culturePageProvider =
