@@ -12,6 +12,8 @@ import '../../../grammar/domain/pos_resolver.dart';
 import '../../../grammar/presentation/paradigm_viewer/paradigm_table_widget.dart';
 import '../../../morphology/data/morphology_providers.dart';
 import '../../data/phonotactic_validation_provider.dart';
+import '../../../phonology/data/phonotactic_providers.dart'
+    show applyRewritePipelineProvider;
 import '../../../phonology/data/romanization_providers.dart';
 import '../../../phonology/domain/word_generator.dart' show ValidationResult;
 import '../../../phonology/presentation/shared/ipa_keyboard/ipa_text_field.dart';
@@ -796,6 +798,30 @@ class _WordDetailPanelState extends ConsumerState<WordDetailPanel> {
                     : 'IPA (auto-derived — edit to override)',
               ),
             ),
+            // D-113 (plan 04-17): surface-phonetic preview line.
+            // Shows rewritePipeline(phonemic) when rewrite rules are
+            // configured and produce a different form. Hidden when no
+            // rules exist or none fire on the current phonemic.
+            Builder(builder: (context) {
+              final applyRewrite = ref.watch(applyRewritePipelineProvider);
+              final phonemic = _ipaController.text;
+              if (phonemic.isEmpty) return const SizedBox.shrink();
+              final phonetic = applyRewrite(phonemic);
+              if (phonetic == phonemic) return const SizedBox.shrink();
+              return Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Text(
+                  'Surface: [$phonetic]',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withValues(alpha: 0.6),
+                        fontStyle: FontStyle.italic,
+                      ),
+                ),
+              );
+            }),
           ] else ...[
             IpaTextField(
               controller: _ipaController,

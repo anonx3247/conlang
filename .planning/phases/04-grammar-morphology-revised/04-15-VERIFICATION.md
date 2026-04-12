@@ -38,6 +38,12 @@ Surfaces 11, 12, 13, 14, 15 all call this helper on stored `Lexemes.romanization
 - **Deleted sites:** 1 (morphology_preview_panel.dart, D-77, Task 6)
 - **Total:** 17
 
+### D-112 addendum (plan 04-17)
+
+The D-75 audit was incomplete — it confirmed `romanize()` call sites but did not disambiguate raw phonemic from post-rewrite phonemic. D-112 (plan 04-17) adds a regression test that locks the rom = romanize(raw phonemic) invariant and was the catch that the D-75 audit should have made.
+
+The root cause was in `paradigm_engine.dart`: `computeParadigmCell` applied the phonological rewrite pipeline to the morphological output and returned the post-rewrite form as `ParadigmFilled.form`. All call sites that did `romanize(form)` were therefore romanizing the phonetic surface (post-rewrite) instead of the phonemic (pre-rewrite). The fix adds a `phonemic` field to `ParadigmFilled` carrying the raw morphological output, and updates `_FilledCell` to use `romanize(phonemic)` for the rom line. Row 1 of the audit table above is retroactively reclassified from "confirmed" to "confirmed after D-112 fix" — the input source was mislabeled as "phonemic output of computeParadigmCell" when it was actually post-rewrite phonetic.
+
 Every `romanize()` call in the audited surfaces is proven to operate on a value that is either:
 1. Stored phonemic read directly from a Drift column (`Lexemes.ipa`, `Phonemes.symbol`), OR
 2. The direct output of `MorphologyEngine.applyRule()` / `computeParadigmCell()` / `WordGenerator.generateOne()` — all of which are engine-native phonemic producers.

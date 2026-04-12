@@ -7,6 +7,8 @@ import '../../../grammar/data/grammar_providers.dart';
 import '../../../grammar/data/intrinsic_levels_codec.dart';
 import '../../../grammar/domain/dimension_level.dart';
 import '../../../morphology/data/morphology_providers.dart';
+import '../../../phonology/data/phonotactic_providers.dart'
+    show applyRewritePipelineProvider;
 import '../../../phonology/data/romanization_providers.dart';
 import '../../data/lexeme_providers.dart';
 import 'inspiration_panel.dart';
@@ -292,6 +294,32 @@ class _WordCreationFormState extends ConsumerState<WordCreationForm> {
                       ),
                       onChanged: (_) => setState(() => _ipaError = null),
                     ),
+                    // D-113 (plan 04-17): surface-phonetic preview line.
+                    // Shows rewritePipeline(phonemic) when rewrite rules
+                    // produce a different surface form. Hidden when no
+                    // rules exist or none fire on the current phonemic.
+                    Builder(builder: (context) {
+                      final applyRewrite =
+                          ref.watch(applyRewritePipelineProvider);
+                      final phonemic = _ipaController.text;
+                      if (phonemic.isEmpty) return const SizedBox.shrink();
+                      final phonetic = applyRewrite(phonemic);
+                      if (phonetic == phonemic) return const SizedBox.shrink();
+                      return Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Text(
+                          'Surface: [$phonetic]',
+                          style:
+                              Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurface
+                                        .withValues(alpha: 0.6),
+                                    fontStyle: FontStyle.italic,
+                                  ),
+                        ),
+                      );
+                    }),
                   ] else ...[
                     // IPA as primary input
                     IpaTextField(
