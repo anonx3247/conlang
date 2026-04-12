@@ -257,6 +257,13 @@ class DimensionEditorPanel extends ConsumerWidget {
     // residual entries in lexeme rows.
     final staleAsync = ref.watch(staleIntrinsicEntryCountProvider(dim.id));
     final staleCount = staleAsync.asData?.value ?? 0;
+    // Plan 04-18-04 Task 2 — missing intrinsic assignment count. Only
+    // computed when dim.intrinsic == true; otherwise 0 to avoid unnecessary
+    // provider work.
+    final missingCount = dim.intrinsic
+        ? ref.watch(missingIntrinsicAssignmentCountProvider(
+            (posId: posId, dimId: dim.id)))
+        : 0;
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       child: Padding(
@@ -278,6 +285,18 @@ class DimensionEditorPanel extends ConsumerWidget {
                     style: theme.textTheme.titleMedium,
                   ),
                 ),
+                // 04-18-04 Task 2 — warning badge: intrinsic dim has words
+                // that haven't been assigned a level yet.
+                if (dim.intrinsic && missingCount > 0)
+                  Tooltip(
+                    message: '$missingCount word${missingCount == 1 ? '' : 's'}'
+                        ' missing ${dim.name} assignment',
+                    child: const Icon(
+                      Icons.warning_amber_outlined,
+                      size: 16,
+                      color: Colors.orange,
+                    ),
+                  ),
                 // G-11: rename affordance — opens a dialog with the current
                 // name pre-filled, rejects empty input, and calls
                 // GrammarDao.updateDimension on save.

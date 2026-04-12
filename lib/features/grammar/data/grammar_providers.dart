@@ -304,6 +304,40 @@ final firstMatchingLexemeForPosProvider =
 });
 
 // ---------------------------------------------------------------------------
+// Plan 04-18-04 Task 2 — missing intrinsic assignment count
+// ---------------------------------------------------------------------------
+
+/// Plan 04-18-04 Task 2 — returns the count of words for a given POS that
+/// are missing an intrinsic level assignment for the given dimension.
+///
+/// Used by [DimensionEditorPanel] to show a warning icon next to intrinsic
+/// dimensions that still have unassigned words, alerting the user to assign
+/// intrinsic levels to existing words.
+///
+/// [rootOnlyViaDerivations] words are excluded — they never surface standalone
+/// and do not need intrinsic level assignments.
+///
+/// Parameters: `({int posId, int dimId})` record.
+final missingIntrinsicAssignmentCountProvider =
+    Provider.family<int, ({int posId, int dimId})>((ref, params) {
+  final allLexemes = ref.watch(allLexemeListProvider).asData?.value ?? [];
+  final posList = ref.watch(posListProvider).asData?.value ?? [];
+
+  // Filter to non-rootOnly lexemes of the target POS.
+  final posLexemes = allLexemes.where((l) {
+    if (l.rootOnlyViaDerivations) return false;
+    final pos = posForLexeme(l, posList);
+    return pos?.id == params.posId;
+  });
+
+  // Count those missing the specific dim assignment.
+  return posLexemes.where((l) {
+    final levels = IntrinsicLevelsCodec.decode(l.intrinsicLevelsJson);
+    return levels[params.dimId] == null;
+  }).length;
+});
+
+// ---------------------------------------------------------------------------
 // D-97 — 04-17 standard form pattern DAO provider
 // ---------------------------------------------------------------------------
 
