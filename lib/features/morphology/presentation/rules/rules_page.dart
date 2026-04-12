@@ -526,17 +526,18 @@ class _RulesPageState extends ConsumerState<RulesPage> {
       }
     }
 
-    // Build level-id -> abbreviation map across all POS dimensions so that
-    // bindingSummary can resolve "lv42" → "PRS" etc. Uses already-cached
-    // provider data; no extra DB queries per build.
-    final levelAbbrMap = <int, String>{};
+    // Build (dimId, levelId) -> abbreviation map across all POS dimensions so
+    // that bindingSummary can resolve level IDs to abbreviations. Level IDs are
+    // only unique within a dimension, so we key by (dimId, levelId) to avoid
+    // collisions between dimensions that reuse the same integer IDs.
+    final levelAbbrMap = <(int, int), String>{};
     for (final pos in posList) {
       final dimsAsync = ref.watch(dimensionsForPosProvider(pos.id));
       final dims = dimsAsync.asData?.value ?? const [];
       for (final dim in dims) {
         final levels = decodeLevelsJson(dim.levelsJson);
         for (final lvl in levels) {
-          levelAbbrMap[lvl.id] = lvl.abbr;
+          levelAbbrMap[(dim.id, lvl.id)] = lvl.abbr;
         }
       }
     }
@@ -545,8 +546,8 @@ class _RulesPageState extends ConsumerState<RulesPage> {
     // e.g. "PRS · PFV" by resolving level IDs to abbreviations.
     String bindingSummary(FeatureBindings bindings) {
       if (bindings.dims.isEmpty) return '';
-      return bindings.dims.values
-          .map((id) => levelAbbrMap[id] ?? 'lv$id')
+      return bindings.dims.entries
+          .map((e) => levelAbbrMap[(e.key, e.value)] ?? 'lv${e.value}')
           .join(' \u00B7 ');
     }
 
