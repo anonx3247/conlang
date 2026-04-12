@@ -31,6 +31,10 @@ Plan 04-17 introduces **intrinsic dimensions**: a per-POS property on a `Dimensi
 - Paradigm viewer default (no-selected-word) behavior: first matching lexeme, not the empty "template" placeholder
 - Rule editor save-time validation blocks sole-intrinsic-binding rules
 
+**Added during 04-16 wave (user feedback 2026-04-11) — scope additions for 04-17:**
+- **Inflections-tab word dropdown uses romanization when enabled (D-100).** The current inflections-page word selector shows stored phonemic IPA; when the project has `romanizationEnabled=true` and the lexeme has a non-null `romanization` field (or when `romanize(ipa)` produces a distinct form), the dropdown MUST show the rom form as the primary label. Applies to any multi-select word picker that 04-17 introduces for "one representative per intrinsic level" — same display rule there. See D-100 below.
+- **Rule editor live preview renders via the current romanize pipeline (D-101).** The static preview inside `rule_editor_dialog.dart` (via `preview_panel.dart`) still emits phonetic output using the pre-04-15 rendering path, unlike `paradigm_table_widget.dart` cells which correctly call `romanizeProvider` on engine-output phonemic. Bring the rule-editor preview onto the same path. See D-101 below.
+
 **Standard-form patterns:**
 - Lightweight branch-based DSL (no ops, no conditions — just position-match predicates with class refs)
 - Dedicated editor dialog accessed from the dimension editor
@@ -234,6 +238,52 @@ Plan 04-17 introduces **intrinsic dimensions**: a per-POS property on a `Dimensi
   - Thesaurus / inspiration surfaces where a lexeme form is rendered
 - **Soft warning only.** Violations never block word creation or editing. They're diagnostic highlights.
 - **Combined with phonotactic violations:** when a word has both a phonotactic violation and a standard-form violation, both render through `ViolationText` simultaneously. Tooltips enumerate all violated rules.
+
+### User feedback additions (2026-04-11, after 04-16 ship)
+
+#### D-100 — Word selector dropdowns prefer romanization when enabled
+
+**Problem observed:** The inflections-tab word-selection dropdown (added by plan 04-13) renders stored phonemic IPA even when the project has `romanizationEnabled=true` and the lexemes have valid `romanization` fields. Users working in rom-first mode have to read IPA in the selector, which breaks the established "rom is the primary display form when enabled" convention already used by `word_list_panel.dart`, `paradigm_table_widget.dart`, etc.
+
+**Decision:** Every word-selection UI surface in 04-17 — including the existing inflections-page single-select dropdown AND any new multi-select surfaces 04-17 introduces for "one representative per intrinsic level" — MUST compute the display label via the same pattern used by `word_list_panel.dart:376`:
+
+```dart
+final romEnabled = ref.watch(romanizationEnabledProvider).asData?.value ?? true;
+final deromanize = ref.watch(deromanizeProvider);
+final romanize = ref.watch(romanizeProvider);
+String displayLabel(Lexeme lexeme) {
+  if (!romEnabled) return lexeme.ipa;
+  // Prefer the stored romanization field when present and consistent;
+  // fall back to romanize(ipa). Never show raw IPA when rom is enabled
+  // unless isIpaManuallyOverridden is true (then show IPA + flag).
+  final stored = lexeme.romanization;
+  if (stored != null && stored.isNotEmpty) return stored;
+  return romanize(lexeme.ipa);
+}
+```
+
+**Scope:** applies to every word-picker that 04-17 touches or introduces. Specifically:
+- The existing inflections-page word dropdown (bug fix — was wrong since Wave 5).
+- The new multi-select word chooser 04-17 adds for "pool one representative per intrinsic level" in the paradigm viewer stacked-slice layout.
+- Any future word-selection surface the plan introduces.
+
+**Out of scope:** editing widgets where the user types rom — those already use the D-73 contract via `deromanize`/`romanize` on the controller text. D-100 is display-side only.
+
+**Test lock:** add a widget test in 04-17 that seeds a project with `romanizationEnabled=true`, a lexeme with `ipa='kat'` and `romanization='cat'`, and asserts the inflections-page dropdown renders `cat` not `kat`. Second case: lexeme with `ipa='kat'` and `romanization=null` — asserts the dropdown renders `romanize('kat')`.
+
+#### D-101 — Rule editor live preview uses the current romanize pipeline
+
+**Problem observed:** The live preview inside `rule_editor_dialog.dart` (via `preview_panel.dart`) emits phonetic output using a pre-04-15 rendering path that does NOT go through the paradigm-table-style `romanizeProvider(engineOutput)` flow. The paradigm viewer cells correctly render `romanize(engine.applyRule(rule, phonemicRoot))`; the rule editor preview uses an older code path that produces inconsistent romanization vs. what the paradigm table shows for the same rule.
+
+**Decision:** Bring `preview_panel.dart` onto the same render path as `paradigm_table_widget.dart`:
+- Apply `romanize()` to engine output, not to an intermediate buffer.
+- Never double-romanize: if the value has already been through `romanize()`, don't run it again.
+- When `romanizationEnabled=false`, display the phonemic form directly (same as paradigm table).
+- Call sites already confirmed confirmed-phonemic by the D-75 audit: `preview_panel.dart:350,371,421`. The fix is to ensure the actual emitted display text matches the paradigm table's display text byte-for-byte for the same rule + root combination.
+
+**Test lock:** add a regression test that seeds a rule + root + mapping, builds BOTH the paradigm table cell AND the rule editor preview for that rule, and asserts the two rendered strings are equal. If they differ, the test fails and points at the divergent call site.
+
+**Scope:** only the live preview (`preview_panel.dart`). The D-77 static Morphology Preview pane is already deleted. The paradigm viewer cells already work correctly per D-75.
 
 ### Claude's Discretion
 
