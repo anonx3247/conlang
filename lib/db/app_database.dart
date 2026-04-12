@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:drift/drift.dart';
 import 'package:drift_flutter/drift_flutter.dart';
 
@@ -14,6 +16,8 @@ import '../features/phonology/data/phoneme_dao.dart';
 import '../features/phonology/data/phonotactic_dao.dart';
 import '../features/phonology/data/rewrite_rule_dao.dart';
 import '../features/phonology/data/romanization_dao.dart';
+import '../features/phonology/domain/notation_helpers.dart';
+import 'migration_notation_classify.dart';
 
 part 'app_database.g.dart';
 
@@ -404,7 +408,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase(super.e);
 
   @override
-  int get schemaVersion => 9;
+  int get schemaVersion => 10;
 
   @override
   MigrationStrategy get migration {
@@ -524,6 +528,83 @@ class AppDatabase extends _$AppDatabase {
               [ruleId, posId],
             );
           }
+        }
+        if (from < 10) {
+          // Plan 04-15 D-74: Notation migration — DSL-parse-aware classify
+          // pass over MorphologicalRules.source. Parses each rule via
+          // parseMorphDsl, rewrites ONLY single-token phonological literals
+          // (ablaut FROM/TO, affixes, remove-suffix literals) via the shared
+          // notation_helpers dot-aware helpers, leaves structural tokens
+          // (ablaut flags, template directives, class refs, condition
+          // patterns) untouched, and serializes back via serializeMorphRule.
+          // Writes a per-rule outcome log to project_settings so the user
+          // can verify the migration after the fact.
+          //
+          // SCHEMA COORDINATION: Plan 04-17 (intrinsic dimensions) will
+          // APPEND its column and table additions to THIS v10 block. Do NOT
+          // bump to v11 in 04-17.
+          //
+          // TODO(04-17): Append Dimensions.intrinsic column add,
+          // Lexemes.intrinsicLevelsJson column add, and StandardFormPatterns
+          // CREATE TABLE here. See 04-17-CONTEXT.md.
+
+          // Step A: Project the active romanization_mappings rows to the
+          // pure NotationMapping record shape exported from notation_helpers.
+          final mappingRows = await customSelect(
+            'SELECT ipa_symbol, latin_mapping FROM romanization_mappings',
+          ).get();
+          final mappings = <NotationMapping>[
+            for (final row in mappingRows)
+              (
+                ipaSymbol: row.read<String>('ipa_symbol'),
+                latinMapping: row.read<String>('latin_mapping'),
+              ),
+          ];
+
+          // Step B: Iterate morphological_rules and apply the DSL-parse-aware
+          // classify helper. The helper is the single source of truth for
+          // the classify logic — app_database.dart does NOT call
+          // dotAwareDeromanize or smartRomanize directly.
+          final ruleRows = await customSelect(
+            'SELECT id, source FROM morphological_rules',
+          ).get();
+          final migrationOutcomes = <Map<String, dynamic>>[];
+          for (final row in ruleRows) {
+            final id = row.read<int>('id');
+            final source = row.read<String>('source');
+            final outcome = classifyAndRewriteRuleSource(source, mappings);
+            if (outcome.rewrote && outcome.newSource != null) {
+              await customStatement(
+                'UPDATE morphological_rules SET source = ? WHERE id = ?',
+                [outcome.newSource!, id],
+              );
+              migrationOutcomes.add(<String, dynamic>{
+                'id': id,
+                'outcome': 'rewritten',
+                'before': source,
+                'after': outcome.newSource,
+              });
+            } else {
+              migrationOutcomes.add(<String, dynamic>{
+                'id': id,
+                'outcome': outcome.reason,
+                'source': source,
+              });
+            }
+          }
+
+          // Step C: Write the migration log to project_settings for
+          // post-hoc verification by the user.
+          final logJson = jsonEncode(<String, dynamic>{
+            'plan': '04-15',
+            'ran_at': DateTime.now().toIso8601String(),
+            'outcomes': migrationOutcomes,
+          });
+          await customStatement(
+            "INSERT OR REPLACE INTO project_settings (key, value) "
+            "VALUES ('notation_migration_v10', ?)",
+            [logJson],
+          );
         }
       },
       beforeOpen: (details) async {
