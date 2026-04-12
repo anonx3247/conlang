@@ -32,8 +32,8 @@ Plan 04-17 introduces **intrinsic dimensions**: a per-POS property on a `Dimensi
 - Rule editor save-time validation blocks sole-intrinsic-binding rules
 
 **Added during 04-16 wave (user feedback 2026-04-11) — scope additions for 04-17:**
-- **Inflections-tab word dropdown uses romanization when enabled (D-100).** The current inflections-page word selector shows stored phonemic IPA; when the project has `romanizationEnabled=true` and the lexeme has a non-null `romanization` field (or when `romanize(ipa)` produces a distinct form), the dropdown MUST show the rom form as the primary label. Applies to any multi-select word picker that 04-17 introduces for "one representative per intrinsic level" — same display rule there. See D-100 below.
-- **Rule editor live preview renders via the current romanize pipeline (D-101).** The static preview inside `rule_editor_dialog.dart` (via `preview_panel.dart`) still emits phonetic output using the pre-04-15 rendering path, unlike `paradigm_table_widget.dart` cells which correctly call `romanizeProvider` on engine-output phonemic. Bring the rule-editor preview onto the same path. See D-101 below.
+- **Inflections-tab word dropdown uses romanization when enabled (D-110).** The current inflections-page word selector shows stored phonemic IPA; when the project has `romanizationEnabled=true` and the lexeme has a non-null `romanization` field (or when `romanize(ipa)` produces a distinct form), the dropdown MUST show the rom form as the primary label. Applies to any multi-select word picker that 04-17 introduces for "one representative per intrinsic level" — same display rule there. See D-110 below.
+- **Rule editor live preview renders via the current romanize pipeline (D-111).** The static preview inside `rule_editor_dialog.dart` (via `preview_panel.dart`) still emits phonetic output using the pre-04-15 rendering path, unlike `paradigm_table_widget.dart` cells which correctly call `romanizeProvider` on engine-output phonemic. Bring the rule-editor preview onto the same path. See D-111 below.
 
 **Standard-form patterns:**
 - Lightweight branch-based DSL (no ops, no conditions — just position-match predicates with class refs)
@@ -241,7 +241,7 @@ Plan 04-17 introduces **intrinsic dimensions**: a per-POS property on a `Dimensi
 
 ### User feedback additions (2026-04-11, after 04-16 ship)
 
-#### D-100 — Word selector dropdowns prefer romanization when enabled
+#### D-110 — Word selector dropdowns prefer romanization when enabled
 
 **Problem observed:** The inflections-tab word-selection dropdown (added by plan 04-13) renders stored phonemic IPA even when the project has `romanizationEnabled=true` and the lexemes have valid `romanization` fields. Users working in rom-first mode have to read IPA in the selector, which breaks the established "rom is the primary display form when enabled" convention already used by `word_list_panel.dart`, `paradigm_table_widget.dart`, etc.
 
@@ -267,11 +267,11 @@ String displayLabel(Lexeme lexeme) {
 - The new multi-select word chooser 04-17 adds for "pool one representative per intrinsic level" in the paradigm viewer stacked-slice layout.
 - Any future word-selection surface the plan introduces.
 
-**Out of scope:** editing widgets where the user types rom — those already use the D-73 contract via `deromanize`/`romanize` on the controller text. D-100 is display-side only.
+**Out of scope:** editing widgets where the user types rom — those already use the D-73 contract via `deromanize`/`romanize` on the controller text. D-110 is display-side only.
 
 **Test lock:** add a widget test in 04-17 that seeds a project with `romanizationEnabled=true`, a lexeme with `ipa='kat'` and `romanization='cat'`, and asserts the inflections-page dropdown renders `cat` not `kat`. Second case: lexeme with `ipa='kat'` and `romanization=null` — asserts the dropdown renders `romanize('kat')`.
 
-#### D-101 — Rule editor live preview uses the current romanize pipeline
+#### D-111 — Rule editor live preview uses the current romanize pipeline
 
 **Problem observed:** The live preview inside `rule_editor_dialog.dart` (via `preview_panel.dart`) emits phonetic output using a pre-04-15 rendering path that does NOT go through the paradigm-table-style `romanizeProvider(engineOutput)` flow. The paradigm viewer cells correctly render `romanize(engine.applyRule(rule, phonemicRoot))`; the rule editor preview uses an older code path that produces inconsistent romanization vs. what the paradigm table shows for the same rule.
 
@@ -284,6 +284,48 @@ String displayLabel(Lexeme lexeme) {
 **Test lock:** add a regression test that seeds a rule + root + mapping, builds BOTH the paradigm table cell AND the rule editor preview for that rule, and asserts the two rendered strings are equal. If they differ, the test fails and points at the divergent call site.
 
 **Scope:** only the live preview (`preview_panel.dart`). The D-77 static Morphology Preview pane is already deleted. The paradigm viewer cells already work correctly per D-75.
+
+#### D-112 — Sound-change rewrite rules apply to phonetic display only, NEVER to rom
+
+**Problem observed:** In the paradigm viewer, a cell like "PRS IPFV" of a present-tense verb renders as `cazana` (rom, top line) with `[kæʒænæ]` (phonetic, bottom line). The top-line rom is `cazana`, but `romanize(phonemic)` for the underlying phonemic form (without sound-change rewrites applied) would produce `casana` (with `s` not `z`). The `s → z` rewrite is part of the phonetic surface form derivation, NOT part of the stored phonemic or its romanization. The rom display is therefore running `romanize()` over `rewritePipeline(phonemic)` instead of over `phonemic` itself.
+
+**Correct contract (reiterated from D-70..D-76):**
+- **Phonemic** = stored, canonical. Engine output after morphology = phonemic.
+- **Rom** = `smartRomanize(phonemic)` — NOTHING else. Rewrite rules are not consulted.
+- **Phonetic** = `rewritePipeline(phonemic)` — rewrite rules are applied here, this is surface IPA (allophones, diacritics allowed). This path is NEVER passed through `romanize()`.
+
+**Decision:** Audit every paradigm-cell-level render path (`paradigm_table_widget.dart:489,564`; `preview_panel.dart:350,371,421`; `derivation_tree_widget.dart:48`) to confirm the input to `romanize()` is the RAW phonemic (engine output direct), not the post-rewrite phonetic form. Fix any site that runs `romanize(rewritePipeline(engineOutput))` back to `romanize(engineOutput)`. The phonetic display, when present, is a separate `Text` widget showing `rewritePipeline(engineOutput)` without romanization.
+
+**Test lock:** add a widget test that seeds a phonemic root `kasana` + a rewrite rule `s → z / V_V` + a romanization mapping `{k→c, s→s, z→z, a→a, n→n}`, builds the paradigm table cell, and asserts:
+- Top line (rom): `casana` (raw phonemic romanized; rewrite rule NOT consulted).
+- Bottom line (phonetic): `[kazana]` (rewrite rule applied to phonemic; `romanize` NOT consulted).
+
+The test fails if rom shows `cazana` (rewrite leaked into rom) OR if phonetic shows `cazana` (romanize leaked into phonetic).
+
+**Why D-75 audit missed this:** the audit traced `romanize()` call sites and confirmed each operated on a "phonemic engine output". But "phonemic engine output" was not clearly disambiguated from "phonetic engine output after rewrite pipeline". The fix distinguishes the two and locks the invariant with a regression test. Update the D-75 audit row for each affected surface to say "confirmed: rom input is raw phonemic, not post-rewrite".
+
+#### D-113 — Word creation dialog's auto-derived phonetic display must apply rewrite pipeline
+
+**Problem observed:** In the new-word dialog (`word_detail_panel.dart` in creation mode), the auto-derived IPA field shows the phonemic form of the typed romanization without applying the rewrite pipeline. When the user types `kasana` (rom), the dialog shows the auto-derived IPA as `/kasana/` (phonemic). It should show `/kasana/` (phonemic — stored form) AND additionally show `[kazana]` (phonetic — surface form, for preview). Currently the phonetic display is missing or shows phonemic.
+
+**Decision:** The word creation dialog gains a read-only "Surface (phonetic)" preview line under the auto-derived IPA field, displaying `rewritePipeline(deromanize(romanization))` when sound-change rules are configured. The phonemic form is still the stored value (D-70); the phonetic preview is purely for user confidence that their rom input produces the expected surface form.
+
+**Layout:**
+```
+romanization:  [kasana]              (editable — user types here)
+phonemic IPA:  /kasana/              (read-only, auto-derived via deromanize, stored as Lexemes.ipa)
+surface:       [kazana]              (read-only, derived via rewritePipeline on the phonemic — NEW)
+```
+
+When no rewrite rules are configured, the surface line is hidden (no added clutter).
+When the rewrite pipeline produces a form identical to the phonemic (no rewrites fire), the surface line is hidden (same rationale).
+The line is never editable — it's a pure derivation check.
+
+**Scope:** applies to the word creation form only. Word edit (existing row) already shows the phonemic IPA from storage; D-113 adds the same surface-phonetic derivation line there as well for consistency.
+
+**Test lock:** widget test seeds a lexeme root `kasana` + a rewrite rule `s → z / V_V`, opens the word creation dialog, types the romanization `kasana`, and asserts the "surface" line renders `[kazana]` (or `kazana` depending on the widget format — lock the format in the test).
+
+**Out of scope for D-113:** editing the rewrite rules from the word dialog (they're configured in the phonology section). The dialog only reads the current rule set.
 
 ### Claude's Discretion
 
@@ -316,7 +358,7 @@ String displayLabel(Lexeme lexeme) {
 - `.planning/phases/04-grammar-morphology-revised/04-CONTEXT-GAPS.md` — Wave 1-5 gap decisions (D-43..D-65), especially D-45/D-46/D-47 (unmarked / marker resolution — predecessor of 04-18's Markers UI), D-48/D-49/D-50 (Inflections sub-tab restructure), D-52 (ParadigmClickMode)
 - `.planning/phases/04-grammar-morphology-revised/04-15-CONTEXT.md` — Wave 6 notation unification (D-70..D-77) — required for D-96 standard-form pattern literals (phonemic-stored)
 - `.planning/phases/04-grammar-morphology-revised/04-16-CONTEXT.md` — Wave 7 sibling plan (D-78..D-81)
-- `.planning/phases/04-grammar-morphology-revised/04-18-CONTEXT.md` — Wave 7 sibling plan (D-100..D-102, Markers UI via RuleEditorDialog checkbox)
+- `.planning/phases/04-grammar-morphology-revised/04-18-CONTEXT.md` — Wave 7 sibling plan (D-110..D-102, Markers UI via RuleEditorDialog checkbox)
 
 ### Source files touched by 04-17
 
