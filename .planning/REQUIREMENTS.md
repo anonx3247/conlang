@@ -74,6 +74,15 @@ Requirements for initial release. Each maps to roadmap phases.
 
 - [ ] **REF-01**: User can search a built-in glossary of linguistic terminology with definitions
 
+### Polish & Refactor
+
+- [ ] **NIT-01**: Natural classes moved to their own Phonology sub-tab (separate from inventory)
+- [ ] **NIT-02**: Phoneme inventory charts show /phoneme/ next to romanization (only when they differ, e.g. skip when t→/t/)
+- [ ] **NIT-03**: Romanization section appears below phoneme inventory section (not as separate sub-tab)
+- [ ] **NIT-04**: Abbreviations are case-insensitive and display with trailing period everywhere (e.g. v.)
+- [ ] **NIT-05**: Draggable panel separator bars throughout the app (resize panels)
+- [ ] **REFAC-01**: Dead code cleanup from culture wiki removal + rule_editor_dialog.dart refactor into smaller files
+
 ## v2 Requirements
 
 Deferred to future release. Tracked but not in current roadmap.

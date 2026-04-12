@@ -71,6 +71,11 @@ Progress: [██████░░░░] 55% (24/44 total plans)
 
 ## Accumulated Context
 
+### Roadmap Evolution
+
+- Phase 5 (Culture Wiki) retired to `culture-wiki-v2-staging` branch — code removed from main, will return in v2
+- Phase 7 added: Polish & Refactor — UI nits, dead code cleanup, rule_editor_dialog.dart refactor
+
 ### Decisions
 
 Decisions are logged in PROJECT.md Key Decisions table.

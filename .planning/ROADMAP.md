@@ -212,4 +212,18 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4. Phases 5 and 6 depend only on
 | 3.2 Phonology Enhancements | 4/4 | Complete | 2026-04-10 |
 | 4. Grammar & Morphology | 25/25 | Complete | 2026-04-12 |
 | 5. Culture Wiki | 3/4 | Gap closure | - |
-| 6. Reference Glossary | 0/2 | Not started | - |
+| 6. Reference Glossary | 2/2 | Complete | 2026-04-12 |
+| 7. Polish & Refactor | 0/? | Not started | - |
+
+### Phase 7: Polish & Refactor
+**Goal**: Fix all outstanding UI nits (phonology layout, abbreviation formatting, natural classes tab), clean up dead code from culture wiki removal, refactor oversized files (rule_editor_dialog.dart), and address code quality concerns from codebase audit
+**Depends on**: Phase 6
+**Requirements**: NIT-01, NIT-02, NIT-03, NIT-04, NIT-05, REFAC-01
+**Success Criteria** (what must be TRUE):
+  1. Natural classes moved to their own Phonology sub-tab
+  2. Phoneme inventory charts show /phoneme/ next to romanization (only when they differ)
+  3. Romanization section appears below phoneme inventory (not separate sub-tab)
+  4. Abbreviations are case-insensitive and display with trailing period (e.g. v.)
+  5. Dead code from culture wiki removal is cleaned up (no orphaned imports, providers, or references)
+  6. rule_editor_dialog.dart split into smaller focused files (<500 lines each)
+**Plans**: TBD
