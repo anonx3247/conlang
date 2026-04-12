@@ -577,39 +577,41 @@ class ParadigmTableWidget extends ConsumerWidget {
     final levels = decodeLevelsJson(dim.levelsJson);
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Header row: one cell per level.
-          Row(
-            children: [
-              for (final lvl in levels)
-                Container(
-                  width: 80,
-                  height: 32,
-                  alignment: Alignment.center,
-                  color: cs.surfaceContainerLow,
-                  child: Text(
-                    lvl.abbr,
-                    style: theme.textTheme.labelSmall
-                        ?.copyWith(fontWeight: FontWeight.w600),
+      child: IntrinsicWidth(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header row: one cell per level.
+            Row(
+              children: [
+                for (final lvl in levels)
+                  Container(
+                    width: 80,
+                    height: 32,
+                    alignment: Alignment.center,
+                    color: cs.surfaceContainerLow,
+                    child: Text(
+                      lvl.abbr,
+                      style: theme.textTheme.labelSmall
+                          ?.copyWith(fontWeight: FontWeight.w600),
+                    ),
                   ),
-                ),
-            ],
-          ),
-          // Data row: one cell per level.
-          Row(
-            children: [
-              for (final lvl in levels)
-                _ParadigmCellWidget(
-                  lexemeId: activeLexemeId,
-                  featureSet: {dim.id: lvl.id},
-                  cell: cellFor({dim.id: lvl.id}),
-                  clickMode: clickMode,
-                ),
-            ],
-          ),
-        ],
+              ],
+            ),
+            // Data row: one cell per level.
+            Row(
+              children: [
+                for (final lvl in levels)
+                  _ParadigmCellWidget(
+                    lexemeId: activeLexemeId,
+                    featureSet: {dim.id: lvl.id},
+                    cell: cellFor({dim.id: lvl.id}),
+                    clickMode: clickMode,
+                  ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
