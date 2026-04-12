@@ -27,7 +27,7 @@ class AppShell extends ConsumerWidget {
     _TabItem(label: 'Phonology', icon: Icons.music_note, enabled: true, phase: null),
     _TabItem(label: 'Grammar', icon: Icons.account_tree, enabled: true, phase: null),
     _TabItem(label: 'Lexicon', icon: Icons.menu_book, enabled: true, phase: null),
-    _TabItem(label: 'Culture', icon: Icons.language, enabled: false, phase: 'Phase 5'),
+    _TabItem(label: 'Culture', icon: Icons.language, enabled: true, phase: null),
   ];
 
   @override

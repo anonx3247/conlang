@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
+import '../features/culture/presentation/culture_shell.dart';
 import '../features/grammar/presentation/grammar_shell.dart';
 import '../features/grammar/presentation/inflections/inflections_page.dart';
 import '../features/grammar/presentation/pos_dimensions/pos_dimensions_page.dart';
@@ -18,43 +19,6 @@ import '../shared/widgets/app_shell.dart';
 
 part 'app_router.g.dart';
 
-/// Placeholder page for tabs not yet implemented.
-class _ComingSoonPage extends StatelessWidget {
-  const _ComingSoonPage({required this.section});
-
-  final String section;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.construction_outlined,
-            size: 64,
-            color: theme.colorScheme.onSurface.withValues(alpha: 0.3),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            section,
-            style: theme.textTheme.headlineSmall?.copyWith(
-              color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Coming in a future phase.',
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
 
 /// The root GoRouter, provided via Riverpod.
 ///
@@ -239,12 +203,12 @@ GoRouter appRouter(Ref ref) {
             ],
           ),
 
-          // Branch 3: Culture (Phase 5 placeholder)
+          // Branch 3: Culture (Phase 5)
           StatefulShellBranch(
             routes: [
               GoRoute(
                 path: '/culture',
-                builder: (_, _) => const _ComingSoonPage(section: 'Culture'),
+                builder: (_, _) => const CultureShell(),
               ),
             ],
           ),
