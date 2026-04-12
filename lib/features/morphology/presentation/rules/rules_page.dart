@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../db/app_database.dart';
 import '../../../grammar/data/grammar_providers.dart';
+import '../../../grammar/domain/feature_bindings.dart';
+import '../../../grammar/domain/marker.dart';
 import '../../../grammar/domain/rule_kind.dart';
 // ignore_for_file: unused_import
 // D-81 plan 04-16 / G-69: phonemeInventoryProvider,
@@ -506,9 +508,43 @@ class _RulesPageState extends ConsumerState<RulesPage> {
       );
     }
 
-    // Flatten groups into a list of items (headers + rule cards). Each group
-    // renders a small-caps header row followed by its rule cards.
+    // D-102 (plan 04-18-05): pull markers for each POS and merge them into
+    // the grouped list alongside rules. markersForPosProvider is reactive —
+    // adding/editing/deleting a marker causes this section to rebuild.
+    //
+    // Build a map: posId -> List<MarkerDecl> so we can append markers to each
+    // group that matches their POS. For multi-POS rules, the first posId in
+    // the group's posIds set is used as the host; markers always belong to a
+    // single POS (insertMarker takes a single posId).
+    final markersByPosId = <int, List<MarkerDecl>>{};
+    for (final pos in posList) {
+      final markersAsync = ref.watch(markersForPosProvider(pos.id));
+      final markers = markersAsync.asData?.value ?? const <MarkerDecl>[];
+      if (markers.isNotEmpty) {
+        markersByPosId[pos.id] = markers;
+      }
+    }
+
+    // Helper: produce a human-readable binding summary from a MarkerDecl,
+    // e.g. "2sg · present" by joining level abbreviations.
+    String bindingSummary(FeatureBindings bindings) {
+      // We only have dim->levelId pairs; resolve level abbrs from posList dims.
+      // As a lightweight approach, just show the level ids — a richer summary
+      // would require loading dimension data, which is overkill for a list row.
+      // The binding chip picker in the dialog shows the full detail.
+      if (bindings.dims.isEmpty) return '';
+      return bindings.dims.values.map((id) => 'lv$id').join(' · ');
+    }
+
+    // Flatten groups into a list of items (headers + rule+marker cards). Each
+    // group renders a small-caps header row followed by its rule cards, then
+    // its marker cards.
     final items = <Widget>[];
+    // Track which posIds we've already rendered markers for (each POS group
+    // shows markers once; multi-POS groups skip the extra POS merging to
+    // avoid duplicating marker rows).
+    final renderedMarkerPosIds = <int>{};
+
     for (final group in groups) {
       items.add(Padding(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
@@ -521,6 +557,14 @@ class _RulesPageState extends ConsumerState<RulesPage> {
           ),
         ),
       ));
+
+      // Collect the POS set for this group's rules.
+      final groupPosIds = <int>{};
+      for (final rule in group.rules) {
+        final posSet = posSetByRuleId[rule.id] ?? const <int>{};
+        groupPosIds.addAll(posSet);
+      }
+
       for (final rule in group.rules) {
         // D-81 plan 04-16 / G-69 + WARN-5 revision: read cached per-rule
         // scanner violations from the family provider. No per-build
@@ -607,6 +651,99 @@ class _RulesPageState extends ConsumerState<RulesPage> {
             ),
           ),
         ));
+      }
+
+      // D-102: append marker rows for each POS in this group that has
+      // markers. Only render each POS's markers once (guard against showing
+      // the same marker in multiple multi-POS groups).
+      for (final posId in groupPosIds) {
+        if (renderedMarkerPosIds.contains(posId)) continue;
+        final groupMarkers = markersByPosId[posId] ?? const <MarkerDecl>[];
+        for (final marker in groupMarkers) {
+          renderedMarkerPosIds.add(posId);
+          final summary = bindingSummary(marker.bindings);
+          items.add(Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 3),
+            child: Card(
+              margin: EdgeInsets.zero,
+              child: Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                child: Row(
+                  children: [
+                    // ∅ badge
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: cs.onSurface.withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        '∅',
+                        style: theme.textTheme.labelMedium?.copyWith(
+                          color: cs.onSurface.withValues(alpha: 0.6),
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    // Marker name + binding summary
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Unmarked',
+                            style: theme.textTheme.bodyLarge?.copyWith(
+                              color: cs.onSurface.withValues(alpha: 0.6),
+                            ),
+                          ),
+                          if (summary.isNotEmpty)
+                            Text(
+                              summary,
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: cs.onSurface.withValues(alpha: 0.45),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                    // Edit marker button
+                    IconButton(
+                      icon: const Icon(Icons.edit_outlined),
+                      tooltip: 'Edit marker',
+                      onPressed: () async {
+                        await showDialog<void>(
+                          context: context,
+                          builder: (_) => RuleEditorDialog(
+                            kind: RuleKind.inflectional,
+                            markerId: marker.id,
+                            markerBindings: marker.bindings,
+                          ),
+                        );
+                      },
+                    ),
+                    // Delete marker button
+                    IconButton(
+                      icon: Icon(Icons.delete_outline, color: cs.error),
+                      tooltip: 'Delete marker',
+                      onPressed: () async {
+                        final confirmed = await _confirmDelete(
+                            context, 'Unmarked marker');
+                        if (confirmed && context.mounted) {
+                          await ref
+                              .read(markerDaoProvider)
+                              ?.deleteMarker(marker.id);
+                        }
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ));
+        }
       }
     }
 
