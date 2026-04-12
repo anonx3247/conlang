@@ -17,6 +17,7 @@ class PhonologyShell extends ConsumerWidget {
 
   static const _sidebarItems = [
     _SidebarItem(label: 'Inventory', icon: Icons.grid_on, path: '/phonology/inventory'),
+    _SidebarItem(label: 'Natural Classes', icon: Icons.category, path: '/phonology/natural-classes'),
     _SidebarItem(label: 'Sound Rules', icon: Icons.rule, path: '/phonology/sound-rules'),
   ];
 

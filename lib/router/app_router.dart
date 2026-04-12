@@ -12,6 +12,7 @@ import '../features/lexicon/presentation/lexicon_shell.dart';
 import '../features/lexicon/presentation/swadesh/swadesh_page.dart';
 import '../features/lexicon/presentation/thesaurus/thesaurus_page.dart';
 import '../features/phonology/presentation/inventory/inventory_page.dart';
+import '../features/phonology/presentation/inventory/natural_classes_page.dart';
 import '../features/phonology/presentation/phonology_shell.dart';
 import '../features/phonology/presentation/sound_rules/sound_rules_page.dart';
 import '../shared/widgets/app_shell.dart';
@@ -84,6 +85,14 @@ GoRouter appRouter(Ref ref) {
                       GoRoute(
                         path: '/phonology/inventory',
                         builder: (_, _) => const InventoryPage(),
+                      ),
+                    ],
+                  ),
+                  StatefulShellBranch(
+                    routes: [
+                      GoRoute(
+                        path: '/phonology/natural-classes',
+                        builder: (_, _) => const NaturalClassesPage(),
                       ),
                     ],
                   ),
