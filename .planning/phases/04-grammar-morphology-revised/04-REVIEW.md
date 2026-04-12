@@ -1,62 +1,228 @@
 ---
 phase: 04-grammar-morphology-revised
-reviewed: 2026-04-10T00:00:00Z
+reviewed: 2026-04-12T00:00:00Z
 depth: standard
-files_reviewed: 43
+files_reviewed: 11
 files_reviewed_list:
-  - lib/db/app_database.dart
-  - lib/features/grammar/data/dimension_templates.dart
-  - lib/features/grammar/data/grammar_dao.dart
   - lib/features/grammar/data/grammar_providers.dart
-  - lib/features/grammar/data/paradigm_cell_override_dao.dart
-  - lib/features/grammar/data/paradigm_coverage_provider.dart
-  - lib/features/grammar/data/typology_providers.dart
-  - lib/features/grammar/domain/dimension_level.dart
-  - lib/features/grammar/domain/feature_bindings.dart
-  - lib/features/grammar/domain/inflectional_rule.dart
-  - lib/features/grammar/domain/paradigm_axes.dart
-  - lib/features/grammar/domain/paradigm_cell.dart
-  - lib/features/grammar/domain/paradigm_engine.dart
-  - lib/features/grammar/domain/pos_resolver.dart
-  - lib/features/grammar/domain/rule_kind.dart
-  - lib/features/grammar/domain/tiebreak_detector.dart
-  - lib/features/grammar/presentation/grammar_shell.dart
-  - lib/features/grammar/presentation/inflectional_rules/inflectional_rules_page.dart
-  - lib/features/grammar/presentation/paradigm_viewer/axis_config_bar.dart
-  - lib/features/grammar/presentation/paradigm_viewer/cell_override_dialog.dart
-  - lib/features/grammar/presentation/paradigm_viewer/coverage_matrix_panel.dart
+  - lib/features/grammar/presentation/inflections/inflections_page.dart
   - lib/features/grammar/presentation/paradigm_viewer/paradigm_table_widget.dart
-  - lib/features/grammar/presentation/paradigm_viewer/paradigm_viewer_page.dart
   - lib/features/grammar/presentation/pos_dimensions/dimension_editor_panel.dart
-  - lib/features/grammar/presentation/pos_dimensions/dimension_template_picker.dart
-  - lib/features/grammar/presentation/pos_dimensions/pos_crud_dialog.dart
-  - lib/features/grammar/presentation/pos_dimensions/pos_dimensions_page.dart
-  - lib/features/grammar/presentation/shared/migration_banner.dart
-  - lib/features/grammar/presentation/typology/typology_page.dart
-  - lib/features/lexicon/data/lexeme_providers.dart
-  - lib/features/lexicon/presentation/derivations/derivations_page.dart
+  - lib/features/lexicon/presentation/dictionary/dictionary_page.dart
+  - lib/features/lexicon/presentation/dictionary/word_creation_form.dart
   - lib/features/lexicon/presentation/dictionary/word_detail_panel.dart
-  - lib/features/lexicon/presentation/lexicon_shell.dart
-  - lib/features/morphology/data/morphology_dao.dart
-  - lib/features/morphology/data/morphology_providers.dart
+  - lib/features/lexicon/presentation/dictionary/word_list_panel.dart
   - lib/features/morphology/presentation/rules/rule_editor_dialog.dart
   - lib/features/morphology/presentation/rules/rules_page.dart
-  - lib/features/phonology/presentation/shared/ipa_chart/ipa_audio_player.dart
-  - lib/features/project/data/project_backup.dart
-  - lib/features/project/data/project_providers.dart
-  - lib/features/project/presentation/project_menu.dart
-  - lib/features/project/presentation/project_selector_dialog.dart
-  - lib/router/app_router.dart
-  - lib/shared/widgets/app_shell.dart
+  - test/widget/grammar/dimension_level_edit_test.dart
 findings:
-  critical: 3
-  warning: 7
-  info: 7
-  total: 17
+  critical: 0
+  warning: 5
+  info: 4
+  total: 9
 status: issues_found
 ---
 
-# Phase 04: Code Review Report
+# Phase 04: Code Review Report (04-18 re-review)
+
+**Reviewed:** 2026-04-12
+**Depth:** standard
+**Files Reviewed:** 11 (04-18-01 through 04-18-05 targeted file set)
+**Status:** issues_found
+
+## Summary
+
+This is a targeted re-review of the 11 files changed during the 04-18 plan wave (markers UI, intrinsic dimensions, UAT gap closure). The prior full review (2026-04-10, 43 files) is preserved below this section.
+
+The 04-18 additions are generally well-structured: the intrinsic dimension provider chain (D-82–D-98), the multi-word FilterChip picker (Issue 37c), the `_LevelChip` hit-test fix (UAT 28+38), and the missing-assignment warning badge (04-18-04 Task 2) are all implemented correctly. The `_ReassignLevelDialog` disables the confirm button until a target is selected, and the `_onPurgeStale` confirmation dialog is appropriate.
+
+Five warnings were found: a `Stream.empty()` used where `Stream.value([])` is needed (causes `parentsForLexemeProvider` / `childrenForLexemeProvider` to stay in loading state permanently when no project is open), a non-atomic delete+insert for the banner dismiss that can lose the dismiss record on crash, a "Review" banner action that only dismisses without navigating (confusing UX), a missing `mounted` check before a DAO write inside a closure captured across an `await`, and a missing loading guard in `_buildStackedIntrinsicSlices` when `lexemeByIdProvider` is still loading.
+
+---
+
+## Warnings
+
+### WR-01: `Stream.empty()` keeps `parentsForLexemeProvider` and `childrenForLexemeProvider` permanently loading
+
+**File:** `lib/features/grammar/data/grammar_providers.dart:130,139`
+
+**Issue:** Both providers return `const Stream<List<LexemeParentRow>>.empty()` when no project is open. A Dart `Stream.empty()` closes immediately without emitting any items. Riverpod's `StreamProvider` only transitions from `AsyncLoading` to `AsyncData` when the stream emits a data event. A stream that closes without emitting causes the provider to stay in `AsyncLoading` permanently (or produce an empty `AsyncData` in some Riverpod versions, but the behavior is unreliable and version-dependent). The rest of the grammar providers in the same file correctly use `Stream.value(const [])` — see `dimensionsForPosProvider` (line 45), `markersForPosProvider` (line 78), `posSetForRuleProvider` (line 99) — which emit a single empty-list event and let consumers fall through to `asData?.value ?? []`.
+
+**Fix:**
+```dart
+// line 130
+if (dao == null) return Stream.value(const <LexemeParentRow>[]);
+
+// line 139
+if (dao == null) return Stream.value(const <LexemeParentRow>[]);
+```
+
+---
+
+### WR-02: Non-atomic delete+insert in `_onDismissBanner` can lose dismiss record on crash
+
+**File:** `lib/features/grammar/presentation/inflections/inflections_page.dart:283-291`
+
+**Issue:** `_onDismissBanner` issues a `db.delete` (lines 283-285) followed by a separate `db.into.insert` (lines 286-290) without wrapping both in a transaction. If the app crashes or is killed between the delete and the insert, the dismiss key is gone from `project_settings` but the pending banner row still exists, so the banner will re-appear on next launch even though the user dismissed it.
+
+**Fix:** Use upsert (`insertOnConflictUpdate`) to make the operation atomic:
+```dart
+Future<void> _onDismissBanner(IntrinsicBackfillBanner banner) async {
+  final db = ref.read(currentDatabaseProvider);
+  if (db == null) return;
+  final dismissKey = 'intrinsic_backfill_banner_dismissed_${banner.dimId}';
+  await db.into(db.projectSettings).insertOnConflictUpdate(
+    ProjectSettingsCompanion.insert(
+      key: dismissKey,
+      value: 'true',
+    ),
+  );
+  ref.invalidate(intrinsicBackfillBannerProvider);
+}
+```
+
+---
+
+### WR-03: "Review" banner action only dismisses — user expectation mismatch
+
+**File:** `lib/features/grammar/presentation/inflections/inflections_page.dart:131-140`
+
+**Issue:** The MaterialBanner shows two actions: "Review" and "Dismiss". The `_onReviewBanner` handler (line 271-273) simply calls `_onDismissBanner(banner)` — the banner disappears with no navigation. The comment explains Task 7 navigation is deferred, but leaving a button labeled "Review" that silently dismisses creates a broken user expectation: the user reads an actionable "Review" label, taps it, and the banner vanishes without any obvious transition. This is a user-visible correctness issue, not a style preference.
+
+**Fix (minimal, until Task 7 is implemented):** Remove the "Review" action from the banner, leaving only "Dismiss":
+```dart
+actions: [
+  // 'Review' removed until Task 7 navigation is wired up.
+  TextButton(
+    onPressed: () => _onDismissBanner(banner),
+    child: const Text('Dismiss'),
+  ),
+],
+```
+
+---
+
+### WR-04: `ref.read(lexemeDaoProvider)` captured across `await` in `_addException`
+
+**File:** `lib/features/lexicon/presentation/dictionary/word_detail_panel.dart:347`
+
+**Issue:** The `_addException` method captures `ref` inside the `showDialog` builder closure (line 347-348). The dialog's `FilledButton.onPressed` callback executes after the user taps a button inside the dialog, which happens after the enclosing `await showDialog(...)`. If the outer `ConsumerState` was disposed while the dialog was open (e.g. the user force-navigated away via a keyboard shortcut or back-gesture while the dialog was visible), `ref.read(lexemeDaoProvider)` inside the still-open dialog will throw "Ref was used after being disposed" in debug mode, or produce a dangling write in release mode.
+
+**Fix:** Read the DAO before the `await` and capture the value (not `ref`) in the closure:
+```dart
+Future<void> _addException(
+    BuildContext context, int lexemeId, Lexeme lexeme) async {
+  final rulesAsync = ref.read(morphologicalRuleListProvider);
+  final rules = rulesAsync.asData?.value ?? [];
+  if (rules.isEmpty) { /* ... */ return; }
+
+  final dao = ref.read(lexemeDaoProvider); // capture before await
+  // ...
+  await showDialog<void>(
+    context: context,
+    builder: (ctx) => StatefulBuilder(
+      builder: (ctx, setDialogState) => AlertDialog(
+        // ...
+        FilledButton(
+          onPressed: () async {
+            final override = overrideController.text.trim();
+            if (override.isEmpty || selectedRuleId == null) return;
+            await dao?.insertException(...); // uses pre-captured dao
+            if (ctx.mounted) Navigator.of(ctx).pop();
+          },
+        ),
+      ),
+    ),
+  );
+  overrideController.dispose();
+}
+```
+
+---
+
+### WR-05: Missing loading guard in `_buildStackedIntrinsicSlices` for word-detail mode
+
+**File:** `lib/features/grammar/presentation/paradigm_viewer/paradigm_table_widget.dart:289-296`
+
+**Issue:** In the `lexemeId != -1` branch (word-detail mode):
+```dart
+final lexemeAsync = ref.watch(lexemeByIdProvider(lexemeId));
+final lexeme = lexemeAsync.asData?.value;
+final ownLevels = IntrinsicLevelsCodec.decode(lexeme?.intrinsicLevelsJson);
+```
+When `lexemeAsync` is still loading on the first frame (e.g. immediately after navigation), `lexeme` is `null` and `ownLevels` decodes to `{}`. The `ownCombo` map is therefore empty, `ownCombo.length != intrinsicDims.length` is true, the code falls back to `ownCombo = {}` (all dims absent), and the widget proceeds to render the fallback path. Depending on when the provider resolves, the wrong slice may briefly flash before the correct one is shown.
+
+**Fix:** Return a loading indicator while the lexeme is not yet available:
+```dart
+final lexemeAsync = ref.watch(lexemeByIdProvider(lexemeId));
+if (lexemeAsync.isLoading) {
+  return const Center(child: CircularProgressIndicator());
+}
+final lexeme = lexemeAsync.asData?.value;
+```
+
+---
+
+## Info
+
+### IN-01: POS looked up by name string rather than id in save paths
+
+**File:** `lib/features/lexicon/presentation/dictionary/word_creation_form.dart:159-166`
+**File:** `lib/features/lexicon/presentation/dictionary/word_detail_panel.dart:196-202`
+
+**Issue:** Both `_save()` methods iterate `posList` matching `p.name == _selectedPos` to find the POS id needed to look up intrinsic dimensions. POS name is used as the in-memory identifier throughout these widgets. If two POS entries share the same name, the first match is used silently. Changing `_selectedPos` to `int?` (holding the POS id) and using the name only for display would make the lookup O(1), name-collision-safe, and consistent with how all grammar providers address POS (by id). This is a pre-existing pattern, not a 04-18 regression.
+
+**Fix:** Store `int? _selectedPos` (id), change the dropdown `value` to `pos.id`, and replace all the `for (final p in posList) { if (p.name == _selectedPos) ... }` loops with a simple `posList.where((p) => p.id == _selectedPos).firstOrNull`.
+
+---
+
+### IN-02: `bindingSummary` in marker rows renders raw level ids
+
+**File:** `lib/features/morphology/presentation/rules/rules_page.dart:530-537`
+
+**Issue:** The `bindingSummary` helper used to render marker binding descriptions in the grouped rules list outputs `lv$id` for each level id (e.g. "lv2 · lv5"). The comment acknowledges this is "overkill" to resolve. The resulting marker rows in the UI are not human-readable and may confuse users who cannot map level ids to their names.
+
+**Fix (when ready):** Resolve level abbreviations from the loaded dims. Pass the POS's dimensions (already available via `markersForPosProvider` → the marker's `posId` → `dimensionsForPosProvider`) and decode `dim.levelsJson` to build a `{levelId: abbr}` lookup map.
+
+---
+
+### IN-03: `ignore_for_file` in `rules_page.dart` suppresses all unused-import warnings file-wide
+
+**File:** `lib/features/morphology/presentation/rules/rules_page.dart:9`
+
+**Issue:** `// ignore_for_file: unused_import` silences all unused-import warnings for the entire file. If an accidentally-unused import is added in the future, the analyzer will not flag it. A targeted `// ignore: unused_import` on the specific import lines is safer.
+
+**Fix:** Replace the file-level ignore with per-import directives on the lines that are "indirectly" referenced:
+```dart
+// ignore: unused_import
+import '../../../phonology/data/phonotactic_providers.dart';
+```
+
+---
+
+### IN-04: Test uses `inkwell.onTap!()` force-unwrap — will throw if widget changes structure
+
+**File:** `test/widget/grammar/dimension_level_edit_test.dart:153`
+
+**Issue:** `tapLevelChipEditIcon` and the delete close-icon test (line 321) invoke `inkwell.onTap!()` directly via force-unwrap. If a future refactor changes `onTap` to null (e.g. when a chip is disabled), the test will throw a null-dereference instead of producing a clear assertion failure. Prefer `tester.tap(finder)` or assert `inkwell.onTap != null` before calling it.
+
+**Fix:**
+```dart
+Future<void> tapLevelChipEditIcon(
+    WidgetTester tester, String labelSubstring) async {
+  final inkwellWidget = tester.widget<InkWell>(
+    levelChipEditInkWellFor(labelSubstring),
+  );
+  expect(inkwellWidget.onTap, isNotNull,
+      reason: 'Edit InkWell must have a non-null onTap');
+  inkwellWidget.onTap!();
+  await tester.pumpAndSettle();
+}
+```
+
+---
+
+# Phase 04: Code Review Report (original — 2026-04-10)
 
 **Reviewed:** 2026-04-10T00:00:00Z
 **Depth:** standard
@@ -164,6 +330,8 @@ IconButton(
 ```
 Even with the confirmation added, the cleanup of dependent JSON state should ship alongside — otherwise CR-03 / WR-01 manifest as soon as the user re-opens the paradigm viewer.
 
+**Note (04-18-02 update):** A confirmation dialog WAS added in 04-18-02 for dimension deletion. CR-02 is now partially resolved — the UX risk is addressed. The data-integrity cleanup of featureBindings.dims / skippedDimensionsJson / ParadigmAxes remains outstanding.
+
 ---
 
 ### CR-03: JSON decoders raise TypeError outside the FormatException guard
@@ -217,7 +385,7 @@ Apply the same pattern to `ParadigmAxes.fromJson`: replace `as int?` with explic
 
 ---
 
-## Warnings
+## Warnings (original 2026-04-10)
 
 ### WR-01: AxisConfigBar crashes when a stored axis references a deleted dimension
 
@@ -363,7 +531,7 @@ Drop the `_didFixOrdering` / in-build check.
 
 ---
 
-## Info
+## Info (original 2026-04-10)
 
 ### IN-01: Dead no-op branch in `pos_dimensions_page.dart`
 
@@ -456,6 +624,6 @@ final String? wordOrder;
 
 ---
 
-_Reviewed: 2026-04-10T00:00:00Z_
+_Reviewed: 2026-04-12 (04-18 targeted re-review) + 2026-04-10 (full phase review)_
 _Reviewer: Claude (gsd-code-reviewer)_
 _Depth: standard_
