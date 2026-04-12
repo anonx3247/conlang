@@ -126,15 +126,23 @@ class DimensionEditorPanel extends ConsumerWidget {
     WidgetRef ref,
     Dimension dim,
   ) async {
-    final newName = await showDialog<String>(
+    final result = await showDialog<({String name, String abbr})>(
       context: ctx,
-      builder: (dlgCtx) => _RenameDimensionDialog(initialName: dim.name),
+      builder: (dlgCtx) => _RenameDimensionDialog(
+        initialName: dim.name,
+        initialAbbr: dim.abbreviation ?? '',
+      ),
     );
-    if (newName == null || newName.isEmpty) return;
-    if (newName == dim.name) return;
+    if (result == null) return;
+    if (result.name == dim.name && result.abbr == (dim.abbreviation ?? '')) {
+      return;
+    }
     final dao = ref.read(grammarDaoProvider);
     if (dao == null) return;
-    await dao.updateDimension(dim.copyWith(name: newName));
+    await dao.updateDimension(dim.copyWith(
+      name: result.name,
+      abbreviation: Value(result.abbr.isEmpty ? null : result.abbr),
+    ));
   }
 
   /// D-79 plan 04-16: per-level rename. Opens [_LevelEditDialog]
@@ -302,7 +310,7 @@ class DimensionEditorPanel extends ConsumerWidget {
                 // GrammarDao.updateDimension on save.
                 IconButton(
                   icon: const Icon(Icons.edit_outlined),
-                  tooltip: 'Rename dimension',
+                  tooltip: 'Edit dimension',
                   onPressed: () => _showRenameDialog(ctx, ref, dim),
                 ),
                 // 04-18-02: confirmation dialog before dimension deletion
@@ -621,9 +629,13 @@ class _LevelChip extends StatelessWidget {
 /// dialog's State lifecycle — avoids "used after dispose" errors from
 /// the in-build callback chain that fires when the dialog is popped.
 class _RenameDimensionDialog extends StatefulWidget {
-  const _RenameDimensionDialog({required this.initialName});
+  const _RenameDimensionDialog({
+    required this.initialName,
+    this.initialAbbr = '',
+  });
 
   final String initialName;
+  final String initialAbbr;
 
   @override
   State<_RenameDimensionDialog> createState() =>
@@ -631,42 +643,62 @@ class _RenameDimensionDialog extends StatefulWidget {
 }
 
 class _RenameDimensionDialogState extends State<_RenameDimensionDialog> {
-  late final TextEditingController _controller;
-  String? _errorText;
+  late final TextEditingController _nameCtrl;
+  late final TextEditingController _abbrCtrl;
+  String? _nameError;
 
   @override
   void initState() {
     super.initState();
-    _controller = TextEditingController(text: widget.initialName);
+    _nameCtrl = TextEditingController(text: widget.initialName);
+    _abbrCtrl = TextEditingController(text: widget.initialAbbr);
   }
 
   @override
   void dispose() {
-    _controller.dispose();
+    _nameCtrl.dispose();
+    _abbrCtrl.dispose();
     super.dispose();
   }
 
   void _onSave() {
-    final name = _controller.text.trim();
+    final name = _nameCtrl.text.trim();
     if (name.isEmpty) {
-      setState(() => _errorText = 'Name cannot be empty');
+      setState(() => _nameError = 'Name cannot be empty');
       return;
     }
-    Navigator.of(context).pop(name);
+    Navigator.of(context).pop((
+      name: name,
+      abbr: _abbrCtrl.text.trim(),
+    ));
   }
 
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('Rename dimension'),
-      content: TextField(
-        controller: _controller,
-        autofocus: true,
-        onSubmitted: (_) => _onSave(),
-        decoration: InputDecoration(
-          labelText: 'Dimension name',
-          errorText: _errorText,
-        ),
+      title: const Text('Edit dimension'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          TextField(
+            controller: _nameCtrl,
+            autofocus: true,
+            onSubmitted: (_) => _onSave(),
+            decoration: InputDecoration(
+              labelText: 'Dimension name',
+              errorText: _nameError,
+            ),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _abbrCtrl,
+            onSubmitted: (_) => _onSave(),
+            decoration: const InputDecoration(
+              labelText: 'Abbreviation (optional)',
+              hintText: 'e.g. GEN, NUM, CAS',
+            ),
+          ),
+        ],
       ),
       actions: [
         TextButton(

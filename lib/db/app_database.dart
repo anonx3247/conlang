@@ -150,6 +150,10 @@ class Dimensions extends Table {
   /// it isn't inflected into the feminine). Intrinsic dims are filtered
   /// out of cell enumeration and act as conditions in rule eval.
   BoolColumn get intrinsic => boolean().withDefault(const Constant(false))();
+
+  /// v12 — Short label for display in compact contexts (paradigm headers,
+  /// binding summaries). Nullable — defaults to first 3 chars of name.
+  TextColumn get abbreviation => text().nullable()();
 }
 
 /// Morphological rules (e.g. "Plural", "Agentive -er") in a pattern DSL.
@@ -441,7 +445,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase(super.e);
 
   @override
-  int get schemaVersion => 11;
+  int get schemaVersion => 12;
 
   @override
   MigrationStrategy get migration {
@@ -644,6 +648,10 @@ class AppDatabase extends _$AppDatabase {
         if (from < 11) {
           // v11: Markers.name for user-given marker labels (gap #6 from 04-18-VERIFICATION)
           await m.addColumn(markers, markers.name);
+        }
+        if (from < 12) {
+          // v12: Dimensions.abbreviation — short label for compact display
+          await m.addColumn(dimensions, dimensions.abbreviation);
         }
       },
       beforeOpen: (details) async {

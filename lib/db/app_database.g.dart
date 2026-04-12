@@ -4665,6 +4665,17 @@ class $DimensionsTable extends Dimensions
     ),
     defaultValue: const Constant(false),
   );
+  static const VerificationMeta _abbreviationMeta = const VerificationMeta(
+    'abbreviation',
+  );
+  @override
+  late final GeneratedColumn<String> abbreviation = GeneratedColumn<String>(
+    'abbreviation',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -4674,6 +4685,7 @@ class $DimensionsTable extends Dimensions
     levelsJson,
     templateId,
     intrinsic,
+    abbreviation,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -4732,6 +4744,15 @@ class $DimensionsTable extends Dimensions
         intrinsic.isAcceptableOrUnknown(data['intrinsic']!, _intrinsicMeta),
       );
     }
+    if (data.containsKey('abbreviation')) {
+      context.handle(
+        _abbreviationMeta,
+        abbreviation.isAcceptableOrUnknown(
+          data['abbreviation']!,
+          _abbreviationMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -4769,6 +4790,10 @@ class $DimensionsTable extends Dimensions
         DriftSqlType.bool,
         data['${effectivePrefix}intrinsic'],
       )!,
+      abbreviation: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}abbreviation'],
+      ),
     );
   }
 
@@ -4791,6 +4816,10 @@ class Dimension extends DataClass implements Insertable<Dimension> {
   /// it isn't inflected into the feminine). Intrinsic dims are filtered
   /// out of cell enumeration and act as conditions in rule eval.
   final bool intrinsic;
+
+  /// v12 — Short label for display in compact contexts (paradigm headers,
+  /// binding summaries). Nullable — defaults to first 3 chars of name.
+  final String? abbreviation;
   const Dimension({
     required this.id,
     required this.posId,
@@ -4799,6 +4828,7 @@ class Dimension extends DataClass implements Insertable<Dimension> {
     required this.levelsJson,
     this.templateId,
     required this.intrinsic,
+    this.abbreviation,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -4812,6 +4842,9 @@ class Dimension extends DataClass implements Insertable<Dimension> {
       map['template_id'] = Variable<String>(templateId);
     }
     map['intrinsic'] = Variable<bool>(intrinsic);
+    if (!nullToAbsent || abbreviation != null) {
+      map['abbreviation'] = Variable<String>(abbreviation);
+    }
     return map;
   }
 
@@ -4826,6 +4859,9 @@ class Dimension extends DataClass implements Insertable<Dimension> {
           ? const Value.absent()
           : Value(templateId),
       intrinsic: Value(intrinsic),
+      abbreviation: abbreviation == null && nullToAbsent
+          ? const Value.absent()
+          : Value(abbreviation),
     );
   }
 
@@ -4842,6 +4878,7 @@ class Dimension extends DataClass implements Insertable<Dimension> {
       levelsJson: serializer.fromJson<String>(json['levelsJson']),
       templateId: serializer.fromJson<String?>(json['templateId']),
       intrinsic: serializer.fromJson<bool>(json['intrinsic']),
+      abbreviation: serializer.fromJson<String?>(json['abbreviation']),
     );
   }
   @override
@@ -4855,6 +4892,7 @@ class Dimension extends DataClass implements Insertable<Dimension> {
       'levelsJson': serializer.toJson<String>(levelsJson),
       'templateId': serializer.toJson<String?>(templateId),
       'intrinsic': serializer.toJson<bool>(intrinsic),
+      'abbreviation': serializer.toJson<String?>(abbreviation),
     };
   }
 
@@ -4866,6 +4904,7 @@ class Dimension extends DataClass implements Insertable<Dimension> {
     String? levelsJson,
     Value<String?> templateId = const Value.absent(),
     bool? intrinsic,
+    Value<String?> abbreviation = const Value.absent(),
   }) => Dimension(
     id: id ?? this.id,
     posId: posId ?? this.posId,
@@ -4874,6 +4913,7 @@ class Dimension extends DataClass implements Insertable<Dimension> {
     levelsJson: levelsJson ?? this.levelsJson,
     templateId: templateId.present ? templateId.value : this.templateId,
     intrinsic: intrinsic ?? this.intrinsic,
+    abbreviation: abbreviation.present ? abbreviation.value : this.abbreviation,
   );
   Dimension copyWithCompanion(DimensionsCompanion data) {
     return Dimension(
@@ -4888,6 +4928,9 @@ class Dimension extends DataClass implements Insertable<Dimension> {
           ? data.templateId.value
           : this.templateId,
       intrinsic: data.intrinsic.present ? data.intrinsic.value : this.intrinsic,
+      abbreviation: data.abbreviation.present
+          ? data.abbreviation.value
+          : this.abbreviation,
     );
   }
 
@@ -4900,14 +4943,23 @@ class Dimension extends DataClass implements Insertable<Dimension> {
           ..write('ordering: $ordering, ')
           ..write('levelsJson: $levelsJson, ')
           ..write('templateId: $templateId, ')
-          ..write('intrinsic: $intrinsic')
+          ..write('intrinsic: $intrinsic, ')
+          ..write('abbreviation: $abbreviation')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode =>
-      Object.hash(id, posId, name, ordering, levelsJson, templateId, intrinsic);
+  int get hashCode => Object.hash(
+    id,
+    posId,
+    name,
+    ordering,
+    levelsJson,
+    templateId,
+    intrinsic,
+    abbreviation,
+  );
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -4918,7 +4970,8 @@ class Dimension extends DataClass implements Insertable<Dimension> {
           other.ordering == this.ordering &&
           other.levelsJson == this.levelsJson &&
           other.templateId == this.templateId &&
-          other.intrinsic == this.intrinsic);
+          other.intrinsic == this.intrinsic &&
+          other.abbreviation == this.abbreviation);
 }
 
 class DimensionsCompanion extends UpdateCompanion<Dimension> {
@@ -4929,6 +4982,7 @@ class DimensionsCompanion extends UpdateCompanion<Dimension> {
   final Value<String> levelsJson;
   final Value<String?> templateId;
   final Value<bool> intrinsic;
+  final Value<String?> abbreviation;
   const DimensionsCompanion({
     this.id = const Value.absent(),
     this.posId = const Value.absent(),
@@ -4937,6 +4991,7 @@ class DimensionsCompanion extends UpdateCompanion<Dimension> {
     this.levelsJson = const Value.absent(),
     this.templateId = const Value.absent(),
     this.intrinsic = const Value.absent(),
+    this.abbreviation = const Value.absent(),
   });
   DimensionsCompanion.insert({
     this.id = const Value.absent(),
@@ -4946,6 +5001,7 @@ class DimensionsCompanion extends UpdateCompanion<Dimension> {
     required String levelsJson,
     this.templateId = const Value.absent(),
     this.intrinsic = const Value.absent(),
+    this.abbreviation = const Value.absent(),
   }) : posId = Value(posId),
        name = Value(name),
        levelsJson = Value(levelsJson);
@@ -4957,6 +5013,7 @@ class DimensionsCompanion extends UpdateCompanion<Dimension> {
     Expression<String>? levelsJson,
     Expression<String>? templateId,
     Expression<bool>? intrinsic,
+    Expression<String>? abbreviation,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -4966,6 +5023,7 @@ class DimensionsCompanion extends UpdateCompanion<Dimension> {
       if (levelsJson != null) 'levels_json': levelsJson,
       if (templateId != null) 'template_id': templateId,
       if (intrinsic != null) 'intrinsic': intrinsic,
+      if (abbreviation != null) 'abbreviation': abbreviation,
     });
   }
 
@@ -4977,6 +5035,7 @@ class DimensionsCompanion extends UpdateCompanion<Dimension> {
     Value<String>? levelsJson,
     Value<String?>? templateId,
     Value<bool>? intrinsic,
+    Value<String?>? abbreviation,
   }) {
     return DimensionsCompanion(
       id: id ?? this.id,
@@ -4986,6 +5045,7 @@ class DimensionsCompanion extends UpdateCompanion<Dimension> {
       levelsJson: levelsJson ?? this.levelsJson,
       templateId: templateId ?? this.templateId,
       intrinsic: intrinsic ?? this.intrinsic,
+      abbreviation: abbreviation ?? this.abbreviation,
     );
   }
 
@@ -5013,6 +5073,9 @@ class DimensionsCompanion extends UpdateCompanion<Dimension> {
     if (intrinsic.present) {
       map['intrinsic'] = Variable<bool>(intrinsic.value);
     }
+    if (abbreviation.present) {
+      map['abbreviation'] = Variable<String>(abbreviation.value);
+    }
     return map;
   }
 
@@ -5025,7 +5088,8 @@ class DimensionsCompanion extends UpdateCompanion<Dimension> {
           ..write('ordering: $ordering, ')
           ..write('levelsJson: $levelsJson, ')
           ..write('templateId: $templateId, ')
-          ..write('intrinsic: $intrinsic')
+          ..write('intrinsic: $intrinsic, ')
+          ..write('abbreviation: $abbreviation')
           ..write(')'))
         .toString();
   }
@@ -10372,6 +10436,7 @@ typedef $$DimensionsTableCreateCompanionBuilder =
       required String levelsJson,
       Value<String?> templateId,
       Value<bool> intrinsic,
+      Value<String?> abbreviation,
     });
 typedef $$DimensionsTableUpdateCompanionBuilder =
     DimensionsCompanion Function({
@@ -10382,6 +10447,7 @@ typedef $$DimensionsTableUpdateCompanionBuilder =
       Value<String> levelsJson,
       Value<String?> templateId,
       Value<bool> intrinsic,
+      Value<String?> abbreviation,
     });
 
 final class $$DimensionsTableReferences
@@ -10475,6 +10541,11 @@ class $$DimensionsTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
+  ColumnFilters<String> get abbreviation => $composableBuilder(
+    column: $table.abbreviation,
+    builder: (column) => ColumnFilters(column),
+  );
+
   $$PartsOfSpeechTableFilterComposer get posId {
     final $$PartsOfSpeechTableFilterComposer composer = $composerBuilder(
       composer: this,
@@ -10563,6 +10634,11 @@ class $$DimensionsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get abbreviation => $composableBuilder(
+    column: $table.abbreviation,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   $$PartsOfSpeechTableOrderingComposer get posId {
     final $$PartsOfSpeechTableOrderingComposer composer = $composerBuilder(
       composer: this,
@@ -10617,6 +10693,11 @@ class $$DimensionsTableAnnotationComposer
 
   GeneratedColumn<bool> get intrinsic =>
       $composableBuilder(column: $table.intrinsic, builder: (column) => column);
+
+  GeneratedColumn<String> get abbreviation => $composableBuilder(
+    column: $table.abbreviation,
+    builder: (column) => column,
+  );
 
   $$PartsOfSpeechTableAnnotationComposer get posId {
     final $$PartsOfSpeechTableAnnotationComposer composer = $composerBuilder(
@@ -10703,6 +10784,7 @@ class $$DimensionsTableTableManager
                 Value<String> levelsJson = const Value.absent(),
                 Value<String?> templateId = const Value.absent(),
                 Value<bool> intrinsic = const Value.absent(),
+                Value<String?> abbreviation = const Value.absent(),
               }) => DimensionsCompanion(
                 id: id,
                 posId: posId,
@@ -10711,6 +10793,7 @@ class $$DimensionsTableTableManager
                 levelsJson: levelsJson,
                 templateId: templateId,
                 intrinsic: intrinsic,
+                abbreviation: abbreviation,
               ),
           createCompanionCallback:
               ({
@@ -10721,6 +10804,7 @@ class $$DimensionsTableTableManager
                 required String levelsJson,
                 Value<String?> templateId = const Value.absent(),
                 Value<bool> intrinsic = const Value.absent(),
+                Value<String?> abbreviation = const Value.absent(),
               }) => DimensionsCompanion.insert(
                 id: id,
                 posId: posId,
@@ -10729,6 +10813,7 @@ class $$DimensionsTableTableManager
                 levelsJson: levelsJson,
                 templateId: templateId,
                 intrinsic: intrinsic,
+                abbreviation: abbreviation,
               ),
           withReferenceMapper: (p0) => p0
               .map(
