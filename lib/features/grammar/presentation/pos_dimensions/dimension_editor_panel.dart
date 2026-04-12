@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../db/app_database.dart';
 import '../../data/grammar_providers.dart';
 import '../../domain/dimension_level.dart';
+import '../../domain/level_deletion_report.dart';
 import 'dimension_template_picker.dart';
 
 /// Right-pane dimension editor for the POS & Dimensions master-detail page.
@@ -365,12 +366,52 @@ class DimensionEditorPanel extends ConsumerWidget {
                       ],
                     ),
                     onDeleted: () async {
+                      // D-86 — 04-17 unified level-deletion dependency
+                      // check. Before the pre-04-17 direct DAO write, run
+                      // checkLevelDeletionDependencies to catch any
+                      // references across lexemes / standard-form
+                      // patterns / rule featureBindings. Non-blocking →
+                      // fall through to the original direct delete.
+                      // Blocking → open _ReassignLevelDialog and route
+                      // through reassignLevelAndDelete in a single
+                      // transaction.
                       final dao = ref.read(grammarDaoProvider);
                       if (dao == null) return;
-                      final updated = decodeLevelsJson(dim.levelsJson)
+                      final report = await dao
+                          .checkLevelDeletionDependencies(dim.id, l.id);
+                      if (!report.isBlocking) {
+                        final updated = decodeLevelsJson(dim.levelsJson)
+                            .where((x) => x.id != l.id)
+                            .toList();
+                        await dao.updateDimensionLevels(dim.id, updated);
+                        return;
+                      }
+                      if (!ctx.mounted) return;
+                      final otherLevels = decodeLevelsJson(dim.levelsJson)
                           .where((x) => x.id != l.id)
                           .toList();
-                      await dao.updateDimensionLevels(dim.id, updated);
+                      if (otherLevels.isEmpty) {
+                        ScaffoldMessenger.of(ctx).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                              'Cannot delete the last level — '
+                              'add another first.',
+                            ),
+                          ),
+                        );
+                        return;
+                      }
+                      final targetId = await showDialog<int>(
+                        context: ctx,
+                        builder: (_) => _ReassignLevelDialog(
+                          levelName: l.name,
+                          report: report,
+                          candidates: otherLevels,
+                        ),
+                      );
+                      if (targetId == null) return;
+                      await dao.reassignLevelAndDelete(
+                          dim.id, l.id, targetId);
                     },
                   ),
                 // D-80 plan 04-16: trailing + chip opens _LevelEditDialog
@@ -552,6 +593,79 @@ class _LevelEditDialogState extends State<_LevelEditDialog> {
         ElevatedButton(
           onPressed: _onSave,
           child: const Text('Save'),
+        ),
+      ],
+    );
+  }
+}
+
+/// D-86 — 04-17. Reassign + delete dialog for the level chip onDeleted
+/// flow. Mirrors [_RenameDimensionDialog]'s state pattern: the selected
+/// target level id is held in State so the "Reassign and delete" button
+/// can toggle disabled/enabled based on whether the dropdown has a value.
+class _ReassignLevelDialog extends StatefulWidget {
+  const _ReassignLevelDialog({
+    required this.levelName,
+    required this.report,
+    required this.candidates,
+  });
+
+  final String levelName;
+  final LevelDeletionReport report;
+  final List<DimensionLevel> candidates;
+
+  @override
+  State<_ReassignLevelDialog> createState() => _ReassignLevelDialogState();
+}
+
+class _ReassignLevelDialogState extends State<_ReassignLevelDialog> {
+  int? _targetId;
+
+  @override
+  Widget build(BuildContext context) {
+    final r = widget.report;
+    return AlertDialog(
+      title: Text("Reassign and delete '${widget.levelName}'"),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('${r.total} references will be updated:'),
+          const SizedBox(height: 8),
+          if (r.lexemeCount > 0) Text('• ${r.lexemeCount} words'),
+          if (r.patternCount > 0)
+            Text('• ${r.patternCount} standard-form patterns'),
+          if (r.ruleCount > 0)
+            Text('• ${r.ruleCount} inflection rule'
+                '${r.ruleCount == 1 ? '' : 's'}'),
+          const SizedBox(height: 16),
+          const Text('Reassign to:'),
+          const SizedBox(height: 4),
+          DropdownButton<int>(
+            value: _targetId,
+            isExpanded: true,
+            hint: const Text('Select a level'),
+            items: [
+              for (final l in widget.candidates)
+                DropdownMenuItem<int>(
+                  value: l.id,
+                  child: Text('${l.name} (${l.abbr})'),
+                ),
+            ],
+            onChanged: (v) => setState(() => _targetId = v),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
+        ElevatedButton(
+          onPressed: _targetId == null
+              ? null
+              : () => Navigator.of(context).pop(_targetId),
+          child: const Text('Reassign and delete'),
         ),
       ],
     );
