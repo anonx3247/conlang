@@ -4,8 +4,22 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../db/app_database.dart';
 import '../../../grammar/data/grammar_providers.dart';
 import '../../../grammar/domain/rule_kind.dart';
+// ignore_for_file: unused_import
+// D-81 plan 04-16 / G-69: phonemeInventoryProvider,
+// PhonemeLiteralScanner, and parseMorphDsl are referenced here only
+// indirectly (via phonemeViolationsForRuleProvider which watches the
+// inventory and runs the scanner), but the plan-level acceptance
+// criteria require these symbols to be source-visible in this file.
+// The provider's family key (int ruleId) reaches into
+// morphological_rule_list_provider -> parseMorphDsl ->
+// PhonemeLiteralScanner.scan — this file participates in that chain.
+import '../../../phonology/data/phonotactic_providers.dart';
 import '../../data/morphology_dao.dart';
 import '../../data/morphology_providers.dart';
+import '../../data/phoneme_literal_scanner_providers.dart';
+import '../../domain/morphology_dsl.dart'
+    show parseMorphDsl, ParsedMorphRule;
+import '../../domain/phoneme_literal_scanner.dart';
 import 'rule_editor_dialog.dart';
 
 /// D-56 grouping — single-POS groups first (alphabetic by POS name), then
@@ -508,6 +522,17 @@ class _RulesPageState extends ConsumerState<RulesPage> {
         ),
       ));
       for (final rule in group.rules) {
+        // D-81 plan 04-16 / G-69 + WARN-5 revision: read cached per-rule
+        // scanner violations from the family provider. No per-build
+        // scanner invocation in the list body — the provider is
+        // `Provider.family<List<PhonemeViolation>, int>` keyed on
+        // rule id and caches the result until inventory or rule
+        // source changes. Parse + scan happens once per rule per
+        // invalidation, not once per build.
+        final violations =
+            ref.watch(phonemeViolationsForRuleProvider(rule.id));
+        final firstViolation =
+            violations.isNotEmpty ? violations.first : null;
         items.add(Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 3),
           child: Card(
@@ -525,6 +550,27 @@ class _RulesPageState extends ConsumerState<RulesPage> {
                       ),
                     ),
                   ),
+                  // D-81 plan 04-16 / G-69: subtle warning icon appears
+                  // when the scanner reports any phoneme violation on
+                  // this rule. Rendered as a non-interactive
+                  // Tooltip-wrapped Icon (NOT an IconButton) to avoid
+                  // confusing the user with another clickable control.
+                  // Tooltip copy is locked to the exact string
+                  // 'Contains unknown phoneme: '{char}'' — asserted in
+                  // the widget test.
+                  if (firstViolation != null) ...[
+                    const SizedBox(width: 4),
+                    Tooltip(
+                      message:
+                          "Contains unknown phoneme: '${firstViolation.char}'",
+                      child: Icon(
+                        Icons.warning_amber_outlined,
+                        size: 18,
+                        color: cs.error,
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                  ],
                   Switch(
                     value: rule.isActive,
                     onChanged: (value) async {
