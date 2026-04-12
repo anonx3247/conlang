@@ -151,5 +151,7 @@ Dimension _dim({required int id, required int posId, required String name}) {
     ordering: 0,
     levelsJson: '[]',
     templateId: null,
+    // 04-17 D-82: Dimensions.intrinsic required field (default false).
+    intrinsic: false,
   );
 }

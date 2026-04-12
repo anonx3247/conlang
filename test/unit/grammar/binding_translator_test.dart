@@ -40,6 +40,8 @@ Dimension _dim({
     name: name,
     levelsJson: levelsJson,
     ordering: 0,
+    // 04-17 D-82: Dimensions.intrinsic required field (default false).
+    intrinsic: false,
   );
 }
 

@@ -306,5 +306,7 @@ Dimension _dim({
     ordering: 0,
     levelsJson: encodeLevelsJson(levels),
     templateId: null,
+    // 04-17 D-82: Dimensions.intrinsic required field (default false).
+    intrinsic: false,
   );
 }
