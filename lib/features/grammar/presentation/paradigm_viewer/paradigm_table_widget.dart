@@ -542,6 +542,7 @@ class ParadigmTableWidget extends ConsumerWidget {
                   for (final col in colLevels)
                     _ParadigmCellWidget(
                       lexemeId: activeLexemeId,
+                      posId: posId,
                       featureSet: {
                         rowDim.id: row.id,
                         colDim.id: col.id,
@@ -604,6 +605,7 @@ class ParadigmTableWidget extends ConsumerWidget {
                 for (final lvl in levels)
                   _ParadigmCellWidget(
                     lexemeId: activeLexemeId,
+                    posId: posId,
                     featureSet: {dim.id: lvl.id},
                     cell: cellFor({dim.id: lvl.id}),
                     clickMode: clickMode,
@@ -640,12 +642,14 @@ final overridesForLexemeProvider =
 class _ParadigmCellWidget extends ConsumerWidget {
   const _ParadigmCellWidget({
     required this.lexemeId,
+    required this.posId,
     required this.featureSet,
     required this.cell,
     required this.clickMode,
   });
 
   final int lexemeId;
+  final int posId;
   final Map<int, int> featureSet;
   final ParadigmCell? cell;
   final ParadigmClickMode clickMode;
@@ -719,6 +723,7 @@ class _ParadigmCellWidget extends ConsumerWidget {
               kind: RuleKind.inflectional,
               existing: existingRule,
               preFilledBindings: existingRule == null ? featureSet : null,
+              preFilledPosIds: existingRule == null ? {posId} : null,
             ),
           );
           break;
@@ -1364,6 +1369,7 @@ class _IntrinsicSliceTable extends ConsumerWidget {
                 for (final col in colLevels)
                   _ParadigmCellWidget(
                     lexemeId: lexemeId,
+                    posId: posId,
                     featureSet: {
                       rowDim.id: row.id,
                       colDim.id: col.id,
@@ -1420,6 +1426,7 @@ class _IntrinsicSliceTable extends ConsumerWidget {
               for (final lvl in levels)
                 _ParadigmCellWidget(
                   lexemeId: lexemeId,
+                  posId: posId,
                   featureSet: {dim.id: lvl.id},
                   cell: cellFor({dim.id: lvl.id}),
                   clickMode: clickMode,

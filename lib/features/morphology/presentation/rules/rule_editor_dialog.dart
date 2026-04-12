@@ -224,6 +224,7 @@ class RuleEditorDialog extends ConsumerStatefulWidget {
     required this.kind,
     this.existing,
     this.preFilledBindings,
+    this.preFilledPosIds,
     this.markerId,
     this.markerBindings,
   });
@@ -242,6 +243,13 @@ class RuleEditorDialog extends ConsumerStatefulWidget {
   /// new-rule dialog opens with the clicked cell's features already bound.
   /// Ignored for derivational kind and when editing an existing rule.
   final Map<int, int>? preFilledBindings;
+
+  /// G-07 / plan 04-20-01: When provided and [existing] is null and [kind]
+  /// is inflectional, pre-selects these POS IDs in the inflectional POS
+  /// FilterChips so the user does not need to manually re-select the POS
+  /// they are already looking at when clicking an empty paradigm cell.
+  /// Ignored for derivational kind and when editing an existing rule.
+  final Set<int>? preFilledPosIds;
 
   /// D-100 (plan 04-18-05): when non-null, the dialog opens in marker edit
   /// mode with [_leaveAsUnmarked] pre-checked and [markerBindings] loaded
@@ -346,6 +354,14 @@ class _RuleEditorDialogState extends ConsumerState<RuleEditorDialog> {
       if (widget.kind == RuleKind.inflectional &&
           widget.preFilledBindings != null) {
         _featureBindings.addAll(widget.preFilledBindings!);
+      }
+      // G-07 / plan 04-20-01: pre-select POS chips from the paradigm cell's
+      // POS so the user doesn't have to re-select the POS they're already on.
+      if (widget.kind == RuleKind.inflectional &&
+          widget.preFilledPosIds != null &&
+          widget.preFilledPosIds!.isNotEmpty) {
+        _inflectionalPosSet.addAll(widget.preFilledPosIds!);
+        _selectedPosIds = Set<int>.from(_inflectionalPosSet);
       }
     }
     // Tiebreak is recomputed inside build() from the live Riverpod stream,
