@@ -28,44 +28,67 @@ final glossaryProvider = FutureProvider<List<GlossaryEntry>>((ref) async {
 /// Notifier backing [glossaryOpenProvider].
 ///
 /// StateProvider was removed in flutter_riverpod 3.x — use NotifierProvider.
-class _GlossaryOpenNotifier extends Notifier<bool> {
+class GlossaryOpenNotifier extends Notifier<bool> {
   @override
   bool build() => false;
+
+  /// Opens the glossary drawer.
+  void open() => state = true;
+
+  /// Closes the glossary drawer.
+  void close() => state = false;
+
+  /// Toggles the glossary drawer open/closed.
+  void toggle() => state = !state;
 }
 
 /// Controls whether the glossary drawer/panel is open.
 ///
-/// Set via `ref.read(glossaryOpenProvider.notifier).state = true`.
-final glossaryOpenProvider = NotifierProvider<_GlossaryOpenNotifier, bool>(
-  _GlossaryOpenNotifier.new,
+/// Use `ref.read(glossaryOpenProvider.notifier).open()` /
+/// `.close()` / `.toggle()` to mutate.
+final glossaryOpenProvider = NotifierProvider<GlossaryOpenNotifier, bool>(
+  GlossaryOpenNotifier.new,
 );
 
 /// Notifier backing [glossarySearchProvider].
-class _GlossarySearchNotifier extends Notifier<String> {
+class GlossarySearchNotifier extends Notifier<String> {
   @override
   String build() => '';
+
+  /// Updates the search query.
+  void set(String query) => state = query;
+
+  /// Clears the search query.
+  void clear() => state = '';
 }
 
 /// The current search query text for glossary filtering.
 ///
-/// Set via `ref.read(glossarySearchProvider.notifier).state = query`.
+/// Use `ref.read(glossarySearchProvider.notifier).set(query)` to mutate.
 final glossarySearchProvider =
-    NotifierProvider<_GlossarySearchNotifier, String>(
-  _GlossarySearchNotifier.new,
+    NotifierProvider<GlossarySearchNotifier, String>(
+  GlossarySearchNotifier.new,
 );
 
 /// Notifier backing [glossaryCategoryFilterProvider].
-class _GlossaryCategoryFilterNotifier extends Notifier<String?> {
+class GlossaryCategoryFilterNotifier extends Notifier<String?> {
   @override
   String? build() => null;
+
+  /// Sets the active category filter.
+  void set(String? category) => state = category;
+
+  /// Clears the category filter.
+  void clear() => state = null;
 }
 
 /// The active category filter, or null for no category restriction.
 ///
-/// Set via `ref.read(glossaryCategoryFilterProvider.notifier).state = 'Phonology'`.
+/// Use `ref.read(glossaryCategoryFilterProvider.notifier).set('Phonology')`
+/// or `.clear()` to mutate.
 final glossaryCategoryFilterProvider =
-    NotifierProvider<_GlossaryCategoryFilterNotifier, String?>(
-  _GlossaryCategoryFilterNotifier.new,
+    NotifierProvider<GlossaryCategoryFilterNotifier, String?>(
+  GlossaryCategoryFilterNotifier.new,
 );
 
 // ---------------------------------------------------------------------------
