@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:drift/drift.dart';
 import 'package:drift_flutter/drift_flutter.dart';
 
+import '../features/culture/data/culture_dao.dart';
 import '../features/grammar/data/grammar_dao.dart';
 import '../features/grammar/data/inflectional_rule_pos_dao.dart';
 import '../features/grammar/data/lexeme_parents_dao.dart';
@@ -397,6 +398,21 @@ class StandardFormPatterns extends Table {
   Set<Column> get primaryKey => {dimensionId, levelId};
 }
 
+/// Wiki-style culture documentation pages organized in a tree hierarchy.
+/// Per D-01: parent-child tree with parent_id self-referential FK.
+/// Per D-14: auto-tracked created/updated timestamps.
+/// Per D-15: optional icon/emoji per page.
+class CulturePages extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  IntColumn get parentId => integer().nullable().references(CulturePages, #id, onDelete: KeyAction.setNull)();
+  TextColumn get title => text()();
+  TextColumn get content => text().withDefault(const Constant(''))();
+  TextColumn get icon => text().nullable()(); // emoji string, per D-15
+  IntColumn get ordering => integer().withDefault(const Constant(0))();
+  DateTimeColumn get createdAt => dateTime()();
+  DateTimeColumn get updatedAt => dateTime()();
+}
+
 // ---------------------------------------------------------------------------
 // Database class
 // ---------------------------------------------------------------------------
@@ -420,6 +436,7 @@ class StandardFormPatterns extends Table {
     InflectionalRulePOS, // v9
     LexemeParents, // v9
     StandardFormPatterns, // v10 (04-17)
+    CulturePages, // v13
   ],
   daos: [
     PhonemeDao,
@@ -435,6 +452,7 @@ class StandardFormPatterns extends Table {
     LexemeParentsDao, // v9 gap D-62
     MarkerDao, // v9 gap D-44 (re-registered after 04-11 regression)
     StandardFormPatternDao, // v10 (04-17)
+    CultureDao, // v13
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -445,7 +463,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase(super.e);
 
   @override
-  int get schemaVersion => 12;
+  int get schemaVersion => 13;
 
   @override
   MigrationStrategy get migration {
@@ -652,6 +670,10 @@ class AppDatabase extends _$AppDatabase {
         if (from < 12) {
           // v12: Dimensions.abbreviation — short label for compact display
           await m.addColumn(dimensions, dimensions.abbreviation);
+        }
+        if (from < 13) {
+          // v13: CulturePages table for wiki-style culture documentation
+          await m.createTable(culturePages);
         }
       },
       beforeOpen: (details) async {
