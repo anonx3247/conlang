@@ -272,6 +272,7 @@ class _DictionaryPageState extends ConsumerState<DictionaryPage> {
             _selectedLexemeId = null;
           });
         },
+        onNavigateToWord: _onWordSelected,
       );
     } else {
       // Empty state
