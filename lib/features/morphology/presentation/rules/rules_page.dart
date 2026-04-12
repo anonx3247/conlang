@@ -284,7 +284,7 @@ class _RulesPageState extends ConsumerState<RulesPage> {
                               ),
                             )
                           : ListView.builder(
-                              padding: const EdgeInsets.all(16),
+                              padding: const EdgeInsets.fromLTRB(16, 16, 16, 80),
                               itemCount: filtered.length,
                               itemBuilder: (context, i) {
                                 final rule = filtered[i];
@@ -774,7 +774,7 @@ class _RulesPageState extends ConsumerState<RulesPage> {
     }
 
     return ListView(
-      padding: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.only(bottom: 80),
       children: items,
     );
   }
