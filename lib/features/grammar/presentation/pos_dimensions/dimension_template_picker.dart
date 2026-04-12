@@ -6,12 +6,8 @@ import '../../data/dimension_templates.dart';
 ///
 /// Returns the chosen [DimensionTemplate], or null if the user cancels /
 /// dismisses the dialog. D-05 two-step picker: user picks a template
-/// (or the single "Custom (start blank)" entry at the bottom), then the
-/// caller inserts the dimension onto the selected POS.
-///
-/// G-12 (UAT): originally shipped with one Custom entry per group, which
-/// users found visually duplicated. Now ships with exactly ONE Custom
-/// entry at the bottom of the list, outside any group header.
+/// (or a per-group "Custom" blank entry), then the caller inserts the
+/// dimension onto the selected POS.
 Future<DimensionTemplate?> showDimensionTemplatePicker(
     BuildContext context) {
   return showDialog<DimensionTemplate>(
@@ -52,9 +48,8 @@ class _DimensionTemplatePickerDialogState
       groups.putIfAbsent(t.group, () => <DimensionTemplate>[]).add(t);
     }
 
-    // G-12: one SINGLE "Custom (start blank)" entry rendered at the very
-    // bottom of the list (outside any group), not per-group duplicates.
-    // Matches the simplified D-05 picker contract after UAT feedback.
+    // Single "Custom (start blank)" entry shown at the top (New Gap 3 fix).
+    const showCustom = true;
     const customBlank = DimensionTemplate(
       id: 'custom.blank',
       group: 'Custom',
@@ -62,10 +57,6 @@ class _DimensionTemplatePickerDialogState
       levels: [],
       description: 'Start from scratch — no preset levels.',
     );
-    // When a search is active, only show the Custom entry if the query
-    // itself matches the word "custom" so it stays consistent with the
-    // other groups' filtering behavior.
-    final showCustom = lowered.isEmpty || 'custom'.contains(lowered);
 
     return Dialog(
       child: ConstrainedBox(
@@ -95,7 +86,12 @@ class _DimensionTemplatePickerDialogState
               child: ListView(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 children: [
-                  if (groups.isEmpty && !showCustom)
+                  // Custom entry always at the TOP of the list.
+                  if (showCustom) ...[
+                    _customCard(theme, cs, context, customBlank),
+                    const SizedBox(height: 16),
+                  ],
+                  if (groups.isEmpty)
                     Padding(
                       padding: const EdgeInsets.all(24),
                       child: Text(
@@ -105,7 +101,7 @@ class _DimensionTemplatePickerDialogState
                         ),
                       ),
                     )
-                  else ...[
+                  else
                     for (final entry in groups.entries) ...[
                       Padding(
                         padding: const EdgeInsets.only(top: 12, bottom: 4),
@@ -120,11 +116,6 @@ class _DimensionTemplatePickerDialogState
                       for (final t in entry.value)
                         _templateCard(t, theme, cs, context),
                     ],
-                    if (showCustom) ...[
-                      const SizedBox(height: 16),
-                      _templateCard(customBlank, theme, cs, context),
-                    ],
-                  ],
                 ],
               ),
             ),
@@ -141,6 +132,102 @@ class _DimensionTemplatePickerDialogState
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  /// Renders the Custom card at the top of the picker.
+  ///
+  /// On tap, shows a name-prompt dialog (AlertDialog with TextField).
+  /// The user enters a dimension name; the returned [DimensionTemplate] uses
+  /// that name rather than the default "Custom (start blank)" label.
+  Widget _customCard(
+    ThemeData theme,
+    ColorScheme cs,
+    BuildContext ctx,
+    DimensionTemplate customBlank,
+  ) {
+    return Tooltip(
+      message: customBlank.description,
+      waitDuration: const Duration(milliseconds: 500),
+      child: Card(
+        margin: const EdgeInsets.symmetric(vertical: 4),
+        child: InkWell(
+          onTap: () async {
+            final nameCtrl = TextEditingController();
+            final entered = await showDialog<String>(
+              context: ctx,
+              builder: (dialogCtx) {
+                return StatefulBuilder(
+                  builder: (sbCtx, setSbState) {
+                    return AlertDialog(
+                      title: const Text('New Custom Dimension'),
+                      content: TextField(
+                        controller: nameCtrl,
+                        autofocus: true,
+                        decoration: const InputDecoration(
+                          labelText: 'Dimension name',
+                          hintText: 'e.g. Evidentiality, Politeness, Animacy',
+                          border: OutlineInputBorder(),
+                        ),
+                        onSubmitted: (v) {
+                          final trimmed = v.trim();
+                          if (trimmed.isNotEmpty) {
+                            Navigator.of(dialogCtx).pop(trimmed);
+                          }
+                        },
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.of(dialogCtx).pop(null),
+                          child: const Text('Cancel'),
+                        ),
+                        FilledButton(
+                          onPressed: () {
+                            final trimmed = nameCtrl.text.trim();
+                            if (trimmed.isNotEmpty) {
+                              Navigator.of(dialogCtx).pop(trimmed);
+                            }
+                          },
+                          child: const Text('Add'),
+                        ),
+                      ],
+                    );
+                  },
+                );
+              },
+            );
+            nameCtrl.dispose();
+            if (entered != null && entered.isNotEmpty && ctx.mounted) {
+              Navigator.of(ctx).pop(
+                DimensionTemplate(
+                  id: customBlank.id,
+                  group: customBlank.group,
+                  name: entered,
+                  levels: const [],
+                  description: customBlank.description,
+                ),
+              );
+            }
+          },
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Row(
+              children: [
+                Icon(Icons.add_circle_outline,
+                    size: 18, color: cs.primary),
+                const SizedBox(width: 8),
+                Text(
+                  'Custom (start blank)',
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: cs.primary,
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );
