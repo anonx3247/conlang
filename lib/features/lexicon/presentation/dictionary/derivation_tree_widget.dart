@@ -35,10 +35,15 @@ class DerivationTreeWidget extends ConsumerWidget {
     super.key,
     required this.rootIpa,
     required this.rootId,
+    this.onNavigateToWord,
   });
 
   final String rootIpa;
   final int rootId;
+
+  /// Called when the user taps a promoted derived form to navigate to its
+  /// detail page. When null, derived rows are not tappable.
+  final ValueChanged<int>? onNavigateToWord;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -119,6 +124,7 @@ class DerivationTreeWidget extends ConsumerWidget {
         posAbbr: posAbbrForRuleId(result.ruleId),
         isException: hasException,
         promoted: promoted,
+        onNavigateToWord: onNavigateToWord,
       ));
     }
 
@@ -199,6 +205,7 @@ class _DerivedRow extends ConsumerStatefulWidget {
     required this.posAbbr,
     required this.isException,
     required this.promoted,
+    this.onNavigateToWord,
   });
 
   final int parentLexemeId;
@@ -210,6 +217,9 @@ class _DerivedRow extends ConsumerStatefulWidget {
   final String? posAbbr;
   final bool isException;
   final Lexeme? promoted;
+
+  /// Called when the user taps a promoted derived form. Null disables tapping.
+  final ValueChanged<int>? onNavigateToWord;
 
   @override
   ConsumerState<_DerivedRow> createState() => _DerivedRowState();
@@ -444,17 +454,47 @@ class _DerivedRowState extends ConsumerState<_DerivedRow> {
               children: [
                 Row(
                   children: [
-                    Text(
-                      widget.displayLabel,
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        fontSize: 13,
-                        color:
-                            widget.isException ? Colors.amber : cs.onSurface,
-                        fontWeight: widget.isException
-                            ? FontWeight.w600
-                            : FontWeight.normal,
+                    // Tappable when promoted and navigation callback provided.
+                    if (promoted != null && widget.onNavigateToWord != null)
+                      GestureDetector(
+                        onTap: () => widget.onNavigateToWord!(promoted.id),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              widget.displayLabel,
+                              style: theme.textTheme.bodyMedium?.copyWith(
+                                fontSize: 13,
+                                color: widget.isException
+                                    ? Colors.amber
+                                    : cs.primary,
+                                fontWeight: widget.isException
+                                    ? FontWeight.w600
+                                    : FontWeight.normal,
+                                decoration: TextDecoration.underline,
+                                decorationColor: widget.isException
+                                    ? Colors.amber
+                                    : cs.primary,
+                              ),
+                            ),
+                            const SizedBox(width: 2),
+                            Icon(Icons.open_in_new,
+                                size: 12, color: cs.primary),
+                          ],
+                        ),
+                      )
+                    else
+                      Text(
+                        widget.displayLabel,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          fontSize: 13,
+                          color:
+                              widget.isException ? Colors.amber : cs.onSurface,
+                          fontWeight: widget.isException
+                              ? FontWeight.w600
+                              : FontWeight.normal,
+                        ),
                       ),
-                    ),
                     const SizedBox(width: 6),
                     Text(
                       widget.ruleName,

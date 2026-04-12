@@ -682,6 +682,7 @@ class _WordDetailPanelState extends ConsumerState<WordDetailPanel> {
             child: DerivationTreeWidget(
               rootIpa: lexeme.ipa,
               rootId: widget.lexemeId,
+              onNavigateToWord: widget.onNavigateToWord,
             ),
           ),
 
@@ -1217,11 +1218,35 @@ class WordDetailParentsSection extends ConsumerWidget {
     final parentsAsync = ref.watch(parentsForLexemeProvider(lexeme.id));
     final parents =
         parentsAsync.asData?.value ?? const <LexemeParentRow>[];
-    if (parents.isEmpty) return const SizedBox.shrink();
+
+    // D-62: also show rule-derived parent (derivedFromLexemeId) alongside
+    // manual parents. Show the section even when manual parents are empty
+    // but a rule-derived parent exists.
+    final hasRuleDerivedParent = lexeme.derivedFromLexemeId != null;
+    if (parents.isEmpty && !hasRuleDerivedParent) {
+      return const SizedBox.shrink();
+    }
 
     final allLexemes =
         ref.watch(allLexemeListProvider).asData?.value ?? const <Lexeme>[];
     final lexemeById = {for (final lx in allLexemes) lx.id: lx};
+
+    // Resolve rule name for the rule-derived parent pill.
+    String? ruleDerivedParentRuleName;
+    Lexeme? ruleDerivedParent;
+    if (hasRuleDerivedParent) {
+      ruleDerivedParent = lexemeById[lexeme.derivedFromLexemeId!];
+      if (lexeme.derivedViaRuleId != null) {
+        final rulesAsync = ref.watch(morphologicalRuleListProvider);
+        final rules = rulesAsync.asData?.value ?? const [];
+        for (final r in rules) {
+          if (r.id == lexeme.derivedViaRuleId) {
+            ruleDerivedParentRuleName = r.name;
+            break;
+          }
+        }
+      }
+    }
 
     return Padding(
       padding: const EdgeInsets.only(top: 8, bottom: 12),
@@ -1236,9 +1261,53 @@ class WordDetailParentsSection extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: 6),
+          // Rule-derived parent pill (D-62) — shown before manual parents.
+          if (hasRuleDerivedParent && ruleDerivedParent != null)
+            _buildRuleDerivedParentRow(
+                context, ruleDerivedParent, ruleDerivedParentRuleName),
           for (final row in parents)
             _buildParentRow(context, row, lexemeById),
         ],
+      ),
+    );
+  }
+
+  Widget _buildRuleDerivedParentRow(
+    BuildContext context,
+    Lexeme parent,
+    String? ruleName,
+  ) {
+    final label = (parent.romanization != null &&
+            parent.romanization!.isNotEmpty)
+        ? parent.romanization!
+        : parent.ipa;
+    final meaning = parent.meaning ?? '';
+    final relationship = ruleName != null ? 'via $ruleName' : 'via rule';
+    final chipLabel = '$label ($meaning) — $relationship';
+
+    if (onNavigateToWord != null) {
+      return Padding(
+        padding: const EdgeInsets.only(top: 4),
+        child: ActionChip(
+          avatar: const Icon(Icons.arrow_upward, size: 14),
+          label: Text(
+            chipLabel,
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              fontSize: 11,
+            ),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 2),
+          materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          onPressed: () => onNavigateToWord!(parent.id),
+        ),
+      );
+    }
+
+    return Padding(
+      padding: const EdgeInsets.only(left: 8, top: 2),
+      child: Text(
+        chipLabel,
+        style: Theme.of(context).textTheme.bodySmall,
       ),
     );
   }
