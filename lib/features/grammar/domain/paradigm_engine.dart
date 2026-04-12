@@ -51,6 +51,17 @@ ParadigmCell computeParadigmCell({
   List<PhonologicalRewriteRule> rewriteRules = const [],
   List<MarkerDecl> markers = const [],
   MorphologyEngine engine = const MorphologyEngine(),
+  // D-88 — 04-17. When provided, rule candidates whose bindings contain
+  // an entry on an intrinsic dim are short-circuit-filtered: the entry
+  // must match the lexeme's intrinsicLevelsJson value for the rule to
+  // be eligible.
+  Map<int, int>? lexemeIntrinsicLevels,
+  // D-88 — 04-17. Maps dimId → intrinsic flag. When a dim has
+  // intrinsic == true and the rule has a binding on it, the binding
+  // acts as a filter, not an axis.
+  // Null = legacy callers (backward compat) - intrinsic short-circuit
+  // disabled when null.
+  Map<int, bool>? dimensionIntrinsicFlags,
 }) {
   // D-13: only active inflectional rules are eligible. Derivational rules
   // have empty dims, which also means `isInflectional == false`, so the
@@ -62,6 +73,22 @@ ParadigmCell computeParadigmCell({
   var working = root;
   final remaining = Map<int, int>.from(target);
   final chain = <InflectionalRule>[];
+
+  // D-88 — 04-17. Intrinsic short-circuit: when flags are provided, a
+  // rule whose bindings contain an intrinsic-dim entry must match the
+  // lexeme's intrinsicLevelsJson value for that dim to be eligible.
+  // Null `lexemeIntrinsicLevels` means "no word-level intrinsic data
+  // known" — any rule binding on an intrinsic dim fails the match.
+  bool matchesIntrinsicConstraints(InflectionalRule r) {
+    if (dimensionIntrinsicFlags == null) return true;
+    for (final entry in r.bindings.dims.entries) {
+      if (dimensionIntrinsicFlags[entry.key] == true) {
+        final lexemeValue = lexemeIntrinsicLevels?[entry.key];
+        if (lexemeValue != entry.value) return false;
+      }
+    }
+    return true;
+  }
 
   /// D-45 step 3 fall-back: when the inflectional rule loop would return
   /// ParadigmUncovered because no chain was produced, consult [markers]
@@ -82,8 +109,17 @@ ParadigmCell computeParadigmCell({
   }
 
   while (remaining.isNotEmpty) {
-    final candidates =
-        active.where((r) => _isSubset(r.bindings.dims, remaining)).toList();
+    // D-88 — 04-17. Two-stage filter: first, intrinsic constraint check
+    // (rule's intrinsic-dim bindings must match the lexeme's
+    // intrinsicLevelsJson), then subset against the non-intrinsic
+    // projection of the binding map. Order is locked: intrinsic FIRST
+    // so we never evaluate subset membership against bindings that
+    // would have been rejected by the constraint.
+    final candidates = active
+        .where(matchesIntrinsicConstraints)
+        .where((r) => _isSubset(
+            _nonIntrinsicBindings(r, dimensionIntrinsicFlags), remaining))
+        .toList();
 
     if (candidates.isEmpty) {
       if (chain.isEmpty) {
@@ -153,6 +189,12 @@ ParadigmCell computeParadigmCell({
     working = winnerForm!;
     chain.add(winner);
     for (final dimId in winner.bindings.dims.keys) {
+      // D-88 — 04-17. Intrinsic dims are filters, not axes — they must
+      // never be removed from `remaining` because `remaining` only ever
+      // contains non-intrinsic entries upstream. Guarding here defends
+      // against callers that pass an intrinsic dim in the target map
+      // by mistake.
+      if (dimensionIntrinsicFlags?[dimId] == true) continue;
       remaining.remove(dimId);
     }
   }
@@ -173,6 +215,22 @@ ParadigmCell computeParadigmCell({
         );
 
   return ParadigmFilled(form: finalForm, ruleChain: chain);
+}
+
+/// D-88 — 04-17. Projects a rule's binding map to the non-intrinsic dims
+/// only. When [flags] is null (legacy callers), returns the binding map
+/// unchanged. The subset check against `remaining` uses this projection
+/// so intrinsic-dim entries act as filters (handled by
+/// `matchesIntrinsicConstraints`), not as axes that would require the
+/// paradigm cell target to contain them.
+Map<int, int> _nonIntrinsicBindings(
+  InflectionalRule r,
+  Map<int, bool>? flags,
+) {
+  if (flags == null) return r.bindings.dims;
+  return Map.fromEntries(
+    r.bindings.dims.entries.where((e) => flags[e.key] != true),
+  );
 }
 
 /// True iff every entry in [sub] is present in [sup] with the same value.

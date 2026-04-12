@@ -258,6 +258,11 @@ class ParadigmChart {
 /// whose id is in the set is dropped from the expansion BEFORE the product
 /// is computed, so its levels never appear as cell keys.
 ///
+/// D-89 — 04-17. When any dimension has `intrinsic == true`, it is filtered
+/// out of the Cartesian enumeration base — intrinsic dims are never paradigm
+/// axes. The engine still consults the rule's intrinsic-dim bindings as
+/// filters via [lexemeIntrinsicLevels] + [dimensionIntrinsicFlags] (D-88).
+///
 /// Returns an empty chart when every dimension is skipped or no active dims
 /// exist.
 ParadigmChart generateParadigm({
@@ -268,13 +273,21 @@ ParadigmChart generateParadigm({
   List<PhonologicalRewriteRule> rewriteRules = const [],
   List<MarkerDecl> markers = const [],
   Set<int> skippedDimensionIds = const {},
+  // D-88 / D-89 — 04-17. Intrinsic short-circuit threading. Null-safe
+  // for legacy callers that pre-date the intrinsic feature.
+  Map<int, int>? lexemeIntrinsicLevels,
+  Map<int, bool>? dimensionIntrinsicFlags,
 }) {
   final activeDims =
       dimensions.where((d) => !skippedDimensionIds.contains(d.id)).toList();
-  if (activeDims.isEmpty) return ParadigmChart(const {});
+  // D-89 — 04-17. Filter intrinsic dims out of cell enumeration. They are
+  // filters, not axes, so they must never appear as cell keys.
+  final nonIntrinsicDims =
+      activeDims.where((d) => !d.intrinsic).toList();
+  if (nonIntrinsicDims.isEmpty) return ParadigmChart(const {});
 
   final entries = <String, ParadigmChartEntry>{};
-  for (final featureSet in cartesianFeatureSets(activeDims)) {
+  for (final featureSet in cartesianFeatureSets(nonIntrinsicDims)) {
     if (featureSet.isEmpty) continue;
     final cell = computeParadigmCell(
       root: root,
@@ -283,6 +296,8 @@ ParadigmChart generateParadigm({
       inventory: inventory,
       rewriteRules: rewriteRules,
       markers: markers,
+      lexemeIntrinsicLevels: lexemeIntrinsicLevels,
+      dimensionIntrinsicFlags: dimensionIntrinsicFlags,
     );
     entries[featureSetKey(featureSet)] =
         ParadigmChartEntry(featureSet: featureSet, cell: cell);
@@ -400,6 +415,14 @@ final computedInflectedParadigmProvider =
   final promoted = ref.watch(promotedDerivedFormProvider(lexemeId));
   final root = promoted?.ipa ?? lexeme.ipa;
 
+  // D-88 / D-89 — 04-17. Build the intrinsic short-circuit inputs via
+  // the helper in grammar_providers.dart, which centralizes the
+  // semantics next to `intrinsicDimensionsForPosProvider`.
+  final intrinsic = buildIntrinsicParadigmInputs(
+    dims: dims,
+    intrinsicLevelsJson: lexeme.intrinsicLevelsJson,
+  );
+
   return generateParadigm(
     root: root,
     dimensions: dims,
@@ -409,5 +432,7 @@ final computedInflectedParadigmProvider =
     markers: markers,
     skippedDimensionIds:
         decodeSkippedDimensionIds(lexeme.skippedDimensionsJson),
+    lexemeIntrinsicLevels: intrinsic.lexemeIntrinsicLevels,
+    dimensionIntrinsicFlags: intrinsic.dimensionIntrinsicFlags,
   );
 });

@@ -6,6 +6,7 @@ import '../../../lexicon/data/lexeme_providers.dart';
 import '../../../morphology/data/morphology_providers.dart';
 import '../../../morphology/presentation/rules/rules_page.dart';
 import '../../../project/data/project_providers.dart';
+import '../../data/grammar_providers.dart';
 import '../../data/typology_providers.dart';
 import '../../domain/pos_resolver.dart';
 import '../../domain/rule_kind.dart';
@@ -102,9 +103,33 @@ class _InflectionsPageState extends ConsumerState<InflectionsPage> {
     final posAsync = ref.watch(posListProvider);
     final posList = posAsync.asData?.value ?? const <PartsOfSpeechData>[];
 
+    // D-84 — 04-17. Intrinsic backfill banner consumer. Surfaces one
+    // MaterialBanner per pending row in project_settings that has not
+    // been dismissed. Dismiss writes a sibling `_dismissed_<dimId>`
+    // marker and invalidates the provider.
+    final bannersAsync = ref.watch(intrinsicBackfillBannerProvider);
+    final banners = bannersAsync.asData?.value ?? const <IntrinsicBackfillBanner>[];
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        for (final banner in banners)
+          MaterialBanner(
+            content: Text(
+              'Review ${banner.count} words with auto-assigned default '
+              'level for ${banner.dimName}.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => _onReviewBanner(banner),
+                child: const Text('Review'),
+              ),
+              TextButton(
+                onPressed: () => _onDismissBanner(banner),
+                child: const Text('Dismiss'),
+              ),
+            ],
+          ),
         // ---- Top controls: POS + word picker ---------------------------
         Padding(
           padding: const EdgeInsets.all(8),
@@ -193,6 +218,34 @@ class _InflectionsPageState extends ConsumerState<InflectionsPage> {
         ],
       ),
     );
+  }
+
+  /// D-84 — 04-17. "Review" action on the backfill banner. For now this
+  /// just dismisses the banner — Task 7 adds the filtered Lexicon
+  /// navigation. We dismiss on Review because the user's stated intent is
+  /// "I've seen it" and leaving it up after a click feels broken.
+  void _onReviewBanner(IntrinsicBackfillBanner banner) {
+    _onDismissBanner(banner);
+  }
+
+  /// D-84 — 04-17. Dismiss handler writes a `_dismissed_<dimId>` marker to
+  /// project_settings and invalidates the banner provider so the
+  /// MaterialBanner disappears from the Inflections sub-tab.
+  Future<void> _onDismissBanner(IntrinsicBackfillBanner banner) async {
+    final db = ref.read(currentDatabaseProvider);
+    if (db == null) return;
+    final dismissKey =
+        'intrinsic_backfill_banner_dismissed_${banner.dimId}';
+    await (db.delete(db.projectSettings)
+          ..where((t) => t.key.equals(dismissKey)))
+        .go();
+    await db.into(db.projectSettings).insert(
+          ProjectSettingsCompanion.insert(
+            key: dismissKey,
+            value: 'true',
+          ),
+        );
+    ref.invalidate(intrinsicBackfillBannerProvider);
   }
 
   Widget _buildWordPicker(List<PartsOfSpeechData> posList) {

@@ -6,6 +6,7 @@ import 'package:conlang_workbench/db/app_database.dart';
 import 'package:conlang_workbench/features/grammar/data/inflectional_rule_pos_dao.dart';
 import 'package:conlang_workbench/features/grammar/data/paradigm_cell_override_dao.dart';
 import 'package:conlang_workbench/features/grammar/data/paradigm_coverage_provider.dart';
+import 'package:conlang_workbench/features/grammar/domain/coverage_matrix.dart';
 import 'package:conlang_workbench/features/grammar/domain/dimension_level.dart';
 import 'package:conlang_workbench/features/grammar/domain/feature_bindings.dart';
 import 'package:conlang_workbench/features/grammar/domain/rule_kind.dart';
@@ -173,16 +174,33 @@ void main() {
       await container.read(dimensionsForPosProvider(nounId).future);
       await container.read(inflectionalRulesForPosProvider(nounId).future);
 
-      final coverage = container.read(paradigmCoverageMatrixProvider(nounId));
+      final matrix = container.read(paradigmCoverageMatrixProvider(nounId));
 
-      expect(coverage[(numberDimId, 2)], isTrue,
-          reason: 'Number=PL should be covered by the Plural rule');
-      expect(coverage[(numberDimId, 1)], isFalse,
-          reason: 'Number=SG should be uncovered');
-      expect(coverage[(genderDimId, 1)], isFalse,
-          reason: 'Gender=M should be uncovered');
-      expect(coverage[(genderDimId, 2)], isFalse,
-          reason: 'Gender=F should be uncovered');
+      // 04-17 D-91: axes collapse to only the referenced dim (Number).
+      // Gender is not referenced by any rule, so it drops OUT of the
+      // axis set entirely. The cells are now the Cartesian product of
+      // referenced axes only — (Number=SG) + (Number=PL), not the old
+      // per-(dim,level) flat shape.
+      expect(matrix.axes, equals([numberDimId]),
+          reason: 'only referenced dim (Number) is an axis; '
+              'Gender collapses out per D-91');
+      expect(matrix.cells.length, equals(2));
+      expect(
+        matrix.cells[FeatureSetKey({numberDimId: 2})],
+        isTrue,
+        reason: 'Number=PL should be covered by the Plural rule',
+      );
+      expect(
+        matrix.cells[FeatureSetKey({numberDimId: 1})],
+        isFalse,
+        reason: 'Number=SG should be uncovered',
+      );
+      // Gender cells are not in the matrix at all (axis collapsed out).
+      expect(
+        matrix.cells[FeatureSetKey({genderDimId: 1})],
+        isNull,
+        reason: 'Gender axis collapsed out — no cell exists',
+      );
     });
   });
 }

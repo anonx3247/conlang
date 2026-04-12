@@ -260,5 +260,8 @@ Dimension _dim({
     ordering: 0,
     levelsJson: encodeLevelsJson(levels),
     templateId: null,
+    // 04-17 D-82: intrinsic flag added; default false for pre-04-17
+    // test fixtures that never exercised the intrinsic short-circuit.
+    intrinsic: false,
   );
 }

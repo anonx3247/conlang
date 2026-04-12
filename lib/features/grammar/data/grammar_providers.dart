@@ -8,6 +8,7 @@ import '../domain/marker.dart';
 import 'dimension_templates.dart';
 import 'grammar_dao.dart';
 import 'inflectional_rule_pos_dao.dart';
+import 'intrinsic_levels_codec.dart';
 import 'lexeme_parents_dao.dart';
 import 'marker_dao.dart';
 
@@ -210,6 +211,36 @@ final intrinsicBackfillBannerProvider =
   }
   return pending;
 });
+
+/// D-88 / D-89 — 04-17. Helper used by `computedInflectedParadigmProvider`
+/// in `typology_providers.dart` to build the intrinsic short-circuit
+/// inputs for the paradigm engine:
+///
+/// - `dimensionIntrinsicFlags`: `{d.id: d.intrinsic}` for every dimension
+///   the POS carries. The engine uses this flag map to decide, per rule
+///   binding entry, whether the entry acts as an axis (non-intrinsic) or
+///   a filter (intrinsic).
+/// - `lexemeIntrinsicLevels`: [IntrinsicLevelsCodec.decode] of the
+///   lexeme's stored `intrinsicLevelsJson`. Null / empty input decodes
+///   to an empty map, which downstream fails any intrinsic constraint
+///   check for that dim.
+///
+/// Keeping the helper here (beside the other 04-17 intrinsic providers)
+/// means `typology_providers.dart` only has to import + call — the
+/// binding semantics live next to `intrinsicDimensionsForPosProvider`
+/// so future audits find everything in one place.
+({
+  Map<int, bool> dimensionIntrinsicFlags,
+  Map<int, int> lexemeIntrinsicLevels,
+}) buildIntrinsicParadigmInputs({
+  required List<Dimension> dims,
+  required String? intrinsicLevelsJson,
+}) {
+  return (
+    dimensionIntrinsicFlags: {for (final d in dims) d.id: d.intrinsic},
+    lexemeIntrinsicLevels: IntrinsicLevelsCodec.decode(intrinsicLevelsJson),
+  );
+}
 
 IntrinsicBackfillBanner? _decodePendingBanner(String value) {
   try {
