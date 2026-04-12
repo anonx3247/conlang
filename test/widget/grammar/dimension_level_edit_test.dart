@@ -117,29 +117,34 @@ void main() {
         .write(DimensionsCompanion(levelsJson: Value(encodeLevelsJson(levels))));
   }
 
-  // Finder for the per-level chip edit InkWell (the tappable region
-  // wrapping Icons.edit_outlined inside an InputChip label row). We
-  // target the InkWell (not the Icon) because the InkWell is the
-  // gesture-receiving widget and has a reliable hit test bounds.
+  // 04-18-02: Updated finders for the new _LevelChip structure.
+  // Level chips are now custom Container-based widgets (not InputChip)
+  // so each icon has its own hit-test area.
+
+  // Finder for the edit InkWell in the _LevelChip for the level whose
+  // text matches [labelSubstring]. The InkWell wraps a Padding > Icon(edit).
   Finder levelChipEditInkWellFor(String labelSubstring) {
+    // Find the Container Row that contains the label text, then find the
+    // InkWell whose child Padding > Icon is edit_outlined.
     return find.descendant(
       of: find.ancestor(
         of: find.text(labelSubstring),
-        matching: find.byType(InputChip),
+        matching: find.byType(Row),
       ),
       matching: find.byWidgetPredicate(
         (w) =>
             w is InkWell &&
-            w.child is Icon &&
-            (w.child as Icon).icon == Icons.edit_outlined,
+            w.child is Padding &&
+            (w.child as Padding).child is Icon &&
+            ((w.child as Padding).child as Icon).icon == Icons.edit_outlined,
       ),
     );
   }
 
   // Tap the edit affordance via a direct call to the InkWell's onTap
-  // callback. This bypasses hit-testing entirely which would otherwise
-  // fight the InputChip's nested Row layout where the icon's
-  // getCenter() can overlap the adjacent Text widget's hit bounds.
+  // callback. With the new _LevelChip, the InkWell has its own hit-test
+  // area (no parent chip absorbing taps), but we still invoke onTap
+  // directly for test reliability.
   Future<void> tapLevelChipEditIcon(
       WidgetTester tester, String labelSubstring) async {
     final inkwell = tester.widget<InkWell>(
@@ -288,24 +293,41 @@ void main() {
     );
 
     testWidgets(
-      'D-79 Test 5 — onDeleted chip affordance still works independently',
+      'D-79 Test 5 — delete affordance works (04-18-02: via close InkWell + confirm dialog)',
       (tester) async {
         await tester.pumpWidget(buildApp());
         await settle(tester);
 
-        // Directly call the chip's onDeleted callback to validate the
-        // delete wiring without fighting the chip's internal render
-        // structure (the delete icon is rendered in a chip-internal
-        // slot that's not a simple descendant of the label Row).
-        final pluralChip = tester.widget<InputChip>(
-          find.ancestor(
+        // 04-18-02: Level chips are now _LevelChip (not InputChip).
+        // The delete affordance is an InkWell wrapping Icon(Icons.close).
+        // Tapping it shows a confirmation dialog first (T-18-02-01).
+        final closeInkWell = find.descendant(
+          of: find.ancestor(
             of: find.text('Plural (PL)'),
-            matching: find.byType(InputChip),
+            matching: find.byType(Row),
+          ),
+          matching: find.byWidgetPredicate(
+            (w) =>
+                w is InkWell &&
+                w.child is Padding &&
+                (w.child as Padding).child is Icon &&
+                ((w.child as Padding).child as Icon).icon == Icons.close,
           ),
         );
-        expect(pluralChip.onDeleted, isNotNull,
-            reason: 'D-79 must preserve onDeleted on level chips.');
-        pluralChip.onDeleted!();
+        expect(closeInkWell, findsWidgets,
+            reason: 'D-79 must have a close/delete affordance on level chips.');
+
+        // Tap close icon — confirmation dialog appears first.
+        final inkwell = tester.widget<InkWell>(closeInkWell.first);
+        inkwell.onTap!();
+        await tester.pumpAndSettle();
+
+        // Confirmation dialog visible.
+        expect(find.byType(AlertDialog), findsOneWidget);
+        expect(find.text('Delete level?'), findsOneWidget);
+
+        // Confirm deletion.
+        await tester.tap(find.text('Delete'));
         await tester.pumpAndSettle();
         await settle(tester);
 
