@@ -150,22 +150,23 @@ class _InflectionsPageState extends ConsumerState<InflectionsPage> {
         ),
         Divider(height: 1, color: cs.outlineVariant),
         // ---- Bottom: rules pane (~45% of remaining space) --------------
+        // D-78 / plan 04-16: when no POS is selected, render the full
+        // inflectional rules list. RulesPage already treats
+        // posScopeFilter: null as "show all groups" (per D-50 /
+        // plan 04-13 Task 4). The paradigm pane above still shows a
+        // placeholder because it genuinely requires a POS; the rules
+        // list does not.
         Expanded(
           flex: 45,
-          child: _selectedPosId == null
-              ? _emptyState(
-                  theme,
-                  cs,
-                  icon: Icons.auto_fix_high_outlined,
-                  message: 'Select a POS to view its rules.',
-                )
-              : RulesPage(
-                  kind: RuleKind.inflectional,
-                  // D-50: scope the rules pane to the selected POS —
-                  // includes any multi-POS rules whose junction set
-                  // contains this POS (plan 04-13 Task 4).
-                  posScopeFilter: _selectedPosId,
-                ),
+          child: RulesPage(
+            kind: RuleKind.inflectional,
+            // D-50 / plan 04-13: scope the rules pane to the selected
+            // POS when one is chosen (includes any multi-POS rules
+            // whose junction set contains this POS). When
+            // _selectedPosId is null, RulesPage falls through to the
+            // full grouped inflectional list.
+            posScopeFilter: _selectedPosId,
+          ),
         ),
       ],
     );
