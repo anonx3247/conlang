@@ -163,9 +163,9 @@ Plans:
 - [x] 04-18-03-PLAN.md — [UAT, Wave 8] Paradigm viewer intrinsic fixes: 1-dim rendering (issue 37a), word-detail filter (37b/39b), multi-word intrinsic selection (37c)
 - [x] 04-18-04-PLAN.md — [UAT, Wave 9] POS + intrinsic level mandatory validation, missing-assignment warning icons, edit mode phonetic preview
 - [x] 04-18-05-PLAN.md — [UAT, Wave 9] Markers UI: D-100 "leave as unmarked" checkbox, D-101 MarkerDao save path, D-102 merged rules+markers list, D-103 cell click to edit marker
-- [ ] 04-19-01-PLAN.md — [GAP, Wave 10] Marker name persistence (schema v11) + level abbreviation resolution in binding summaries + feature bindings under rule names
-- [ ] 04-19-02-PLAN.md — [GAP, Wave 10] Standard form validation romanized-form fix + single-row paradigm table IntrinsicWidth layout fix
-- [ ] 04-19-03-PLAN.md — [GAP, Wave 11] Standard form violation preview in derivation rule editor
+- [x] 04-19-01-PLAN.md — [GAP, Wave 10] Marker name persistence (schema v11) + level abbreviation resolution in binding summaries + feature bindings under rule names
+- [x] 04-19-02-PLAN.md — [GAP, Wave 10] Standard form validation romanized-form fix + single-row paradigm table IntrinsicWidth layout fix
+- [x] 04-19-03-PLAN.md — [GAP, Wave 11] Standard form violation preview in derivation rule editor
 
 ### Phase 5: Culture Wiki
 **Goal**: Users can document the world and culture behind their conlang in a structured wiki with Markdown formatting and navigable internal links between pages

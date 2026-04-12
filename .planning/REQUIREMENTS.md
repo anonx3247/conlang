@@ -60,10 +60,10 @@ Requirements for initial release. Each maps to roadmap phases.
 - [ ] **GRAM-01**: User can define parts of speech categories with N user-defined grammatical dimensions, each with K levels (e.g. gender[M/F] × number[SG/PL] × case[NOM/ACC])
 - [ ] **GRAM-02**: User can attach inflectional morphology rules to dimension levels that stack hierarchically with auto-generated combined forms
 - [ ] **GRAM-03**: User can generate full paradigm charts (declension/conjugation tables) for any word based on its POS dimensions
-- [ ] **GRAM-04**: User can specify language typology choices (ergative/accusative alignment, word order, modality expression as morphological vs analytic)
+- [x] **GRAM-04**: User can specify language typology choices (ergative/accusative alignment, word order, modality expression as morphological vs analytic)
 - [ ] **GRAM-05**: User can override any individual cell in a paradigm table with a manual exception form
-- [ ] **GRAM-06**: The standalone Morphology tab is removed; rule editor UI is reused within Grammar (inflectional) and Lexicon (derivational)
-- [ ] **GRAM-07**: Existing morphology rules migrate to lexicon derivational rules; derivational rules have a dedicated tab in Lexicon with romanization for all derived forms
+- [x] **GRAM-06**: The standalone Morphology tab is removed; rule editor UI is reused within Grammar (inflectional) and Lexicon (derivational)
+- [x] **GRAM-07**: Existing morphology rules migrate to lexicon derivational rules; derivational rules have a dedicated tab in Lexicon with romanization for all derived forms
 
 ### Culture
 
@@ -166,10 +166,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | GRAM-01 | Phase 4 | Pending |
 | GRAM-02 | Phase 4 | Pending |
 | GRAM-03 | Phase 4 | Pending |
-| GRAM-04 | Phase 4 | Pending |
+| GRAM-04 | Phase 4 | Complete |
 | GRAM-05 | Phase 4 | Pending |
-| GRAM-06 | Phase 4 | Pending |
-| GRAM-07 | Phase 4 | Pending |
+| GRAM-06 | Phase 4 | Complete |
+| GRAM-07 | Phase 4 | Complete |
 | CULT-01 | Phase 5 | Pending |
 | CULT-02 | Phase 5 | Pending |
 | REF-01 | Phase 6 | Pending |
