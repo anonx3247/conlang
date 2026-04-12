@@ -3,14 +3,18 @@ import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../db/app_database.dart';
+import '../../lexicon/data/lexeme_providers.dart';
+import '../../morphology/data/morphology_providers.dart';
 import '../../project/data/project_providers.dart';
 import '../domain/marker.dart';
+import '../domain/pos_resolver.dart';
 import 'dimension_templates.dart';
 import 'grammar_dao.dart';
 import 'inflectional_rule_pos_dao.dart';
 import 'intrinsic_levels_codec.dart';
 import 'lexeme_parents_dao.dart';
 import 'marker_dao.dart';
+import 'standard_form_pattern_dao.dart';
 
 // NOTE: plain Provider / StreamProvider (not @riverpod codegen) — per STATE
 // 01-05, riverpod_generator 3.x cannot resolve Drift part-file types at
@@ -241,6 +245,74 @@ final intrinsicBackfillBannerProvider =
     lexemeIntrinsicLevels: IntrinsicLevelsCodec.decode(intrinsicLevelsJson),
   );
 }
+
+// ---------------------------------------------------------------------------
+// D-94 / D-95 — 04-17 paradigm viewer stacked intrinsic slices
+// ---------------------------------------------------------------------------
+
+/// D-94 — 04-17. Lexemes for a POS grouped by their intrinsic level combination.
+/// Key = FeatureSet (dim id -> level id) for intrinsic dims only.
+/// Value = list of lexemes whose intrinsicLevelsJson exactly matches the key.
+final lexemesByIntrinsicCombinationProvider =
+    Provider.family<Map<String, List<Lexeme>>, int>((ref, posId) {
+  final dimsAsync = ref.watch(dimensionsForPosProvider(posId));
+  final dims = dimsAsync.asData?.value ?? const <Dimension>[];
+  final intrinsicDims = dims.where((d) => d.intrinsic).toList();
+  if (intrinsicDims.isEmpty) return const {};
+
+  final allLexemes = ref.watch(allLexemeListProvider).asData?.value ?? [];
+  final posList = ref.watch(posListProvider).asData?.value ?? [];
+
+  // Filter lexemes to this POS.
+  final posLexemes = allLexemes.where((lex) {
+    final pos = posForLexeme(lex, posList);
+    return pos?.id == posId;
+  }).toList();
+
+  final grouped = <String, List<Lexeme>>{};
+  for (final lex in posLexemes) {
+    final decoded = IntrinsicLevelsCodec.decode(lex.intrinsicLevelsJson);
+    final key = <int, int>{
+      for (final d in intrinsicDims)
+        if (decoded.containsKey(d.id)) d.id: decoded[d.id]!,
+    };
+    // Skip lexemes with incomplete intrinsic level coverage.
+    if (key.length != intrinsicDims.length) continue;
+    final keyStr = key.entries.map((e) => '${e.key}:${e.value}').join(',');
+    grouped.putIfAbsent(keyStr, () => []).add(lex);
+  }
+  // Sort each bucket by id ascending for deterministic default-first.
+  for (final list in grouped.values) {
+    list.sort((a, b) => a.id.compareTo(b.id));
+  }
+  return grouped;
+});
+
+/// D-95 — 04-17. First matching lexeme for a POS (lowest id). Null if
+/// no lexeme of that POS exists. Replaces the empty-template default.
+final firstMatchingLexemeForPosProvider =
+    Provider.family<Lexeme?, int>((ref, posId) {
+  final allLexemes = ref.watch(allLexemeListProvider).asData?.value ?? [];
+  final posList = ref.watch(posListProvider).asData?.value ?? [];
+  final posLexemes = allLexemes.where((lex) {
+    final pos = posForLexeme(lex, posList);
+    return pos?.id == posId;
+  }).toList();
+  if (posLexemes.isEmpty) return null;
+  posLexemes.sort((a, b) => a.id.compareTo(b.id));
+  return posLexemes.first;
+});
+
+// ---------------------------------------------------------------------------
+// D-97 — 04-17 standard form pattern DAO provider
+// ---------------------------------------------------------------------------
+
+/// D-97 — 04-17. The [StandardFormPatternDao] scoped to the currently-open
+/// project database. Returns null when no project is open.
+final standardFormPatternDaoProvider = Provider<StandardFormPatternDao?>((ref) {
+  final db = ref.watch(currentDatabaseProvider);
+  return db == null ? null : StandardFormPatternDao(db);
+});
 
 IntrinsicBackfillBanner? _decodePendingBanner(String value) {
   try {
