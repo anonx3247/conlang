@@ -246,6 +246,13 @@ class _RuleEditorDialogState extends ConsumerState<RuleEditorDialog> {
   String? _validationError;
   bool _saving = false;
 
+  /// D-90 (plan 04-17 Task 6) — save-time validator reason for rules that
+  /// bind only to intrinsic dimensions. Cleared whenever the user modifies
+  /// a binding (POS chip or dim chip). Rendered as an inline red Text below
+  /// the action bar when non-null; also surfaced as a SnackBar the instant
+  /// the user taps Save on a blocked rule.
+  String? _saveBlockedReason;
+
   // ---- Plan 04-05 kind-aware state -----------------------------------------
 
   /// Inflectional mode — the full POS set this rule applies to (plan 04-11
@@ -601,6 +608,69 @@ class _RuleEditorDialogState extends ConsumerState<RuleEditorDialog> {
     final featureBindings =
         FeatureBindings(pos: boundPos, dims: boundDims);
 
+    // ---- D-90 / plan 04-17 Task 6 — block sole-intrinsic-binding rules ----
+    //
+    // [WARN-3 revision] Iterate EVERY POS in bindings.pos, not just the
+    // first. A rule like [Noun, Adjective] where `gender` is intrinsic
+    // on Noun but non-intrinsic on Adjective must NOT be blocked if ANY
+    // POS has a non-intrinsic axis available. Using only the first POS
+    // (pre-revision behavior) would produce a list-order-dependent
+    // verdict, which is unsafe. The correct semantics: for each posId in
+    // bindings.pos, compute the nonIntrinsicAxes projection under that
+    // POS's dimension intrinsic-flag map; the rule is blocked iff EVERY
+    // POS yields an empty nonIntrinsicAxes set (no POS under which the
+    // rule would produce paradigm variation).
+    //
+    // Empty-bindings rules (bindings.dims.isEmpty) are intentionally NOT
+    // blocked here — the derivational/unbound inflectional path upstream
+    // already handled that.
+    final bindings = featureBindings; // grep-locked alias: `bindings.pos`
+    if (widget.kind == RuleKind.inflectional &&
+        bindings.dims.isNotEmpty &&
+        bindings.pos.isNotEmpty) {
+      var anyPosHasNonIntrinsicAxis = false;
+      for (final posId in bindings.pos) {
+        final dims =
+            await ref.read(dimensionsForPosProvider(posId).future);
+        // intrinsicFlags maps only dim ids that EXIST on this POS to
+        // their intrinsic boolean. Dim ids absent from the POS are
+        // intentionally not present in the map — a binding on a dim
+        // that this POS does not define cannot produce variation for
+        // this POS regardless of intrinsicness, so it is NOT counted
+        // as a non-intrinsic axis here.
+        final intrinsicFlags = {for (final d in dims) d.id: d.intrinsic};
+        final nonIntrinsicAxes = bindings.dims.keys
+            .where((id) =>
+                intrinsicFlags.containsKey(id) && intrinsicFlags[id] == false)
+            .toList();
+        if (nonIntrinsicAxes.isNotEmpty) {
+          anyPosHasNonIntrinsicAxis = true;
+          break;
+        }
+      }
+      if (!anyPosHasNonIntrinsicAxis) {
+        // Exact locked error copy from D-90 — grep-verified in Task 12.
+        // Single-line string so `grep 'Rule has no non-intrinsic axes'`
+        // AND `grep 'intrinsic-only behavior belongs in standard-form patterns'`
+        // both succeed against this source file.
+        // ignore: lines_longer_than_80_chars
+        const errorCopy = 'Rule has no non-intrinsic axes — it would produce no paradigm variation. Intrinsic-only behavior belongs in standard-form patterns at word creation, not inflection rules.';
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(errorCopy),
+              duration: Duration(seconds: 6),
+            ),
+          );
+          setState(() {
+            _saving = false;
+            _saveBlockedReason = errorCopy;
+          });
+        }
+        return; // Do NOT proceed with insertRule / updateRule.
+      }
+    }
+
     // Legacy CSV stays in lockstep with the new bindings so the posIds column
     // continues to mirror reality until it's physically dropped (A9).
     final posIdsStr =
@@ -779,6 +849,10 @@ class _RuleEditorDialogState extends ConsumerState<RuleEditorDialog> {
                       } else {
                         _featureBindings.remove(dim.id);
                       }
+                      // D-90 — clear any prior blocked-save hint the moment
+                      // the user edits a binding, so the inline red text
+                      // disappears the same frame.
+                      _saveBlockedReason = null;
                       _recomputeTiebreak(_cachedInflectionalRows);
                     });
                   },
@@ -876,6 +950,9 @@ class _RuleEditorDialogState extends ConsumerState<RuleEditorDialog> {
                     // intersection (best-effort — the build-time intersection
                     // filter will surface the mismatch too).
                   }
+                  // D-90 — clear any prior blocked-save hint the moment
+                  // the user edits the POS set.
+                  _saveBlockedReason = null;
                   _selectedPosIds = Set<int>.from(_inflectionalPosSet);
                   _recomputeTiebreak(_cachedInflectionalRows);
                 });
@@ -1329,33 +1406,53 @@ class _RuleEditorDialogState extends ConsumerState<RuleEditorDialog> {
             // --- Action bar ---
             Padding(
               padding: const EdgeInsets.fromLTRB(24, 12, 24, 12),
-              child: Row(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  if (_validationError != null)
-                    Expanded(
+                  Row(
+                    children: [
+                      if (_validationError != null)
+                        Expanded(
+                          child: Text(
+                            _validationError!,
+                            style: theme.textTheme.bodySmall
+                                ?.copyWith(color: cs.error),
+                          ),
+                        )
+                      else
+                        const Spacer(),
+                      TextButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        child: const Text('Cancel'),
+                      ),
+                      const SizedBox(width: 8),
+                      FilledButton(
+                        onPressed: _saving ? null : _save,
+                        child: _saving
+                            ? const SizedBox(
+                                width: 16,
+                                height: 16,
+                                child:
+                                    CircularProgressIndicator(strokeWidth: 2),
+                              )
+                            : const Text('Save'),
+                      ),
+                    ],
+                  ),
+                  // D-90 / plan 04-17 Task 6 — inline red reason shown below
+                  // the Save button when the user tapped Save on a rule that
+                  // only binds intrinsic dims. Cleared on any binding edit.
+                  if (_saveBlockedReason != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8),
                       child: Text(
-                        _validationError!,
+                        _saveBlockedReason!,
+                        key: const ValueKey('saveBlockedReasonText'),
                         style: theme.textTheme.bodySmall
                             ?.copyWith(color: cs.error),
                       ),
-                    )
-                  else
-                    const Spacer(),
-                  TextButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    child: const Text('Cancel'),
-                  ),
-                  const SizedBox(width: 8),
-                  FilledButton(
-                    onPressed: _saving ? null : _save,
-                    child: _saving
-                        ? const SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Text('Save'),
-                  ),
+                    ),
                 ],
               ),
             ),
