@@ -111,7 +111,8 @@ final filteredGlossaryProvider = Provider<List<GlossaryEntry>>((ref) {
   return entries.where((entry) {
     final matchesSearch = query.isEmpty ||
         entry.term.toLowerCase().contains(query) ||
-        entry.definition.toLowerCase().contains(query);
+        entry.definition.toLowerCase().contains(query) ||
+        entry.example.toLowerCase().contains(query);
     final matchesCategory = category == null || entry.category == category;
     return matchesSearch && matchesCategory;
   }).toList();
