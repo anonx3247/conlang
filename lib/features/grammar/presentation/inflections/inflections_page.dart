@@ -57,6 +57,12 @@ class _InflectionsPageState extends ConsumerState<InflectionsPage> {
   int? _selectedPosId;
   int? _selectedLexemeId;
 
+  /// Issue 37c — 04-18-03. Multi-word selection set for intrinsic POSes.
+  /// When the selected POS has intrinsic dimensions, the word picker switches
+  /// to FilterChip multi-select and this set tracks the active selection.
+  /// Cleared when the POS changes.
+  Set<int> _selectedLexemeIds = {};
+
   /// G-01: restore the per-POS last-selected lexeme from project_settings
   /// when a POS is picked. Falls back to leaving `_selectedLexemeId` null
   /// (keeps the "(template)" default) when no stored value exists or the
@@ -83,6 +89,7 @@ class _InflectionsPageState extends ConsumerState<InflectionsPage> {
     setState(() {
       _selectedPosId = posId;
       _selectedLexemeId = null;
+      _selectedLexemeIds = {};
     });
     if (posId != null) {
       _restoreLastSelectedWord(posId);
@@ -158,6 +165,10 @@ class _InflectionsPageState extends ConsumerState<InflectionsPage> {
         // D-95 — 04-17. When no explicit word is selected, fall back to
         // first-matching-lexeme for the POS (lowest id). The -1 sentinel
         // is only passed when firstMatchingLexeme is also null (no words).
+        //
+        // Issue 37c — 04-18-03. For intrinsic POSes, lexemeIds (multi-select)
+        // is passed instead of a single lexemeId so the stacked-slice viewer
+        // can filter each slice to only the selected words.
         Expanded(
           flex: 55,
           child: _selectedPosId == null
@@ -171,9 +182,29 @@ class _InflectionsPageState extends ConsumerState<InflectionsPage> {
                   padding: const EdgeInsets.all(8),
                   child: Builder(
                     builder: (context) {
+                      final dimsAsync = ref.watch(
+                          dimensionsForPosProvider(_selectedPosId!));
+                      final dims =
+                          dimsAsync.asData?.value ?? const <Dimension>[];
+                      final hasIntrinsic = dims.any((d) => d.intrinsic);
+
+                      if (hasIntrinsic) {
+                        // Issue 37c: multi-word mode — pass selected IDs.
+                        return ParadigmTableWidget(
+                          lexemeId: -1,
+                          posId: _selectedPosId!,
+                          clickMode: ParadigmClickMode.ruleEditor,
+                          lexemeIds: _selectedLexemeIds.isEmpty
+                              ? null
+                              : _selectedLexemeIds.toList(),
+                        );
+                      }
+
                       final effectiveLexemeId = _selectedLexemeId ??
-                          ref.watch(firstMatchingLexemeForPosProvider(
-                              _selectedPosId!))?.id ??
+                          ref
+                              .watch(firstMatchingLexemeForPosProvider(
+                                  _selectedPosId!))
+                              ?.id ??
                           -1;
                       return ParadigmTableWidget(
                         lexemeId: effectiveLexemeId,
@@ -277,6 +308,68 @@ class _InflectionsPageState extends ConsumerState<InflectionsPage> {
         ref.watch(romanizationEnabledProvider).asData?.value ?? true;
     final romanize = ref.watch(romanizeProvider);
 
+    // Issue 37c — 04-18-03. Detect whether selected POS has intrinsic dims.
+    // If so, switch to multi-select FilterChips so the user can select one
+    // word per intrinsic level and see all slices side by side.
+    final dimsAsync =
+        ref.watch(dimensionsForPosProvider(_selectedPosId!));
+    final dims = dimsAsync.asData?.value ?? const <Dimension>[];
+    final hasIntrinsic = dims.any((d) => d.intrinsic);
+
+    if (hasIntrinsic) {
+      return Expanded(
+        child: SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: [
+              Text(
+                'Words:',
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
+              const SizedBox(width: 8),
+              if (filtered.isEmpty)
+                Text(
+                  'No words for this POS yet.',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withValues(alpha: 0.6),
+                      ),
+                )
+              else
+                for (final l in filtered)
+                  Padding(
+                    padding: const EdgeInsets.only(right: 4),
+                    child: FilterChip(
+                      label: Text(lexemeDisplayLabel(
+                        l,
+                        romEnabled: romEnabled,
+                        romanize: romanize,
+                      )),
+                      selected: _selectedLexemeIds.contains(l.id),
+                      onSelected: (selected) {
+                        setState(() {
+                          if (selected) {
+                            _selectedLexemeIds = {
+                              ..._selectedLexemeIds,
+                              l.id,
+                            };
+                          } else {
+                            _selectedLexemeIds =
+                                _selectedLexemeIds.difference({l.id});
+                          }
+                        });
+                      },
+                    ),
+                  ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    // Non-intrinsic POS: single-select dropdown (existing behavior).
     return Expanded(
       child: DropdownButton<int?>(
         value: _selectedLexemeId,
