@@ -177,12 +177,13 @@ Plans:
 **Success Criteria** (what must be TRUE):
   1. User can create, edit, and organize Markdown-formatted documentation pages within their project, with rendered preview
   2. User can create [[wiki-style]] internal links between culture pages and navigate the link graph — broken links are visually distinct from resolved ones
-**Plans:** 3 plans in 3 waves
+**Plans:** 4 plans (3 core + 1 gap closure)
 
 Plans:
-- [ ] 05-01-PLAN.md — Data layer: CulturePages table (schema v13), CultureDao CRUD + tree queries, Riverpod providers, PageHistory, block splitter with tests
-- [ ] 05-02-PLAN.md — Culture shell + tree sidebar: enable Culture tab, GoRouter wiring, 240px tree sidebar with DnD + context menu CRUD, page view, back/forward nav, empty state
-- [ ] 05-03-PLAN.md — Block editor + wiki links: heading-based section editing (rendered/edit toggle), [[wikilink]] InlineSyntax + autocomplete, broken link ? badge + create prompt, hover preview tooltip
+- [x] 05-01-PLAN.md — Data layer: CulturePages table (schema v13), CultureDao CRUD + tree queries, Riverpod providers, PageHistory, block splitter with tests
+- [x] 05-02-PLAN.md — Culture shell + tree sidebar: enable Culture tab, GoRouter wiring, 240px tree sidebar with DnD + context menu CRUD, page view, back/forward nav, empty state
+- [x] 05-03-PLAN.md — Block editor + wiki links: heading-based section editing (rendered/edit toggle), [[wikilink]] InlineSyntax + autocomplete, broken link ? badge + create prompt, hover preview tooltip
+- [ ] 05-04-PLAN.md — [GAP] Fix StateProvider compile error: replace with NotifierProvider pattern, update 6 call sites
 
 ### Phase 6: Reference Glossary
 **Goal**: Users can look up unfamiliar linguistic terminology without leaving the application
@@ -209,5 +210,5 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4. Phases 5 and 6 depend only on
 | 3.1 Display & UX Fixes | 4/4 | Complete | 2026-04-10 |
 | 3.2 Phonology Enhancements | 4/4 | Complete | 2026-04-10 |
 | 4. Grammar & Morphology | 25/25 | Complete | 2026-04-12 |
-| 5. Culture Wiki | 0/3 | Not started | - |
+| 5. Culture Wiki | 3/4 | Gap closure | - |
 | 6. Reference Glossary | 0/1 | Not started | - |
