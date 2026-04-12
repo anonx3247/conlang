@@ -319,6 +319,11 @@ class _RuleEditorDialogState extends ConsumerState<RuleEditorDialog> {
   /// Derivational mode — target POS (defaults to [_inputPosId] on change).
   int? _outputPosId;
 
+  /// Derivational mode — plan 04-20-01 (UAT New Gap 1): maps each intrinsic
+  /// dimension of the output POS to the selected level id. Cleared whenever
+  /// [_outputPosId] changes. Persisted in featureBindings.outputIntrinsic.
+  Map<int, int> _outputIntrinsicLevels = {};
+
   /// Derivational mode — D-59 auto_apply flag. When true, every matching-POS
   /// word is auto-promoted into a Lexeme row with a templated gloss on save.
   /// Ignored in inflectional mode (the column defaults to false there).
@@ -428,6 +433,10 @@ class _RuleEditorDialogState extends ConsumerState<RuleEditorDialog> {
       // D-59 (plan 04-14): hydrate the auto_apply flag on edit so the
       // checkbox reflects the persisted value when the dialog reopens.
       _autoApply = row.autoApply;
+      // plan 04-20-01: load output intrinsic levels from featureBindings.
+      if (bindings.outputIntrinsic.isNotEmpty) {
+        _outputIntrinsicLevels = Map<int, int>.from(bindings.outputIntrinsic);
+      }
     }
 
     // Load multi-POS selection from posIds text column (legacy fallback —
@@ -670,8 +679,14 @@ class _RuleEditorDialogState extends ConsumerState<RuleEditorDialog> {
       boundPos = _inputPosId == null ? const <int>[] : <int>[_inputPosId!];
       boundDims = const <int, int>{};
     }
-    final featureBindings =
-        FeatureBindings(pos: boundPos, dims: boundDims);
+    final featureBindings = FeatureBindings(
+      pos: boundPos,
+      dims: boundDims,
+      // plan 04-20-01: persist output intrinsic levels for derivational rules.
+      outputIntrinsic: widget.kind == RuleKind.derivational
+          ? Map<int, int>.from(_outputIntrinsicLevels)
+          : const <int, int>{},
+    );
 
     // ---- D-90 / plan 04-17 Task 6 — block sole-intrinsic-binding rules ----
     //
@@ -1222,9 +1237,88 @@ class _RuleEditorDialogState extends ConsumerState<RuleEditorDialog> {
             ),
         ],
         onChanged: (v) {
-          setState(() => _outputPosId = v);
+          setState(() {
+            _outputPosId = v;
+            // plan 04-20-01: clear stale intrinsic selections when output
+            // POS changes so the picker always reflects the new POS.
+            _outputIntrinsicLevels = {};
+          });
         },
       ),
+      // plan 04-20-01 (UAT New Gap 1): intrinsic level picker for output POS.
+      // Shown when the output POS has intrinsic dimensions (e.g. Noun with
+      // Gender). Each intrinsic dim gets a DropdownButton so the user can
+      // specify which level the derived word gets (e.g. Feminine).
+      if (_outputPosId != null)
+        Builder(
+          builder: (context) {
+            final dimsAsync =
+                ref.watch(dimensionsForPosProvider(_outputPosId!));
+            final allDims =
+                dimsAsync.asData?.value ?? const <db.Dimension>[];
+            final intrinsicDims =
+                allDims.where((d) => d.intrinsic).toList();
+            if (intrinsicDims.isEmpty) return const SizedBox.shrink();
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 12),
+                Text(
+                  'Output intrinsic levels',
+                  style: theme.textTheme.bodySmall,
+                ),
+                const SizedBox(height: 4),
+                for (final dim in intrinsicDims) ...[
+                  Row(
+                    children: [
+                      SizedBox(
+                        width: 100,
+                        child: Text(
+                          dim.name,
+                          style: theme.textTheme.bodySmall,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: DropdownButtonFormField<int>(
+                          initialValue: _outputIntrinsicLevels[dim.id],
+                          decoration: const InputDecoration(
+                            border: OutlineInputBorder(),
+                            isDense: true,
+                            contentPadding: EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 8,
+                            ),
+                          ),
+                          isExpanded: true,
+                          hint: const Text('Select level'),
+                          items: [
+                            for (final lvl in decodeLevelsJson(dim.levelsJson))
+                              DropdownMenuItem<int>(
+                                value: lvl.id,
+                                child: Text(
+                                  '${lvl.name} (${lvl.abbr})',
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                          ],
+                          onChanged: (v) {
+                            if (v != null) {
+                              setState(() =>
+                                  _outputIntrinsicLevels[dim.id] = v);
+                            }
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                ],
+              ],
+            );
+          },
+        ),
       // D-59 / G-18 (plan 04-14): auto_apply checkbox + templated-gloss
       // preview. Derivational-only — the column defaults to false for
       // inflectional rules and the checkbox isn't rendered there.
