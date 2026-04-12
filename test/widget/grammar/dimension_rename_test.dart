@@ -86,6 +86,17 @@ void main() {
         .getSingle();
   }
 
+  // Finder for the dimension rename IconButton (the card-header edit
+  // button with tooltip 'Rename dimension'). Disambiguates from the
+  // per-level chip edit icons added in plan 04-16 D-79.
+  Finder renameDimensionButton() => find.byWidgetPredicate(
+        (w) =>
+            w is IconButton &&
+            w.tooltip == 'Rename dimension' &&
+            w.icon is Icon &&
+            (w.icon as Icon).icon == Icons.edit_outlined,
+      );
+
   group('G-11 — rename dimension UI', () {
     testWidgets(
         'renders an edit_outlined rename IconButton on each dimension card',
@@ -94,7 +105,8 @@ void main() {
       await settle(tester);
 
       expect(find.text('Number'), findsOneWidget);
-      expect(find.byIcon(Icons.edit_outlined), findsOneWidget);
+      // Exactly one 'Rename dimension' IconButton per card.
+      expect(renameDimensionButton(), findsOneWidget);
       expect(find.byIcon(Icons.delete_outline), findsOneWidget);
 
       await teardownWidget(tester);
@@ -107,11 +119,13 @@ void main() {
       await tester.pumpWidget(buildApp());
       await settle(tester);
 
-      await tester.tap(find.byIcon(Icons.edit_outlined));
+      await tester.tap(renameDimensionButton());
       await tester.pumpAndSettle();
 
       expect(find.text('Rename dimension'), findsOneWidget);
-      // TextField value should be the current dim name
+      // The rename dialog contains exactly one TextField (the
+      // dimension name field). Disambiguated from the level editor
+      // dialog which has two TextFields.
       final textField = tester.widget<TextField>(find.byType(TextField));
       expect(textField.controller?.text, equals('Number'));
 
@@ -125,7 +139,7 @@ void main() {
       await tester.pumpWidget(buildApp());
       await settle(tester);
 
-      await tester.tap(find.byIcon(Icons.edit_outlined));
+      await tester.tap(renameDimensionButton());
       await tester.pumpAndSettle();
 
       // Clear the field and type the new name.
@@ -151,7 +165,7 @@ void main() {
       await tester.pumpWidget(buildApp());
       await settle(tester);
 
-      await tester.tap(find.byIcon(Icons.edit_outlined));
+      await tester.tap(renameDimensionButton());
       await tester.pumpAndSettle();
 
       // Clear the text field.
