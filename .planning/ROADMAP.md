@@ -138,7 +138,7 @@ Plans:
   5. User can record language-level typology choices (alignment, word order, modality expression strategy)
   6. The standalone Morphology tab is removed; its rule editor UI is reused within Grammar (inflectional) and Lexicon (derivational)
   7. Existing morphology rules are migrated to lexicon derivational rules; derivational rules appear in a "Derivations" tab within Lexicon with romanization for all derived forms
-**Plans:** 22 plans
+**Plans:** 25 plans
 
 Plans:
 - [x] 04-01-PLAN.md — Schema v8 migration: Dimensions + ParadigmCellOverrides tables, kind/featureBindings/input/outputPosId columns, file-level v7 backup, FeatureBindings TypeConverter
@@ -158,11 +158,14 @@ Plans:
 - [x] 04-15-PLAN.md — [GAP, Wave 6] Notation-layer unification (D-70..D-77, closes G-66/G-67/G-68): phonemic IPA as single canonical storage for MorphologicalRules.source (D-70/D-71); romanization bijection validator + save-time block + project-open banner (D-72); rule editor rom input -> deromanize at save / romanize on load, class-ref invariant doc in morphology_dsl.dart (D-73); v9->v10 Drift migration with round-trip classify rewrite pass + migration_log, 04-17 extends same v10 block (D-74); per-surface render-path audit persisted to 04-15-VERIFICATION.md (D-75); sound rule editor asymmetric labels Pattern (phonemic) / Replacement (phonetic) (D-76); delete static MorphologyPreviewPanel + VerticalDivider from rules_page.dart, keep live preview_panel.dart (D-77)
 - [x] 04-16-PLAN.md — [GAP, Wave 7] Rules list UX + dimension editor extensions + phoneme validation: empty-POS inflectional rules passthrough (D-78); per-level rename via chip edit icon (D-79); add-new-level + chip (D-80); PhonemeLiteralScanner domain service for G-69 phoneme validation
 - [x] 04-17-PLAN.md — [GAP, Wave 7] Intrinsic dimensions per POS + standard-form patterns + paradigm viewer stacking (D-82..D-99) + user feedback fixes (D-110..D-113)
-- [ ] 04-18-01-PLAN.md — [UAT, Wave 8] Word detail fixes: promoted derivation edit IPA (issue 13), phonetic bracket display (issue 35b), POS pill with intrinsic level (issue 39a), clickable parent pills
-- [ ] 04-18-02-PLAN.md — [UAT, Wave 8] Dimension editor chip hit-test fix (issues 28/38), phonetic preview integration (issue 35a), delete confirmation dialogs
-- [ ] 04-18-03-PLAN.md — [UAT, Wave 8] Paradigm viewer intrinsic fixes: 1-dim rendering (issue 37a), word-detail filter (37b/39b), multi-word intrinsic selection (37c)
-- [ ] 04-18-04-PLAN.md — [UAT, Wave 9] POS + intrinsic level mandatory validation, missing-assignment warning icons, edit mode phonetic preview
-- [ ] 04-18-05-PLAN.md — [UAT, Wave 9] Markers UI: D-100 "leave as unmarked" checkbox, D-101 MarkerDao save path, D-102 merged rules+markers list, D-103 cell click to edit marker
+- [x] 04-18-01-PLAN.md — [UAT, Wave 8] Word detail fixes: promoted derivation edit IPA (issue 13), phonetic bracket display (issue 35b), POS pill with intrinsic level (issue 39a), clickable parent pills
+- [x] 04-18-02-PLAN.md — [UAT, Wave 8] Dimension editor chip hit-test fix (issues 28/38), phonetic preview integration (issue 35a), delete confirmation dialogs
+- [x] 04-18-03-PLAN.md — [UAT, Wave 8] Paradigm viewer intrinsic fixes: 1-dim rendering (issue 37a), word-detail filter (37b/39b), multi-word intrinsic selection (37c)
+- [x] 04-18-04-PLAN.md — [UAT, Wave 9] POS + intrinsic level mandatory validation, missing-assignment warning icons, edit mode phonetic preview
+- [x] 04-18-05-PLAN.md — [UAT, Wave 9] Markers UI: D-100 "leave as unmarked" checkbox, D-101 MarkerDao save path, D-102 merged rules+markers list, D-103 cell click to edit marker
+- [ ] 04-19-01-PLAN.md — [GAP, Wave 10] Marker name persistence (schema v11) + level abbreviation resolution in binding summaries + feature bindings under rule names
+- [ ] 04-19-02-PLAN.md — [GAP, Wave 10] Standard form validation romanized-form fix + single-row paradigm table IntrinsicWidth layout fix
+- [ ] 04-19-03-PLAN.md — [GAP, Wave 11] Standard form violation preview in derivation rule editor
 
 ### Phase 5: Culture Wiki
 **Goal**: Users can document the world and culture behind their conlang in a structured wiki with Markdown formatting and navigable internal links between pages
