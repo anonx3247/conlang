@@ -416,6 +416,19 @@ Parser<MorphBranch> _buildBranchParser() {
 ///
 /// Grammar: branches separated by ' | ' (space-pipe-space).
 /// Each branch: optional condition spec(s) + space + operation sequence.
+///
+/// Class-ref invariant (D-73, plan 04-15):
+/// Class-ref tokens — V, C, F, and [natural-class-name] — are matched
+/// STRUCTURALLY against the phoneme inventory via binding_translator.dart.
+/// They are NOT phonological characters and MUST bypass both romanize() and
+/// deromanize() unchanged. The rule editor's rom input / phonemic storage
+/// contract (D-73) only applies to literal-phoneme segments; class refs flow
+/// through untouched.
+///
+/// D-78 note: the `.` character is a rom-side glyph separator consumed by
+/// `dotAwareDeromanize()` before a rule source ever reaches this parser, so
+/// by the time parseMorphDsl sees a DSL string it is pure phonemic and
+/// never contains a D-78 separator dot.
 ParsedMorphRule parseMorphDsl(String source, {int id = 0, String name = ''}) {
   final trimmed = source.trim();
   if (trimmed.isEmpty) {

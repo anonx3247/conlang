@@ -9,6 +9,8 @@ import '../../../grammar/domain/feature_bindings.dart';
 import '../../../grammar/domain/inflectional_rule.dart';
 import '../../../grammar/domain/rule_kind.dart';
 import '../../../grammar/domain/tiebreak_detector.dart';
+import '../../../phonology/data/romanization_bijection.dart';
+import '../../../phonology/data/romanization_providers.dart';
 import '../../../phonology/presentation/shared/ipa_keyboard/ipa_text_field.dart';
 import '../../application/derivation_promotion_service.dart';
 import '../../data/morphology_providers.dart';
@@ -49,6 +51,14 @@ class _OpState {
   AblautDirection ablautDirection;
   int? ablautCount; // null = all
 
+  // D-73 (plan 04-15): RAW phonemic values stashed at load time. Used by
+  // the build-time rom hydration pass to re-populate the controllers once
+  // the romanizationMappingsProvider stream has resolved.
+  String? rawAffix;
+  String? rawAblautFrom;
+  String? rawAblautTo;
+  String? rawSuppletive;
+
   _OpState()
       : type = OpType.suffix,
         redupScope = 'CV',
@@ -66,38 +76,53 @@ class _OpState {
   }
 
   /// Convert to domain [MorphOperation]. Returns null if fields are incomplete.
-  MorphOperation? toOperation() {
+  ///
+  /// D-73 (plan 04-15): when [literalTransform] is non-null, it is applied to
+  /// every SINGLE-TOKEN literal-phoneme field (affix, ablaut from/to,
+  /// suppletive) before the MorphOperation is constructed. Used by [_save] to
+  /// route field values through `deromanize` when rom mode is active so the
+  /// stored MorphologicalRules.source is always phonemic.
+  ///
+  /// WARN-1 / D-73 partial: template literal runs are NOT transformed — the
+  /// template pattern uses structural digit/char semantics and in the 04-15
+  /// deferred scope we store the template as-typed. See must_haves.truths.
+  MorphOperation? toOperation({String Function(String)? literalTransform}) {
+    String t(String s) =>
+        literalTransform == null ? s : literalTransform(s);
     return switch (type) {
       OpType.prefix => affixCtrl.text.trim().isNotEmpty
-          ? PrefixOp(affixCtrl.text.trim())
+          ? PrefixOp(t(affixCtrl.text.trim()))
           : null,
       OpType.suffix => affixCtrl.text.trim().isNotEmpty
-          ? SuffixOp(affixCtrl.text.trim())
+          ? SuffixOp(t(affixCtrl.text.trim()))
           : null,
       OpType.infix => () {
           final affix = affixCtrl.text.trim();
           final pos = int.tryParse(posCtrl.text.trim()) ?? 1;
-          return affix.isNotEmpty ? InfixOp(affix: affix, position: pos) : null;
+          return affix.isNotEmpty
+              ? InfixOp(affix: t(affix), position: pos)
+              : null;
         }(),
       OpType.ablaut => () {
           final from = ablautFromCtrl.text.trim();
           final to = ablautToCtrl.text.trim();
           return (from.isNotEmpty && to.isNotEmpty)
               ? AblautOp(
-                  from: from,
-                  to: to,
+                  from: t(from),
+                  to: t(to),
                   count: ablautCount,
                   direction: ablautDirection,
                 )
               : null;
         }(),
       OpType.template => templateCtrl.text.trim().isNotEmpty
+          // D-73 partial deferred: template literal runs NOT transformed.
           ? TemplateOp(templateCtrl.text.trim())
           : null,
       OpType.reduplication =>
         RedupOp(scope: redupScope, position: redupPosition),
       OpType.suppletive => suppletiveCtrl.text.trim().isNotEmpty
-          ? SuppleteOp(suppletiveCtrl.text.trim())
+          ? SuppleteOp(t(suppletiveCtrl.text.trim()))
           : null,
     };
   }
@@ -135,15 +160,26 @@ class _BranchState {
   }
 
   /// Convert to domain [MorphBranch]. Returns null if all operations are incomplete.
-  MorphBranch? toBranch() {
-    final operations =
-        ops.map((o) => o.toOperation()).whereType<MorphOperation>().toList();
+  ///
+  /// D-73 (plan 04-15): see [toOperation] — [literalTransform] is forwarded
+  /// to every op's literal-token fields. Condition patterns are NOT
+  /// transformed (WARN-1 deferred).
+  MorphBranch? toBranch({String Function(String)? literalTransform}) {
+    final operations = ops
+        .map((o) => o.toOperation(literalTransform: literalTransform))
+        .whereType<MorphOperation>()
+        .toList();
     if (operations.isEmpty) return null;
 
     final conds = conditions
         .where((c) => c.patternCtrl.text.trim().isNotEmpty)
-        .map((c) => PatternCond(c.patternCtrl.text.trim(),
-            position: c.position) as MorphCondition)
+        .map((c) => PatternCond(
+              // WARN-1 / D-73 partial: condition patterns are NOT
+              // transformed in 04-15 — structural literal-run wrapping is
+              // deferred to a follow-up plan.
+              c.patternCtrl.text.trim(),
+              position: c.position,
+            ) as MorphCondition)
         .toList();
 
     return MorphBranch(conditions: conds, operations: operations);
@@ -263,9 +299,40 @@ class _RuleEditorDialogState extends ConsumerState<RuleEditorDialog> {
     // so initState doesn't need to schedule a post-frame callback.
   }
 
+  /// D-73 (plan 04-15): set to true once the romanize hydration pass has
+  /// run successfully in build() — guards against re-running on every
+  /// rebuild and lets `initState` stash the raw phonemic values while the
+  /// mappings stream is still loading its first event.
+  bool _romDisplayHydrated = false;
+
   /// Populate form state from a Drift [db.MorphologicalRule] row.
+  ///
+  /// D-73 (plan 04-15): literal-phoneme fields (affix, ablautFrom, ablautTo,
+  /// removeSuffix, suppletive) are passed through `romanizeProvider` on the
+  /// load path when rom is enabled so the user sees their rom input instead
+  /// of the stored phonemic form. Class-ref tokens (V, C, F, [name]) and
+  /// condition/template literal runs are NOT wrapped — see must_haves.truths
+  /// D-73 partial-string scope and the WARN-1 deferral.
+  ///
+  /// Two-phase hydration: initState stashes RAW phonemic values in every
+  /// controller (the mappings stream hasn't emitted yet, so romanize is
+  /// identity). Then [_hydrateRomDisplay] runs in build() once the stream
+  /// resolves and re-populates the wrapped controllers with the rom form.
+  //
+  // WARN-1 / D-73 partial: template + condition literal runs are NOT wrapped
+  // in 04-15 — see must_haves.truths, follow-up plan needed.
   void _loadFromExisting(db.MorphologicalRule row) {
     _nameCtrl.text = row.name;
+
+    // D-73 (plan 04-15): wrap literal-phoneme fields with romanize() on load.
+    // We read the synchronous snapshot of romanizationEnabledProvider +
+    // romanizeProvider here; if the mappings stream hasn't resolved yet,
+    // `romanize` falls back to identity and [_hydrateRomDisplay] will
+    // re-run in build() with the real mapping set.
+    final romEnabled =
+        ref.read(romanizationEnabledProvider).asData?.value ?? true;
+    final romanize = ref.read(romanizeProvider);
+    String display(String stored) => romEnabled ? romanize(stored) : stored;
 
     // Seed kind-specific state from the row's featureBindings before we set
     // up the legacy _selectedPosIds fallback.
@@ -337,22 +404,35 @@ class _RuleEditorDialogState extends ConsumerState<RuleEditorDialog> {
         switch (op) {
           case PrefixOp(:final affix):
             os.type = OpType.prefix;
-            os.affixCtrl.text = affix;
+            // D-73: single-token literal — wrap through romanize on load.
+            // Stash raw phonemic so the build-time hydration pass can
+            // re-apply romanize once the mappings stream has resolved.
+            os.rawAffix = affix;
+            os.affixCtrl.text = display(affix);
           case SuffixOp(:final affix):
             os.type = OpType.suffix;
-            os.affixCtrl.text = affix;
+            os.rawAffix = affix;
+            os.affixCtrl.text = display(affix);
           case InfixOp(:final affix, :final position):
             os.type = OpType.infix;
-            os.affixCtrl.text = affix;
+            // D-73 partial: infix affix literal is still wrapped (it's a
+            // single-token literal field like prefix/suffix). Only the
+            // TEMPLATE field is deferred.
+            os.rawAffix = affix;
+            os.affixCtrl.text = display(affix);
             os.posCtrl.text = '$position';
           case AblautOp(:final from, :final to, :final count, :final direction):
             os.type = OpType.ablaut;
-            os.ablautFromCtrl.text = from;
-            os.ablautToCtrl.text = to;
+            os.rawAblautFrom = from;
+            os.rawAblautTo = to;
+            os.ablautFromCtrl.text = display(from);
+            os.ablautToCtrl.text = display(to);
             os.ablautCount = count;
             os.ablautDirection = direction;
           case TemplateOp(:final pattern):
             os.type = OpType.template;
+            // WARN-1 / D-73 partial: template literal runs are NOT wrapped
+            // in 04-15. Stored as-typed under rom mode; follow-up plan.
             os.templateCtrl.text = pattern;
           case RedupOp(:final scope, :final position):
             os.type = OpType.reduplication;
@@ -360,7 +440,10 @@ class _RuleEditorDialogState extends ConsumerState<RuleEditorDialog> {
             os.redupPosition = position;
           case SuppleteOp(:final form):
             os.type = OpType.suppletive;
-            os.suppletiveCtrl.text = form;
+            // Suppletive whole-word override — a single literal phoneme
+            // string, wrap on load.
+            os.rawSuppletive = form;
+            os.suppletiveCtrl.text = display(form);
           case RemoveSuffixOp():
             // RemoveSuffixOp is an internal DSL operation; skip in UI.
             continue;
@@ -447,8 +530,24 @@ class _RuleEditorDialogState extends ConsumerState<RuleEditorDialog> {
       return;
     }
 
-    final branches =
-        _branches.map((b) => b.toBranch()).whereType<MorphBranch>().toList();
+    // D-73 (plan 04-15): save-path rom -> phonemic conversion. When rom
+    // mode is active, literal-phoneme fields (affix, ablaut from/to,
+    // suppletive) are passed through `deromanizeProvider` BEFORE the
+    // MorphOperation is constructed so the serialized source written to
+    // MorphologicalRules.source is always phonemic IPA.
+    //
+    // WARN-1 / D-73 partial: template + condition literal runs are NOT
+    // wrapped in 04-15 — see must_haves.truths, follow-up plan needed.
+    final romEnabled =
+        ref.read(romanizationEnabledProvider).asData?.value ?? true;
+    final deromanize = ref.read(deromanizeProvider);
+    final String Function(String)? literalTransform =
+        romEnabled ? deromanize : null;
+
+    final branches = _branches
+        .map((b) => b.toBranch(literalTransform: literalTransform))
+        .whereType<MorphBranch>()
+        .toList();
     if (branches.isEmpty) {
       setState(
           () => _validationError =
@@ -950,10 +1049,116 @@ class _RuleEditorDialogState extends ConsumerState<RuleEditorDialog> {
   // Build
   // ---------------------------------------------------------------------------
 
+  /// D-73 rom display hydration pass (plan 04-15).
+  ///
+  /// `_loadFromExisting` runs in `initState`, which is BEFORE the Drift
+  /// stream query backing `romanizationMappingsProvider` has emitted its
+  /// first value — so the synchronous `ref.read(romanizeProvider)` call
+  /// there returns the identity fallback and the controllers end up
+  /// holding raw phonemic text. This method re-applies romanize to each
+  /// stashed raw value once the mappings stream has resolved. Runs at
+  /// most once per dialog lifetime (guarded by [_romDisplayHydrated]).
+  void _hydrateRomDisplay() {
+    if (_romDisplayHydrated) return;
+    // Only hydrate once the mappings stream has resolved. If it's still
+    // loading, leave the raw text in place — build() will call us again
+    // on the next frame once data arrives.
+    final mappingsAsync = ref.read(romanizationMappingsProvider);
+    if (mappingsAsync is! AsyncData) return;
+    final romEnabled =
+        ref.read(romanizationEnabledProvider).asData?.value ?? true;
+    if (!romEnabled) {
+      // rom disabled — nothing to wrap. Mark hydrated so we don't re-run.
+      _romDisplayHydrated = true;
+      return;
+    }
+    final romanize = ref.read(romanizeProvider);
+    for (final branch in _branches) {
+      for (final op in branch.ops) {
+        if (op.rawAffix != null) {
+          op.affixCtrl.text = romanize(op.rawAffix!);
+        }
+        if (op.rawAblautFrom != null) {
+          op.ablautFromCtrl.text = romanize(op.rawAblautFrom!);
+        }
+        if (op.rawAblautTo != null) {
+          op.ablautToCtrl.text = romanize(op.rawAblautTo!);
+        }
+        if (op.rawSuppletive != null) {
+          op.suppletiveCtrl.text = romanize(op.rawSuppletive!);
+        }
+      }
+    }
+    _romDisplayHydrated = true;
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
+
+    // D-73 hydration: once the mappings stream has resolved, re-apply
+    // romanize to the stashed raw phonemic values in each op state so
+    // the user sees their rom input. Watched (not read) so that if the
+    // mappings change while the editor is open, we... actually no —
+    // changing mappings mid-edit would clobber user input, so we guard
+    // via _romDisplayHydrated.
+    _hydrateRomDisplay();
+
+    // D-72 (plan 04-15): check romanization bijection status. When the
+    // active mapping set has any violations, the rule editor is locked —
+    // the body is replaced with a read-only message pointing the user to
+    // the romanization settings, and the save button is hidden.
+    final bijectionViolations =
+        ref.watch(bijectionStatusProvider).asData?.value ??
+            const <BijectionViolation>[];
+    final bijectionLocked = bijectionViolations.isNotEmpty;
+    if (bijectionLocked) {
+      return Dialog(
+        insetPadding: const EdgeInsets.symmetric(horizontal: 40, vertical: 32),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 520),
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.lock_outline, color: cs.error),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Rule editor is locked until romanization conflicts '
+                        'are resolved — see Phonology → Romanization.',
+                        style: theme.textTheme.titleMedium
+                            ?.copyWith(color: cs.onSurface),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                for (final v in bijectionViolations)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 4),
+                    child: Text('• ${v.detail}',
+                        style: theme.textTheme.bodySmall),
+                  ),
+                const SizedBox(height: 16),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    child: const Text('Close'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
 
     // Compute current domain rule for the preview panel.
     final previewRule = _buildDomainRule(id: widget.existing?.id ?? 0);
@@ -1403,11 +1608,26 @@ class _RuleEditorDialogState extends ConsumerState<RuleEditorDialog> {
       contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 6),
     );
 
+    // D-73 + D-78 (plan 04-15): compute the rom-aware helper text once
+    // per rebuild. When rom is enabled, every literal-phoneme field shows
+    // the auto-convert blurb AND the `.` escape-hatch discoverability
+    // hint. When rom is disabled, fields show a simple "phonemic IPA"
+    // note so users know what notation the field expects.
+    final romEnabled =
+        ref.watch(romanizationEnabledProvider).asData?.value ?? true;
+    final String literalHelperText = romEnabled
+        ? 'rom (auto-converted to phonemic on save) — '
+            'use . to force a glyph boundary (e.g. at.ha vs atha)'
+        : 'phonemic IPA';
+
     return switch (op.type) {
       OpType.prefix || OpType.suffix => IpaTextField(
           controller: op.affixCtrl,
-          decoration:
-              fieldDecoration.copyWith(hintText: 'IPA affix, e.g. in, ɯ'),
+          decoration: fieldDecoration.copyWith(
+            hintText: 'IPA affix, e.g. in, ɯ',
+            helperText: literalHelperText,
+            helperMaxLines: 2,
+          ),
           onChanged: (_) => setState(() {}),
         ),
       OpType.infix => Row(
@@ -1415,8 +1635,11 @@ class _RuleEditorDialogState extends ConsumerState<RuleEditorDialog> {
             Expanded(
               child: IpaTextField(
                 controller: op.affixCtrl,
-                decoration:
-                    fieldDecoration.copyWith(hintText: 'IPA affix'),
+                decoration: fieldDecoration.copyWith(
+                  hintText: 'IPA affix',
+                  helperText: literalHelperText,
+                  helperMaxLines: 2,
+                ),
                 onChanged: (_) => setState(() {}),
               ),
             ),
@@ -1441,7 +1664,11 @@ class _RuleEditorDialogState extends ConsumerState<RuleEditorDialog> {
                 Expanded(
                   child: IpaTextField(
                     controller: op.ablautFromCtrl,
-                    decoration: fieldDecoration.copyWith(hintText: 'from'),
+                    decoration: fieldDecoration.copyWith(
+                      hintText: 'from',
+                      helperText: literalHelperText,
+                      helperMaxLines: 2,
+                    ),
                     onChanged: (_) => setState(() {}),
                   ),
                 ),
@@ -1452,7 +1679,11 @@ class _RuleEditorDialogState extends ConsumerState<RuleEditorDialog> {
                 Expanded(
                   child: IpaTextField(
                     controller: op.ablautToCtrl,
-                    decoration: fieldDecoration.copyWith(hintText: 'to'),
+                    decoration: fieldDecoration.copyWith(
+                      hintText: 'to',
+                      helperText: literalHelperText,
+                      helperMaxLines: 2,
+                    ),
                     onChanged: (_) => setState(() {}),
                   ),
                 ),
