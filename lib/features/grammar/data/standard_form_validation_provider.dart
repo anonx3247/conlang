@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../lexicon/data/lexeme_providers.dart';
 import '../../morphology/data/morphology_providers.dart';
 import '../../phonology/data/phonotactic_providers.dart';
+import '../../phonology/data/romanization_providers.dart';
 import '../../phonology/domain/word_generator.dart' show Violation;
 import '../domain/standard_form_branch.dart';
 import '../domain/standard_form_matcher.dart';
@@ -42,6 +43,7 @@ final standardFormViolationsProvider =
   if (dao == null) return const [];
 
   final inventory = ref.watch(phonemeInventoryProvider);
+  final romanize = ref.watch(romanizeProvider);
   const matcher = StandardFormMatcher();
   final violations = <Violation>[];
 
@@ -50,7 +52,8 @@ final standardFormViolationsProvider =
     if (levelId == null) continue;
     final branches = await dao.getPattern(dim.id, levelId);
     if (branches == null || branches.isEmpty) continue;
-    if (matcher.matches(lexeme.ipa, branches, inventory)) continue;
+    final romForm = romanize(lexeme.ipa);
+    if (matcher.matches(romForm, branches, inventory)) continue;
     // Violation: word does not match the standard form pattern.
     final levels = decodeLevelsJson(dim.levelsJson);
     final level = levels.where((l) => l.id == levelId).firstOrNull;
@@ -58,7 +61,7 @@ final standardFormViolationsProvider =
     final desc = _describeBranches(dim.name, levelName, branches);
     violations.add(Violation(
       position: 0,
-      length: lexeme.ipa.length,
+      length: romForm.length,
       ruleDescription: desc,
     ));
   }
