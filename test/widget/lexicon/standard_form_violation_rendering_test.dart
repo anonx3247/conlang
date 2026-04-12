@@ -5,7 +5,6 @@
 import 'package:conlang_workbench/db/app_database.dart';
 import 'package:conlang_workbench/features/grammar/data/intrinsic_levels_codec.dart';
 import 'package:conlang_workbench/features/grammar/data/standard_form_pattern_dao.dart';
-import 'package:conlang_workbench/features/grammar/data/standard_form_validation_provider.dart';
 import 'package:conlang_workbench/features/grammar/domain/dimension_level.dart';
 import 'package:conlang_workbench/features/grammar/domain/standard_form_branch.dart';
 import 'package:conlang_workbench/features/grammar/domain/standard_form_matcher.dart';
