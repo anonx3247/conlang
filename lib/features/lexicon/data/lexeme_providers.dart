@@ -127,6 +127,8 @@ final filteredLexemeListProvider = Provider<List<Lexeme>>((ref) {
   final allLexemes = ref.watch(allLexemeListProvider).asData?.value ?? [];
   final query = ref.watch(lexemeSearchQueryProvider).toLowerCase();
   final posFilter = ref.watch(lexemePosFilterProvider);
+  // New Gap 7: also romanize computed derived forms for search matching.
+  final romanize = ref.watch(romanizeProvider);
 
   // Collect root IDs whose stored derived children match the query (legacy
   // path — keeps working for any manually-inserted derived lexemes).
@@ -169,10 +171,14 @@ final filteredLexemeListProvider = Provider<List<Lexeme>>((ref) {
         for (final rule in activeRules) {
           final result = engine.applyRule(rule, root.ipa, inventory);
           if (result case MorphSuccess(:final form)) {
-            if (form != root.ipa &&
-                form.toLowerCase().contains(query)) {
-              computedDerivedMatchRootIds.add(root.id);
-              break; // one match is enough — skip remaining rules for root
+            if (form != root.ipa) {
+              final romForm = romanize(form);
+              if (form.toLowerCase().contains(query) ||
+                  (romForm.isNotEmpty &&
+                      romForm.toLowerCase().contains(query))) {
+                computedDerivedMatchRootIds.add(root.id);
+                break; // one match is enough — skip remaining rules for root
+              }
             }
           }
         }
