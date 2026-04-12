@@ -8,6 +8,7 @@ import '../features/grammar/data/inflectional_rule_pos_dao.dart';
 import '../features/grammar/data/lexeme_parents_dao.dart';
 import '../features/grammar/data/marker_dao.dart';
 import '../features/grammar/data/paradigm_cell_override_dao.dart';
+import '../features/grammar/data/standard_form_pattern_dao.dart';
 import '../features/grammar/domain/feature_bindings.dart';
 import '../features/lexicon/data/lexeme_dao.dart';
 import '../features/morphology/data/morphology_dao.dart';
@@ -143,6 +144,12 @@ class Dimensions extends Table {
   IntColumn get ordering => integer().withDefault(const Constant(0))();
   TextColumn get levelsJson => text()();
   TextColumn get templateId => text().nullable()();
+
+  /// v10 — Phase 4 04-17 D-82. When true, words of this POS have a fixed
+  /// level on this dimension (e.g. noun gender: a noun IS masculine,
+  /// it isn't inflected into the feminine). Intrinsic dims are filtered
+  /// out of cell enumeration and act as conditions in rule eval.
+  BoolColumn get intrinsic => boolean().withDefault(const Constant(false))();
 }
 
 /// Morphological rules (e.g. "Plural", "Agentive -er") in a pattern DSL.
@@ -360,6 +367,29 @@ class Lexemes extends Table {
   /// e.g. a bound root that never surfaces as a standalone word.
   BoolColumn get rootOnlyViaDerivations =>
       boolean().withDefault(const Constant(false))();
+
+  /// v10 — Phase 4 04-17 D-83. JSON object `{"<dimensionId>": <levelId>, ...}`
+  /// mapping each intrinsic dimension on this lexeme's POS to the lexeme's
+  /// fixed level on that dim. Null = no intrinsic levels set (e.g. root
+  /// words of POSes with no intrinsic dims or legacy words pre-v10).
+  /// See IntrinsicLevelsCodec for encode/decode helpers.
+  TextColumn get intrinsicLevelsJson => text().nullable()();
+}
+
+/// v10 — Phase 4 04-17 D-97. Standard-form pattern rows keyed by
+/// (dimensionId, levelId). Each row stores a list of pattern branches
+/// (kind + literal, OR-combined) that a lexeme's phonemic form must
+/// match for it to conform to the intrinsic level's standard form.
+/// Matches are soft warnings surfaced via ViolationText (D-99).
+/// Cascade delete on Dimensions removal.
+class StandardFormPatterns extends Table {
+  IntColumn get dimensionId =>
+      integer().references(Dimensions, #id, onDelete: KeyAction.cascade)();
+  IntColumn get levelId => integer()();
+  TextColumn get branchesJson => text()();
+
+  @override
+  Set<Column> get primaryKey => {dimensionId, levelId};
 }
 
 // ---------------------------------------------------------------------------
@@ -384,6 +414,7 @@ class Lexemes extends Table {
     Markers, // v9
     InflectionalRulePOS, // v9
     LexemeParents, // v9
+    StandardFormPatterns, // v10 (04-17)
   ],
   daos: [
     PhonemeDao,
@@ -398,6 +429,7 @@ class Lexemes extends Table {
     InflectionalRulePOSDao, // v9 gap D-55
     LexemeParentsDao, // v9 gap D-62
     MarkerDao, // v9 gap D-44 (re-registered after 04-11 regression)
+    StandardFormPatternDao, // v10 (04-17)
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -540,13 +572,15 @@ class AppDatabase extends _$AppDatabase {
           // Writes a per-rule outcome log to project_settings so the user
           // can verify the migration after the fact.
           //
-          // SCHEMA COORDINATION: Plan 04-17 (intrinsic dimensions) will
-          // APPEND its column and table additions to THIS v10 block. Do NOT
-          // bump to v11 in 04-17.
+          // SCHEMA COORDINATION: Plan 04-17 (intrinsic dimensions) appends
+          // its column and table additions to THIS v10 block. Do NOT
+          // bump to v11.
           //
-          // TODO(04-17): Append Dimensions.intrinsic column add,
-          // Lexemes.intrinsicLevelsJson column add, and StandardFormPatterns
-          // CREATE TABLE here. See 04-17-CONTEXT.md.
+          // --- Plan 04-17 additions appended to the 04-15 v10 block (D-82, D-83, D-97) ---
+          await m.addColumn(dimensions, dimensions.intrinsic);
+          await m.addColumn(lexemes, lexemes.intrinsicLevelsJson);
+          await m.createTable(standardFormPatterns);
+          // --- end 04-17 additions ---
 
           // Step A: Project the active romanization_mappings rows to the
           // pure NotationMapping record shape exported from notation_helpers.
@@ -787,6 +821,31 @@ class AppDatabase extends _$AppDatabase {
           await customStatement(
             'ALTER TABLE lexemes ADD COLUMN '
             '"root_only_via_derivations" INTEGER NOT NULL DEFAULT 0',
+          );
+        } catch (_) {}
+        // v10 safety net: Dimensions.intrinsic (04-17 D-82)
+        try {
+          await customStatement(
+            'ALTER TABLE dimensions ADD COLUMN '
+            '"intrinsic" INTEGER NOT NULL DEFAULT 0',
+          );
+        } catch (_) {}
+        // v10 safety net: Lexemes.intrinsicLevelsJson (04-17 D-83)
+        try {
+          await customStatement(
+            'ALTER TABLE lexemes ADD COLUMN '
+            '"intrinsic_levels_json" TEXT',
+          );
+        } catch (_) {}
+        // v10 safety net: StandardFormPatterns (04-17 D-97)
+        try {
+          await customStatement(
+            'CREATE TABLE IF NOT EXISTS standard_form_patterns ('
+            '"dimension_id" INTEGER NOT NULL REFERENCES dimensions(id) ON DELETE CASCADE, '
+            '"level_id" INTEGER NOT NULL, '
+            '"branches_json" TEXT NOT NULL, '
+            'PRIMARY KEY ("dimension_id", "level_id")'
+            ')',
           );
         } catch (_) {}
       },
