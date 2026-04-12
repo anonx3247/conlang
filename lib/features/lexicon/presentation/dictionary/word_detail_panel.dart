@@ -5,6 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../db/app_database.dart';
 import '../../../../shared/widgets/violation_text.dart';
 import '../../../grammar/data/grammar_providers.dart';
+import '../../../grammar/data/intrinsic_levels_codec.dart';
+import '../../../grammar/domain/dimension_level.dart';
 import '../../../grammar/domain/pos_resolver.dart';
 import '../../../grammar/presentation/paradigm_viewer/paradigm_table_widget.dart';
 import '../../../morphology/data/morphology_providers.dart';
@@ -42,6 +44,32 @@ class _WordDetailPanelState extends ConsumerState<WordDetailPanel> {
   final _romanizationController = TextEditingController();
   final _meaningController = TextEditingController();
   String? _editPos;
+
+  /// D-92 / D-93 (plan 04-17 Task 7) — per-intrinsic-dim level selection
+  /// for the currently-selected POS. Key = dimension id, value = selected
+  /// level id (null until the user picks one). On POS change, we preserve
+  /// entries whose dim ids overlap the new POS's intrinsic dims via
+  /// [IntrinsicLevelsCodec.decode] of the stored lexeme json; dim ids
+  /// absent from the new POS are silently dropped at save time because
+  /// they are not keys in this map.
+  final Map<int, int?> _intrinsicLevelSelections = <int, int?>{};
+
+  /// D-92 — per-dim validation error keyed by dimension id. Non-null
+  /// entries are rendered as red helper text under the dropdown and
+  /// block save.
+  final Map<int, String?> _intrinsicLevelErrors = <int, String?>{};
+
+  /// D-93 — snapshot of the lexeme's decoded intrinsic levels at the time
+  /// editing started. Used by the Builder sub-form to seed overlap
+  /// preservation when the user changes POS: any dim id present in both
+  /// the old json and the new POS's intrinsic set is pre-filled.
+  Map<int, int> _storedIntrinsicLevels = const {};
+
+  /// D-93 — set to true whenever the user changes POS via the dropdown in
+  /// edit mode. The Builder sub-form uses this flag to auto-populate
+  /// `_intrinsicLevelSelections` from [_storedIntrinsicLevels] on the
+  /// first render after the POS change, then resets the flag.
+  bool _posJustChanged = false;
 
   /// Mirrors [WordCreationForm]: true when the user has manually edited the
   /// IPA field since the last programmatic sync. Initialized by
@@ -106,6 +134,16 @@ class _WordDetailPanelState extends ConsumerState<WordDetailPanel> {
       lexeme.romanization,
       deromanize,
     );
+    // D-92 / D-93 — decode the stored intrinsic levels json into our
+    // state map AND store a snapshot for overlap preservation.
+    _storedIntrinsicLevels =
+        IntrinsicLevelsCodec.decode(lexeme.intrinsicLevelsJson);
+    _intrinsicLevelSelections
+      ..clear()
+      ..addAll(_storedIntrinsicLevels
+          .map<int, int?>((k, v) => MapEntry(k, v)));
+    _intrinsicLevelErrors.clear();
+    _posJustChanged = false;
     _updatingControllersProgrammatically = false;
     setState(() => _isEditing = true);
   }
@@ -115,6 +153,58 @@ class _WordDetailPanelState extends ConsumerState<WordDetailPanel> {
     if (ipa.isEmpty) return;
     final dao = ref.read(lexemeDaoProvider);
     if (dao == null) return;
+
+    // D-92 / D-93 (plan 04-17 Task 7) — resolve the currently-selected
+    // POS, look up its intrinsic dims, and block save if any required
+    // intrinsic dim has a null selection. The validator copy lives next
+    // to the dropdown (`Required — every {posName} must have a fixed
+    // {dim.name}.`) but we rebuild the error map here so a direct Save
+    // tap also surfaces the same state.
+    final posList =
+        ref.read(posListProvider).asData?.value ?? const <PartsOfSpeechData>[];
+    PartsOfSpeechData? selectedPos;
+    if (_editPos != null) {
+      for (final p in posList) {
+        if (p.name == _editPos) {
+          selectedPos = p;
+          break;
+        }
+      }
+    }
+    Map<int, int> encodedLevels = const {};
+    if (selectedPos != null) {
+      // Use the synchronously-cached .asData (the Builder sub-form is
+      // already watching this provider, so the stream has resolved).
+      final dims = ref
+              .read(dimensionsForPosProvider(selectedPos.id))
+              .asData
+              ?.value ??
+          const <Dimension>[];
+      final intrinsicDims = dims.where((d) => d.intrinsic).toList();
+      _intrinsicLevelErrors.clear();
+      var anyMissing = false;
+      for (final dim in intrinsicDims) {
+        final current = _intrinsicLevelSelections[dim.id];
+        if (current == null) {
+          _intrinsicLevelErrors[dim.id] =
+              'Required — every ${selectedPos.name} must have a '
+              'fixed ${dim.name}.';
+          anyMissing = true;
+        }
+      }
+      if (anyMissing) {
+        setState(() {});
+        return;
+      }
+      // Build the encoded map — only entries whose dim id is in the
+      // current POS's intrinsic dim set, so old-POS-only entries are
+      // silently dropped per D-93.
+      encodedLevels = {
+        for (final dim in intrinsicDims)
+          dim.id: _intrinsicLevelSelections[dim.id]!,
+      };
+    }
+    final encoded = IntrinsicLevelsCodec.encode(encodedLevels);
 
     await dao.updateLexeme(
       lexeme.copyWith(
@@ -126,6 +216,7 @@ class _WordDetailPanelState extends ConsumerState<WordDetailPanel> {
             ? null
             : _meaningController.text.trim()),
         partOfSpeech: Value(_editPos),
+        intrinsicLevelsJson: Value(encoded),
       ),
     );
     setState(() => _isEditing = false);
@@ -734,7 +825,96 @@ class _WordDetailPanelState extends ConsumerState<WordDetailPanel> {
                   ),
                 ),
               ],
-              onChanged: (val) => setState(() => _editPos = val),
+              onChanged: (val) {
+                // D-93 — synchronously set the POS and clear the
+                // intrinsic selections. The Builder sub-form below
+                // watches dimensionsForPosProvider for the new POS and
+                // uses [_posJustChanged] + [_storedIntrinsicLevels] to
+                // auto-populate overlap-preserved values on its first
+                // render after the POS switch. This avoids an `await`
+                // on `.future` (which would hang if the stream hasn't
+                // started yet).
+                setState(() {
+                  _editPos = val;
+                  _intrinsicLevelSelections.clear();
+                  _intrinsicLevelErrors.clear();
+                  _posJustChanged = true;
+                });
+              },
+            ),
+
+          // D-92 / D-93 (plan 04-17 Task 7) — dynamic intrinsic sub-form
+          // rendered directly beneath the POS dropdown. Watches
+          // dimensionsForPosProvider for the currently-selected POS and
+          // filters to intrinsic dims only. Hides entirely when the POS
+          // has none. Each dim renders a required DropdownButtonFormField
+          // with its own per-dim validation error copy.
+          if (_editPos != null)
+            Builder(
+              builder: (ctx) {
+                final currentPosId = () {
+                  for (final p in posList) {
+                    if (p.name == _editPos) return p.id;
+                  }
+                  return null;
+                }();
+                if (currentPosId == null) return const SizedBox.shrink();
+                final dimsAsync =
+                    ref.watch(dimensionsForPosProvider(currentPosId));
+                final dims =
+                    dimsAsync.asData?.value ?? const <Dimension>[];
+                final intrinsicDims =
+                    dims.where((d) => d.intrinsic).toList();
+                if (intrinsicDims.isEmpty) return const SizedBox.shrink();
+                // D-93 overlap preservation: on POS change, pre-fill
+                // selections from the stored lexeme json snapshot for
+                // any dim id that overlaps the new POS's intrinsic set.
+                if (_posJustChanged) {
+                  _posJustChanged = false;
+                  for (final d in intrinsicDims) {
+                    _intrinsicLevelSelections[d.id] =
+                        _storedIntrinsicLevels[d.id]; // may be null
+                  }
+                }
+                return Padding(
+                  padding: const EdgeInsets.only(top: 12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      for (final dim in intrinsicDims)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 8),
+                          child: DropdownButtonFormField<int>(
+                            key: ValueKey('intrinsicDim_${dim.id}'),
+                            value: _intrinsicLevelSelections[dim.id],
+                            decoration: InputDecoration(
+                              labelText: dim.name,
+                              helperText:
+                                  'Intrinsic — fixed for every $_editPos',
+                              errorText: _intrinsicLevelErrors[dim.id],
+                            ),
+                            items: [
+                              for (final lv
+                                  in decodeLevelsJson(dim.levelsJson))
+                                DropdownMenuItem<int>(
+                                  value: lv.id,
+                                  child: Text('${lv.name} (${lv.abbr})'),
+                                ),
+                            ],
+                            onChanged: (v) => setState(() {
+                              _intrinsicLevelSelections[dim.id] = v;
+                              _intrinsicLevelErrors[dim.id] = null;
+                            }),
+                            validator: (v) => v == null
+                                ? 'Required — every $_editPos must have '
+                                    'a fixed ${dim.name}.'
+                                : null,
+                          ),
+                        ),
+                    ],
+                  ),
+                );
+              },
             ),
 
           const SizedBox(height: 24),
