@@ -5,6 +5,7 @@ import '../../../../db/app_database.dart';
 import '../../../../shared/widgets/violation_text.dart';
 import '../../../lexicon/data/lexeme_providers.dart';
 import '../../../lexicon/data/phonotactic_validation_provider.dart';
+import '../../../lexicon/presentation/widgets/lexeme_display_label.dart';
 import '../../../morphology/data/morphology_providers.dart';
 import '../../../morphology/presentation/rules/rule_editor_dialog.dart';
 import '../../../phonology/data/romanization_providers.dart';
@@ -878,14 +879,28 @@ class _IntrinsicSliceSectionState
               ),
               if (widget.pool.isNotEmpty) ...[
                 const SizedBox(width: 16),
-                DropdownButton<int>(
-                  value: effectiveId,
-                  items: [
-                    for (final lex in widget.pool)
-                      DropdownMenuItem(value: lex.id, child: Text(lex.ipa)),
-                  ],
-                  onChanged: (v) => setState(() => _selectedLexemeId = v),
-                ),
+                // D-110 (plan 04-17): rom-aware display labels in the
+                // per-intrinsic-slice word selector dropdown.
+                Builder(builder: (context) {
+                  final romEnabled =
+                      ref.watch(romanizationEnabledProvider).asData?.value ?? true;
+                  final romanize = ref.watch(romanizeProvider);
+                  return DropdownButton<int>(
+                    value: effectiveId,
+                    items: [
+                      for (final lex in widget.pool)
+                        DropdownMenuItem(
+                          value: lex.id,
+                          child: Text(lexemeDisplayLabel(
+                            lex,
+                            romEnabled: romEnabled,
+                            romanize: romanize,
+                          )),
+                        ),
+                    ],
+                    onChanged: (v) => setState(() => _selectedLexemeId = v),
+                  );
+                }),
                 // D-99 -- 04-17: base-form standard-form violations (base form only).
                 if (effectiveId != null) ...[
                   const SizedBox(width: 8),

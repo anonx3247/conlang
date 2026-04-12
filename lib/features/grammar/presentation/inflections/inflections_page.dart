@@ -3,8 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../db/app_database.dart';
 import '../../../lexicon/data/lexeme_providers.dart';
+import '../../../lexicon/presentation/widgets/lexeme_display_label.dart';
 import '../../../morphology/data/morphology_providers.dart';
 import '../../../morphology/presentation/rules/rules_page.dart';
+import '../../../phonology/data/romanization_providers.dart';
 import '../../../project/data/project_providers.dart';
 import '../../data/grammar_providers.dart';
 import '../../data/typology_providers.dart';
@@ -268,6 +270,13 @@ class _InflectionsPageState extends ConsumerState<InflectionsPage> {
       return pos?.id == _selectedPosId;
     }).toList();
 
+    // D-110 (plan 04-17): use rom-aware display labels in the word
+    // selector dropdown. When romanization is enabled, show the stored
+    // romanization (or derived via romanize) instead of raw IPA.
+    final romEnabled =
+        ref.watch(romanizationEnabledProvider).asData?.value ?? true;
+    final romanize = ref.watch(romanizeProvider);
+
     return Expanded(
       child: DropdownButton<int?>(
         value: _selectedLexemeId,
@@ -276,7 +285,14 @@ class _InflectionsPageState extends ConsumerState<InflectionsPage> {
         items: [
           const DropdownMenuItem<int?>(value: null, child: Text('(template)')),
           for (final l in filtered)
-            DropdownMenuItem<int?>(value: l.id, child: Text(l.ipa)),
+            DropdownMenuItem<int?>(
+              value: l.id,
+              child: Text(lexemeDisplayLabel(
+                l,
+                romEnabled: romEnabled,
+                romanize: romanize,
+              )),
+            ),
         ],
         onChanged: _onWordChanged,
       ),
