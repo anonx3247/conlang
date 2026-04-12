@@ -80,6 +80,11 @@ class _WordDetailPanelState extends ConsumerState<WordDetailPanel> {
   /// first render after the POS change, then resets the flag.
   bool _posJustChanged = false;
 
+  /// Plan 04-18-04 Task 1 — POS mandatory validation error for edit mode.
+  /// Non-null value is rendered as errorText on the POS dropdown and blocks
+  /// save. Cleared when the user picks any non-null POS value.
+  String? _posError;
+
   /// Mirrors [WordCreationForm]: true when the user has manually edited the
   /// IPA field since the last programmatic sync. Initialized by
   /// [_startEditing] from whether the loaded lexeme's stored IPA diverges
@@ -159,6 +164,7 @@ class _WordDetailPanelState extends ConsumerState<WordDetailPanel> {
       ..addAll(_storedIntrinsicLevels
           .map<int, int?>((k, v) => MapEntry(k, v)));
     _intrinsicLevelErrors.clear();
+    _posError = null;
     _posJustChanged = false;
     _updatingControllersProgrammatically = false;
     setState(() => _isEditing = true);
@@ -169,6 +175,14 @@ class _WordDetailPanelState extends ConsumerState<WordDetailPanel> {
     if (ipa.isEmpty) return;
     final dao = ref.read(lexemeDaoProvider);
     if (dao == null) return;
+
+    // Plan 04-18-04 Task 1 — POS mandatory validation in edit mode.
+    // rootOnlyViaDerivations words are exempt (they never surface standalone).
+    if (!(lexeme.rootOnlyViaDerivations) &&
+        (_editPos == null || _editPos!.isEmpty)) {
+      setState(() => _posError = 'Part of speech is required');
+      return;
+    }
 
     // D-92 / D-93 (plan 04-17 Task 7) — resolve the currently-selected
     // POS, look up its intrinsic dims, and block save if any required
@@ -784,39 +798,53 @@ class _WordDetailPanelState extends ConsumerState<WordDetailPanel> {
 
           // When romanization is enabled, it becomes the primary input and
           // IPA is auto-derived (override-only). Mirrors WordCreationForm.
-          if (romanizationEnabled) ...[
-            TextField(
-              controller: _romanizationController,
-              decoration: const InputDecoration(
-                labelText: 'Romanization *',
-                helperText: 'IPA is auto-derived from this',
-              ),
-            ),
-            const SizedBox(height: 12),
-            IpaTextField(
-              controller: _ipaController,
-              decoration: InputDecoration(
-                labelText: _ipaManuallyEdited
-                    ? 'IPA (manual override)'
-                    : 'IPA (auto-derived — edit to override)',
-              ),
-            ),
-            // D-113 (plan 04-17): surface-phonetic preview line.
-            // Shows rewritePipeline(phonemic) when rewrite rules are
-            // configured and produce a different form. Hidden when no
-            // rules exist or none fire on the current phonemic.
-            Builder(builder: (context) {
-              final applyRewrite = ref.watch(applyRewritePipelineProvider);
-              final phonemic = _ipaController.text;
-              if (phonemic.isEmpty) return const SizedBox.shrink();
-              final phonetic = applyRewrite(phonemic);
-              if (phonetic == phonemic) return const SizedBox.shrink();
-              return Padding(
-                padding: const EdgeInsets.only(top: 4),
-                child: Text(
-                  'Surface: [$phonetic]',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Theme.of(context)
+          // 04-18-04 Task 1: phonetic preview integrated as helperText inside
+          // the IPA field decoration — no standalone Surface: [...] line below.
+          Builder(builder: (ctx) {
+            final applyRewrite = ref.watch(applyRewritePipelineProvider);
+            final phonemic = _ipaController.text;
+            final phonetic =
+                phonemic.isNotEmpty ? applyRewrite(phonemic) : phonemic;
+            final showPhonetic = phonemic.isNotEmpty && phonetic != phonemic;
+            if (romanizationEnabled) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: _romanizationController,
+                    decoration: const InputDecoration(
+                      labelText: 'Romanization *',
+                      helperText: 'IPA is auto-derived from this',
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  IpaTextField(
+                    controller: _ipaController,
+                    decoration: InputDecoration(
+                      labelText: _ipaManuallyEdited
+                          ? 'IPA (manual override)'
+                          : 'IPA (auto-derived — edit to override)',
+                      helperText: showPhonetic ? '[$phonetic]' : null,
+                      helperStyle: Theme.of(ctx).textTheme.bodySmall?.copyWith(
+                            color: Theme.of(ctx)
+                                .colorScheme
+                                .onSurface
+                                .withValues(alpha: 0.6),
+                            fontStyle: FontStyle.italic,
+                          ),
+                    ),
+                  ),
+                ],
+              );
+            } else {
+              return IpaTextField(
+                controller: _ipaController,
+                decoration: InputDecoration(
+                  labelText: 'IPA *',
+                  helperText: showPhonetic ? '[$phonetic]' : null,
+                  helperStyle: Theme.of(ctx).textTheme.bodySmall?.copyWith(
+                        color: Theme.of(ctx)
                             .colorScheme
                             .onSurface
                             .withValues(alpha: 0.6),
@@ -824,15 +852,8 @@ class _WordDetailPanelState extends ConsumerState<WordDetailPanel> {
                       ),
                 ),
               );
-            }),
-          ] else ...[
-            IpaTextField(
-              controller: _ipaController,
-              decoration: const InputDecoration(
-                labelText: 'IPA *',
-              ),
-            ),
-          ],
+            }
+          }),
           const SizedBox(height: 12),
 
           // Meaning
@@ -844,11 +865,14 @@ class _WordDetailPanelState extends ConsumerState<WordDetailPanel> {
           ),
           const SizedBox(height: 12),
 
-          // POS dropdown
+          // POS dropdown — 04-18-04: required (unless rootOnlyViaDerivations).
           if (posList.isNotEmpty)
             DropdownButtonFormField<String>(
               value: _editPos,
-              decoration: const InputDecoration(labelText: 'Part of speech'),
+              decoration: InputDecoration(
+                labelText: 'Part of speech *',
+                errorText: _posError,
+              ),
               hint: const Text('— none —'),
               items: [
                 const DropdownMenuItem<String>(
@@ -873,6 +897,10 @@ class _WordDetailPanelState extends ConsumerState<WordDetailPanel> {
                 // started yet).
                 setState(() {
                   _editPos = val;
+                  // Clear POS error when user selects a value.
+                  if (val != null && val.isNotEmpty) {
+                    _posError = null;
+                  }
                   _intrinsicLevelSelections.clear();
                   _intrinsicLevelErrors.clear();
                   _posJustChanged = true;

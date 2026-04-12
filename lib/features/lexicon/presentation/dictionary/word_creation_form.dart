@@ -51,6 +51,11 @@ class _WordCreationFormState extends ConsumerState<WordCreationForm> {
   bool _saving = false;
   String? _ipaError;
 
+  /// Plan 04-18-04 Task 1 — POS is required unless [_rootOnlyViaDerivations].
+  /// Non-null value is rendered as red helper text below the POS dropdown and
+  /// cleared when the user selects any POS value.
+  String? _posError;
+
   /// D-92 (plan 04-17 Task 7) — per-intrinsic-dim level selection for
   /// the currently-selected POS. Key = dim id, value = level id (null
   /// until picked). Cleared whenever the user switches POS.
@@ -130,6 +135,15 @@ class _WordCreationFormState extends ConsumerState<WordCreationForm> {
     final ipa = _ipaController.text.trim();
     if (ipa.isEmpty) {
       setState(() => _ipaError = 'IPA is required');
+      return;
+    }
+
+    // Plan 04-18-04 Task 1 — POS mandatory validation.
+    // rootOnlyViaDerivations words are exempt: they never surface standalone
+    // so requiring a POS is unnecessary and would frustrate the user.
+    if (!_rootOnlyViaDerivations &&
+        (_selectedPos == null || _selectedPos!.isEmpty)) {
+      setState(() => _posError = 'Part of speech is required');
       return;
     }
 
@@ -346,13 +360,16 @@ class _WordCreationFormState extends ConsumerState<WordCreationForm> {
                   const SizedBox(height: 12),
 
                   // ---- POS dropdown --------------------------------------
+                  // 04-18-04: POS is required (unless rootOnlyViaDerivations).
+                  // Hint text updated to reflect the requirement.
                   if (posList.isNotEmpty)
                     DropdownButtonFormField<String>(
                       value: _selectedPos,
-                      decoration: const InputDecoration(
-                        labelText: 'Part of speech',
+                      decoration: InputDecoration(
+                        labelText: 'Part of speech *',
+                        errorText: _posError,
                       ),
-                      hint: const Text('Select POS (optional)'),
+                      hint: const Text('Select POS'),
                       items: [
                         const DropdownMenuItem<String>(
                           value: null,
@@ -367,6 +384,10 @@ class _WordCreationFormState extends ConsumerState<WordCreationForm> {
                       ],
                       onChanged: (val) => setState(() {
                         _selectedPos = val;
+                        // Clear POS error when user selects a value.
+                        if (val != null && val.isNotEmpty) {
+                          _posError = null;
+                        }
                         // D-92 — every POS change resets the intrinsic
                         // sub-form. The create-flow has no pre-existing
                         // lexeme json to preserve so there is no overlap
