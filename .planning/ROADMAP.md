@@ -183,7 +183,7 @@ Plans:
 - [x] 05-01-PLAN.md — Data layer: CulturePages table (schema v13), CultureDao CRUD + tree queries, Riverpod providers, PageHistory, block splitter with tests
 - [x] 05-02-PLAN.md — Culture shell + tree sidebar: enable Culture tab, GoRouter wiring, 240px tree sidebar with DnD + context menu CRUD, page view, back/forward nav, empty state
 - [x] 05-03-PLAN.md — Block editor + wiki links: heading-based section editing (rendered/edit toggle), [[wikilink]] InlineSyntax + autocomplete, broken link ? badge + create prompt, hover preview tooltip
-- [ ] 05-04-PLAN.md — [GAP] Fix StateProvider compile error: replace with NotifierProvider pattern, update 6 call sites
+- [x] 05-04-PLAN.md — [GAP] Fix StateProvider compile error: replace with NotifierProvider pattern, update 6 call sites
 
 ### Phase 6: Reference Glossary
 **Goal**: Users can look up unfamiliar linguistic terminology without leaving the application
