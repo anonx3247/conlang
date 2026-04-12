@@ -1,0 +1,974 @@
+[
+  {
+    "term": "phoneme",
+    "category": "Phonology",
+    "definition": "The smallest unit of sound in a language that distinguishes one word from another. Phonemes are abstract mental representations; their physical realizations are allophones.",
+    "seeAlso": ["allophone", "minimal pair", "phonological rule"]
+  },
+  {
+    "term": "allophone",
+    "category": "Phonology",
+    "definition": "A phonetic variant of a phoneme that does not change meaning. Allophones occur in predictable phonetic environments defined by phonological rules.",
+    "seeAlso": ["phoneme", "phonological rule", "complementary distribution"]
+  },
+  {
+    "term": "minimal pair",
+    "category": "Phonology",
+    "definition": "Two words that differ by only a single phoneme in the same position, used to demonstrate that two sounds are distinct phonemes in a language.",
+    "seeAlso": ["phoneme"]
+  },
+  {
+    "term": "phonological rule",
+    "category": "Phonology",
+    "definition": "A formal statement describing how phonemes are systematically altered in certain phonetic environments. Written as A → B / C _ D, meaning A becomes B when preceded by C and followed by D.",
+    "seeAlso": ["allophone", "assimilation", "dissimilation"]
+  },
+  {
+    "term": "assimilation",
+    "category": "Phonology",
+    "definition": "A phonological process in which a sound becomes more similar to a neighboring sound in terms of place or manner of articulation. Can be regressive (anticipatory) or progressive.",
+    "seeAlso": ["dissimilation", "phonological rule", "nasal assimilation"]
+  },
+  {
+    "term": "dissimilation",
+    "category": "Phonology",
+    "definition": "A phonological process in which a sound becomes less similar to a neighboring sound, often to make the two sounds easier to distinguish.",
+    "seeAlso": ["assimilation", "phonological rule"]
+  },
+  {
+    "term": "vowel harmony",
+    "category": "Phonology",
+    "definition": "A phonological process in which all vowels within a word must share a common feature (e.g., front/back or ATR). Common in Turkic and Mongolian languages.",
+    "seeAlso": ["assimilation", "ATR", "rounding harmony"]
+  },
+  {
+    "term": "nasal assimilation",
+    "category": "Phonology",
+    "definition": "A process by which a nasal consonant takes on the place of articulation of a following stop consonant.",
+    "seeAlso": ["assimilation", "place of articulation"]
+  },
+  {
+    "term": "lenition",
+    "category": "Phonology",
+    "definition": "A weakening of consonants, often as a result of being in a medial or intervocalic position. Examples include voicing of stops and spirantization.",
+    "seeAlso": ["spirantization", "voicing"]
+  },
+  {
+    "term": "spirantization",
+    "category": "Phonology",
+    "definition": "The change of a stop consonant into a fricative or spirant, a common type of lenition.",
+    "seeAlso": ["lenition", "fricative"]
+  },
+  {
+    "term": "metathesis",
+    "category": "Phonology",
+    "definition": "A phonological process in which two sounds switch positions within a word.",
+    "seeAlso": ["phonological rule"]
+  },
+  {
+    "term": "epenthesis",
+    "category": "Phonology",
+    "definition": "The insertion of a sound (usually a vowel) into a word, often to break up an otherwise impermissible consonant cluster.",
+    "seeAlso": ["phonotactics", "cluster"]
+  },
+  {
+    "term": "syncope",
+    "category": "Phonology",
+    "definition": "The deletion of a vowel, typically an unstressed one, from within a word (not at the beginning or end).",
+    "seeAlso": ["apocope", "elision"]
+  },
+  {
+    "term": "apocope",
+    "category": "Phonology",
+    "definition": "The loss of a sound or sounds at the end of a word.",
+    "seeAlso": ["syncope", "elision"]
+  },
+  {
+    "term": "phonotactics",
+    "category": "Phonology",
+    "definition": "The constraints on permissible sound sequences in a language. Phonotactic rules specify which sounds may appear in which positions (onset, nucleus, coda) and what clusters are allowed.",
+    "seeAlso": ["syllable structure", "onset", "coda", "nucleus"]
+  },
+  {
+    "term": "syllable structure",
+    "category": "Phonology",
+    "definition": "The internal organization of a syllable into onset, nucleus, and coda. Commonly represented as (C)V(C) or through moraic theory.",
+    "seeAlso": ["onset", "nucleus", "coda", "mora", "phonotactics"]
+  },
+  {
+    "term": "onset",
+    "category": "Phonology",
+    "definition": "The consonant or consonant cluster that begins a syllable, preceding the nucleus.",
+    "seeAlso": ["coda", "nucleus", "syllable structure"]
+  },
+  {
+    "term": "coda",
+    "category": "Phonology",
+    "definition": "The consonant or consonant cluster that follows the nucleus of a syllable.",
+    "seeAlso": ["onset", "nucleus", "syllable structure"]
+  },
+  {
+    "term": "nucleus",
+    "category": "Phonology",
+    "definition": "The core of a syllable, typically a vowel or syllabic consonant. The nucleus is the only obligatory part of a syllable.",
+    "seeAlso": ["onset", "coda", "syllable structure"]
+  },
+  {
+    "term": "mora",
+    "category": "Phonology",
+    "definition": "A unit of syllabic weight. Short vowels are monomoraic; long vowels and diphthongs are bimoraic. Used in quantity-sensitive phonological processes.",
+    "seeAlso": ["syllable structure", "weight"]
+  },
+  {
+    "term": "stress",
+    "category": "Phonology",
+    "definition": "The relative prominence of a syllable, typically realized through greater loudness, pitch, or duration. Languages vary in whether stress is fixed, free, or predictable.",
+    "seeAlso": ["tone", "pitch accent", "mora"]
+  },
+  {
+    "term": "tone",
+    "category": "Phonology",
+    "definition": "The use of pitch to distinguish lexical or grammatical meaning. Tonal languages include Mandarin, Yoruba, and many Southeast Asian languages.",
+    "seeAlso": ["pitch accent", "stress", "register tone"]
+  },
+  {
+    "term": "pitch accent",
+    "category": "Phonology",
+    "definition": "A system in which pitch is used to distinguish words but each word has only one accented syllable rather than multiple tones.",
+    "seeAlso": ["tone", "stress"]
+  },
+  {
+    "term": "place of articulation",
+    "category": "Phonology",
+    "definition": "The location in the vocal tract where airflow is most constricted during the production of a consonant. Includes bilabial, labiodental, dental, alveolar, palatal, velar, and uvular.",
+    "seeAlso": ["manner of articulation", "voicing"]
+  },
+  {
+    "term": "manner of articulation",
+    "category": "Phonology",
+    "definition": "The way airflow is modified in producing a consonant: stop, fricative, affricate, nasal, approximant, trill, tap, etc.",
+    "seeAlso": ["place of articulation", "voicing"]
+  },
+  {
+    "term": "voicing",
+    "category": "Phonology",
+    "definition": "The vibration of the vocal folds during the production of a sound. Voiced sounds (e.g. /b/, /d/) involve vibration; voiceless sounds (e.g. /p/, /t/) do not.",
+    "seeAlso": ["place of articulation", "manner of articulation"]
+  },
+  {
+    "term": "complementary distribution",
+    "category": "Phonology",
+    "definition": "Two sounds are in complementary distribution when they never appear in the same phonetic environment. This is evidence that they are allophones of the same phoneme.",
+    "seeAlso": ["allophone", "free variation"]
+  },
+  {
+    "term": "free variation",
+    "category": "Phonology",
+    "definition": "Two sounds are in free variation when they can substitute for each other without changing word meaning and without being conditioned by phonetic environment.",
+    "seeAlso": ["complementary distribution", "allophone"]
+  },
+  {
+    "term": "ATR",
+    "category": "Phonology",
+    "definition": "Advanced Tongue Root — a phonological feature distinguishing vowels produced with the tongue root pushed forward (+ATR) from those with it retracted (-ATR). Significant in vowel harmony systems of West African and East African languages.",
+    "seeAlso": ["vowel harmony"]
+  },
+  {
+    "term": "cluster",
+    "category": "Phonology",
+    "definition": "A sequence of two or more consonants without an intervening vowel. Languages vary in which clusters are permitted by their phonotactics.",
+    "seeAlso": ["phonotactics", "epenthesis", "onset"]
+  },
+  {
+    "term": "morpheme",
+    "category": "Morphology",
+    "definition": "The smallest meaningful unit in a language. Morphemes can be free (can stand alone as a word) or bound (must attach to another morpheme).",
+    "seeAlso": ["free morpheme", "bound morpheme", "allomorph"]
+  },
+  {
+    "term": "free morpheme",
+    "category": "Morphology",
+    "definition": "A morpheme that can stand alone as a word (e.g., 'book', 'run', 'happy').",
+    "seeAlso": ["morpheme", "bound morpheme"]
+  },
+  {
+    "term": "bound morpheme",
+    "category": "Morphology",
+    "definition": "A morpheme that cannot stand alone and must attach to another morpheme. Includes prefixes, suffixes, infixes, and circumfixes.",
+    "seeAlso": ["morpheme", "affix", "free morpheme"]
+  },
+  {
+    "term": "affix",
+    "category": "Morphology",
+    "definition": "A bound morpheme attached to a base or stem to derive a new form or mark grammatical categories. Types include prefix, suffix, infix, circumfix, suprafix, and transfix.",
+    "seeAlso": ["prefix", "suffix", "infix", "circumfix", "bound morpheme"]
+  },
+  {
+    "term": "prefix",
+    "category": "Morphology",
+    "definition": "An affix attached to the beginning of a base or stem.",
+    "seeAlso": ["suffix", "infix", "affix"]
+  },
+  {
+    "term": "suffix",
+    "category": "Morphology",
+    "definition": "An affix attached to the end of a base or stem.",
+    "seeAlso": ["prefix", "infix", "affix"]
+  },
+  {
+    "term": "infix",
+    "category": "Morphology",
+    "definition": "An affix inserted within the base of a word rather than at its edges. Common in Tagalog and some Native American languages.",
+    "seeAlso": ["prefix", "suffix", "affix"]
+  },
+  {
+    "term": "circumfix",
+    "category": "Morphology",
+    "definition": "An affix consisting of two parts that attach to both ends of a base simultaneously. Also called a discontinuous affix.",
+    "seeAlso": ["prefix", "suffix", "affix"]
+  },
+  {
+    "term": "allomorph",
+    "category": "Morphology",
+    "definition": "A phonological variant of a morpheme. For example, the English plural morpheme has allomorphs /-s/, /-z/, and /-ɪz/ depending on the final sound of the base.",
+    "seeAlso": ["morpheme", "phonological rule"]
+  },
+  {
+    "term": "root",
+    "category": "Morphology",
+    "definition": "The core morpheme of a word that carries its basic lexical meaning, to which affixes may be added. Distinct from stem, which may include some affixes.",
+    "seeAlso": ["stem", "base", "morpheme"]
+  },
+  {
+    "term": "stem",
+    "category": "Morphology",
+    "definition": "The form of a word to which inflectional affixes are attached. A stem may be identical to the root or may include derivational affixes.",
+    "seeAlso": ["root", "base", "inflection"]
+  },
+  {
+    "term": "base",
+    "category": "Morphology",
+    "definition": "The form to which any morphological operation applies. A base is more general than root or stem, as it can be a simple root, a derived form, or even a compound.",
+    "seeAlso": ["root", "stem"]
+  },
+  {
+    "term": "inflection",
+    "category": "Morphology",
+    "definition": "The process of adding morphological material to a word to mark grammatical categories such as tense, aspect, number, case, gender, or agreement, without changing the word's core meaning or part of speech.",
+    "seeAlso": ["derivation", "paradigm", "declension", "conjugation"]
+  },
+  {
+    "term": "derivation",
+    "category": "Morphology",
+    "definition": "The process of forming a new word from an existing one, typically changing its meaning or part of speech (e.g., 'happy' → 'happiness').",
+    "seeAlso": ["inflection", "root", "word formation"]
+  },
+  {
+    "term": "paradigm",
+    "category": "Morphology",
+    "definition": "The complete set of inflected forms of a word. For example, the paradigm of a Latin noun includes all case and number forms.",
+    "seeAlso": ["inflection", "declension", "conjugation"]
+  },
+  {
+    "term": "declension",
+    "category": "Morphology",
+    "definition": "The inflection of nouns, pronouns, and adjectives for case, number, and gender. Languages that organize nouns into classes with similar paradigms are said to have declension classes.",
+    "seeAlso": ["paradigm", "case", "inflection"]
+  },
+  {
+    "term": "conjugation",
+    "category": "Morphology",
+    "definition": "The inflection of verbs for categories such as tense, aspect, mood, voice, person, and number.",
+    "seeAlso": ["paradigm", "inflection", "tense", "aspect"]
+  },
+  {
+    "term": "ablaut",
+    "category": "Morphology",
+    "definition": "A systematic vowel alternation within a root that signals grammatical distinctions. The English strong verb system shows ablaut: sing/sang/sung.",
+    "seeAlso": ["umlaut", "apophony", "root"]
+  },
+  {
+    "term": "umlaut",
+    "category": "Morphology",
+    "definition": "A type of vowel alternation in which a vowel is fronted due to a front vowel or /j/ in a following syllable. The German plural umlaut (Fuß → Füße) is a well-known example.",
+    "seeAlso": ["ablaut", "vowel harmony", "apophony"]
+  },
+  {
+    "term": "apophony",
+    "category": "Morphology",
+    "definition": "Any systematic alternation of sounds within a morpheme to signal a grammatical or lexical contrast. Includes ablaut and umlaut as subtypes.",
+    "seeAlso": ["ablaut", "umlaut"]
+  },
+  {
+    "term": "suppletion",
+    "category": "Morphology",
+    "definition": "An inflectional relationship between two forms of the same lexeme where the forms share no phonological resemblance (e.g., English 'go'/'went', 'good'/'better').",
+    "seeAlso": ["paradigm", "inflection"]
+  },
+  {
+    "term": "reduplication",
+    "category": "Morphology",
+    "definition": "A morphological process that copies all or part of a base to signal a grammatical or lexical meaning, such as plurality, intensity, or repetition.",
+    "seeAlso": ["morpheme", "affix"]
+  },
+  {
+    "term": "agglutinative",
+    "category": "Morphology",
+    "definition": "A morphological type in which words are formed by stringing together morphemes that are clearly separable and each corresponds to a single grammatical meaning. Finnish and Swahili are classic examples.",
+    "seeAlso": ["fusional", "isolating", "polysynthetic", "morphological type"]
+  },
+  {
+    "term": "fusional",
+    "category": "Morphology",
+    "definition": "A morphological type (also called inflecting or synthetic) in which a single morpheme expresses multiple grammatical meanings simultaneously. Latin case endings are a typical example.",
+    "seeAlso": ["agglutinative", "isolating", "morphological type"]
+  },
+  {
+    "term": "isolating",
+    "category": "Morphology",
+    "definition": "A morphological type in which words consist of single morphemes with no inflection. Grammatical relations are expressed through word order and particles. Mandarin is a prototypical example.",
+    "seeAlso": ["agglutinative", "fusional", "morphological type"]
+  },
+  {
+    "term": "polysynthetic",
+    "category": "Morphology",
+    "definition": "A morphological type in which words contain many morphemes and can express what other languages might say in an entire sentence. Common in indigenous North American languages.",
+    "seeAlso": ["agglutinative", "morphological type", "incorporation"]
+  },
+  {
+    "term": "morphological type",
+    "category": "Morphology",
+    "definition": "The classification of languages according to their dominant morphological strategy: isolating, agglutinative, fusional, or polysynthetic. Most languages exhibit features of more than one type.",
+    "seeAlso": ["agglutinative", "fusional", "isolating", "polysynthetic"]
+  },
+  {
+    "term": "incorporation",
+    "category": "Morphology",
+    "definition": "A process in which a nominal (noun) is incorporated into a verb to form a compound predicate. Particularly common in polysynthetic languages.",
+    "seeAlso": ["polysynthetic", "compound"]
+  },
+  {
+    "term": "compound",
+    "category": "Morphology",
+    "definition": "A word formed by combining two or more free morphemes or roots. Compounds may be endocentric (the meaning is a hyponym of one constituent) or exocentric.",
+    "seeAlso": ["derivation", "root", "word formation"]
+  },
+  {
+    "term": "word formation",
+    "category": "Morphology",
+    "definition": "The set of morphological and phonological processes used to create new words, including derivation, compounding, reduplication, and conversion.",
+    "seeAlso": ["derivation", "compound", "inflection"]
+  },
+  {
+    "term": "zero morpheme",
+    "category": "Morphology",
+    "definition": "An invisible or phonologically null morpheme that nonetheless carries grammatical meaning, as in English 'sheep' (plural unmarked) or 'cut' (past tense unmarked).",
+    "seeAlso": ["morpheme", "inflection"]
+  },
+  {
+    "term": "clitic",
+    "category": "Morphology",
+    "definition": "A morpheme that behaves phonologically like an affix (attached to a host) but syntactically like an independent word. English 's (possessive) and 'll (future) are clitics.",
+    "seeAlso": ["bound morpheme", "affix", "word"]
+  },
+  {
+    "term": "phrase structure",
+    "category": "Syntax",
+    "definition": "The hierarchical organization of words into phrases and clauses. Phrase structure rules specify how constituents are combined; commonly represented in tree diagrams.",
+    "seeAlso": ["constituent", "head", "X-bar theory"]
+  },
+  {
+    "term": "constituent",
+    "category": "Syntax",
+    "definition": "A syntactic unit that functions as part of a larger construction. Constituents are identified by constituency tests such as substitution, movement, and coordination.",
+    "seeAlso": ["phrase structure", "head"]
+  },
+  {
+    "term": "head",
+    "category": "Syntax",
+    "definition": "The obligatory, central element of a phrase that determines the phrase's category and distributional properties. Phrases are named after their heads: NP, VP, AP, PP.",
+    "seeAlso": ["phrase structure", "complement", "specifier"]
+  },
+  {
+    "term": "complement",
+    "category": "Syntax",
+    "definition": "A syntactic argument that completes the meaning of the head. The complement is typically selected (subcategorized) by the head.",
+    "seeAlso": ["head", "adjunct", "specifier"]
+  },
+  {
+    "term": "adjunct",
+    "category": "Syntax",
+    "definition": "An optional syntactic constituent that modifies a head or phrase without being selected by it. Adjuncts are typically adverbs, adverbials, or prepositional phrases.",
+    "seeAlso": ["complement", "head"]
+  },
+  {
+    "term": "specifier",
+    "category": "Syntax",
+    "definition": "In X-bar theory, the position at the edge of a maximal projection that is occupied by determiners, degree modifiers, or subjects.",
+    "seeAlso": ["head", "X-bar theory", "determiner"]
+  },
+  {
+    "term": "X-bar theory",
+    "category": "Syntax",
+    "definition": "A theory of phrase structure in which every phrase has an intermediate bar-level (X') between the head (X) and the maximal projection (XP), allowing for a uniform hierarchical template.",
+    "seeAlso": ["phrase structure", "head", "specifier"]
+  },
+  {
+    "term": "word order",
+    "category": "Syntax",
+    "definition": "The canonical order of subject, verb, and object in declarative clauses. Common typological patterns are SOV, SVO, VSO, VOS, OVS, and OVS.",
+    "seeAlso": ["SOV", "SVO", "VSO", "typological parameter"]
+  },
+  {
+    "term": "SOV",
+    "category": "Syntax",
+    "definition": "Subject-Object-Verb word order. The most common order cross-linguistically, found in Japanese, Turkish, and Hindi.",
+    "seeAlso": ["word order", "SVO", "VSO"]
+  },
+  {
+    "term": "SVO",
+    "category": "Syntax",
+    "definition": "Subject-Verb-Object word order. Characteristic of English, French, Mandarin, and Swahili.",
+    "seeAlso": ["word order", "SOV", "VSO"]
+  },
+  {
+    "term": "VSO",
+    "category": "Syntax",
+    "definition": "Verb-Subject-Object word order. Common in Classical Arabic, Welsh, and many Austronesian languages.",
+    "seeAlso": ["word order", "SOV", "SVO"]
+  },
+  {
+    "term": "agreement",
+    "category": "Syntax",
+    "definition": "A grammatical relationship in which one word (the controller) determines the morphological form of another word (the target). Common agreement features include person, number, gender, and case.",
+    "seeAlso": ["inflection", "feature", "subject"]
+  },
+  {
+    "term": "argument structure",
+    "category": "Syntax",
+    "definition": "The specification of the number and type of arguments (subject, object, indirect object) that a predicate requires. Closely related to the verb's semantic role assignment.",
+    "seeAlso": ["theta role", "valency", "predicate"]
+  },
+  {
+    "term": "valency",
+    "category": "Syntax",
+    "definition": "The number of arguments a predicate takes. Intransitive verbs have valency 1; transitive verbs have valency 2; ditransitive verbs have valency 3.",
+    "seeAlso": ["argument structure", "transitivity"]
+  },
+  {
+    "term": "transitivity",
+    "category": "Syntax",
+    "definition": "The property of a verb that determines whether it takes a direct object. Transitive verbs require an object; intransitive verbs do not.",
+    "seeAlso": ["valency", "argument structure"]
+  },
+  {
+    "term": "relative clause",
+    "category": "Syntax",
+    "definition": "A subordinate clause that modifies a noun (the head noun) and is typically introduced by a relative pronoun. Relative clauses are classified as prenominal, postnominal, or internally headed.",
+    "seeAlso": ["subordination", "head", "constituent"]
+  },
+  {
+    "term": "subordination",
+    "category": "Syntax",
+    "definition": "The syntactic relationship in which one clause (the subordinate) is embedded within another (the main clause).",
+    "seeAlso": ["relative clause", "complementizer", "coordination"]
+  },
+  {
+    "term": "coordination",
+    "category": "Syntax",
+    "definition": "The joining of two or more clauses or phrases of equal syntactic status using a coordinating conjunction (and, or, but).",
+    "seeAlso": ["subordination", "conjunction"]
+  },
+  {
+    "term": "case",
+    "category": "Syntax",
+    "definition": "A grammatical category that marks the syntactic role of a noun phrase (subject, object, indirect object, possessor, etc.). Realized morphologically (through declension) or syntactically (through position).",
+    "seeAlso": ["nominative", "accusative", "ergative", "dative", "genitive"]
+  },
+  {
+    "term": "nominative",
+    "category": "Syntax",
+    "definition": "The case assigned to the subject of a clause in nominative-accusative alignment systems.",
+    "seeAlso": ["case", "accusative", "ergative", "nominative-accusative"]
+  },
+  {
+    "term": "accusative",
+    "category": "Syntax",
+    "definition": "The case assigned to the direct object of a verb in nominative-accusative alignment systems.",
+    "seeAlso": ["case", "nominative", "nominative-accusative"]
+  },
+  {
+    "term": "dative",
+    "category": "Syntax",
+    "definition": "The case assigned to the indirect object or recipient argument in many languages, also used for beneficiaries and goals.",
+    "seeAlso": ["case", "nominative", "accusative"]
+  },
+  {
+    "term": "genitive",
+    "category": "Syntax",
+    "definition": "The case that typically marks possessors or associates. Also used to express partitivity and measure in many languages.",
+    "seeAlso": ["case", "possession"]
+  },
+  {
+    "term": "tense",
+    "category": "Syntax",
+    "definition": "A grammatical category that locates an event in time, typically relative to the moment of speech (present, past, future) or to another reference point.",
+    "seeAlso": ["aspect", "mood", "conjugation"]
+  },
+  {
+    "term": "aspect",
+    "category": "Syntax",
+    "definition": "A grammatical category that expresses the internal temporal structure of an event: whether it is complete (perfective), ongoing (imperfective), habitual, etc.",
+    "seeAlso": ["tense", "mood", "aktionsart"]
+  },
+  {
+    "term": "mood",
+    "category": "Syntax",
+    "definition": "A grammatical category that expresses the speaker's attitude toward the proposition: indicative (factual), subjunctive (hypothetical), imperative (command), conditional, etc.",
+    "seeAlso": ["tense", "aspect", "modality"]
+  },
+  {
+    "term": "voice",
+    "category": "Syntax",
+    "definition": "A grammatical category relating to the relationship between the verb and its arguments, particularly which argument is the syntactic subject. Includes active, passive, and middle voice.",
+    "seeAlso": ["passive", "argument structure", "valency"]
+  },
+  {
+    "term": "passive",
+    "category": "Syntax",
+    "definition": "A voice construction in which the patient or theme argument is promoted to subject position and the agent is demoted or omitted.",
+    "seeAlso": ["voice", "argument structure"]
+  },
+  {
+    "term": "semantic role",
+    "category": "Semantics",
+    "definition": "The underlying thematic relationship between a noun phrase and the predicate (verb). Core semantic roles include agent, patient, theme, experiencer, recipient, goal, and source.",
+    "seeAlso": ["theta role", "agent", "patient", "argument structure"]
+  },
+  {
+    "term": "theta role",
+    "category": "Semantics",
+    "definition": "A formal label for the semantic relationship between a predicate and its arguments. The theta-criterion holds that each argument receives exactly one theta role.",
+    "seeAlso": ["semantic role", "argument structure"]
+  },
+  {
+    "term": "agent",
+    "category": "Semantics",
+    "definition": "The semantic role assigned to the willful initiator or performer of an action.",
+    "seeAlso": ["semantic role", "patient", "theta role"]
+  },
+  {
+    "term": "patient",
+    "category": "Semantics",
+    "definition": "The semantic role assigned to the entity that is affected by or undergoes the action or change described by the verb.",
+    "seeAlso": ["semantic role", "agent", "theta role"]
+  },
+  {
+    "term": "experiencer",
+    "category": "Semantics",
+    "definition": "The semantic role assigned to the entity that perceives or has an internal experience described by a psychological predicate (e.g., 'John knows the answer').",
+    "seeAlso": ["semantic role", "agent", "patient"]
+  },
+  {
+    "term": "lexical semantics",
+    "category": "Semantics",
+    "definition": "The study of word meaning, including sense relations (synonymy, antonymy, hyponymy), componential analysis, prototype theory, and lexical fields.",
+    "seeAlso": ["sense", "synonymy", "antonymy", "hyponymy"]
+  },
+  {
+    "term": "sense",
+    "category": "Semantics",
+    "definition": "The meaning of a linguistic expression defined by its relationship to other expressions in the language system, as opposed to reference (the real-world entity it denotes).",
+    "seeAlso": ["reference", "lexical semantics", "denotation"]
+  },
+  {
+    "term": "reference",
+    "category": "Semantics",
+    "definition": "The real-world entity or set of entities that a linguistic expression picks out in a given context.",
+    "seeAlso": ["sense", "denotation", "deixis"]
+  },
+  {
+    "term": "denotation",
+    "category": "Semantics",
+    "definition": "The literal or primary meaning of a word, as opposed to its connotations. The denotation of 'dog' is any member of the species Canis lupus familiaris.",
+    "seeAlso": ["connotation", "sense", "reference"]
+  },
+  {
+    "term": "connotation",
+    "category": "Semantics",
+    "definition": "The secondary, associative, or evaluative meanings that a word carries beyond its literal denotation.",
+    "seeAlso": ["denotation", "sense"]
+  },
+  {
+    "term": "synonymy",
+    "category": "Semantics",
+    "definition": "The relationship between two words that have the same or very similar meaning. True (full) synonymy is rare; most synonyms differ in register, connotation, or collocations.",
+    "seeAlso": ["antonymy", "hyponymy", "lexical semantics"]
+  },
+  {
+    "term": "antonymy",
+    "category": "Semantics",
+    "definition": "The sense relation of opposite meaning. Includes gradable antonyms (hot/cold), complementary antonyms (alive/dead), and relational antonyms (buy/sell).",
+    "seeAlso": ["synonymy", "hyponymy", "lexical semantics"]
+  },
+  {
+    "term": "hyponymy",
+    "category": "Semantics",
+    "definition": "The sense relation in which one word (the hyponym) is more specific than another (the hyperonym or superordinate). 'Dog' is a hyponym of 'animal'.",
+    "seeAlso": ["synonymy", "antonymy", "lexical semantics"]
+  },
+  {
+    "term": "polysemy",
+    "category": "Semantics",
+    "definition": "The property of a single word having multiple related senses (e.g., 'bank' as a financial institution and as the side of a river — though these may be homonyms rather than polysemes).",
+    "seeAlso": ["homonymy", "lexical semantics"]
+  },
+  {
+    "term": "homonymy",
+    "category": "Semantics",
+    "definition": "The relationship between two words that share the same form but have unrelated meanings (e.g., 'bat' the animal vs. 'bat' the implement).",
+    "seeAlso": ["polysemy", "lexical semantics"]
+  },
+  {
+    "term": "compositionality",
+    "category": "Semantics",
+    "definition": "The principle that the meaning of a complex expression is a function of the meanings of its parts and the syntactic rules combining them.",
+    "seeAlso": ["semantic role", "lexical semantics"]
+  },
+  {
+    "term": "deixis",
+    "category": "Semantics",
+    "definition": "The phenomenon of expressions whose interpretation depends on contextual features such as the speaker, hearer, time, or place. Includes personal (I/you), temporal (now/then), and spatial (here/there) deixis.",
+    "seeAlso": ["reference", "context"]
+  },
+  {
+    "term": "modality",
+    "category": "Semantics",
+    "definition": "The semantic domain covering necessity, possibility, permission, and obligation. Grammatically expressed through modal verbs, moods, or particles.",
+    "seeAlso": ["mood", "epistemic modality", "deontic modality"]
+  },
+  {
+    "term": "epistemic modality",
+    "category": "Semantics",
+    "definition": "Modality relating to the speaker's degree of certainty about a proposition (certainty, probability, possibility).",
+    "seeAlso": ["modality", "deontic modality"]
+  },
+  {
+    "term": "deontic modality",
+    "category": "Semantics",
+    "definition": "Modality relating to obligation, permission, or prohibition. Deontic must means 'it is required that'; deontic may means 'it is permitted that'.",
+    "seeAlso": ["modality", "epistemic modality"]
+  },
+  {
+    "term": "aktionsart",
+    "category": "Semantics",
+    "definition": "Lexical aspect or situation type — the inherent temporal structure of a verb or predicate independent of grammatical aspect. Includes states, activities, accomplishments, and achievements (Vendler classes).",
+    "seeAlso": ["aspect", "telicity"]
+  },
+  {
+    "term": "telicity",
+    "category": "Semantics",
+    "definition": "A semantic property of predicates that have a natural endpoint. Telic predicates describe events with an inherent culmination; atelic predicates do not.",
+    "seeAlso": ["aktionsart", "aspect"]
+  },
+  {
+    "term": "ergative",
+    "category": "Typology",
+    "definition": "The case (or alignment) assigned to the agent of a transitive verb in ergative-absolutive systems. Contrasts with absolutive, which marks both the patient of transitive verbs and the single argument of intransitive verbs.",
+    "seeAlso": ["absolutive", "nominative-accusative", "split ergativity"]
+  },
+  {
+    "term": "absolutive",
+    "category": "Typology",
+    "definition": "The case that marks the single argument of an intransitive predicate and the patient of a transitive predicate in an ergative-absolutive alignment system.",
+    "seeAlso": ["ergative", "nominative-accusative"]
+  },
+  {
+    "term": "nominative-accusative",
+    "category": "Typology",
+    "definition": "An alignment system in which the subject of both transitive and intransitive verbs is treated the same (nominative), while the object of a transitive verb receives a different case (accusative). The most common alignment cross-linguistically.",
+    "seeAlso": ["nominative", "accusative", "ergative"]
+  },
+  {
+    "term": "split ergativity",
+    "category": "Typology",
+    "definition": "A system in which a language uses ergative-absolutive alignment in some contexts and nominative-accusative alignment in others, often conditioned by tense, aspect, or person.",
+    "seeAlso": ["ergative", "nominative-accusative"]
+  },
+  {
+    "term": "alignment",
+    "category": "Typology",
+    "definition": "The grammatical pattern that determines how the S (subject of intransitive), A (agent of transitive), and P (patient of transitive) arguments are marked. Major types are nominative-accusative and ergative-absolutive.",
+    "seeAlso": ["nominative-accusative", "ergative", "split ergativity"]
+  },
+  {
+    "term": "typological parameter",
+    "category": "Typology",
+    "definition": "A cross-linguistically varying grammatical feature that can take a small number of values and tends to correlate with other typological properties.",
+    "seeAlso": ["word order", "alignment", "head-marking"]
+  },
+  {
+    "term": "head-marking",
+    "category": "Typology",
+    "definition": "A typological property in which grammatical information about arguments is marked on the head of a phrase (e.g., agreement on the verb) rather than on the dependents.",
+    "seeAlso": ["dependent-marking", "typological parameter"]
+  },
+  {
+    "term": "dependent-marking",
+    "category": "Typology",
+    "definition": "A typological property in which grammatical information is marked on the dependent of a construction rather than on the head. Case marking on nouns is an example.",
+    "seeAlso": ["head-marking", "typological parameter"]
+  },
+  {
+    "term": "pro-drop",
+    "category": "Typology",
+    "definition": "A typological property of languages that allow the subject (or object) pronoun to be omitted when recoverable from context or verb agreement. Spanish and Italian are pro-drop; English is not.",
+    "seeAlso": ["typological parameter", "agreement"]
+  },
+  {
+    "term": "numeral classifier",
+    "category": "Typology",
+    "definition": "A morpheme used with numerals to categorize the noun it quantifies according to semantic properties (animacy, shape, size). Common in Mandarin, Japanese, and Burmese.",
+    "seeAlso": ["noun class", "typological parameter"]
+  },
+  {
+    "term": "noun class",
+    "category": "Typology",
+    "definition": "A grammatical categorization of nouns into classes based on semantic or formal properties. Classes often trigger agreement on adjectives, verbs, and determiners. Bantu languages have elaborate noun class systems.",
+    "seeAlso": ["grammatical gender", "agreement", "numeral classifier"]
+  },
+  {
+    "term": "grammatical gender",
+    "category": "Typology",
+    "definition": "A system for classifying nouns into groups (genders) that trigger agreement on other words. Genders may correlate with biological sex (masculine/feminine) or be semantically arbitrary.",
+    "seeAlso": ["noun class", "agreement"]
+  },
+  {
+    "term": "evidentiality",
+    "category": "Typology",
+    "definition": "A grammatical category that obligatorily encodes the source of the speaker's information about an event: direct witness, reported speech, inference, etc. Grammaticalized in Quechua, Tibetan, and many other languages.",
+    "seeAlso": ["epistemic modality", "typological parameter"]
+  },
+  {
+    "term": "mirativity",
+    "category": "Typology",
+    "definition": "A grammatical category encoding whether information is new or unexpected to the speaker. Grammaticalized in some languages alongside evidentiality.",
+    "seeAlso": ["evidentiality", "typological parameter"]
+  },
+  {
+    "term": "animacy",
+    "category": "Typology",
+    "definition": "A semantic property that classifies referents on a scale from most animate (humans, animals) to least animate (abstract concepts, inanimate objects). Animacy hierarchies affect agreement, case, and word order in many languages.",
+    "seeAlso": ["noun class", "semantic role"]
+  },
+  {
+    "term": "obviation",
+    "category": "Typology",
+    "definition": "A grammatical category used in Algonquian languages that distinguishes between a proximate third person (the more salient referent) and an obviative third person (the less salient referent).",
+    "seeAlso": ["animacy", "reference"]
+  },
+  {
+    "term": "register tone",
+    "category": "Typology",
+    "definition": "A tonal system in which each syllable is assigned a tone on a discrete scale (high, mid, low) without complex contour distinctions. Contrasts with contour tone systems.",
+    "seeAlso": ["tone", "pitch accent"]
+  },
+  {
+    "term": "triconsonantal root",
+    "category": "Morphology",
+    "definition": "A Semitic morphological pattern in which a root consisting of three consonants (a triliteral skeleton) carries core lexical meaning, while vowel patterns and affixes mark derivational and inflectional categories.",
+    "seeAlso": ["root", "nonconcatenative morphology", "template morphology"]
+  },
+  {
+    "term": "nonconcatenative morphology",
+    "category": "Morphology",
+    "definition": "Morphological processes in which morphemes are not simply strung end-to-end but interdigitated or overlaid with the base (transfixes, templates). Characteristic of Semitic languages.",
+    "seeAlso": ["triconsonantal root", "template morphology", "concatenative morphology"]
+  },
+  {
+    "term": "template morphology",
+    "category": "Morphology",
+    "definition": "A morphological system in which words are formed by mapping a root onto an abstract canonical pattern (template) that specifies the distribution of vowels and consonants.",
+    "seeAlso": ["nonconcatenative morphology", "triconsonantal root"]
+  },
+  {
+    "term": "concatenative morphology",
+    "category": "Morphology",
+    "definition": "Morphological processes in which morphemes are combined by simple linear concatenation (affixation, compounding). Contrasts with nonconcatenative morphology.",
+    "seeAlso": ["affix", "nonconcatenative morphology"]
+  },
+  {
+    "term": "copula",
+    "category": "Syntax",
+    "definition": "A verb (typically 'be') that links a subject to a predicate nominal or predicate adjective. Some languages lack a copula in present-tense equative sentences (null copula).",
+    "seeAlso": ["predicate", "head"]
+  },
+  {
+    "term": "predicate",
+    "category": "Syntax",
+    "definition": "The element of a sentence (typically a verb phrase) that says something about the subject. In formal semantics, a predicate denotes a property or relation.",
+    "seeAlso": ["argument structure", "copula"]
+  },
+  {
+    "term": "determiner",
+    "category": "Syntax",
+    "definition": "A closed-class word that specifies the reference of a noun phrase (definite article, indefinite article, demonstrative, quantifier).",
+    "seeAlso": ["specifier", "noun class"]
+  },
+  {
+    "term": "complementizer",
+    "category": "Syntax",
+    "definition": "A functional element that introduces a subordinate clause, marking it as a complement. In English, 'that' in 'I know that he left' is a complementizer.",
+    "seeAlso": ["subordination", "head"]
+  },
+  {
+    "term": "null subject",
+    "category": "Syntax",
+    "definition": "A construction in which the subject of a sentence is phonologically absent but interpretable from context or verb agreement. See pro-drop.",
+    "seeAlso": ["pro-drop", "agreement"]
+  },
+  {
+    "term": "scope",
+    "category": "Semantics",
+    "definition": "The domain over which an operator (quantifier, negation, modal) takes effect. Scope relations determine the truth conditions of complex sentences.",
+    "seeAlso": ["quantifier", "negation"]
+  },
+  {
+    "term": "quantifier",
+    "category": "Semantics",
+    "definition": "An expression that specifies the quantity of a noun phrase: universal (every, all), existential (some, a), cardinal (three), etc.",
+    "seeAlso": ["scope", "determiner"]
+  },
+  {
+    "term": "negation",
+    "category": "Semantics",
+    "definition": "The semantic operation of reversing the truth value of a proposition. Morphosyntactically realized as negative particles, affixes, or polarity verbs.",
+    "seeAlso": ["scope", "polarity"]
+  },
+  {
+    "term": "polarity",
+    "category": "Syntax",
+    "definition": "The distinction between positive (affirmative) and negative constructions. Polarity items (e.g., 'any', 'ever') are sensitive to the polarity environment.",
+    "seeAlso": ["negation", "scope"]
+  },
+  {
+    "term": "sandhi",
+    "category": "Phonology",
+    "definition": "Phonological changes that occur at morpheme or word boundaries due to the influence of neighboring sounds. Includes vowel sandhi, tone sandhi, and consonant sandhi.",
+    "seeAlso": ["assimilation", "phonological rule"]
+  },
+  {
+    "term": "liaison",
+    "category": "Phonology",
+    "definition": "In French, the pronunciation of a normally silent word-final consonant before a following word beginning with a vowel. A type of external sandhi.",
+    "seeAlso": ["sandhi", "elision"]
+  },
+  {
+    "term": "elision",
+    "category": "Phonology",
+    "definition": "The omission of a sound or syllable in connected speech, often at word boundaries.",
+    "seeAlso": ["syncope", "apocope", "sandhi"]
+  },
+  {
+    "term": "fortition",
+    "category": "Phonology",
+    "definition": "A phonological process in which a consonant is strengthened, e.g., a fricative becoming a stop. The opposite of lenition.",
+    "seeAlso": ["lenition", "spirantization"]
+  },
+  {
+    "term": "syllabification",
+    "category": "Phonology",
+    "definition": "The assignment of segments to syllables. Languages follow the maximal onset principle (prefer larger onsets) subject to phonotactic constraints.",
+    "seeAlso": ["syllable structure", "phonotactics"]
+  },
+  {
+    "term": "weight",
+    "category": "Phonology",
+    "definition": "The relative heaviness of a syllable, determined by the number of moras. Heavy syllables (two moras) differ from light syllables (one mora) in stress assignment and prosodic patterns.",
+    "seeAlso": ["mora", "stress"]
+  },
+  {
+    "term": "foot",
+    "category": "Phonology",
+    "definition": "A metrical unit that groups syllables into a rhythmic unit. Common foot types include the iamb (light-heavy), trochee (heavy-light), and dactyl.",
+    "seeAlso": ["stress", "mora", "weight"]
+  },
+  {
+    "term": "iconicity",
+    "category": "Semantics",
+    "definition": "A resemblance relationship between the form of a sign and its meaning. Sound symbolism (phonesthesia) and onomatopoeia are examples of iconic motivation in language.",
+    "seeAlso": ["onomatopoeia", "arbitrariness"]
+  },
+  {
+    "term": "arbitrariness",
+    "category": "Semantics",
+    "definition": "The property of language whereby the relationship between a linguistic form and its meaning is conventional and unmotivated. Contrasted with iconicity.",
+    "seeAlso": ["iconicity"]
+  },
+  {
+    "term": "onomatopoeia",
+    "category": "Semantics",
+    "definition": "Words whose phonological form imitates or resembles the sound they denote (e.g., 'buzz', 'meow', 'splash').",
+    "seeAlso": ["iconicity", "sound symbolism"]
+  },
+  {
+    "term": "sound symbolism",
+    "category": "Semantics",
+    "definition": "A non-arbitrary relationship between sound and meaning, where certain sounds or sound patterns are associated with particular semantic properties cross-linguistically.",
+    "seeAlso": ["iconicity", "onomatopoeia"]
+  },
+  {
+    "term": "grammatical category",
+    "category": "Morphology",
+    "definition": "A class of expressions that share distributional and morphosyntactic properties. Includes parts of speech (noun, verb, adjective) and inflectional categories (tense, case, number).",
+    "seeAlso": ["inflection", "part of speech"]
+  },
+  {
+    "term": "part of speech",
+    "category": "Morphology",
+    "definition": "A major syntactic-semantic category of words such as noun, verb, adjective, adverb, preposition/postposition, conjunction, determiner, and pronoun.",
+    "seeAlso": ["grammatical category", "inflection"]
+  },
+  {
+    "term": "classifier",
+    "category": "Typology",
+    "definition": "A morpheme that classifies the noun it modifies according to semantic features like shape, animacy, or function. Distinct from noun class systems but related.",
+    "seeAlso": ["numeral classifier", "noun class"]
+  },
+  {
+    "term": "locative",
+    "category": "Syntax",
+    "definition": "A case or grammatical relation marking location. Some languages grammaticalize a rich set of locative distinctions (interior, surface, proximity).",
+    "seeAlso": ["case", "spatial deixis"]
+  },
+  {
+    "term": "instrumental",
+    "category": "Syntax",
+    "definition": "A case that marks the instrument or means by which an action is performed.",
+    "seeAlso": ["case", "semantic role"]
+  },
+  {
+    "term": "vocative",
+    "category": "Syntax",
+    "definition": "A case used to address someone directly. In many languages, the vocative is formally distinct from the nominative.",
+    "seeAlso": ["case", "nominative"]
+  },
+  {
+    "term": "topic",
+    "category": "Syntax",
+    "definition": "The element of a sentence that names what the sentence is about; often sentence-initial. Topic differs from subject in being a discourse category rather than a purely grammatical one.",
+    "seeAlso": ["focus", "information structure"]
+  },
+  {
+    "term": "focus",
+    "category": "Syntax",
+    "definition": "The element of a sentence that presents new or contrastive information. Marked through prosody (stress), morphology, or syntactic movement in different languages.",
+    "seeAlso": ["topic", "information structure"]
+  },
+  {
+    "term": "information structure",
+    "category": "Syntax",
+    "definition": "The way a sentence packages given (old) vs. new information for the discourse participant. Includes topic-comment and focus-background articulations.",
+    "seeAlso": ["topic", "focus"]
+  }
+]
