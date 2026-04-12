@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../db/app_database.dart';
 import '../../../grammar/data/grammar_providers.dart';
+import '../../../morphology/application/derivation_promotion_service.dart';
 import '../../../grammar/data/intrinsic_levels_codec.dart';
 import '../../../grammar/domain/dimension_level.dart';
 import '../../../morphology/data/morphology_providers.dart';
@@ -237,6 +238,9 @@ class _WordCreationFormState extends ConsumerState<WordCreationForm> {
           );
         }
       }
+      // D-59: reconcile auto-apply derivational rules so new matching-POS
+      // words immediately get their derived forms created.
+      await ref.read(derivationPromotionServiceProvider).reconcile();
       widget.onSaved();
     } finally {
       if (mounted) setState(() => _saving = false);

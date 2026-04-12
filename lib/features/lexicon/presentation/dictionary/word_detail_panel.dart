@@ -10,6 +10,7 @@ import '../../../grammar/data/standard_form_validation_provider.dart';
 import '../../../grammar/domain/dimension_level.dart';
 import '../../../grammar/domain/pos_resolver.dart';
 import '../../../grammar/presentation/paradigm_viewer/paradigm_table_widget.dart';
+import '../../../morphology/application/derivation_promotion_service.dart';
 import '../../../morphology/data/morphology_providers.dart';
 import '../../data/phonotactic_validation_provider.dart';
 import '../../../phonology/data/phonotactic_providers.dart'
@@ -249,6 +250,9 @@ class _WordDetailPanelState extends ConsumerState<WordDetailPanel> {
         intrinsicLevelsJson: Value(encoded),
       ),
     );
+    // D-59: reconcile after meaning changes — a previously-null meaning
+    // landing triggers auto-apply for rules that skipped this word.
+    await ref.read(derivationPromotionServiceProvider).reconcile();
     setState(() => _isEditing = false);
   }
 
