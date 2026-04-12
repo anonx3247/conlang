@@ -1886,10 +1886,27 @@ class _PhonemeViolationRow extends ConsumerWidget {
     if (text.isEmpty) return const SizedBox.shrink();
     final inventory = ref.watch(phonemeInventoryProvider);
 
+    // D-81 04-16 user feedback fix (2026-04-11): when romanization is
+    // enabled, the rule editor displays the rom form of stored phonemic
+    // literals (e.g. the user's mapping `ø → o` renders a stored `ø` as
+    // `o` in the field). The scanner must receive the DEROMANIZED
+    // phonemic form so the inventory check compares phonemes against
+    // phonemes, not rom glyphs against phonemes. Without this, typing a
+    // valid rom like `o` (which maps to phonemic `ø` in the inventory)
+    // incorrectly emits "Contains unknown phoneme: 'o'".
+    //
+    // We scan the deromanized form and, if violations exist, show the
+    // warning on the DEROMANIZED text (not the rom text) so the user
+    // sees the exact phoneme-level offender. This is a small cosmetic
+    // divergence from the field display but keeps the warning accurate.
+    final romEnabled =
+        ref.watch(romanizationEnabledProvider).asData?.value ?? true;
+    final deromanize = ref.watch(deromanizeProvider);
+    final scanText = romEnabled ? deromanize(text) : text;
+
     // Build a minimal synthetic rule with a single branch + single
-    // op/cond containing [text], run the scanner, and render a
-    // ViolationText if any violations are reported. Keeps this widget
-    // decoupled from the full rule-building path in _buildDomainRule.
+    // op/cond containing [scanText], run the scanner, and render a
+    // ViolationText if any violations are reported.
     final synthetic = switch (scope) {
       'cond' => MorphologicalRule(
           id: 0,
@@ -1897,7 +1914,7 @@ class _PhonemeViolationRow extends ConsumerWidget {
           source: '',
           branches: [
             MorphBranch(
-              conditions: [PatternCond(text)],
+              conditions: [PatternCond(scanText)],
               operations: const [SuffixOp('')],
             ),
           ],
@@ -1909,7 +1926,7 @@ class _PhonemeViolationRow extends ConsumerWidget {
           branches: [
             MorphBranch(
               conditions: const [],
-              operations: [TemplateOp(text)],
+              operations: [TemplateOp(scanText)],
             ),
           ],
         ),
@@ -1920,7 +1937,7 @@ class _PhonemeViolationRow extends ConsumerWidget {
           branches: [
             MorphBranch(
               conditions: const [],
-              operations: [SuffixOp(text)],
+              operations: [SuffixOp(scanText)],
             ),
           ],
         ),
@@ -1946,7 +1963,7 @@ class _PhonemeViolationRow extends ConsumerWidget {
     return Padding(
       padding: const EdgeInsets.only(top: 4),
       child: ViolationText(
-        text: text,
+        text: scanText,
         violations: mapped,
         style: Theme.of(context).textTheme.bodySmall,
       ),

@@ -137,6 +137,14 @@ class PhonemeLiteralScanner {
   // ---------------------------------------------------------------------
   // Literal-string longest-match scan. Mirrors the
   // `word_generator.dart:172` tokenizer pattern.
+  //
+  // D-81 04-16 user feedback fix (2026-04-11): class-ref tokens `V`,
+  // `C`, `F`, and `[name]` are recognised and skipped here too — they
+  // are legal literal-field contents in AblautOp.from/to, SuffixOp.affix,
+  // etc. (e.g. an ablaut rule `/V/o/` stores `from='V'` meaning "any
+  // vowel"; V must NOT be flagged as an unknown phoneme). Before this
+  // fix, class-ref skipping was only in `_scanPatternCond`; the rule
+  // editor flagged valid V/C/F class-refs in op fields.
   // ---------------------------------------------------------------------
   void _scanLiteral(
     String literal,
@@ -147,6 +155,21 @@ class PhonemeLiteralScanner {
     if (literal.isEmpty) return;
     var i = 0;
     while (i < literal.length) {
+      final ch = literal[i];
+      // Class-ref passthrough: `[name]` bracket-wrapped natural class.
+      if (ch == '[') {
+        final closeIdx = literal.indexOf(']', i + 1);
+        if (closeIdx != -1) {
+          i = closeIdx + 1;
+          continue;
+        }
+        // Malformed bracket — fall through to flag `[` as unknown.
+      }
+      // Class-ref passthrough: single uppercase letter `V`, `C`, `F`.
+      if (ch == 'V' || ch == 'C' || ch == 'F') {
+        i += 1;
+        continue;
+      }
       final matched = _longestMatchAt(literal, i, phonemes);
       if (matched > 0) {
         i += matched;
@@ -158,7 +181,7 @@ class PhonemeLiteralScanner {
           opIndex: opIndex,
           literalOffset: i,
           length: 1,
-          char: literal[i],
+          char: ch,
         ));
         i += 1;
       }
@@ -182,6 +205,21 @@ class PhonemeLiteralScanner {
       final code = ch.codeUnitAt(0);
       // Skip digits '1'..'9' (consonant slot markers).
       if (code >= 0x31 && code <= 0x39) {
+        i += 1;
+        continue;
+      }
+      // D-81 04-16 user feedback fix: class-ref passthroughs also
+      // apply inside template patterns — `[name]` bracket-wrapped
+      // and single uppercase `V`/`C`/`F` are structural, not literal.
+      if (ch == '[') {
+        final closeIdx = pattern.indexOf(']', i + 1);
+        if (closeIdx != -1) {
+          i = closeIdx + 1;
+          continue;
+        }
+        // Malformed bracket — fall through to flag as unknown.
+      }
+      if (ch == 'V' || ch == 'C' || ch == 'F') {
         i += 1;
         continue;
       }
