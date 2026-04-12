@@ -12,12 +12,14 @@ import '../../../phonology/data/romanization_providers.dart';
 import '../../../phonology/domain/word_generator.dart';
 import '../../../project/data/project_providers.dart';
 import '../../data/grammar_providers.dart';
+import '../../data/intrinsic_levels_codec.dart';
 import '../../data/paradigm_cell_override_dao.dart';
 import '../../data/standard_form_validation_provider.dart';
 import '../../data/typology_providers.dart';
 import '../../domain/dimension_level.dart';
 import '../../domain/paradigm_axes.dart';
 import '../../domain/paradigm_cell.dart';
+import '../../domain/pos_resolver.dart';
 import '../../domain/rule_kind.dart';
 import 'cell_override_dialog.dart';
 
@@ -61,6 +63,7 @@ class ParadigmTableWidget extends ConsumerWidget {
     required this.lexemeId,
     required this.posId,
     this.clickMode = ParadigmClickMode.ruleEditor,
+    this.lexemeIds,
   });
 
   final int lexemeId;
@@ -71,6 +74,13 @@ class ParadigmTableWidget extends ConsumerWidget {
   /// is the primary consumer post-plan-04-13. The Lexicon word-detail
   /// embed explicitly passes [ParadigmClickMode.wordOverride].
   final ParadigmClickMode clickMode;
+
+  /// Issue 37c — 04-18-03. Optional set of lexeme IDs for multi-word
+  /// intrinsic selection in the grammar tab. When non-null and non-empty,
+  /// the stacked-slice viewer filters each intrinsic slice to only show
+  /// lexemes whose IDs appear in this set. Null = template / single-word
+  /// behavior (unchanged).
+  final List<int>? lexemeIds;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -102,12 +112,35 @@ class ParadigmTableWidget extends ConsumerWidget {
     final axesAsync = ref.watch(paradigmAxesProvider(posId));
     final axes = axesAsync.asData?.value ?? const ParadigmAxes();
 
-    if (dims.length < 2) {
+    if (dims.isEmpty) {
       return Center(
         child: Text(
-          'This POS has fewer than 2 dimensions; no paradigm to render.',
+          'This POS has no dimensions. Add dimensions to build a paradigm.',
           style: theme.textTheme.bodyMedium,
         ),
+      );
+    }
+
+    // Issue 37a — 04-18-03. A POS with exactly 1 dimension renders a
+    // single-row flat table: that dimension supplies the column headers
+    // and there is exactly one data row with the base stem.
+    if (dims.length == 1) {
+      final singleDim = dims.first;
+      final effectiveLexemeId = lexemeId != -1
+          ? lexemeId
+          : (ref.watch(firstMatchingLexemeForPosProvider(posId))?.id ?? -1);
+      final chart =
+          ref.watch(computedInflectedParadigmProvider(effectiveLexemeId));
+      ParadigmCell? cellFor(Map<int, int> featureSet) =>
+          chart.cellFor(featureSet);
+      return _buildSingleDimTable(
+        context,
+        ref,
+        theme,
+        cs,
+        dim: singleDim,
+        cellFor: cellFor,
+        activeLexemeId: effectiveLexemeId,
       );
     }
 
@@ -223,6 +256,13 @@ class ParadigmTableWidget extends ConsumerWidget {
   /// D-94 — 04-17. Stacked intrinsic slice rendering. Enumerates the
   /// Cartesian product of intrinsic combinations and renders one section
   /// per combination (even for empty buckets — show the hint).
+  ///
+  /// Issues 37b/37c/39b — 04-18-03:
+  /// - When [lexemeId] != -1 (word-detail mode), only the combination
+  ///   matching that lexeme's own intrinsic levels is shown (no dropdowns).
+  /// - When [lexemeIds] is non-null/non-empty (grammar-tab multi-select),
+  ///   each slice's pool is filtered to the selected IDs, skipping slices
+  ///   with no matching word.
   Widget _buildStackedIntrinsicSlices(
     BuildContext context,
     WidgetRef ref,
@@ -243,32 +283,141 @@ class ParadigmTableWidget extends ConsumerWidget {
       ];
     }
 
-    // Lookup grouped lexemes.
-    final grouped = ref.watch(lexemesByIntrinsicCombinationProvider(posId));
+    // Issue 37b/39b — 04-18-03. Word-detail mode: filter to the specific
+    // lexeme's own intrinsic combination and render exactly one slice.
+    if (lexemeId != -1) {
+      final lexemeAsync = ref.watch(lexemeByIdProvider(lexemeId));
+      final lexeme = lexemeAsync.asData?.value;
+      final ownLevels = IntrinsicLevelsCodec.decode(lexeme?.intrinsicLevelsJson);
+      // Build the single combination key that matches this word's intrinsic
+      // levels. Fall back to the first combo if levels are not yet stored.
+      Map<int, int> ownCombo = {};
+      for (final d in intrinsicDims) {
+        if (ownLevels.containsKey(d.id)) {
+          ownCombo[d.id] = ownLevels[d.id]!;
+        }
+      }
+      final filteredCombinations = ownCombo.length == intrinsicDims.length
+          ? [ownCombo]
+          : combinations.take(1).toList();
 
-    if (nonIntrinsicDims.length < 2) {
-      return Center(
-        child: Text(
-          'This POS needs at least 2 non-intrinsic dimensions to render a paradigm.',
-          style: theme.textTheme.bodyMedium,
+      // For word-detail, show no-dropdown slice (pool = [lexeme]).
+      final pool = lexeme != null ? [lexeme] : <Lexeme>[];
+
+      return SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            for (final combo in filteredCombinations)
+              _IntrinsicSliceSection(
+                posId: posId,
+                combination: combo,
+                intrinsicDims: intrinsicDims,
+                allDims: dims,
+                pool: pool,
+                clickMode: clickMode,
+                // Word-detail: lock the word, hide the dropdown.
+                lockedLexemeId: lexemeId,
+              ),
+          ],
         ),
       );
     }
+
+    // Lookup grouped lexemes.
+    final grouped = ref.watch(lexemesByIntrinsicCombinationProvider(posId));
+
+    // Issue 37a — 04-18-03. 0 non-intrinsic dims: POS is entirely intrinsic
+    // (e.g. a gender-only POS). Show base forms only — no paradigm axes.
+    if (nonIntrinsicDims.isEmpty) {
+      final allLexemes = ref.watch(allLexemeListProvider).asData?.value ?? const <Lexeme>[];
+      final posList = ref.watch(posListProvider).asData?.value ?? const <PartsOfSpeechData>[];
+      final posLexemes = allLexemes.where((lex) {
+        final pos = posForLexeme(lex, posList);
+        return pos?.id == posId;
+      }).toList();
+      return _buildBaseFormDisplay(context, theme, cs, posLexemes, intrinsicDims);
+    }
+
+    // Issue 37a — 04-18-03. 1 non-intrinsic dim: render a single-row
+    // paradigm table per intrinsic slice instead of rejecting.
+    // (2+ non-intrinsic dims: existing multi-axis table rendering below.)
+    //
+    // Multi-select filtering (issue 37c): when [lexemeIds] is set, filter
+    // each combo's pool and skip combos with no matching word.
+    final effectiveLexemeIds = lexemeIds;
 
     return SingleChildScrollView(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          for (final combo in combinations)
-            _IntrinsicSliceSection(
-              posId: posId,
-              combination: combo,
-              intrinsicDims: intrinsicDims,
-              allDims: dims,
-              pool: _lookupPool(grouped, combo, intrinsicDims),
-              clickMode: clickMode,
-            ),
+          for (final combo in combinations) ...[
+            Builder(builder: (ctx) {
+              var pool = _lookupPool(grouped, combo, intrinsicDims);
+              // Issue 37c: filter pool when lexemeIds selection is active.
+              if (effectiveLexemeIds != null && effectiveLexemeIds.isNotEmpty) {
+                pool = pool
+                    .where((l) => effectiveLexemeIds.contains(l.id))
+                    .toList();
+                // Skip combos where no selected word has these intrinsic levels.
+                if (pool.isEmpty) return const SizedBox.shrink();
+              }
+              return _IntrinsicSliceSection(
+                posId: posId,
+                combination: combo,
+                intrinsicDims: intrinsicDims,
+                allDims: dims,
+                pool: pool,
+                clickMode: clickMode,
+              );
+            }),
+          ],
         ],
+      ),
+    );
+  }
+
+  /// Issue 37a — 04-18-03. Base-form display for POSes with 0 non-intrinsic
+  /// dimensions. Lists words grouped by their intrinsic combination — no
+  /// paradigm axes to generate.
+  Widget _buildBaseFormDisplay(
+    BuildContext context,
+    ThemeData theme,
+    ColorScheme cs,
+    List<Lexeme> posLexemes,
+    List<Dimension> intrinsicDims,
+  ) {
+    if (posLexemes.isEmpty) {
+      return Center(
+        child: Text(
+          'No words for this POS yet.',
+          style: theme.textTheme.bodyMedium?.copyWith(
+            color: cs.onSurface.withValues(alpha: 0.6),
+          ),
+        ),
+      );
+    }
+    return SingleChildScrollView(
+      child: Padding(
+        padding: const EdgeInsets.all(8),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'All dimensions are intrinsic — no paradigm axes. '
+              'Base forms listed below.',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: cs.onSurface.withValues(alpha: 0.6),
+              ),
+            ),
+            const SizedBox(height: 8),
+            for (final lex in posLexemes)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 2),
+                child: Text(lex.ipa, style: theme.textTheme.bodyMedium),
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -409,6 +558,58 @@ class ParadigmTableWidget extends ConsumerWidget {
               ),
           ],
         ),
+      ),
+    );
+  }
+
+  /// Issue 37a — 04-18-03. Single-dimension table: one row of cells,
+  /// one column header per level. The "row" header area is omitted since
+  /// there is only one row (the base form row).
+  Widget _buildSingleDimTable(
+    BuildContext context,
+    WidgetRef ref,
+    ThemeData theme,
+    ColorScheme cs, {
+    required Dimension dim,
+    required ParadigmCell? Function(Map<int, int>) cellFor,
+    int activeLexemeId = -1,
+  }) {
+    final levels = decodeLevelsJson(dim.levelsJson);
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header row: one cell per level.
+          Row(
+            children: [
+              for (final lvl in levels)
+                Container(
+                  width: 80,
+                  height: 32,
+                  alignment: Alignment.center,
+                  color: cs.surfaceContainerLow,
+                  child: Text(
+                    lvl.abbr,
+                    style: theme.textTheme.labelSmall
+                        ?.copyWith(fontWeight: FontWeight.w600),
+                  ),
+                ),
+            ],
+          ),
+          // Data row: one cell per level.
+          Row(
+            children: [
+              for (final lvl in levels)
+                _ParadigmCellWidget(
+                  lexemeId: activeLexemeId,
+                  featureSet: {dim.id: lvl.id},
+                  cell: cellFor({dim.id: lvl.id}),
+                  clickMode: clickMode,
+                ),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -821,6 +1022,7 @@ class _IntrinsicSliceSection extends ConsumerStatefulWidget {
     required this.allDims,
     required this.pool,
     required this.clickMode,
+    this.lockedLexemeId,
   });
 
   final int posId;
@@ -829,6 +1031,11 @@ class _IntrinsicSliceSection extends ConsumerStatefulWidget {
   final List<Dimension> allDims;
   final List<Lexeme> pool;
   final ParadigmClickMode clickMode;
+
+  /// Issue 37b/39b — 04-18-03. When set, skip the word-picker dropdown
+  /// and render the paradigm for exactly this lexeme. Used in word-detail
+  /// mode where the host has already determined the correct intrinsic slice.
+  final int? lockedLexemeId;
 
   @override
   ConsumerState<_IntrinsicSliceSection> createState() =>
@@ -858,6 +1065,35 @@ class _IntrinsicSliceSectionState
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
     final label = _combinationLabel();
+
+    // Issue 37b/39b: when lockedLexemeId is set, bypass the pool/dropdown
+    // and render the paradigm for exactly that word.
+    final lockedId = widget.lockedLexemeId;
+    if (lockedId != null) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (label.isNotEmpty)
+              Text(
+                label,
+                style: theme.textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            const SizedBox(height: 4),
+            _IntrinsicSliceTable(
+              posId: widget.posId,
+              lexemeId: lockedId,
+              allDims: widget.allDims,
+              clickMode: widget.clickMode,
+            ),
+            const Divider(),
+          ],
+        ),
+      );
+    }
 
     // Default selection = pool.first.id (D-95 per-slice first-matching).
     final effectiveId =
@@ -957,6 +1193,25 @@ class _IntrinsicSliceTable extends ConsumerWidget {
     final nonIntrinsicDims = allDims.where((d) => !d.intrinsic).toList();
     final axesAsync = ref.watch(paradigmAxesProvider(posId));
     final axes = axesAsync.asData?.value ?? const ParadigmAxes();
+
+    // Issue 37a — 04-18-03. Handle 1 non-intrinsic dim: render a single-row
+    // flat table (one column header per level, one data row).
+    if (nonIntrinsicDims.length == 1) {
+      final singleDim = nonIntrinsicDims.first;
+      final chart = ref.watch(computedInflectedParadigmProvider(lexemeId));
+      ParadigmCell? cellFor(Map<int, int> featureSet) =>
+          chart.cellFor(featureSet);
+      return _buildSingleDimSliceTable(
+          context, ref, theme, cs, singleDim, cellFor);
+    }
+    if (nonIntrinsicDims.isEmpty) {
+      return Center(
+        child: Text(
+          'No non-intrinsic dimensions.',
+          style: theme.textTheme.bodyMedium,
+        ),
+      );
+    }
 
     // Resolve row/col from non-intrinsic dims only.
     Dimension? rowDim = nonIntrinsicDims
@@ -1103,6 +1358,54 @@ class _IntrinsicSliceTable extends ConsumerWidget {
                   ),
               ],
             ),
+        ],
+      ),
+    );
+  }
+
+  /// Issue 37a — 04-18-03. Single-dim slice table for intrinsic POSes with
+  /// exactly 1 non-intrinsic dimension. Renders a header row + one data row.
+  Widget _buildSingleDimSliceTable(
+    BuildContext context,
+    WidgetRef ref,
+    ThemeData theme,
+    ColorScheme cs,
+    Dimension dim,
+    ParadigmCell? Function(Map<int, int>) cellFor,
+  ) {
+    final levels = decodeLevelsJson(dim.levelsJson);
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              for (final lvl in levels)
+                Container(
+                  width: 80,
+                  height: 32,
+                  alignment: Alignment.center,
+                  color: cs.surfaceContainerLow,
+                  child: Text(
+                    lvl.abbr,
+                    style: theme.textTheme.labelSmall
+                        ?.copyWith(fontWeight: FontWeight.w600),
+                  ),
+                ),
+            ],
+          ),
+          Row(
+            children: [
+              for (final lvl in levels)
+                _ParadigmCellWidget(
+                  lexemeId: lexemeId,
+                  featureSet: {dim.id: lvl.id},
+                  cell: cellFor({dim.id: lvl.id}),
+                  clickMode: clickMode,
+                ),
+            ],
+          ),
         ],
       ),
     );
