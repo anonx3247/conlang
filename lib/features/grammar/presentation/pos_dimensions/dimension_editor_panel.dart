@@ -286,10 +286,38 @@ class DimensionEditorPanel extends ConsumerWidget {
                   tooltip: 'Rename dimension',
                   onPressed: () => _showRenameDialog(ctx, ref, dim),
                 ),
+                // 04-18-02: confirmation dialog before dimension deletion
+                // (T-18-02-01 — prevents accidental data loss).
                 IconButton(
                   icon: const Icon(Icons.delete_outline),
                   tooltip: 'Delete dimension',
                   onPressed: () async {
+                    final confirmed = await showDialog<bool>(
+                      context: ctx,
+                      builder: (dlgCtx) => AlertDialog(
+                        title: const Text('Delete dimension?'),
+                        content: Text(
+                          "Delete dimension '${dim.name}'? All levels and "
+                          'associated rules will be affected.',
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () =>
+                                Navigator.of(dlgCtx).pop(false),
+                            child: const Text('Cancel'),
+                          ),
+                          TextButton(
+                            onPressed: () =>
+                                Navigator.of(dlgCtx).pop(true),
+                            style: TextButton.styleFrom(
+                              foregroundColor: theme.colorScheme.error,
+                            ),
+                            child: const Text('Delete'),
+                          ),
+                        ],
+                      ),
+                    );
+                    if (confirmed != true) return;
                     final dao = ref.read(grammarDaoProvider);
                     if (dao == null) return;
                     await dao.deleteDimension(dim.id);
@@ -337,60 +365,55 @@ class DimensionEditorPanel extends ConsumerWidget {
                 ),
               ),
             const SizedBox(height: 8),
+            // 04-18-02: Fix UAT issues 28+38 — chip hit-test fix.
+            // Previously InkWell (edit) and IconButton (standard-form) were
+            // nested inside InputChip.label, causing the chip to absorb taps
+            // before inner widgets could receive them.
+            //
+            // Fix (Option A): replaced InputChip with custom _LevelChip
+            // Container. Each interactive element gets its own gesture
+            // detector with no parent chip absorbing taps.
             Wrap(
               spacing: 8,
               runSpacing: 4,
               children: [
                 for (final l in levels)
-                  InputChip(
-                    // BLOCKER-2 slot order: [edit-04-16] [text] [standard-form-04-17-if-intrinsic]
-                    label: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        // LEFT slot: D-79 plan 04-16 level rename affordance.
-                        InkWell(
-                          onTap: () => _onEditLevel(ctx, ref, dim, l),
-                          child: Icon(
-                            Icons.edit_outlined,
-                            size: 14,
-                            color: theme.colorScheme.onSurface
-                                .withValues(alpha: 0.6),
+                  _LevelChip(
+                    level: l,
+                    dim: dim,
+                    theme: theme,
+                    onEdit: () => _onEditLevel(ctx, ref, dim, l),
+                    onDelete: () async {
+                      // 04-18-02: confirmation dialog before level deletion.
+                      if (!ctx.mounted) return;
+                      final confirmed = await showDialog<bool>(
+                        context: ctx,
+                        builder: (dlgCtx) => AlertDialog(
+                          title: const Text('Delete level?'),
+                          content: Text(
+                            "Delete level '${l.name} (${l.abbr})' from "
+                            "${dim.name}? This cannot be undone.",
                           ),
+                          actions: [
+                            TextButton(
+                              onPressed: () =>
+                                  Navigator.of(dlgCtx).pop(false),
+                              child: const Text('Cancel'),
+                            ),
+                            TextButton(
+                              onPressed: () =>
+                                  Navigator.of(dlgCtx).pop(true),
+                              style: TextButton.styleFrom(
+                                foregroundColor: theme.colorScheme.error,
+                              ),
+                              child: const Text('Delete'),
+                            ),
+                          ],
                         ),
-                        const SizedBox(width: 4),
-                        // CENTER slot: level label text.
-                        Text('${l.name} (${l.abbr})'),
-                        // RIGHT slot: D-98 plan 04-17 standard-form pattern
-                        // affordance, only shown when dim is intrinsic.
-                        if (dim.intrinsic) ...[
-                          const SizedBox(width: 4),
-                          IconButton(
-                            icon: const Icon(Icons.text_snippet_outlined, size: 16),
-                            tooltip: 'Edit standard form pattern',
-                            padding: EdgeInsets.zero,
-                            constraints: const BoxConstraints(),
-                            onPressed: () {
-                              showDialog(
-                                context: ctx,
-                                builder: (_) => StandardFormPatternDialog(
-                                  dimId: dim.id,
-                                  dimName: dim.name,
-                                  levelId: l.id,
-                                  levelName: l.name,
-                                ),
-                              );
-                            },
-                          ),
-                        ],
-                      ],
-                    ),
-                    onDeleted: () async {
+                      );
+                      if (confirmed != true) return;
                       // D-86 — 04-17 unified level-deletion dependency
-                      // check. Before the pre-04-17 direct DAO write, run
-                      // checkLevelDeletionDependencies to catch any
-                      // references across lexemes / standard-form
-                      // patterns / rule featureBindings. Non-blocking →
-                      // fall through to the original direct delete.
+                      // check. Non-blocking → fall through to direct delete.
                       // Blocking → open _ReassignLevelDialog and route
                       // through reassignLevelAndDelete in a single
                       // transaction.
@@ -432,6 +455,19 @@ class DimensionEditorPanel extends ConsumerWidget {
                       await dao.reassignLevelAndDelete(
                           dim.id, l.id, targetId);
                     },
+                    onShowStandardForm: dim.intrinsic
+                        ? () {
+                            showDialog(
+                              context: ctx,
+                              builder: (_) => StandardFormPatternDialog(
+                                dimId: dim.id,
+                                dimName: dim.name,
+                                levelId: l.id,
+                                levelName: l.name,
+                              ),
+                            );
+                          }
+                        : null,
                   ),
                 // D-80 plan 04-16: trailing + chip opens _LevelEditDialog
                 // with empty fields; on save appends a new DimensionLevel
@@ -448,6 +484,114 @@ class DimensionEditorPanel extends ConsumerWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// 04-18-02: Custom level chip that gives each interactive element its own
+/// hit-test area, fixing UAT issues 28 and 38.
+///
+/// Replaces the old `InputChip` with nested `InkWell`/`IconButton` inside
+/// `label` — that layout caused the InputChip to absorb taps before inner
+/// widgets received them.
+///
+/// Styled to visually match Material InputChip: rounded rectangle, border,
+/// surface background, padding.
+class _LevelChip extends StatelessWidget {
+  const _LevelChip({
+    required this.level,
+    required this.dim,
+    required this.theme,
+    required this.onEdit,
+    required this.onDelete,
+    this.onShowStandardForm,
+  });
+
+  final DimensionLevel level;
+  final Dimension dim;
+  final ThemeData theme;
+  final VoidCallback onEdit;
+  final VoidCallback onDelete;
+
+  /// When non-null (dim.intrinsic == true), the standard-form icon is shown
+  /// and this callback is invoked on tap.
+  final VoidCallback? onShowStandardForm;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: theme.colorScheme.outline.withValues(alpha: 0.3),
+        ),
+        color: theme.colorScheme.surface,
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // LEFT slot: edit-level affordance (D-79 plan 04-16).
+          // Direct InkWell in its own layout slot — no parent chip absorbs.
+          InkWell(
+            onTap: onEdit,
+            borderRadius: BorderRadius.circular(4),
+            child: Padding(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 2, vertical: 2),
+              child: Icon(
+                Icons.edit_outlined,
+                size: 14,
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+              ),
+            ),
+          ),
+          const SizedBox(width: 4),
+          // CENTER slot: level label text.
+          Text(
+            '${level.name} (${level.abbr})',
+            style: theme.textTheme.bodySmall,
+          ),
+          // RIGHT slot: D-98 plan 04-17 standard-form pattern affordance,
+          // only shown when dim is intrinsic.
+          if (onShowStandardForm != null) ...[
+            const SizedBox(width: 2),
+            InkWell(
+              onTap: onShowStandardForm,
+              borderRadius: BorderRadius.circular(4),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 2, vertical: 2),
+                child: Tooltip(
+                  message: 'Edit standard form pattern',
+                  child: Icon(
+                    Icons.text_snippet_outlined,
+                    size: 14,
+                    color: theme.colorScheme.onSurface
+                        .withValues(alpha: 0.6),
+                  ),
+                ),
+              ),
+            ),
+          ],
+          // DELETE slot: close icon — replaces InputChip.onDeleted.
+          const SizedBox(width: 2),
+          InkWell(
+            onTap: onDelete,
+            borderRadius: BorderRadius.circular(4),
+            child: Padding(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 2, vertical: 2),
+              child: Icon(
+                Icons.close,
+                size: 14,
+                color:
+                    theme.colorScheme.onSurface.withValues(alpha: 0.5),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
