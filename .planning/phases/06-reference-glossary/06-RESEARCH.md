@@ -372,17 +372,11 @@ Color _chipColor(String category, ColorScheme cs) => switch (category) {
 | A2 | Search debounce can be omitted or set to 150-200ms; with 150-200 entries in-memory filtering is fast enough to run on every keystroke | Architecture Patterns | If performance is unexpectedly poor, add a Timer debounce using the existing WordGeneratorPanel pattern |
 | A3 | "See also" taps jump to the referenced term by clearing filters and scrolling | Common Pitfalls (Pitfall 4) | User may prefer a simpler approach (e.g. just set the search text to the term name) |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **Glossary content authoring**
-   - What we know: D-02 specifies 150-200 terms across 5 categories
-   - What's unclear: The glossary.json content itself must be authored; research cannot auto-generate authoritative linguistic definitions
-   - Recommendation: Wave 0 of the plan should include authoring the JSON asset as a concrete task (not a code task — a content task). The planner should budget for this. The developer/user likely needs to source or write definitions for ~150 terms.
+1. **Glossary content authoring** — RESOLVED: Addressed in Plan 06-01 Task 1 step 3; glossary.json content authored as part of execution with 150-200 terms across 5 categories.
 
-2. **Culture tab contextual filter**
-   - What we know: D-06 lists Phonology, Grammar, Lexicon as having contextual `?` buttons
-   - What's unclear: Culture tab is not listed — should it have a contextual button at all? No category in D-10 is labeled "Culture"
-   - Recommendation: Omit the `?` button from CultureShell unless specifically requested. The global `?` in AppShell provides access from Culture tab.
+2. **Culture tab contextual filter** — RESOLVED: Culture tab omitted per no matching D-10 category; global ? in AppShell provides access from any tab including Culture.
 
 ## Environment Availability
 
