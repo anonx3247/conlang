@@ -239,6 +239,16 @@ class _WordCreationFormState extends ConsumerState<WordCreationForm> {
     final posAsync = ref.watch(posListProvider);
     final posList = posAsync.asData?.value ?? [];
 
+    // 04-18-02 Task 2 — Issue 35a: integrate phonetic preview into the IPA
+    // field as helperText instead of rendering a separate Text below it.
+    // Compute here (before the field is built) so we can pass helperText
+    // directly into InputDecoration. Hidden when IPA is empty or when no
+    // rewrite rules fire (phonetic == phonemic).
+    final applyRewrite = ref.watch(applyRewritePipelineProvider);
+    final phonemic = _ipaController.text;
+    final phonetic = phonemic.isNotEmpty ? applyRewrite(phonemic) : phonemic;
+    final showPhonetic = phonemic.isNotEmpty && phonetic != phonemic;
+
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -283,6 +293,8 @@ class _WordCreationFormState extends ConsumerState<WordCreationForm> {
                       onChanged: (_) => setState(() {}),
                     ),
                     const SizedBox(height: 12),
+                    // D-113 / 04-18-02: phonetic preview integrated as
+                    // helperText inside the IPA field decoration (not below).
                     IpaTextField(
                       controller: _ipaController,
                       decoration: InputDecoration(
@@ -291,43 +303,30 @@ class _WordCreationFormState extends ConsumerState<WordCreationForm> {
                             : 'IPA (auto-derived — edit to override)',
                         hintText: 'e.g. /kala/',
                         errorText: _ipaError,
+                        helperText: showPhonetic ? '[$phonetic]' : null,
+                        helperStyle:
+                            theme.textTheme.bodySmall?.copyWith(
+                          color: cs.onSurface.withValues(alpha: 0.6),
+                          fontStyle: FontStyle.italic,
+                        ),
                       ),
                       onChanged: (_) => setState(() => _ipaError = null),
                     ),
-                    // D-113 (plan 04-17): surface-phonetic preview line.
-                    // Shows rewritePipeline(phonemic) when rewrite rules
-                    // produce a different surface form. Hidden when no
-                    // rules exist or none fire on the current phonemic.
-                    Builder(builder: (context) {
-                      final applyRewrite =
-                          ref.watch(applyRewritePipelineProvider);
-                      final phonemic = _ipaController.text;
-                      if (phonemic.isEmpty) return const SizedBox.shrink();
-                      final phonetic = applyRewrite(phonemic);
-                      if (phonetic == phonemic) return const SizedBox.shrink();
-                      return Padding(
-                        padding: const EdgeInsets.only(top: 4),
-                        child: Text(
-                          'Surface: [$phonetic]',
-                          style:
-                              Theme.of(context).textTheme.bodySmall?.copyWith(
-                                    color: Theme.of(context)
-                                        .colorScheme
-                                        .onSurface
-                                        .withValues(alpha: 0.6),
-                                    fontStyle: FontStyle.italic,
-                                  ),
-                        ),
-                      );
-                    }),
                   ] else ...[
-                    // IPA as primary input
+                    // IPA as primary input — phonetic preview also shown
+                    // as helperText when rewrite rules produce a surface form.
                     IpaTextField(
                       controller: _ipaController,
                       decoration: InputDecoration(
                         labelText: 'IPA *',
                         hintText: 'e.g. /kala/',
                         errorText: _ipaError,
+                        helperText: showPhonetic ? '[$phonetic]' : null,
+                        helperStyle:
+                            theme.textTheme.bodySmall?.copyWith(
+                          color: cs.onSurface.withValues(alpha: 0.6),
+                          fontStyle: FontStyle.italic,
+                        ),
                       ),
                       onChanged: (_) => setState(() => _ipaError = null),
                     ),
