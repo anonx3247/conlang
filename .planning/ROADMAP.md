@@ -195,8 +195,8 @@ Plans:
 **Plans:** 2 plans in 2 waves
 
 Plans:
-- [ ] 06-01-PLAN.md — Data layer: glossary.json asset (150-200 terms), GlossaryEntry domain class, Riverpod providers for loading + real-time filtering by search and category
-- [ ] 06-02-PLAN.md — Glossary UI: 320px right-side drawer with accordion tiles, AppShell ? button, per-tab contextual ? buttons (Phonology/Grammar/Lexicon), See Also navigation
+- [x] 06-01-PLAN.md — Data layer: glossary.json asset (150-200 terms), GlossaryEntry domain class, Riverpod providers for loading + real-time filtering by search and category
+- [x] 06-02-PLAN.md — Glossary UI: 320px right-side drawer with accordion tiles, AppShell ? button, per-tab contextual ? buttons (Phonology/Grammar/Lexicon), See Also navigation
 
 ## Progress
 
