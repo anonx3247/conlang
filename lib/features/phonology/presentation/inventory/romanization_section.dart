@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../db/app_database.dart';
 import '../../data/ipa_data.dart';
 import '../../data/phoneme_providers.dart';
+import '../../data/romanization_bijection.dart';
 import '../../data/romanization_dao.dart';
 import '../../data/romanization_providers.dart';
 import '../shared/ipa_keyboard/ipa_text_field.dart';
@@ -81,6 +82,47 @@ class _RomanizationSectionState extends ConsumerState<RomanizationSection> {
 
     final dao = _dao;
     if (dao == null) return;
+
+    // Plan 04-15 D-72 dry-run bijection check: build the PROPOSED mapping
+    // set (current rows with the edit applied) and validate it before
+    // touching the database. If any violation involves the proposed row
+    // (by content — the staged row has no id yet when inserting), block
+    // the save and surface the violation detail via a SnackBar.
+    final currentRows = await dao.getAllMappings();
+    final proposedRows = <RomanizationMapping>[];
+    if (existing == null) {
+      proposedRows
+        ..addAll(currentRows)
+        ..add(RomanizationMapping(
+          id: -1, // sentinel: new row
+          ipaSymbol: ipa,
+          latinMapping: latin,
+        ));
+    } else {
+      for (final row in currentRows) {
+        if (row.id == existing.id) {
+          proposedRows.add(
+              row.copyWith(ipaSymbol: ipa, latinMapping: latin));
+        } else {
+          proposedRows.add(row);
+        }
+      }
+    }
+    final violations = validateMappingsBijection(proposedRows);
+    if (violations.isNotEmpty) {
+      final blocker = violations.first;
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Romanization bijection conflict: ${blocker.detail}',
+            ),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
+      }
+      return;
+    }
 
     if (existing == null) {
       // Insert new mapping.
@@ -253,9 +295,68 @@ class _RomanizationSectionState extends ConsumerState<RomanizationSection> {
     List<RomanizationMapping> mappings,
     bool enabled,
   ) {
+    // Plan 04-15 D-72: non-dismissible banner when the active mapping set
+    // has bijection violations. Rule DSL editing must be treated as locked
+    // until the user fixes the conflict. The banner lives inside this
+    // section because the section already owns the mapping list and is
+    // the natural place for the user to resolve the issue.
+    final bijectionAsync = ref.watch(bijectionStatusProvider);
+    final violations = bijectionAsync.asData?.value ?? const <BijectionViolation>[];
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        if (violations.isNotEmpty)
+          Container(
+            margin: const EdgeInsets.only(bottom: 12),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: colorScheme.errorContainer,
+              border: Border.all(color: colorScheme.error),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.error_outline,
+                        size: 18, color: colorScheme.error),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Romanization bijection conflict '
+                        '(${violations.length} issue${violations.length == 1 ? '' : 's'})',
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          color: colorScheme.onErrorContainer,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                for (final v in violations)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 4),
+                    child: Text(
+                      '• ${v.detail}',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: colorScheme.onErrorContainer,
+                      ),
+                    ),
+                  ),
+                const SizedBox(height: 4),
+                Text(
+                  'Rule DSL editing is blocked until these conflicts are resolved.',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: colorScheme.onErrorContainer,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
         // Section header with toggle.
         Padding(
           padding: const EdgeInsets.fromLTRB(0, 0, 0, 12),

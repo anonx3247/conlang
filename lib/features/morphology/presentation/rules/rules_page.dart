@@ -6,7 +6,6 @@ import '../../../grammar/data/grammar_providers.dart';
 import '../../../grammar/domain/rule_kind.dart';
 import '../../data/morphology_dao.dart';
 import '../../data/morphology_providers.dart';
-import 'morphology_preview_panel.dart';
 import 'rule_editor_dialog.dart';
 
 /// D-56 grouping — single-POS groups first (alphabetic by POS name), then
@@ -157,14 +156,12 @@ class _RulesPageState extends ConsumerState<RulesPage> {
     final posAsync = ref.watch(posListProvider);
     final posList = posAsync.asData?.value ?? [];
 
+    // D-77 (plan 04-15): the static preview pane was removed from this
+    // page — the live preview lives in rule_editor_dialog.dart's
+    // preview_panel.dart. The rules list is now the full body of the
+    // page; no vertical divider, no right pane.
     return Scaffold(
-      body: Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // ---- Left: rules list -------------------------------------------
-          SizedBox(
-            width: 420,
-            child: rulesAsync.when(
+      body: rulesAsync.when(
               loading: () => const Center(child: CircularProgressIndicator()),
               error: (e, _) => Center(child: Text('Error: $e')),
               data: (rules) {
@@ -412,21 +409,6 @@ class _RulesPageState extends ConsumerState<RulesPage> {
                 );
               },
             ),
-          ),
-
-          // ---- Vertical divider -------------------------------------------
-          VerticalDivider(
-            width: 1,
-            thickness: 1,
-            color: cs.outlineVariant,
-          ),
-
-          // ---- Right: morphology preview panel ----------------------------
-          const Expanded(
-            child: MorphologyPreviewPanel(),
-          ),
-        ],
-      ),
       floatingActionButton: hasProject
           ? FloatingActionButton.extended(
               onPressed: () async {

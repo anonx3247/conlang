@@ -203,9 +203,12 @@ void main() {
       } catch (_) {}
     });
 
-    test('schemaVersion reports 9 after migration', () async {
+    test('schemaVersion reports 10 after migration (v8→v9→v10 chained)',
+        () async {
       await seedAndOpen(seed: (_) async {});
-      expect(db.schemaVersion, equals(9));
+      // schemaVersion now advances to 10 because plan 04-15 D-74 bumps the
+      // migration tip to v10. The v8→v9 tests exercise the same chained path.
+      expect(db.schemaVersion, equals(10));
     });
 
     test('Markers table exists and is empty after migration', () async {
@@ -408,7 +411,7 @@ void main() {
       await db.close();
       db = AppDatabase(NativeDatabase(File(dbPath)));
       await db.customSelect('SELECT 1').get();
-      expect(db.schemaVersion, equals(9));
+      expect(db.schemaVersion, equals(10));
     });
 
     test(

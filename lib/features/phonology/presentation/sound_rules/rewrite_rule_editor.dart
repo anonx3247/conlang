@@ -326,13 +326,21 @@ class _RewriteRuleEditDialogState extends State<_RewriteRuleEditDialog> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Main row: [input] -> [output]
+            //
+            // D-76 (plan 04-15): asymmetric labels. The input side is the
+            // phonemic match pattern (operates on phoneme inventory); the
+            // output side is the phonetic replacement (surface IPA, may
+            // contain allophones or diacritics outside the inventory).
+            // The rewrite pipeline applies this rule AFTER morphology,
+            // taking phonemic input and producing phonetic output —
+            // romanization contract (D-73) only applies to the input side.
             Row(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Expanded(
                   child: _RuleField(
                     controller: _inputCtrl,
-                    label: 'Input',
+                    label: 'Pattern (phonemic)',
                     hint: 'k',
                     onChanged: _validate,
                   ),
@@ -344,7 +352,7 @@ class _RewriteRuleEditDialogState extends State<_RewriteRuleEditDialog> {
                 Expanded(
                   child: _RuleField(
                     controller: _outputCtrl,
-                    label: 'Output',
+                    label: 'Replacement (phonetic)',
                     hint: 'x',
                     onChanged: _validate,
                   ),
@@ -352,15 +360,28 @@ class _RewriteRuleEditDialogState extends State<_RewriteRuleEditDialog> {
               ],
             ),
 
+            // D-76: surface the asymmetry to the user inline, not just via
+            // labels. The replacement field accepts surface IPA (allophones,
+            // diacritics allowed) and is NEVER subject to rom↔phonemic
+            // conversion regardless of the romanization toggle.
+            const SizedBox(height: 6),
+            Text(
+              'Pattern matches phonemic input; replacement is surface phonetic '
+              '(allophones, diacritics allowed).',
+              style: TextStyle(fontSize: 11, color: cs.onSurfaceVariant),
+            ),
+
             const SizedBox(height: 16),
 
             // Context row: [left] _ [right]
+            // D-76: phonemic (context side of the rule, not the replacement).
             Text('Context (optional)', style: labelStyle),
             const SizedBox(height: 6),
             Row(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Expanded(
+                  // D-76: phonemic (context side of the rule, not the replacement)
                   child: _RuleField(
                     controller: _leftCtrl,
                     label: 'Before',
@@ -373,6 +394,7 @@ class _RewriteRuleEditDialogState extends State<_RewriteRuleEditDialog> {
                   child: Text('_', style: arrowStyle),
                 ),
                 Expanded(
+                  // D-76: phonemic (context side of the rule, not the replacement)
                   child: _RuleField(
                     controller: _rightCtrl,
                     label: 'After',
