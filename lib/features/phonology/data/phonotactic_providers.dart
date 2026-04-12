@@ -58,6 +58,22 @@ final parsedRewriteRulesProvider = Provider<List<PhonologicalRewriteRule>>((ref)
   return parsed;
 });
 
+/// D-113 (plan 04-17): exposes a `String Function(String phonemic)` that
+/// applies the current project's active rewrite rules in order.
+///
+/// Returns the identity function when no rewrite rules are configured.
+/// Used by the word creation/edit dialog to show a surface-phonetic
+/// preview line under the auto-derived IPA field.
+final applyRewritePipelineProvider =
+    Provider<String Function(String phonemic)>((ref) {
+  final rules = ref.watch(parsedRewriteRulesProvider);
+  if (rules.isEmpty) return (String s) => s;
+  final inventory = ref.watch(phonemeInventoryProvider);
+  final gen = WordGenerator();
+  return (String phonemic) =>
+      gen.applyRewriteRules(word: phonemic, rules: rules, inventory: inventory);
+});
+
 // ---------------------------------------------------------------------------
 // Template providers
 // ---------------------------------------------------------------------------
