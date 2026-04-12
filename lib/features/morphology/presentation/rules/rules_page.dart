@@ -156,10 +156,10 @@ class _RulesPageState extends ConsumerState<RulesPage> {
     final posAsync = ref.watch(posListProvider);
     final posList = posAsync.asData?.value ?? [];
 
-    // D-77 (plan 04-15): static MorphologyPreviewPanel removed — the live
-    // preview lives in rule_editor_dialog.dart's preview_panel.dart. The
-    // rules list is now the full body of the page; no vertical divider, no
-    // right pane.
+    // D-77 (plan 04-15): the static preview pane was removed from this
+    // page — the live preview lives in rule_editor_dialog.dart's
+    // preview_panel.dart. The rules list is now the full body of the
+    // page; no vertical divider, no right pane.
     return Scaffold(
       body: rulesAsync.when(
               loading: () => const Center(child: CircularProgressIndicator()),
