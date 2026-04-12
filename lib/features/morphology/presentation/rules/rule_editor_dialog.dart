@@ -9,6 +9,8 @@ import '../../../grammar/domain/feature_bindings.dart';
 import '../../../grammar/domain/inflectional_rule.dart';
 import '../../../grammar/domain/rule_kind.dart';
 import '../../../grammar/domain/tiebreak_detector.dart';
+// D-100/D-101 — marker mode: MarkerDecl for pre-loading bindings on edit.
+import '../../../grammar/domain/marker.dart';
 import '../../../phonology/data/phonotactic_providers.dart';
 import '../../../phonology/data/romanization_bijection.dart';
 import '../../../phonology/data/romanization_providers.dart';
@@ -207,12 +209,19 @@ class _BranchState {
 /// (feature-binding picker, D-42) plus a live tiebreak banner (D-12). In
 /// derivational mode it renders Input/Output POS dropdowns (D-38) and hides
 /// the chip rows.
+///
+/// D-100/D-101 (plan 04-18-05): when [markerId] is non-null, the dialog
+/// opens in marker mode — the "Leave as unmarked" checkbox is pre-checked,
+/// the operations section and preview panel are hidden, and saving writes to
+/// [MarkerDao] instead of [MorphologyDao].
 class RuleEditorDialog extends ConsumerStatefulWidget {
   const RuleEditorDialog({
     super.key,
     required this.kind,
     this.existing,
     this.preFilledBindings,
+    this.markerId,
+    this.markerBindings,
   });
 
   /// Whether this dialog edits an inflectional or derivational rule.
@@ -230,6 +239,15 @@ class RuleEditorDialog extends ConsumerStatefulWidget {
   /// Ignored for derivational kind and when editing an existing rule.
   final Map<int, int>? preFilledBindings;
 
+  /// D-100 (plan 04-18-05): when non-null, the dialog opens in marker edit
+  /// mode with [_leaveAsUnmarked] pre-checked and [markerBindings] loaded
+  /// into the feature-binding picker.
+  final int? markerId;
+
+  /// D-100 (plan 04-18-05): pre-loaded bindings when editing an existing
+  /// marker. Only meaningful when [markerId] is non-null.
+  final FeatureBindings? markerBindings;
+
   @override
   ConsumerState<RuleEditorDialog> createState() => _RuleEditorDialogState();
 }
@@ -237,6 +255,13 @@ class RuleEditorDialog extends ConsumerStatefulWidget {
 class _RuleEditorDialogState extends ConsumerState<RuleEditorDialog> {
   final _nameCtrl = TextEditingController();
   final List<_BranchState> _branches = [];
+
+  /// D-100 (plan 04-18-05): when true the dialog is in marker mode —
+  /// the operations section and preview panel are hidden; saving writes to
+  /// [MarkerDao] instead of [MorphologyDao]. Toggled by the
+  /// "Leave as unmarked" checkbox (inflectional mode only).
+  bool _leaveAsUnmarked = false;
+
   /// Legacy selected POS IDs (derivational-era multi-POS filter). Kept so the
   /// DSL preview path and the legacy `posIds` text column keep working while
   /// we migrate to kind-aware bindings. In inflectional mode this mirrors
@@ -296,7 +321,20 @@ class _RuleEditorDialogState extends ConsumerState<RuleEditorDialog> {
     super.initState();
     if (widget.existing != null) {
       _loadFromExisting(widget.existing!);
-    } else {
+    }
+    // D-100: if opened for an existing marker, enter marker mode and
+    // pre-load its bindings into the feature-binding picker.
+    if (widget.markerId != null) {
+      _leaveAsUnmarked = true;
+      if (widget.markerBindings != null) {
+        _featureBindings.addAll(widget.markerBindings!.dims);
+        if (widget.markerBindings!.pos.isNotEmpty) {
+          _inflectionalPosSet.addAll(widget.markerBindings!.pos);
+          _selectedPosIds = Set<int>.from(_inflectionalPosSet);
+        }
+      }
+    }
+    if (widget.existing == null) {
       // Default: one branch with one suffix op.
       _branches.add(_BranchState());
       // D-51: seed feature bindings from caller-provided pre-fill
@@ -520,6 +558,13 @@ class _RuleEditorDialogState extends ConsumerState<RuleEditorDialog> {
   }
 
   Future<void> _save() async {
+    // D-101 (plan 04-18-05): marker mode save path — writes to MarkerDao,
+    // skips MorphologyDao entirely. Gated by _leaveAsUnmarked flag.
+    if (_leaveAsUnmarked) {
+      await _saveMarker();
+      return;
+    }
+
     // D-81 plan 04-16: scanner violations are soft warnings only —
     // never block save. There is no `if (violations.isNotEmpty)
     // return;` branch anywhere in this save path. The user may
@@ -755,6 +800,58 @@ class _RuleEditorDialogState extends ConsumerState<RuleEditorDialog> {
       // rule is a no-op.
       if (widget.kind == RuleKind.derivational && _autoApply) {
         await ref.read(derivationPromotionServiceProvider).reconcile();
+      }
+
+      if (mounted) Navigator.of(context).pop();
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // D-101 — marker mode save (plan 04-18-05)
+  // ---------------------------------------------------------------------------
+
+  /// Saves the dialog as a [MarkerDecl] via [MarkerDao].
+  ///
+  /// Validation: at least one binding must be selected and at least one POS
+  /// must be chosen. The POS is read from [_inflectionalPosSet] (markers are
+  /// per-POS, so only the first selected POS is used if multiple are picked).
+  Future<void> _saveMarker() async {
+    // Validate: at least one binding required.
+    if (_featureBindings.isEmpty) {
+      setState(() => _validationError =
+          'Select at least one dimension + level to mark as unmarked.');
+      return;
+    }
+    // Validate: a POS must be selected.
+    if (_inflectionalPosSet.isEmpty) {
+      setState(() => _validationError =
+          'Select at least one POS to attach this marker to.');
+      return;
+    }
+
+    final dao = ref.read(markerDaoProvider);
+    if (dao == null) return;
+
+    setState(() {
+      _saving = true;
+      _validationError = null;
+    });
+
+    try {
+      final bindings = FeatureBindings(
+        pos: [_inflectionalPosSet.first],
+        dims: Map<int, int>.from(_featureBindings),
+      );
+      final posId = _inflectionalPosSet.first;
+
+      if (widget.markerId != null) {
+        // Edit existing marker.
+        await dao.updateMarker(widget.markerId!, bindings);
+      } else {
+        // Create new marker.
+        await dao.insertMarker(posId: posId, bindings: bindings);
       }
 
       if (mounted) Navigator.of(context).pop();
@@ -1316,7 +1413,13 @@ class _RuleEditorDialogState extends ConsumerState<RuleEditorDialog> {
               child: Row(
                 children: [
                   Text(
-                    widget.existing != null ? 'Edit Rule' : 'New Rule',
+                    widget.markerId != null
+                        ? 'Edit Marker'
+                        : (_leaveAsUnmarked
+                            ? 'New Marker'
+                            : (widget.existing != null
+                                ? 'Edit Rule'
+                                : 'New Rule')),
                     style: theme.textTheme.titleLarge,
                   ),
                   const Spacer(),
@@ -1353,7 +1456,26 @@ class _RuleEditorDialogState extends ConsumerState<RuleEditorDialog> {
                             ),
                             onChanged: (_) => setState(() {}),
                           ),
-                          const SizedBox(height: 12),
+                          const SizedBox(height: 8),
+
+                          // D-100 (plan 04-18-05): "Leave as unmarked"
+                          // checkbox — inflectional mode only. Toggles
+                          // between rule mode and marker mode. In marker
+                          // mode the operations section and preview panel
+                          // are hidden; only the bindings picker remains.
+                          if (widget.kind == RuleKind.inflectional)
+                            CheckboxListTile(
+                              value: _leaveAsUnmarked,
+                              onChanged: (v) =>
+                                  setState(() => _leaveAsUnmarked = v ?? false),
+                              title: const Text(
+                                  'Leave as unmarked (no rule, just a ∅ cell)'),
+                              dense: true,
+                              controlAffinity:
+                                  ListTileControlAffinity.leading,
+                              contentPadding: EdgeInsets.zero,
+                            ),
+                          const SizedBox(height: 4),
 
                           // Kind-aware top section (plan 04-05).
                           if (widget.kind == RuleKind.inflectional)
@@ -1362,21 +1484,24 @@ class _RuleEditorDialogState extends ConsumerState<RuleEditorDialog> {
                             ..._buildDerivationalTop(theme, cs, posList),
                           const SizedBox(height: 16),
 
-                          // Branches
-                          ..._buildBranchCards(theme, cs),
+                          // D-100: hide ops + add-branch button in marker mode.
+                          if (!_leaveAsUnmarked) ...[
+                            // Branches
+                            ..._buildBranchCards(theme, cs),
 
-                          const SizedBox(height: 8),
+                            const SizedBox(height: 8),
 
-                          // Add branch button
-                          OutlinedButton.icon(
-                            onPressed: () {
-                              setState(() {
-                                _branches.add(_BranchState());
-                              });
-                            },
-                            icon: const Icon(Icons.add, size: 16),
-                            label: const Text('Add branch'),
-                          ),
+                            // Add branch button
+                            OutlinedButton.icon(
+                              onPressed: () {
+                                setState(() {
+                                  _branches.add(_BranchState());
+                                });
+                              },
+                              icon: const Icon(Icons.add, size: 16),
+                              label: const Text('Add branch'),
+                            ),
+                          ],
                         ],
                       ),
                     ),
@@ -1389,14 +1514,15 @@ class _RuleEditorDialogState extends ConsumerState<RuleEditorDialog> {
                     color: cs.outlineVariant,
                   ),
 
-                  // Right: preview
-                  Expanded(
-                    flex: 2,
-                    child: SingleChildScrollView(
-                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-                      child: PreviewPanel(rule: previewRule),
+                  // D-100: hide preview panel in marker mode.
+                  if (!_leaveAsUnmarked)
+                    Expanded(
+                      flex: 2,
+                      child: SingleChildScrollView(
+                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                        child: PreviewPanel(rule: previewRule),
+                      ),
                     ),
-                  ),
                 ],
               ),
             ),
