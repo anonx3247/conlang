@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../db/app_database.dart';
@@ -132,3 +134,97 @@ final childrenForLexemeProvider =
   if (dao == null) return const Stream<List<LexemeParentRow>>.empty();
   return dao.watchChildrenForParent(parentLexemeId);
 });
+
+// ---------------------------------------------------------------------------
+// D-82 / D-84 / D-85 — 04-17 intrinsic dimensions providers
+// ---------------------------------------------------------------------------
+
+/// D-82 — 04-17. Filters [dimensionsForPosProvider] to only intrinsic
+/// dimensions. Used by the word creation / edit intrinsic sub-form
+/// (Task 7) and the standard-form validation provider (Task 11).
+final intrinsicDimensionsForPosProvider =
+    Provider.family<List<Dimension>, int>((ref, posId) {
+  final async = ref.watch(dimensionsForPosProvider(posId));
+  final list = async.asData?.value ?? const <Dimension>[];
+  return list.where((d) => d.intrinsic).toList();
+});
+
+/// D-85 — 04-17. Counts how many lexemes still carry an intrinsic level
+/// entry for [dimId] in their [Lexemes.intrinsicLevelsJson]. Used by the
+/// purge affordance's visibility check in dimension_editor_panel.dart.
+/// Returns 0 when no project is open.
+final staleIntrinsicEntryCountProvider =
+    FutureProvider.family<int, int>((ref, dimId) async {
+  final dao = ref.watch(grammarDaoProvider);
+  if (dao == null) return 0;
+  return dao.countStaleIntrinsicEntries(dimId);
+});
+
+/// D-84 — 04-17. Intrinsic backfill banner row payload surfaced on the
+/// Inflections sub-tab after a false→true intrinsic toggle.
+class IntrinsicBackfillBanner {
+  const IntrinsicBackfillBanner({
+    required this.dimId,
+    required this.dimName,
+    required this.count,
+  });
+
+  final int dimId;
+  final String dimName;
+  final int count;
+}
+
+/// D-84 — 04-17. Watches project_settings for pending backfill banner
+/// rows (key pattern `intrinsic_backfill_pending_*`) and filters out
+/// dismissed rows (key pattern `intrinsic_backfill_banner_dismissed_*`).
+///
+/// The provider is a FutureProvider that reads the project_settings table
+/// directly via the database — it intentionally does not stream because
+/// banners are only refreshed after explicit user action (dismiss or
+/// toggle). Consumers call `ref.invalidate(intrinsicBackfillBannerProvider)`
+/// to force a refresh.
+final intrinsicBackfillBannerProvider =
+    FutureProvider<List<IntrinsicBackfillBanner>>((ref) async {
+  final db = ref.watch(currentDatabaseProvider);
+  if (db == null) return const [];
+  final rows = await db.select(db.projectSettings).get();
+  final pending = <IntrinsicBackfillBanner>[];
+  final dismissedDimIds = <int>{};
+  for (final row in rows) {
+    if (row.key.startsWith('intrinsic_backfill_banner_dismissed_')) {
+      final idPart = row.key.split('_').last;
+      final id = int.tryParse(idPart);
+      if (id != null && row.value == 'true') dismissedDimIds.add(id);
+    }
+  }
+  for (final row in rows) {
+    if (!row.key.startsWith('intrinsic_backfill_pending_')) continue;
+    try {
+      final decoded = _decodePendingBanner(row.value);
+      if (decoded == null) continue;
+      if (dismissedDimIds.contains(decoded.dimId)) continue;
+      pending.add(decoded);
+    } catch (_) {
+      // Skip malformed rows silently.
+    }
+  }
+  return pending;
+});
+
+IntrinsicBackfillBanner? _decodePendingBanner(String value) {
+  try {
+    final decoded = jsonDecode(value);
+    if (decoded is! Map) return null;
+    final dimId = decoded['dimId'] as int?;
+    final dimName = decoded['dimName'] as String?;
+    final count = decoded['count'] as int?;
+    if (dimId == null || dimName == null || count == null) return null;
+    return IntrinsicBackfillBanner(
+      dimId: dimId,
+      dimName: dimName,
+      count: count,
+    );
+  } catch (_) {
+    return null;
+  }
+}
