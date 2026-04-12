@@ -192,10 +192,11 @@ Plans:
 **Success Criteria** (what must be TRUE):
   1. User can open the built-in glossary, search for a linguistic term (e.g. "ergative", "allophone", "paradigm"), and read a clear definition without leaving the app
   2. Glossary entries for terms relevant to current context (morphology, phonology, grammar) are accessible from those tabs
-**Plans**: TBD
+**Plans:** 2 plans in 2 waves
 
 Plans:
-- [ ] 06-01: Linguistic glossary — bundled terminology dataset, searchable glossary UI, contextual access from relevant tabs
+- [ ] 06-01-PLAN.md — Data layer: glossary.json asset (150-200 terms), GlossaryEntry domain class, Riverpod providers for loading + real-time filtering by search and category
+- [ ] 06-02-PLAN.md — Glossary UI: 320px right-side drawer with accordion tiles, AppShell ? button, per-tab contextual ? buttons (Phonology/Grammar/Lexicon), See Also navigation
 
 ## Progress
 
@@ -211,4 +212,4 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4. Phases 5 and 6 depend only on
 | 3.2 Phonology Enhancements | 4/4 | Complete | 2026-04-10 |
 | 4. Grammar & Morphology | 25/25 | Complete | 2026-04-12 |
 | 5. Culture Wiki | 3/4 | Gap closure | - |
-| 6. Reference Glossary | 0/1 | Not started | - |
+| 6. Reference Glossary | 0/2 | Not started | - |
