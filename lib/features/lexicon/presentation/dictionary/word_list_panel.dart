@@ -2,9 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../features/morphology/data/morphology_providers.dart';
-import '../../../../shared/widgets/violation_text.dart';
-import '../../../phonology/domain/word_generator.dart' show Violation;
-import '../../../grammar/data/standard_form_validation_provider.dart';
+import '../../../phonology/data/phonotactic_providers.dart'
+    show applyRewritePipelineProvider;
 import '../../../phonology/data/romanization_providers.dart';
 import '../../data/lexeme_providers.dart';
 
@@ -370,14 +369,15 @@ class _WordListPanelState extends ConsumerState<WordListPanel> {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
 
-    // Batch violations for all lexemes — avoids per-item validation calls.
-    final violations = ref.watch(lexemeViolationsProvider);
     // Hoist allLexemes watch outside itemBuilder so we have a single provider
     // subscription per rebuild rather than one per visible row.
     final allLexemes = ref.watch(allLexemeListProvider).asData?.value ?? [];
     // Hoist the deromanize function so the per-row override flag check is
     // a cheap comparison rather than reading the provider per item.
     final deromanize = ref.watch(deromanizeProvider);
+    // Issue 35b: [bracket] notation means PHONETIC (post-rewrite), not
+    // phonemic. Hoist applyRewrite so every row applies the same pipeline.
+    final applyRewrite = ref.watch(applyRewritePipelineProvider);
     final ipaOverrideColor = Colors.orange.shade300;
 
     return ListView.builder(
@@ -398,14 +398,6 @@ class _WordListPanelState extends ConsumerState<WordListPanel> {
                 allLexemes.any((l) => l.id == id && l.rootId == rootIdStr))
             .length;
 
-        // Violations for this specific lexeme (null if it's an exception).
-        // D-99 -- 04-17: combine phonotactic + standard-form violations.
-        final lexemeViolation = violations[lexeme.id];
-        final sfViolations = ref.watch(standardFormViolationsProvider(lexeme.id)).asData?.value ?? const [];
-        final itemViolations = <Violation>[
-          ...lexemeViolation?.violations ?? [],
-          ...sfViolations,
-        ];
         // G-68 (wave 3a-bis): promoted derivations store `ipa = parent.ipa`
         // as a placeholder and compute the real rom/ipa via
         // `promotedDerivedFormProvider`. Resolve effective display values
@@ -496,38 +488,14 @@ class _WordListPanelState extends ConsumerState<WordListPanel> {
                               ),
                           ],
                         ),
-                        // Brackets rendered OUTSIDE ViolationText so the
-                        // violation offsets (which index into lexeme.ipa)
-                        // line up with the highlighted characters. Wrapping
-                        // the IPA in `'[${lexeme.ipa}]'` used to shift every
-                        // underline one character right. Uses inline spans
-                        // so the brackets stay tight against the IPA.
-                        Text.rich(
-                          TextSpan(
-                            style: theme.textTheme.labelSmall?.copyWith(
-                              fontSize: 12,
-                              color: cs.onSurface.withValues(alpha: 0.55),
-                            ),
-                            children: [
-                              const TextSpan(text: '['),
-                              WidgetSpan(
-                                alignment: PlaceholderAlignment.baseline,
-                                baseline: TextBaseline.alphabetic,
-                                child: ViolationText(
-                                  // G-68: use computed IPA for promoted
-                                  // rows, stored IPA otherwise.
-                                  text: display.ipa,
-                                  violations: itemViolations,
-                                  style:
-                                      theme.textTheme.labelSmall?.copyWith(
-                                    fontSize: 12,
-                                    color: cs.onSurface
-                                        .withValues(alpha: 0.55),
-                                  ),
-                                ),
-                              ),
-                              const TextSpan(text: ']'),
-                            ],
+                        // Issue 35b: [bracket] notation is PHONETIC
+                        // (post-rewrite). Compute the phonetic form and
+                        // display it as plain text inside the brackets.
+                        Text(
+                          '[${applyRewrite(display.ipa)}]',
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            fontSize: 12,
+                            color: cs.onSurface.withValues(alpha: 0.55),
                           ),
                         ),
                         if (lexeme.meaning != null && lexeme.meaning!.isNotEmpty)
@@ -570,10 +538,10 @@ class _WordListPanelState extends ConsumerState<WordListPanel> {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
 
-    // Batch violations for table view IPA cells.
-    final violations = ref.watch(lexemeViolationsProvider);
     // Same override-flag computation as the list view.
     final deromanize = ref.watch(deromanizeProvider);
+    // Issue 35b: [bracket] notation is PHONETIC — apply rewrite pipeline.
+    final applyRewrite = ref.watch(applyRewritePipelineProvider);
     final ipaOverrideColor = Colors.orange.shade300;
 
     // Sort lexemes based on current sort state
@@ -656,13 +624,6 @@ class _WordListPanelState extends ConsumerState<WordListPanel> {
           final isSelected = widget.isSelectionMode
               ? widget.selectedForExport.contains(lexeme.id)
               : widget.selectedLexemeId == lexeme.id;
-          final lexemeViolation = violations[lexeme.id];
-          // D-99 -- 04-17: combine phonotactic + standard-form violations.
-          final sfViolations2 = ref.watch(standardFormViolationsProvider(lexeme.id)).asData?.value ?? const [];
-          final itemViolations = <Violation>[
-            ...lexemeViolation?.violations ?? [],
-            ...sfViolations2,
-          ];
           // G-68 (wave 3a-bis): resolve display forms via the promoted
           // provider so derived rows render their computed rom/ipa
           // instead of the parent placeholder stored at promotion time.
@@ -693,30 +654,12 @@ class _WordListPanelState extends ConsumerState<WordListPanel> {
                 ),
               ),
               DataCell(
-                // Brackets rendered outside ViolationText so violation
-                // offsets line up with the IPA characters (see list view).
-                Text.rich(
-                  TextSpan(
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      fontSize: 12,
-                      color: cs.onSurface.withValues(alpha: 0.7),
-                    ),
-                    children: [
-                      const TextSpan(text: '['),
-                      WidgetSpan(
-                        alignment: PlaceholderAlignment.baseline,
-                        baseline: TextBaseline.alphabetic,
-                        child: ViolationText(
-                          text: display.ipa,
-                          violations: itemViolations,
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            fontSize: 12,
-                            color: cs.onSurface.withValues(alpha: 0.7),
-                          ),
-                        ),
-                      ),
-                      const TextSpan(text: ']'),
-                    ],
+                // Issue 35b: [bracket] notation is PHONETIC (post-rewrite).
+                Text(
+                  '[${applyRewrite(display.ipa)}]',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    fontSize: 12,
+                    color: cs.onSurface.withValues(alpha: 0.7),
                   ),
                 ),
               ),

@@ -31,10 +31,15 @@ class WordDetailPanel extends ConsumerStatefulWidget {
     super.key,
     required this.lexemeId,
     required this.onDeleted,
+    this.onNavigateToWord,
   });
 
   final int lexemeId;
   final VoidCallback onDeleted;
+
+  /// Called when the user taps a parent pill to navigate to that word.
+  /// When null, parent pills are rendered as plain non-clickable text.
+  final ValueChanged<int>? onNavigateToWord;
 
   @override
   ConsumerState<WordDetailPanel> createState() => _WordDetailPanelState();
@@ -125,19 +130,26 @@ class _WordDetailPanelState extends ConsumerState<WordDetailPanel> {
 
   void _startEditing(Lexeme lexeme) {
     _updatingControllersProgrammatically = true;
-    _ipaController.text = lexeme.ipa;
-    _romanizationController.text = lexeme.romanization ?? '';
+    // Issue 13: for promoted derivations, lexeme.ipa / lexeme.romanization
+    // are parent-placeholder stubs — resolve the correct display form first
+    // so the edit pane seeds with the derived form's IPA/rom, not the root's.
+    final promoted = ref.read(promotedDerivedFormProvider(lexeme.id));
+    final display = resolveDisplayForms(lexeme, promoted);
+    _ipaController.text = display.ipa;
+    _romanizationController.text = display.rom;
     _meaningController.text = lexeme.meaning ?? '';
     _editPos = lexeme.partOfSpeech;
-    // Seed the manual-edit flag from whether the stored IPA diverges from
-    // the orthography-derived form. A word loaded with a manual override
-    // should stay overridden unless the user explicitly re-derives it.
+    // Seed the manual-edit flag from whether the resolved IPA diverges from
+    // the orthography-derived form. For promoted rows, always false (the
+    // placeholder diverges from deromanize output, which would wrongly set
+    // the override flag — the promoted form is computed, not manually set).
     final deromanize = ref.read(deromanizeProvider);
-    _ipaManuallyEdited = isIpaManuallyOverridden(
-      lexeme.ipa,
-      lexeme.romanization,
-      deromanize,
-    );
+    _ipaManuallyEdited = promoted == null &&
+        isIpaManuallyOverridden(
+          display.ipa,
+          display.rom.isEmpty ? null : display.rom,
+          deromanize,
+        );
     // D-92 / D-93 — decode the stored intrinsic levels json into our
     // state map AND store a snapshot for overlap preservation.
     _storedIntrinsicLevels =
@@ -634,26 +646,17 @@ class _WordDetailPanelState extends ConsumerState<WordDetailPanel> {
             ),
 
           // ---- POS badge -----------------------------------------------
+          // ---- POS badge — Issue 39a: show intrinsic level in parens ----
           if (lexeme.partOfSpeech != null && lexeme.partOfSpeech!.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 16),
-              child: Chip(
-                label: Text(
-                  lexeme.partOfSpeech!,
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    fontSize: 11,
-                    letterSpacing: 0.5,
-                  ),
-                ),
-                padding: const EdgeInsets.symmetric(horizontal: 4),
-                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              ),
-            ),
+            _IntrinsicPosBadge(lexeme: lexeme),
 
           const Divider(height: 24),
 
           // ---- Plan 04-14 D-62: Parents / Etymology --------------------
-          WordDetailParentsSection(lexeme: lexeme),
+          WordDetailParentsSection(
+            lexeme: lexeme,
+            onNavigateToWord: widget.onNavigateToWord,
+          ),
 
           // ---- Derivation tree -----------------------------------------
           Padding(
@@ -1164,9 +1167,16 @@ class WordDetailSuggestionsSection extends ConsumerWidget {
 ///
 /// Extracted as a public widget so widget tests can pump it in isolation.
 class WordDetailParentsSection extends ConsumerWidget {
-  const WordDetailParentsSection({super.key, required this.lexeme});
+  const WordDetailParentsSection({
+    super.key,
+    required this.lexeme,
+    this.onNavigateToWord,
+  });
 
   final Lexeme lexeme;
+
+  /// Called when the user taps a parent chip to navigate to that word.
+  final ValueChanged<int>? onNavigateToWord;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -1194,7 +1204,8 @@ class WordDetailParentsSection extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: 6),
-          for (final row in parents) _buildParentRow(context, row, lexemeById),
+          for (final row in parents)
+            _buildParentRow(context, row, lexemeById),
         ],
       ),
     );
@@ -1213,14 +1224,101 @@ class WordDetailParentsSection extends ConsumerWidget {
         : parent.ipa;
     final meaning = parent.meaning ?? '';
     final relationship = row.relationship;
-    final text = relationship != null && relationship.isNotEmpty
+    final chipLabel = relationship != null && relationship.isNotEmpty
         ? '$label ($meaning) — $relationship'
         : '$label ($meaning)';
+
+    if (onNavigateToWord != null) {
+      // Enhancement: clickable parent chip with arrow icon.
+      return Padding(
+        padding: const EdgeInsets.only(top: 4),
+        child: ActionChip(
+          avatar: const Icon(Icons.arrow_upward, size: 14),
+          label: Text(
+            chipLabel,
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              fontSize: 11,
+            ),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 2),
+          materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          onPressed: () => onNavigateToWord!(parent.id),
+        ),
+      );
+    }
+
+    // Fallback: plain text when no navigation callback provided.
     return Padding(
       padding: const EdgeInsets.only(left: 8, top: 2),
       child: Text(
-        text,
+        chipLabel,
         style: Theme.of(context).textTheme.bodySmall,
+      ),
+    );
+  }
+}
+
+/// Issue 39a — POS badge with intrinsic level names shown in parentheses.
+///
+/// Looks up the lexeme's POS id, watches [dimensionsForPosProvider] for its
+/// intrinsic dims, decodes [IntrinsicLevelsCodec] to find which level id was
+/// assigned for each dim, then resolves the human-readable level name from
+/// the dimension's levelsJson. Renders e.g. "Noun (Masculine)" or plain
+/// "Verb" when no intrinsic levels are set.
+class _IntrinsicPosBadge extends ConsumerWidget {
+  const _IntrinsicPosBadge({required this.lexeme});
+
+  final Lexeme lexeme;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+
+    final posList = ref.watch(posListProvider).asData?.value ??
+        const <PartsOfSpeechData>[];
+    final pos = posForLexeme(lexeme, posList);
+
+    // Without a matching POS row we cannot resolve intrinsic dims — fall back
+    // to displaying the raw string the lexeme carries.
+    String label = lexeme.partOfSpeech!;
+
+    if (pos != null) {
+      final dims = ref
+              .watch(dimensionsForPosProvider(pos.id))
+              .asData
+              ?.value ??
+          const <Dimension>[];
+      final intrinsicDims = dims.where((d) => d.intrinsic).toList();
+
+      if (intrinsicDims.isNotEmpty) {
+        final storedLevels =
+            IntrinsicLevelsCodec.decode(lexeme.intrinsicLevelsJson);
+        final levelNames = <String>[];
+        for (final dim in intrinsicDims) {
+          final levelId = storedLevels[dim.id];
+          if (levelId == null) continue;
+          final dimLevels = decodeLevelsJson(dim.levelsJson);
+          final match = dimLevels.where((l) => l.id == levelId).firstOrNull;
+          if (match != null) levelNames.add(match.name);
+        }
+        if (levelNames.isNotEmpty) {
+          label = '${lexeme.partOfSpeech!} (${levelNames.join(', ')})';
+        }
+      }
+    }
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Chip(
+        label: Text(
+          label,
+          style: theme.textTheme.labelSmall?.copyWith(
+            fontSize: 11,
+            letterSpacing: 0.5,
+          ),
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 4),
+        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
       ),
     );
   }
