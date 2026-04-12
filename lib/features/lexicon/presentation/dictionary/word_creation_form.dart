@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../db/app_database.dart';
 import '../../../grammar/data/grammar_providers.dart';
+import '../../../grammar/data/intrinsic_levels_codec.dart';
+import '../../../grammar/domain/dimension_level.dart';
 import '../../../morphology/data/morphology_providers.dart';
 import '../../../phonology/data/romanization_providers.dart';
 import '../../data/lexeme_providers.dart';
@@ -46,6 +48,15 @@ class _WordCreationFormState extends ConsumerState<WordCreationForm> {
   String? _selectedPos;
   bool _saving = false;
   String? _ipaError;
+
+  /// D-92 (plan 04-17 Task 7) — per-intrinsic-dim level selection for
+  /// the currently-selected POS. Key = dim id, value = level id (null
+  /// until picked). Cleared whenever the user switches POS.
+  final Map<int, int?> _intrinsicLevelSelections = <int, int?>{};
+
+  /// D-92 — per-dim validation error copy keyed by dim id. Non-null
+  /// entries render below the dim's dropdown and block save.
+  final Map<int, String?> _intrinsicLevelErrors = <int, String?>{};
 
   /// Plan 04-14 D-63: new lexeme gets marked as "this root only exists
   /// through derivations" — rendered muted in the Dictionary sidebar but
@@ -119,6 +130,57 @@ class _WordCreationFormState extends ConsumerState<WordCreationForm> {
       setState(() => _ipaError = 'IPA is required');
       return;
     }
+
+    // D-92 / plan 04-17 Task 7 — required-intrinsic sub-form validator.
+    // If the selected POS has any intrinsic dimensions, every dim must
+    // have a non-null level selection before the lexeme can be inserted.
+    // The validator copy is `Required — every {posName} must have a
+    // fixed {dim.name}.` rendered inline under each dropdown AND
+    // replayed into the error map here so a direct Save tap also lights
+    // up the failing rows.
+    final posList =
+        ref.read(posListProvider).asData?.value ?? const <PartsOfSpeechData>[];
+    PartsOfSpeechData? selectedPos;
+    if (_selectedPos != null) {
+      for (final p in posList) {
+        if (p.name == _selectedPos) {
+          selectedPos = p;
+          break;
+        }
+      }
+    }
+    Map<int, int> encodedLevels = const {};
+    if (selectedPos != null) {
+      // Use the synchronously-cached .asData (the Builder sub-form is
+      // already watching this provider, so the stream has resolved).
+      final dims = ref
+              .read(dimensionsForPosProvider(selectedPos.id))
+              .asData
+              ?.value ??
+          const <Dimension>[];
+      final intrinsicDims = dims.where((d) => d.intrinsic).toList();
+      _intrinsicLevelErrors.clear();
+      var anyMissing = false;
+      for (final dim in intrinsicDims) {
+        final current = _intrinsicLevelSelections[dim.id];
+        if (current == null) {
+          _intrinsicLevelErrors[dim.id] =
+              'Required — every ${selectedPos.name} must have a '
+              'fixed ${dim.name}.';
+          anyMissing = true;
+        }
+      }
+      if (anyMissing) {
+        if (mounted) setState(() {});
+        return;
+      }
+      encodedLevels = {
+        for (final dim in intrinsicDims)
+          dim.id: _intrinsicLevelSelections[dim.id]!,
+      };
+    }
+    final encoded = IntrinsicLevelsCodec.encode(encodedLevels);
+
     setState(() {
       _ipaError = null;
       _saving = true;
@@ -140,6 +202,10 @@ class _WordCreationFormState extends ConsumerState<WordCreationForm> {
           partOfSpeech: Value(_selectedPos),
           // D-63 / G-16 (plan 04-14): persist the muted-root flag.
           rootOnlyViaDerivations: Value(_rootOnlyViaDerivations),
+          // D-92 / plan 04-17 Task 7 — serialized intrinsic levels. Null
+          // when the selected POS has no intrinsic dims (canonical
+          // absence sentinel from [IntrinsicLevelsCodec.encode]).
+          intrinsicLevelsJson: Value(encoded),
         ),
       );
 
@@ -272,8 +338,89 @@ class _WordCreationFormState extends ConsumerState<WordCreationForm> {
                           ),
                         ),
                       ],
-                      onChanged: (val) =>
-                          setState(() => _selectedPos = val),
+                      onChanged: (val) => setState(() {
+                        _selectedPos = val;
+                        // D-92 — every POS change resets the intrinsic
+                        // sub-form. The create-flow has no pre-existing
+                        // lexeme json to preserve so there is no overlap
+                        // logic here; that lives in word_detail_panel's
+                        // edit-mode D-93 path.
+                        _intrinsicLevelSelections.clear();
+                        _intrinsicLevelErrors.clear();
+                      }),
+                    ),
+
+                  // D-92 (plan 04-17 Task 7) — dynamic intrinsic sub-form
+                  // beneath the POS dropdown. Watches
+                  // dimensionsForPosProvider for the selected POS and
+                  // renders a required DropdownButtonFormField per
+                  // intrinsic dim. Hides entirely when the POS has none.
+                  if (_selectedPos != null)
+                    Builder(
+                      builder: (ctx) {
+                        final currentPosId = () {
+                          for (final p in posList) {
+                            if (p.name == _selectedPos) return p.id;
+                          }
+                          return null;
+                        }();
+                        if (currentPosId == null) {
+                          return const SizedBox.shrink();
+                        }
+                        final dimsAsync = ref
+                            .watch(dimensionsForPosProvider(currentPosId));
+                        final dims = dimsAsync.asData?.value ??
+                            const <Dimension>[];
+                        final intrinsicDims =
+                            dims.where((d) => d.intrinsic).toList();
+                        if (intrinsicDims.isEmpty) {
+                          return const SizedBox.shrink();
+                        }
+                        return Padding(
+                          padding: const EdgeInsets.only(top: 12),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              for (final dim in intrinsicDims)
+                                Padding(
+                                  padding: const EdgeInsets.only(bottom: 8),
+                                  child: DropdownButtonFormField<int>(
+                                    key: ValueKey(
+                                        'intrinsicDim_${dim.id}'),
+                                    value:
+                                        _intrinsicLevelSelections[dim.id],
+                                    decoration: InputDecoration(
+                                      labelText: dim.name,
+                                      helperText:
+                                          'Intrinsic — fixed for every $_selectedPos',
+                                      errorText:
+                                          _intrinsicLevelErrors[dim.id],
+                                    ),
+                                    items: [
+                                      for (final lv in decodeLevelsJson(
+                                          dim.levelsJson))
+                                        DropdownMenuItem<int>(
+                                          value: lv.id,
+                                          child: Text(
+                                              '${lv.name} (${lv.abbr})'),
+                                        ),
+                                    ],
+                                    onChanged: (v) => setState(() {
+                                      _intrinsicLevelSelections[dim.id] =
+                                          v;
+                                      _intrinsicLevelErrors[dim.id] = null;
+                                    }),
+                                    validator: (v) => v == null
+                                        ? 'Required — every $_selectedPos '
+                                            'must have a fixed '
+                                            '${dim.name}.'
+                                        : null,
+                                  ),
+                                ),
+                            ],
+                          ),
+                        );
+                      },
                     ),
 
                   if (_ipaError != null)
