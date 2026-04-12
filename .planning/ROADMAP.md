@@ -138,7 +138,7 @@ Plans:
   5. User can record language-level typology choices (alignment, word order, modality expression strategy)
   6. The standalone Morphology tab is removed; its rule editor UI is reused within Grammar (inflectional) and Lexicon (derivational)
   7. Existing morphology rules are migrated to lexicon derivational rules; derivational rules appear in a "Derivations" tab within Lexicon with romanization for all derived forms
-**Plans:** 25 plans
+**Plans:** 28 plans
 
 Plans:
 - [x] 04-01-PLAN.md — Schema v8 migration: Dimensions + ParadigmCellOverrides tables, kind/featureBindings/input/outputPosId columns, file-level v7 backup, FeatureBindings TypeConverter
@@ -166,6 +166,9 @@ Plans:
 - [x] 04-19-01-PLAN.md — [GAP, Wave 10] Marker name persistence (schema v11) + level abbreviation resolution in binding summaries + feature bindings under rule names
 - [x] 04-19-02-PLAN.md — [GAP, Wave 10] Standard form validation romanized-form fix + single-row paradigm table IntrinsicWidth layout fix
 - [x] 04-19-03-PLAN.md — [GAP, Wave 11] Standard form violation preview in derivation rule editor
+- [ ] 04-20-01-PLAN.md — [GAP, Wave 12] Rule editor pre-fill: paradigm cell click POS pre-selection (G-07 regression) + derivational output intrinsic level picker (New Gap 1)
+- [ ] 04-20-02-PLAN.md — [GAP, Wave 12] Derivation lifecycle: auto-apply on new word creation (G-18 regression), derived word click navigation (New Gap 5), rule-derived parent pill (New Gap 6), romanized derived form search (New Gap 7)
+- [ ] 04-20-03-PLAN.md — [GAP, Wave 12] UX polish: POS deletion with word migration (New Gap 2), custom template name prompt (New Gap 3), derivation rule POS labels (New Gap 4)
 
 ### Phase 5: Culture Wiki
 **Goal**: Users can document the world and culture behind their conlang in a structured wiki with Markdown formatting and navigable internal links between pages
