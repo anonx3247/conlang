@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../features/glossary/data/glossary_providers.dart';
 import 'shared/ipa_chart/ipa_chart_panel.dart';
 
 /// Phonology sub-shell with a left sidebar for navigation
 /// and a persistent IPA reference chart placeholder on the right.
-class PhonologyShell extends StatelessWidget {
+class PhonologyShell extends ConsumerWidget {
   const PhonologyShell({
     super.key,
     required this.navigationShell,
@@ -26,7 +28,7 @@ class PhonologyShell extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
@@ -41,13 +43,31 @@ class PhonologyShell extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-                  child: Text(
-                    'PHONOLOGY',
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      color: colorScheme.onSurface.withValues(alpha: 0.5),
-                      letterSpacing: 1.2,
-                    ),
+                  padding: const EdgeInsets.fromLTRB(16, 8, 4, 8),
+                  child: Row(
+                    children: [
+                      Text(
+                        'PHONOLOGY',
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: colorScheme.onSurface.withValues(alpha: 0.5),
+                          letterSpacing: 1.2,
+                        ),
+                      ),
+                      const Spacer(),
+                      IconButton(
+                        icon: const Icon(Icons.help_outline, size: 16),
+                        tooltip: 'Glossary: Phonology terms',
+                        padding: EdgeInsets.zero,
+                        constraints:
+                            const BoxConstraints(minWidth: 28, minHeight: 28),
+                        onPressed: () {
+                          ref
+                              .read(glossaryCategoryFilterProvider.notifier)
+                              .set('Phonology');
+                          ref.read(glossaryOpenProvider.notifier).open();
+                        },
+                      ),
+                    ],
                   ),
                 ),
                 ...List.generate(_sidebarItems.length, (index) {

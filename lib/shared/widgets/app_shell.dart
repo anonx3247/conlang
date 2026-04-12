@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../features/glossary/data/glossary_providers.dart';
+import '../../features/glossary/presentation/glossary_drawer.dart';
 import '../../features/project/data/project_providers.dart';
 import '../../features/project/data/project_registry.dart';
 import '../../features/project/presentation/project_menu.dart';
@@ -92,6 +94,28 @@ class AppShell extends ConsumerWidget {
 
                       const Spacer(),
 
+                      // Glossary ? button (only when a project is open)
+                      if (currentProjectId != null) ...[
+                        IconButton(
+                          icon: const Icon(Icons.help_outline, size: 18),
+                          tooltip: 'Glossary',
+                          onPressed: () {
+                            final notifier =
+                                ref.read(glossaryOpenProvider.notifier);
+                            if (ref.read(glossaryOpenProvider)) {
+                              notifier.close();
+                            } else {
+                              ref
+                                  .read(
+                                      glossaryCategoryFilterProvider.notifier)
+                                  .clear();
+                              notifier.open();
+                            }
+                          },
+                        ),
+                        const SizedBox(width: 4),
+                      ],
+
                       // Current project name (right-aligned)
                       if (currentProjectId != null)
                         registryAsync.when(
@@ -118,10 +142,22 @@ class AppShell extends ConsumerWidget {
             ),
           ),
 
-          // Main content area
+          // Main content area (with optional glossary drawer on the right)
           Expanded(
             child: currentProjectId != null
-                ? navigationShell
+                ? Row(
+                    children: [
+                      Expanded(child: navigationShell),
+                      if (ref.watch(glossaryOpenProvider)) ...[
+                        VerticalDivider(
+                          width: 1,
+                          thickness: 1,
+                          color: colorScheme.outlineVariant,
+                        ),
+                        const GlossaryDrawer(),
+                      ],
+                    ],
+                  )
                 : _NoProjectEmptyState(),
           ),
         ],
