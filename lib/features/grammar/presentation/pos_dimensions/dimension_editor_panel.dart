@@ -1,3 +1,5 @@
+import 'dart:math' show max;
+
 import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -133,6 +135,80 @@ class DimensionEditorPanel extends ConsumerWidget {
     await dao.updateDimension(dim.copyWith(name: newName));
   }
 
+  /// D-79 plan 04-16: per-level rename. Opens [_LevelEditDialog]
+  /// pre-filled with the current level name and abbr; on save,
+  /// decodes `levelsJson`, finds the level by id, replaces its name
+  /// and abbr via `copyWith` (which preserves id and ordering), and
+  /// writes the updated list via `GrammarDao.updateDimensionLevels`.
+  ///
+  /// The level id is PRESERVED across rename (critical — rules and
+  /// lexemes reference level ids in featureBindings and
+  /// skippedDimensionsJson; reassigning would silently break them).
+  Future<void> _onEditLevel(
+    BuildContext ctx,
+    WidgetRef ref,
+    Dimension dim,
+    DimensionLevel level,
+  ) async {
+    final result = await showDialog<({String name, String abbr})>(
+      context: ctx,
+      builder: (_) => _LevelEditDialog(
+        title: 'Edit level',
+        initialName: level.name,
+        initialAbbr: level.abbr,
+      ),
+    );
+    if (result == null) return;
+    final dao = ref.read(grammarDaoProvider);
+    if (dao == null) return;
+    final updated = decodeLevelsJson(dim.levelsJson)
+        .map((x) => x.id == level.id
+            ? x.copyWith(name: result.name, abbr: result.abbr)
+            : x)
+        .toList();
+    await dao.updateDimensionLevels(dim.id, updated);
+  }
+
+  /// D-80 plan 04-16: add-new-level. Opens [_LevelEditDialog] with
+  /// empty fields; on save, appends a new [DimensionLevel] to the
+  /// decoded levels list with `id = max(existing ids) + 1` (or 0 if
+  /// empty) and `ordering = max(existing ordering) + 1` (or 0 if
+  /// empty). No re-ordering UI — new levels append at the end.
+  Future<void> _onAddLevel(
+    BuildContext ctx,
+    WidgetRef ref,
+    Dimension dim,
+  ) async {
+    final result = await showDialog<({String name, String abbr})>(
+      context: ctx,
+      builder: (_) => const _LevelEditDialog(
+        title: 'Add level',
+        initialName: '',
+        initialAbbr: '',
+      ),
+    );
+    if (result == null) return;
+    final dao = ref.read(grammarDaoProvider);
+    if (dao == null) return;
+    final current = decodeLevelsJson(dim.levelsJson);
+    final nextId = current.isEmpty
+        ? 0
+        : (current.map((l) => l.id).reduce(max) + 1);
+    final nextOrdering = current.isEmpty
+        ? 0
+        : (current.map((l) => l.ordering).reduce(max) + 1);
+    final updated = [
+      ...current,
+      DimensionLevel(
+        id: nextId,
+        name: result.name,
+        abbr: result.abbr,
+        ordering: nextOrdering,
+      ),
+    ];
+    await dao.updateDimensionLevels(dim.id, updated);
+  }
+
   Widget _dimensionCard(
     BuildContext ctx,
     WidgetRef ref,
@@ -180,27 +256,58 @@ class DimensionEditorPanel extends ConsumerWidget {
                 ),
               ],
             ),
-            if (levels.isNotEmpty) ...[
-              const SizedBox(height: 8),
-              Wrap(
-                spacing: 8,
-                runSpacing: 4,
-                children: [
-                  for (final l in levels)
-                    InputChip(
-                      label: Text('${l.name} (${l.abbr})'),
-                      onDeleted: () async {
-                        final dao = ref.read(grammarDaoProvider);
-                        if (dao == null) return;
-                        final updated = decodeLevelsJson(dim.levelsJson)
-                            .where((x) => x.id != l.id)
-                            .toList();
-                        await dao.updateDimensionLevels(dim.id, updated);
-                      },
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 4,
+              children: [
+                for (final l in levels)
+                  InputChip(
+                    // D-79 plan 04-16: each level chip gains a left-edge
+                    // edit icon that opens a name+abbr dialog. The chip
+                    // label is wrapped in a Row so the edit affordance
+                    // sits inside the chip alongside the level name.
+                    // BLOCKER-2 slot marker: 04-17 Task 10 will add its
+                    // standard-form icon to the right of this Text when
+                    // dim.intrinsic == true.
+                    label: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        InkWell(
+                          onTap: () => _onEditLevel(ctx, ref, dim, l),
+                          child: Icon(
+                            Icons.edit_outlined,
+                            size: 14,
+                            color: theme.colorScheme.onSurface
+                                .withValues(alpha: 0.6),
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        Text('${l.name} (${l.abbr})'),
+                      ],
                     ),
-                ],
-              ),
-            ],
+                    onDeleted: () async {
+                      final dao = ref.read(grammarDaoProvider);
+                      if (dao == null) return;
+                      final updated = decodeLevelsJson(dim.levelsJson)
+                          .where((x) => x.id != l.id)
+                          .toList();
+                      await dao.updateDimensionLevels(dim.id, updated);
+                    },
+                  ),
+                // D-80 plan 04-16: trailing + chip opens _LevelEditDialog
+                // with empty fields; on save appends a new DimensionLevel
+                // with id = max(existing ids) + 1 and
+                // ordering = max(existing ordering) + 1. Always visible
+                // (including for dimensions with zero levels) so users
+                // can add the first level via this affordance.
+                InputChip(
+                  label: const Icon(Icons.add, size: 14),
+                  tooltip: 'Add level',
+                  onPressed: () => _onAddLevel(ctx, ref, dim),
+                ),
+              ],
+            ),
           ],
         ),
       ),
@@ -259,6 +366,105 @@ class _RenameDimensionDialogState extends State<_RenameDimensionDialog> {
           labelText: 'Dimension name',
           errorText: _errorText,
         ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
+        ElevatedButton(
+          onPressed: _onSave,
+          child: const Text('Save'),
+        ),
+      ],
+    );
+  }
+}
+
+/// Stateful dialog body for the level edit / add-new-level flows
+/// (D-79, D-80 plan 04-16). Owns its own [TextEditingController]s so
+/// the controller lifecycle matches the dialog's State lifecycle.
+///
+/// Edits BOTH [DimensionLevel.name] and [DimensionLevel.abbr] in a
+/// single form. Used by both the per-level rename affordance (chip
+/// edit icon, pre-filled) and the add-new-level trailing + chip
+/// (empty fields). Returns a `({String name, String abbr})?` record
+/// via `Navigator.pop` — null when cancelled.
+///
+/// Sibling of [_RenameDimensionDialog] rather than a generalization —
+/// isolating the two-field form from the one-field G-11 rename flow
+/// avoids risk to the existing dimension-rename widget tests.
+class _LevelEditDialog extends StatefulWidget {
+  const _LevelEditDialog({
+    required this.title,
+    required this.initialName,
+    required this.initialAbbr,
+  });
+
+  final String title; // 'Edit level' or 'Add level'
+  final String initialName;
+  final String initialAbbr;
+
+  @override
+  State<_LevelEditDialog> createState() => _LevelEditDialogState();
+}
+
+class _LevelEditDialogState extends State<_LevelEditDialog> {
+  late final TextEditingController _nameCtrl;
+  late final TextEditingController _abbrCtrl;
+  String? _nameError;
+  String? _abbrError;
+
+  @override
+  void initState() {
+    super.initState();
+    _nameCtrl = TextEditingController(text: widget.initialName);
+    _abbrCtrl = TextEditingController(text: widget.initialAbbr);
+  }
+
+  @override
+  void dispose() {
+    _nameCtrl.dispose();
+    _abbrCtrl.dispose();
+    super.dispose();
+  }
+
+  void _onSave() {
+    final name = _nameCtrl.text.trim();
+    final abbr = _abbrCtrl.text.trim();
+    setState(() {
+      _nameError = name.isEmpty ? 'Name cannot be empty' : null;
+      _abbrError = abbr.isEmpty ? 'Abbreviation cannot be empty' : null;
+    });
+    if (name.isEmpty || abbr.isEmpty) return;
+    Navigator.of(context).pop((name: name, abbr: abbr));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text(widget.title),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          TextField(
+            controller: _nameCtrl,
+            autofocus: true,
+            decoration: InputDecoration(
+              labelText: 'Level name',
+              errorText: _nameError,
+            ),
+          ),
+          const SizedBox(height: 8),
+          TextField(
+            controller: _abbrCtrl,
+            onSubmitted: (_) => _onSave(),
+            decoration: InputDecoration(
+              labelText: 'Abbreviation',
+              errorText: _abbrError,
+            ),
+          ),
+        ],
       ),
       actions: [
         TextButton(

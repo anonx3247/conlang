@@ -1,14 +1,23 @@
-// Plan 04-13 Task 3 — widget tests for InflectionsPage (D-49 / D-50 /
-// G-06). Locks the stacked layout, the POS-scoped rules pane, the
-// ruleEditor click mode on the paradigm, and the G-01 last-selected-word
-// persistence ported from the deleted paradigm_viewer_page.
+// Plan 04-16 Task 1 — D-78 / G-06 widget test: the Inflections sub-tab
+// must render the full inflectional rules list when no POS is selected,
+// not the "Select a POS to view its rules." empty-state placeholder.
+//
+// Locks three invariants:
+//   - No POS: rules pane is a RulesPage (kind=inflectional,
+//     posScopeFilter=null) and the old placeholder text is GONE.
+//   - No POS: the paradigm pane placeholder is UNCHANGED
+//     ("Select a POS to view its paradigm.").
+//   - With a POS selected: RulesPage still renders with
+//     posScopeFilter = selected POS id (non-null), proving the
+//     non-null branch is preserved.
+//
+// Uses the same in-memory AppDatabase scaffold as inflections_page_test.dart.
 
 import 'package:conlang_workbench/db/app_database.dart';
 import 'package:conlang_workbench/features/grammar/data/inflectional_rule_pos_dao.dart';
 import 'package:conlang_workbench/features/grammar/domain/dimension_level.dart';
 import 'package:conlang_workbench/features/grammar/domain/rule_kind.dart';
 import 'package:conlang_workbench/features/grammar/presentation/inflections/inflections_page.dart';
-import 'package:conlang_workbench/features/grammar/presentation/paradigm_viewer/paradigm_table_widget.dart';
 import 'package:conlang_workbench/features/morphology/presentation/rules/rules_page.dart';
 import 'package:conlang_workbench/features/project/data/project_providers.dart';
 import 'package:drift/drift.dart' hide isNull, isNotNull, Column;
@@ -72,14 +81,14 @@ void main() {
     await tester.pump(const Duration(milliseconds: 150));
   }
 
-  Future<({int nounId, int verbId, int numberDimId})> seedFixture() async {
+  Future<({int nounId, int verbId})> seedFixture() async {
     final nounId = await db.into(db.partsOfSpeech).insert(
           PartsOfSpeechCompanion.insert(name: 'Noun', abbreviation: 'N'),
         );
     final verbId = await db.into(db.partsOfSpeech).insert(
           PartsOfSpeechCompanion.insert(name: 'Verb', abbreviation: 'V'),
         );
-    final numberDimId = await db.into(db.dimensions).insert(
+    await db.into(db.dimensions).insert(
           DimensionsCompanion.insert(
             posId: nounId,
             name: 'Number',
@@ -93,20 +102,6 @@ void main() {
         );
     await db.into(db.dimensions).insert(
           DimensionsCompanion.insert(
-            posId: nounId,
-            name: 'Gender',
-            ordering: const Value(1),
-            levelsJson: encodeLevelsJson(const [
-              DimensionLevel(id: 1, name: 'Masculine', abbr: 'M', ordering: 0),
-              DimensionLevel(id: 2, name: 'Feminine', abbr: 'F', ordering: 1),
-            ]),
-            templateId: const Value('gender.mf'),
-          ),
-        );
-    // Verb dims (used to create a Verb-only rule that must NOT show
-    // under the Noun scope).
-    await db.into(db.dimensions).insert(
-          DimensionsCompanion.insert(
             posId: verbId,
             name: 'Tense',
             ordering: const Value(0),
@@ -117,7 +112,7 @@ void main() {
             templateId: const Value('tense.prs_pst'),
           ),
         );
-    return (nounId: nounId, verbId: verbId, numberDimId: numberDimId);
+    return (nounId: nounId, verbId: verbId);
   }
 
   Future<int> insertInflectionalRule({
@@ -132,53 +127,69 @@ void main() {
     return id;
   }
 
-  group('InflectionsPage (D-49 / D-50 / G-06)', () {
+  group('InflectionsPage empty-POS rules pane (D-78 / plan 04-16)', () {
     testWidgets(
-      'Test 1 — renders POS picker at top, paradigm middle (flex 55), rules bottom (flex 45)',
+      'Test 1 — empty POS selection renders RulesPage (not placeholder)',
       (tester) async {
-        await seedFixture();
+        final ids = await seedFixture();
+        // Seed 3 rules: noun-only, verb-only, multi-POS.
+        await insertInflectionalRule(name: 'Plural', posIds: {ids.nounId});
+        await insertInflectionalRule(name: 'Past', posIds: {ids.verbId});
+        await insertInflectionalRule(
+            name: 'Agreement', posIds: {ids.nounId, ids.verbId});
 
         await tester.pumpWidget(buildApp(const InflectionsPage()));
         await settle(tester);
 
-        // POS picker is at the top.
-        expect(find.text('POS:'), findsOneWidget);
-        expect(find.text('Select a POS'), findsOneWidget);
-        // Paradigm empty state shows before a POS is selected.
-        expect(
-          find.text('Select a POS to view its paradigm.'),
-          findsOneWidget,
-        );
-        // D-78 / plan 04-16: the rules pane no longer shows a
-        // placeholder. The full inflectional rules list (RulesPage)
-        // renders regardless of POS selection.
+        // Placeholder must be gone.
         expect(
           find.text('Select a POS to view its rules.'),
           findsNothing,
+          reason:
+              'D-78: the rules pane no longer shows a placeholder before a '
+              'POS is selected — it renders the full inflectional rules list.',
         );
+
+        // RulesPage is mounted.
         expect(find.byType(RulesPage), findsOneWidget);
 
-        // Confirm that the layout contains two Expanded children with flex
-        // 55 and 45. We walk the widget tree and look for those flex
-        // values.
-        final expandeds = tester.widgetList<Expanded>(find.byType(Expanded)).toList();
-        final flexes = expandeds.map((e) => e.flex).toSet();
-        expect(flexes.contains(55), isTrue,
-            reason: 'paradigm pane must be Expanded(flex: 55)');
-        expect(flexes.contains(45), isTrue,
-            reason: 'rules pane must be Expanded(flex: 45)');
+        // RulesPage has kind=inflectional and posScopeFilter=null.
+        final rulesPage = tester.widget<RulesPage>(find.byType(RulesPage));
+        expect(rulesPage.kind, RuleKind.inflectional);
+        expect(rulesPage.posScopeFilter, isNull);
 
         await teardownWidget(tester);
       },
     );
 
     testWidgets(
-      'Test 2 — selecting a POS refreshes both panes',
+      'Test 2 — paradigm pane placeholder is UNCHANGED when no POS selected',
+      (tester) async {
+        await seedFixture();
+
+        await tester.pumpWidget(buildApp(const InflectionsPage()));
+        await settle(tester);
+
+        // The paradigm pane still shows its own placeholder because the
+        // paradigm genuinely requires a POS.
+        expect(
+          find.text('Select a POS to view its paradigm.'),
+          findsOneWidget,
+          reason:
+              'D-78: only the rules pane empty-state is removed. The '
+              'paradigm pane _emptyState helper must still be called with '
+              'the "Select a POS to view its paradigm." message.',
+        );
+
+        await teardownWidget(tester);
+      },
+    );
+
+    testWidgets(
+      'Test 3 — selecting a POS preserves posScopeFilter scoping (non-null branch unchanged)',
       (tester) async {
         final ids = await seedFixture();
-        // Rules for both POS so we can observe filtering.
         await insertInflectionalRule(name: 'Plural', posIds: {ids.nounId});
-        await insertInflectionalRule(name: 'Past', posIds: {ids.verbId});
 
         await tester.pumpWidget(buildApp(const InflectionsPage()));
         await settle(tester);
@@ -189,85 +200,8 @@ void main() {
         await tester.tap(find.text('Noun').last);
         await settle(tester);
 
-        // Paradigm empty-state replaced with an actual ParadigmTableWidget.
-        expect(find.byType(ParadigmTableWidget), findsOneWidget);
-        // The rules pane shows the Noun-scoped list: Plural is visible,
-        // Past is not.
-        expect(find.text('Plural'), findsOneWidget);
-        expect(find.text('Past'), findsNothing);
-
-        await teardownWidget(tester);
-      },
-    );
-
-    testWidgets(
-      'Test 3 — D-50 POS-scoping: multi-POS rules matching the scope are kept',
-      (tester) async {
-        final ids = await seedFixture();
-        // Noun-only, multi-POS {Noun, Verb}, Verb-only.
-        await insertInflectionalRule(name: 'Plural', posIds: {ids.nounId});
-        await insertInflectionalRule(
-            name: 'Agreement', posIds: {ids.nounId, ids.verbId});
-        await insertInflectionalRule(name: 'Past', posIds: {ids.verbId});
-
-        await tester.pumpWidget(buildApp(const InflectionsPage()));
-        await settle(tester);
-
-        // Select Noun.
-        await tester.tap(find.text('Select a POS'));
-        await settle(tester);
-        await tester.tap(find.text('Noun').last);
-        await settle(tester);
-
-        // Plural (Noun-only) + Agreement (multi-POS includes Noun) visible.
-        expect(find.text('Plural'), findsOneWidget);
-        expect(find.text('Agreement'), findsOneWidget);
-        // Past (Verb-only) is filtered out.
-        expect(find.text('Past'), findsNothing);
-
-        await teardownWidget(tester);
-      },
-    );
-
-    testWidgets(
-      'Test 4 — paradigm table is constructed with clickMode.ruleEditor',
-      (tester) async {
-        final ids = await seedFixture();
-        await insertInflectionalRule(name: 'Plural', posIds: {ids.nounId});
-
-        await tester.pumpWidget(buildApp(const InflectionsPage()));
-        await settle(tester);
-
-        // Select Noun.
-        await tester.tap(find.text('Select a POS'));
-        await settle(tester);
-        await tester.tap(find.text('Noun').last);
-        await settle(tester);
-
-        // Inspect the ParadigmTableWidget and assert clickMode.
-        final paradigm = tester
-            .widget<ParadigmTableWidget>(find.byType(ParadigmTableWidget));
-        expect(paradigm.clickMode, ParadigmClickMode.ruleEditor);
-
-        await teardownWidget(tester);
-      },
-    );
-
-    testWidgets(
-      'Test 5 — bottom pane is a RulesPage with kind=inflectional and posScopeFilter set',
-      (tester) async {
-        final ids = await seedFixture();
-        await insertInflectionalRule(name: 'Plural', posIds: {ids.nounId});
-
-        await tester.pumpWidget(buildApp(const InflectionsPage()));
-        await settle(tester);
-
-        // Select Noun.
-        await tester.tap(find.text('Select a POS'));
-        await settle(tester);
-        await tester.tap(find.text('Noun').last);
-        await settle(tester);
-
+        // RulesPage remains mounted with kind=inflectional and
+        // posScopeFilter=nounId (non-null branch preserved).
         final rulesPage = tester.widget<RulesPage>(find.byType(RulesPage));
         expect(rulesPage.kind, RuleKind.inflectional);
         expect(rulesPage.posScopeFilter, ids.nounId);

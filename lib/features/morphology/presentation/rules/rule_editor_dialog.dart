@@ -9,12 +9,16 @@ import '../../../grammar/domain/feature_bindings.dart';
 import '../../../grammar/domain/inflectional_rule.dart';
 import '../../../grammar/domain/rule_kind.dart';
 import '../../../grammar/domain/tiebreak_detector.dart';
+import '../../../phonology/data/phonotactic_providers.dart';
 import '../../../phonology/data/romanization_bijection.dart';
 import '../../../phonology/data/romanization_providers.dart';
+import '../../../phonology/domain/word_generator.dart';
 import '../../../phonology/presentation/shared/ipa_keyboard/ipa_text_field.dart';
+import '../../../../shared/widgets/violation_text.dart';
 import '../../application/derivation_promotion_service.dart';
 import '../../data/morphology_providers.dart';
 import '../../domain/morphology_dsl.dart';
+import '../../domain/phoneme_literal_scanner.dart';
 import 'preview_panel.dart';
 
 // ---------------------------------------------------------------------------
@@ -500,7 +504,20 @@ class _RuleEditorDialogState extends ConsumerState<RuleEditorDialog> {
   // Save
   // ---------------------------------------------------------------------------
 
+  // WARN-8 / D-81 plan 04-16: every wrapped literal field
+  // re-triggers the PhonemeViolationRow's scanner read by forcing a
+  // State rebuild on text change. Factored into one callback so we
+  // do not duplicate the lambda across 7 fields.
+  void _rebuildOnLiteralInput(String _) {
+    if (mounted) setState(() {});
+  }
+
   Future<void> _save() async {
+    // D-81 plan 04-16: scanner violations are soft warnings only —
+    // never block save. There is no `if (violations.isNotEmpty)
+    // return;` branch anywhere in this save path. The user may
+    // intentionally prototype a rule for a phoneme they're about to
+    // add to the inventory; warnings are informational.
     final name = _nameCtrl.text.trim();
     if (name.isEmpty) {
       setState(() => _validationError = 'Rule name is required.');
@@ -1469,18 +1486,27 @@ class _RuleEditorDialogState extends ConsumerState<RuleEditorDialog> {
                   },
                 ),
                 const SizedBox(width: 8),
-                // Pattern field
+                // Pattern field + inline phoneme-violation warning
+                // (D-81 plan 04-16 / G-69, 'cond' scope skips V/C/F
+                // and bracketed class-refs).
                 Expanded(
-                  child: IpaTextField(
-                    controller: cond.patternCtrl,
-                    decoration: const InputDecoration(
-                      hintText: 'e.g. [nasal]V, CV, Vk(l)',
-                      isDense: true,
-                      border: OutlineInputBorder(),
-                      contentPadding: EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 6),
-                    ),
-                    onChanged: (_) => setState(() {}),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      IpaTextField(
+                        controller: cond.patternCtrl,
+                        decoration: const InputDecoration(
+                          hintText: 'e.g. [nasal]V, CV, Vk(l)',
+                          isDense: true,
+                          border: OutlineInputBorder(),
+                          contentPadding: EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 6),
+                        ),
+                        onChanged: _rebuildOnLiteralInput,
+                      ),
+                      _PhonemeViolationRow(
+                          text: cond.patternCtrl.text, scope: 'cond'),
+                    ],
                   ),
                 ),
                 if (branch.conditions.length > 1) ...[
@@ -1621,39 +1647,53 @@ class _RuleEditorDialogState extends ConsumerState<RuleEditorDialog> {
         : 'phonemic IPA';
 
     return switch (op.type) {
-      OpType.prefix || OpType.suffix => IpaTextField(
-          controller: op.affixCtrl,
-          decoration: fieldDecoration.copyWith(
-            hintText: 'IPA affix, e.g. in, ɯ',
-            helperText: literalHelperText,
-            helperMaxLines: 2,
-          ),
-          onChanged: (_) => setState(() {}),
-        ),
-      OpType.infix => Row(
+      OpType.prefix || OpType.suffix => Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Expanded(
-              child: IpaTextField(
-                controller: op.affixCtrl,
-                decoration: fieldDecoration.copyWith(
-                  hintText: 'IPA affix',
-                  helperText: literalHelperText,
-                  helperMaxLines: 2,
+            IpaTextField(
+              controller: op.affixCtrl,
+              decoration: fieldDecoration.copyWith(
+                hintText: 'IPA affix, e.g. in, ɯ',
+                helperText: literalHelperText,
+                helperMaxLines: 2,
+              ),
+              onChanged: _rebuildOnLiteralInput,
+            ),
+            _PhonemeViolationRow(
+                text: op.affixCtrl.text, scope: 'op'),
+          ],
+        ),
+      OpType.infix => Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: IpaTextField(
+                    controller: op.affixCtrl,
+                    decoration: fieldDecoration.copyWith(
+                      hintText: 'IPA affix',
+                      helperText: literalHelperText,
+                      helperMaxLines: 2,
+                    ),
+                    onChanged: _rebuildOnLiteralInput,
+                  ),
                 ),
-                onChanged: (_) => setState(() {}),
-              ),
+                const SizedBox(width: 6),
+                SizedBox(
+                  width: 60,
+                  child: TextField(
+                    controller: op.posCtrl,
+                    decoration:
+                        fieldDecoration.copyWith(hintText: 'after C#'),
+                    keyboardType: TextInputType.number,
+                    onChanged: (_) => setState(() {}),
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(width: 6),
-            SizedBox(
-              width: 60,
-              child: TextField(
-                controller: op.posCtrl,
-                decoration:
-                    fieldDecoration.copyWith(hintText: 'after C#'),
-                keyboardType: TextInputType.number,
-                onChanged: (_) => setState(() {}),
-              ),
-            ),
+            _PhonemeViolationRow(
+                text: op.affixCtrl.text, scope: 'op'),
           ],
         ),
       OpType.ablaut => Column(
@@ -1662,14 +1702,21 @@ class _RuleEditorDialogState extends ConsumerState<RuleEditorDialog> {
             Row(
               children: [
                 Expanded(
-                  child: IpaTextField(
-                    controller: op.ablautFromCtrl,
-                    decoration: fieldDecoration.copyWith(
-                      hintText: 'from',
-                      helperText: literalHelperText,
-                      helperMaxLines: 2,
-                    ),
-                    onChanged: (_) => setState(() {}),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      IpaTextField(
+                        controller: op.ablautFromCtrl,
+                        decoration: fieldDecoration.copyWith(
+                          hintText: 'from',
+                          helperText: literalHelperText,
+                          helperMaxLines: 2,
+                        ),
+                        onChanged: _rebuildOnLiteralInput,
+                      ),
+                      _PhonemeViolationRow(
+                          text: op.ablautFromCtrl.text, scope: 'op'),
+                    ],
                   ),
                 ),
                 const Padding(
@@ -1677,14 +1724,21 @@ class _RuleEditorDialogState extends ConsumerState<RuleEditorDialog> {
                   child: Icon(Icons.arrow_forward, size: 14),
                 ),
                 Expanded(
-                  child: IpaTextField(
-                    controller: op.ablautToCtrl,
-                    decoration: fieldDecoration.copyWith(
-                      hintText: 'to',
-                      helperText: literalHelperText,
-                      helperMaxLines: 2,
-                    ),
-                    onChanged: (_) => setState(() {}),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      IpaTextField(
+                        controller: op.ablautToCtrl,
+                        decoration: fieldDecoration.copyWith(
+                          hintText: 'to',
+                          helperText: literalHelperText,
+                          helperMaxLines: 2,
+                        ),
+                        onChanged: _rebuildOnLiteralInput,
+                      ),
+                      _PhonemeViolationRow(
+                          text: op.ablautToCtrl.text, scope: 'op'),
+                    ],
                   ),
                 ),
               ],
@@ -1736,14 +1790,21 @@ class _RuleEditorDialogState extends ConsumerState<RuleEditorDialog> {
             ),
           ],
         ),
-      OpType.template => TextField(
-          controller: op.templateCtrl,
-          decoration: fieldDecoration.copyWith(
-            hintText: 'e.g. 1a23aa',
-            helperText:
-                'Digits = consonant slots, other chars literal',
-          ),
-          onChanged: (_) => setState(() {}),
+      OpType.template => Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            TextField(
+              controller: op.templateCtrl,
+              decoration: fieldDecoration.copyWith(
+                hintText: 'e.g. 1a23aa',
+                helperText:
+                    'Digits = consonant slots, other chars literal',
+              ),
+              onChanged: _rebuildOnLiteralInput,
+            ),
+            _PhonemeViolationRow(
+                text: op.templateCtrl.text, scope: 'template'),
+          ],
         ),
       OpType.reduplication => Row(
           children: [
@@ -1778,12 +1839,117 @@ class _RuleEditorDialogState extends ConsumerState<RuleEditorDialog> {
             ),
           ],
         ),
-      OpType.suppletive => IpaTextField(
-          controller: op.suppletiveCtrl,
-          decoration: fieldDecoration.copyWith(
-              hintText: 'Replaces entire word (e.g. went for go, mice for mouse)'),
-          onChanged: (_) => setState(() {}),
+      OpType.suppletive => Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            IpaTextField(
+              controller: op.suppletiveCtrl,
+              decoration: fieldDecoration.copyWith(
+                  hintText:
+                      'Replaces entire word (e.g. went for go, mice for mouse)'),
+              onChanged: _rebuildOnLiteralInput,
+            ),
+            _PhonemeViolationRow(
+                text: op.suppletiveCtrl.text, scope: 'op'),
+          ],
         ),
     };
+  }
+}
+
+/// D-81 plan 04-16 / G-69 — renders a compact inline phoneme-violation
+/// warning beneath a literal rule-editor TextField. Returns
+/// [SizedBox.shrink] when the scanner reports no violations for [text].
+/// Watches [phonemeInventoryProvider] for reactivity — adding the
+/// missing phoneme to the inventory clears the warning automatically.
+///
+/// This widget is intentionally SOFT-WARNING-ONLY: it never blocks
+/// save, never triggers state changes, never exposes a callback. It is
+/// a pure read-side indicator.
+class _PhonemeViolationRow extends ConsumerWidget {
+  const _PhonemeViolationRow({
+    required this.text,
+    required this.scope,
+  });
+
+  /// The literal text from the associated TextField's controller.
+  final String text;
+
+  /// One of:
+  ///   - 'op'       — wrap in a synthetic SuffixOp (generic literal field)
+  ///   - 'template' — wrap in a synthetic TemplateOp (digit-slot skipping)
+  ///   - 'cond'     — wrap in a synthetic PatternCond (class-ref skipping)
+  final String scope;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    if (text.isEmpty) return const SizedBox.shrink();
+    final inventory = ref.watch(phonemeInventoryProvider);
+
+    // Build a minimal synthetic rule with a single branch + single
+    // op/cond containing [text], run the scanner, and render a
+    // ViolationText if any violations are reported. Keeps this widget
+    // decoupled from the full rule-building path in _buildDomainRule.
+    final synthetic = switch (scope) {
+      'cond' => MorphologicalRule(
+          id: 0,
+          name: '',
+          source: '',
+          branches: [
+            MorphBranch(
+              conditions: [PatternCond(text)],
+              operations: const [SuffixOp('')],
+            ),
+          ],
+        ),
+      'template' => MorphologicalRule(
+          id: 0,
+          name: '',
+          source: '',
+          branches: [
+            MorphBranch(
+              conditions: const [],
+              operations: [TemplateOp(text)],
+            ),
+          ],
+        ),
+      _ => MorphologicalRule(
+          id: 0,
+          name: '',
+          source: '',
+          branches: [
+            MorphBranch(
+              conditions: const [],
+              operations: [SuffixOp(text)],
+            ),
+          ],
+        ),
+    };
+    final parsed = ParsedMorphRule.success(source: '', rule: synthetic);
+    final violations =
+        const PhonemeLiteralScanner().scan(parsed, inventory);
+    if (violations.isEmpty) return const SizedBox.shrink();
+
+    // Map PhonemeViolation -> Violation for ViolationText. The locked
+    // tooltip copy from CONTEXT.md D-81 is embedded here — exact
+    // string enforced by widget tests. Soft warnings only: save is
+    // never blocked on these violations.
+    final mapped = violations
+        .map((v) => Violation(
+              position: v.literalOffset,
+              length: v.length,
+              ruleDescription:
+                  "'${v.char}' is not in the phoneme inventory (did you mean to define it first?)",
+            ))
+        .toList();
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 4),
+      child: ViolationText(
+        text: text,
+        violations: mapped,
+        style: Theme.of(context).textTheme.bodySmall,
+      ),
+    );
   }
 }
