@@ -12,6 +12,7 @@ import '../../../phonology/domain/word_generator.dart';
 import '../../../project/data/project_providers.dart';
 import '../../data/grammar_providers.dart';
 import '../../data/paradigm_cell_override_dao.dart';
+import '../../data/standard_form_validation_provider.dart';
 import '../../data/typology_providers.dart';
 import '../../domain/dimension_level.dart';
 import '../../domain/paradigm_axes.dart';
@@ -870,6 +871,11 @@ class _IntrinsicSliceSectionState
                   ],
                   onChanged: (v) => setState(() => _selectedLexemeId = v),
                 ),
+                // D-99 -- 04-17: base-form standard-form violations (base form only).
+                if (effectiveId != null) ...[
+                  const SizedBox(width: 8),
+                  _BaseFormViolationBadge(lexemeId: effectiveId),
+                ],
               ],
             ],
           ),
@@ -1069,6 +1075,42 @@ class _IntrinsicSliceTable extends ConsumerWidget {
             ),
         ],
       ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// D-99 -- 04-17. Base-form violation badge for the paradigm viewer header.
+// Shows combined phonotactic + standard-form violations for the selected
+// lexeme's IPA (base form only, NOT inflected cells).
+// ---------------------------------------------------------------------------
+
+class _BaseFormViolationBadge extends ConsumerWidget {
+  const _BaseFormViolationBadge({required this.lexemeId});
+
+  final int lexemeId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final lexemeAsync = ref.watch(lexemeByIdProvider(lexemeId));
+    final lexeme = lexemeAsync.asData?.value;
+    if (lexeme == null) return const SizedBox.shrink();
+    if (lexeme.isPhonologicalException) return const SizedBox.shrink();
+
+    final validate = ref.watch(phonotacticValidatorProvider);
+    final phonoResult = validate(word: lexeme.ipa);
+    final sfViolations =
+        ref.watch(standardFormViolationsProvider(lexemeId)).asData?.value ??
+            const [];
+    final combined = [...phonoResult.violations, ...sfViolations];
+    if (combined.isEmpty) return const SizedBox.shrink();
+
+    return ViolationText(
+      text: '[${lexeme.ipa}]',
+      violations: combined,
+      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+            color: Theme.of(context).colorScheme.error,
+          ),
     );
   }
 }
