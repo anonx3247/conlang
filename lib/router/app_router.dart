@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
-import '../features/culture/presentation/culture_shell.dart';
 import '../features/grammar/presentation/grammar_shell.dart';
 import '../features/grammar/presentation/inflections/inflections_page.dart';
 import '../features/grammar/presentation/pos_dimensions/pos_dimensions_page.dart';
@@ -23,13 +22,13 @@ part 'app_router.g.dart';
 /// The root GoRouter, provided via Riverpod.
 ///
 /// Uses a two-level StatefulShellRoute architecture:
-///  - Outer: AppShell — top-level tab bar (Phonology, Grammar, Lexicon, Culture)
+///  - Outer: AppShell — top-level tab bar (Phonology, Grammar, Lexicon)
 ///  - Inner: per-tab shells (PhonologyShell, GrammarShell, LexiconShell)
 ///
 /// Phase 4 plan 04-04 surgery: the old Morphology branch (index 1) is
 /// replaced by the new Grammar branch, and the old placeholder Grammar
 /// branch is deleted. Final branch order matches the AppShell `_tabs`
-/// list: 0=Phonology, 1=Grammar, 2=Lexicon, 3=Culture.
+/// list: 0=Phonology, 1=Grammar, 2=Lexicon.
 @riverpod
 GoRouter appRouter(Ref ref) {
   return GoRouter(
@@ -203,15 +202,6 @@ GoRouter appRouter(Ref ref) {
             ],
           ),
 
-          // Branch 3: Culture (Phase 5)
-          StatefulShellBranch(
-            routes: [
-              GoRoute(
-                path: '/culture',
-                builder: (_, _) => const CultureShell(),
-              ),
-            ],
-          ),
         ],
       ),
     ],
