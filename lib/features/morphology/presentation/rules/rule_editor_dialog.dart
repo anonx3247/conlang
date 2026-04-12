@@ -4,10 +4,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../db/app_database.dart' as db;
 import '../../../grammar/data/grammar_providers.dart';
+import '../../../grammar/data/standard_form_pattern_dao.dart';
 import '../../../grammar/domain/dimension_level.dart';
 import '../../../grammar/domain/feature_bindings.dart';
 import '../../../grammar/domain/inflectional_rule.dart';
 import '../../../grammar/domain/rule_kind.dart';
+import '../../../grammar/domain/standard_form_branch.dart';
+import '../../../grammar/domain/standard_form_matcher.dart';
 import '../../../grammar/domain/tiebreak_detector.dart';
 // D-100/D-101 — marker mode: MarkerDecl for pre-loading bindings on edit.
 import '../../../grammar/domain/marker.dart';
@@ -20,6 +23,7 @@ import '../../../../shared/widgets/violation_text.dart';
 import '../../application/derivation_promotion_service.dart';
 import '../../data/morphology_providers.dart';
 import '../../domain/morphology_dsl.dart';
+import '../../domain/morphology_engine.dart';
 import '../../domain/phoneme_literal_scanner.dart';
 import 'preview_panel.dart';
 
@@ -1524,7 +1528,21 @@ class _RuleEditorDialogState extends ConsumerState<RuleEditorDialog> {
                       flex: 2,
                       child: SingleChildScrollView(
                         padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-                        child: PreviewPanel(rule: previewRule),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            PreviewPanel(rule: previewRule),
+                            // D-gap-3: standard form violation preview for
+                            // derivational rules (plan 04-19-03).
+                            if (widget.kind == RuleKind.derivational &&
+                                _outputPosId != null &&
+                                previewRule != null)
+                              _StandardFormDerivationWarning(
+                                outputPosId: _outputPosId!,
+                                previewRule: previewRule,
+                              ),
+                          ],
+                        ),
                       ),
                     ),
                 ],
@@ -2195,5 +2213,148 @@ class _PhonemeViolationRow extends ConsumerWidget {
         style: Theme.of(context).textTheme.bodySmall,
       ),
     );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// D-gap-3 (plan 04-19-03): Standard form violation preview for derivational
+// rule editor. Shown below the preview panel when outputPosId is set and the
+// preview rule produces a sample form.
+// ---------------------------------------------------------------------------
+
+/// Applies [previewRule] to a sample generated word and checks whether the
+/// output form violates any standard-form pattern for [outputPosId]'s intrinsic
+/// dimensions. Shows a warning banner if any violation is found.
+///
+/// Uses a [FutureBuilder] internally to handle async DAO lookups without
+/// requiring a new provider. The widget re-evaluates whenever [previewRule] or
+/// [outputPosId] changes (keyed via the parent [Column]).
+class _StandardFormDerivationWarning extends ConsumerWidget {
+  const _StandardFormDerivationWarning({
+    required this.outputPosId,
+    required this.previewRule,
+  });
+
+  final int outputPosId;
+  final MorphologicalRule previewRule;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final inventory = ref.watch(phonemeInventoryProvider);
+    final romanize = ref.watch(romanizeProvider);
+
+    // Derive a sample output form by applying the rule to a generated word.
+    // We run the engine over a small candidate list and take the first
+    // MorphSuccess result as the representative form to check.
+    final templates = ref.watch(parsedTemplatesProvider);
+    final constraintsAsync = ref.watch(parsedConstraintsProvider);
+    final constraints = constraintsAsync.asData?.value ?? const [];
+    final templateList = templates.asData?.value ?? const [];
+
+    if (templateList.isEmpty ||
+        (inventory.consonants.isEmpty && inventory.vowels.isEmpty)) {
+      return const SizedBox.shrink();
+    }
+
+    final gen = WordGenerator();
+    final candidates = gen.generateWords(
+      templates: templateList,
+      inventory: inventory,
+      count: 20,
+      minSyllables: 1,
+      maxSyllables: 2,
+    );
+
+    String? sampleOutput;
+    final engine = const MorphologyEngine();
+    for (final word in candidates) {
+      if (constraints.isNotEmpty) {
+        final v = gen.validateWord(
+          word: word,
+          constraints: constraints,
+          inventory: inventory,
+        );
+        if (!v.isValid) continue;
+      }
+      final result = engine.applyRule(previewRule, word, inventory);
+      if (result case MorphSuccess(:final form)) {
+        sampleOutput = form;
+        break;
+      }
+    }
+
+    if (sampleOutput == null) return const SizedBox.shrink();
+    final romForm = romanize(sampleOutput);
+
+    // Now check standard form patterns for outputPosId's intrinsic dimensions.
+    final dimsAsync = ref.watch(dimensionsForPosProvider(outputPosId));
+    final dims = dimsAsync.asData?.value ?? const [];
+    final intrinsicDims = dims.where((d) => d.intrinsic).toList();
+    if (intrinsicDims.isEmpty) return const SizedBox.shrink();
+
+    final dao = ref.read(standardFormPatternDaoProvider);
+    if (dao == null) return const SizedBox.shrink();
+
+    return FutureBuilder<List<String>>(
+      future: _computeViolations(intrinsicDims, dao, romForm, inventory),
+      builder: (context, snap) {
+        final warnings = snap.data ?? const [];
+        if (warnings.isEmpty) return const SizedBox.shrink();
+        final cs = Theme.of(context).colorScheme;
+        return Padding(
+          padding: const EdgeInsets.only(top: 8),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: cs.errorContainer,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(Icons.warning_amber_outlined,
+                    size: 18, color: cs.onErrorContainer),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    warnings.join('; '),
+                    style: TextStyle(
+                        color: cs.onErrorContainer, fontSize: 12),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<List<String>> _computeViolations(
+    List<db.Dimension> intrinsicDims,
+    StandardFormPatternDao dao,
+    String romForm,
+    PhonemeInventory inventory,
+  ) async {
+    const matcher = StandardFormMatcher();
+    final warnings = <String>[];
+    for (final dim in intrinsicDims) {
+      final levels = decodeLevelsJson(dim.levelsJson);
+      for (final level in levels) {
+        final branches = await dao.getPattern(dim.id, level.id);
+        if (branches == null || branches.isEmpty) continue;
+        if (matcher.matches(romForm, branches, inventory)) continue;
+        final kindLabel = branches.map((b) {
+          final kl = switch (b.kind) {
+            BranchKind.startsWith => 'starts with',
+            BranchKind.endsWith => 'ends with',
+            BranchKind.contains => 'contains',
+          };
+          return '$kl "${b.literal}"';
+        }).join(' OR ');
+        warnings.add('${level.name} ${dim.name}: should $kindLabel');
+      }
+    }
+    return warnings;
   }
 }
