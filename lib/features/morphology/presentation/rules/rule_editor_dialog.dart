@@ -846,9 +846,9 @@ class _RuleEditorDialogState extends ConsumerState<RuleEditorDialog> {
       );
       final posId = _inflectionalPosSet.first;
 
-      final markerName = _nameController.text.trim().isEmpty
+      final markerName = _nameCtrl.text.trim().isEmpty
           ? 'Unmarked'
-          : _nameController.text.trim();
+          : _nameCtrl.text.trim();
 
       if (widget.markerId != null) {
         // Edit existing marker.
