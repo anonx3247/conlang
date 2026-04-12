@@ -526,8 +526,8 @@ class _ParadigmCellWidget extends ConsumerWidget {
           ParadigmUncovered() => _uncoveredCell(cs, theme),
           ParadigmAmbiguous() =>
             Icon(Icons.error_outline, color: cs.error, size: 16),
-          ParadigmFilled(:final form) =>
-            _FilledCell(form: form, lexemeId: lexemeId),
+          ParadigmFilled(:final form, :final phonemic) =>
+            _FilledCell(form: form, phonemic: phonemic, lexemeId: lexemeId),
           // D-47: bare root in muted gray with trailing ∅ badge. Click
           // handler intentionally reuses the existing openDialog() path
           // in this plan — plan 04-13 replaces the entire ParadigmTable
@@ -571,10 +571,24 @@ class _ParadigmCellWidget extends ConsumerWidget {
 /// is consistent with the word list's red wavy underlines. If the lexeme
 /// has `isPhonologicalException == true` (Phase 3 per-word toggle) the
 /// validation is skipped and no violations are shown.
+///
+/// D-112 (plan 04-17): [phonemic] is the raw morphological output
+/// (pre-rewrite); [form] is the phonetic surface (post-rewrite). The rom
+/// line uses `romanize(phonemic)` — NEVER `romanize(form)` — so that
+/// sound-change rewrites do not leak into the romanization display.
 class _FilledCell extends ConsumerWidget {
-  const _FilledCell({required this.form, required this.lexemeId});
+  const _FilledCell({
+    required this.form,
+    required this.phonemic,
+    required this.lexemeId,
+  });
 
+  /// Phonetic surface form (post-rewrite). Used for `[bracket]` display.
   final String form;
+
+  /// Raw morphological output (pre-rewrite). Used as input to `romanize()`.
+  final String phonemic;
+
   final int lexemeId;
 
   @override
@@ -588,15 +602,16 @@ class _FilledCell extends ConsumerWidget {
     final lexeme = lexemeAsync.asData?.value;
     final isException = lexeme?.isPhonologicalException ?? false;
 
-    final romText = romanize(form);
+    // D-112: romanize the raw phonemic, not the post-rewrite phonetic.
+    final romText = romanize(phonemic);
     final ValidationResult result =
-        isException ? const ValidationResult(violations: []) : validate(word: form);
+        isException ? const ValidationResult(violations: []) : validate(word: phonemic);
 
     // G-04 / D-29: show romanization as the primary top line ONLY when it
-    // actually differs from the IPA form. Mirrors the "showRomanizedRoot"
+    // actually differs from the phonemic form. Mirrors the "showRomanizedRoot"
     // idiom in derivation_tree_widget.dart:41-42 so users never see the
     // same glyphs duplicated when no romanization mapping is configured.
-    final showRom = romText.isNotEmpty && romText != form;
+    final showRom = romText.isNotEmpty && romText != phonemic;
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 2),
@@ -608,7 +623,7 @@ class _FilledCell extends ConsumerWidget {
             // per-cell phonotactic underlines (D-30).
             ViolationText(text: romText, violations: result.violations),
             const SizedBox(height: 2),
-            // D-29 bottom line: IPA dimmed.
+            // D-29 bottom line: phonetic surface in brackets, dimmed.
             Text(
               '[$form]',
               style: theme.textTheme.bodySmall?.copyWith(
@@ -616,7 +631,7 @@ class _FilledCell extends ConsumerWidget {
               ),
             ),
           ] else
-            // No distinct romanization: single IPA-only dimmed line so
+            // No distinct romanization: single phonetic-only dimmed line so
             // the cell doesn't double-render identical text.
             ViolationText(
               text: '[$form]',

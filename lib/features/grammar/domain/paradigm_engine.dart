@@ -201,11 +201,15 @@ ParadigmCell computeParadigmCell({
 
   // G-08: after the inflectional chain completes, run the phonology
   // rewrite pipeline ONCE on the final form. D-29 requires paradigm cells
-  // to reflect the same phonological surface as root words — rewrite rules
+  // to reflect the same phonological surface as root words ��� rewrite rules
   // applied to roots must also apply after inflectional affixation. The
   // rewrite is only invoked for the ParadigmFilled success path; the
   // ParadigmUncovered and ParadigmAmbiguous returns earlier in this
   // function deliberately skip it.
+  //
+  // D-112 (plan 04-17): the engine now returns BOTH the raw phonemic
+  // (`working`) and the post-rewrite phonetic (`finalForm`). Consumers
+  // MUST use `phonemic` for romanize() and `form` for [bracket] display.
   final finalForm = rewriteRules.isEmpty
       ? working
       : WordGenerator().applyRewriteRules(
@@ -214,7 +218,7 @@ ParadigmCell computeParadigmCell({
           inventory: inventory,
         );
 
-  return ParadigmFilled(form: finalForm, ruleChain: chain);
+  return ParadigmFilled(form: finalForm, ruleChain: chain, phonemic: working);
 }
 
 /// D-88 — 04-17. Projects a rule's binding map to the non-intrinsic dims

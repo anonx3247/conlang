@@ -13,14 +13,32 @@ sealed class ParadigmCell {
   const ParadigmCell();
 }
 
-/// The cell was filled successfully. [form] is the final surface form after
-/// applying the rule chain in order. [ruleChain] contains each applied rule
-/// in application order (most-specific first, then whatever remains after
-/// that rule consumed its dimension bindings).
+/// The cell was filled successfully. [form] is the phonetic surface form
+/// after applying the rule chain AND the rewrite pipeline. [phonemic] is
+/// the raw morphological output BEFORE the rewrite pipeline — this is
+/// what `romanize()` should consume. [ruleChain] contains each applied
+/// rule in application order (most-specific first, then whatever remains
+/// after that rule consumed its dimension bindings).
+///
+/// D-112 (plan 04-17): consumers MUST use [phonemic] as the input to
+/// `romanize()` and [form] as the phonetic `[bracket]` display. Passing
+/// [form] through `romanize()` leaks sound-change rewrites into the rom
+/// line (e.g. `cazana` instead of correct `casana`).
 class ParadigmFilled extends ParadigmCell {
-  const ParadigmFilled({required this.form, required this.ruleChain});
+  const ParadigmFilled({
+    required this.form,
+    required this.ruleChain,
+    String? phonemic,
+  }) : phonemic = phonemic ?? form;
 
+  /// Phonetic surface form (post-rewrite-pipeline). Use for `[bracket]`
+  /// display. When no rewrite rules are configured, equals [phonemic].
   final String form;
+
+  /// Raw morphological output (pre-rewrite-pipeline). Use as input to
+  /// `romanize()` for the rom display line. D-112 invariant.
+  final String phonemic;
+
   final List<InflectionalRule> ruleChain;
 }
 
