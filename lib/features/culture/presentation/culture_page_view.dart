@@ -4,15 +4,17 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/culture_providers.dart';
 import '../../project/data/project_providers.dart';
 import '../../../db/app_database.dart' show CulturePage;
+import 'block_editor.dart';
 
 String _formatDate(DateTime dt) =>
     '${dt.year}-${dt.month.toString().padLeft(2, '0')}-${dt.day.toString().padLeft(2, '0')}';
 
 /// Displays a single culture wiki page: header (emoji + title + timestamps)
-/// and content area with raw Markdown text.
+/// and content area with block-based Markdown editor.
 ///
-/// Plan 02: renders content as plain [Text] showing raw Markdown.
-/// Plan 03 will replace this with the block editor + rendered Markdown.
+/// Plan 03: replaces plain Text with BlockEditor for Markdown rendering
+/// and inline section editing. [[wiki-links]] rendered with resolved/broken
+/// visual states and autocomplete support.
 class CulturePageView extends ConsumerStatefulWidget {
   const CulturePageView({super.key, required this.pageId});
 
@@ -50,11 +52,51 @@ class _CulturePageViewState extends ConsumerState<CulturePageView> {
     if (mounted) setState(() => _editingTitle = false);
   }
 
+  Future<void> _handleLinkTap(String title, bool exists) async {
+    if (exists) {
+      // Navigate to the existing page
+      final titleIndex = ref.read(pageTitleIndexProvider);
+      final pageId = titleIndex[title];
+      if (pageId != null) {
+        ref.read(selectedCulturePageIdProvider.notifier).state = pageId;
+      }
+    } else {
+      // Per D-11: show "Create this page?" dialog
+      if (!mounted) return;
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Page not found'),
+          content: Text("Create a new page titled '$title'?"),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Create Page'),
+            ),
+          ],
+        ),
+      );
+      if (confirmed == true && mounted) {
+        final db = ref.read(currentDatabaseProvider);
+        if (db == null) return;
+        final newId = await db.cultureDao.createPage(title: title);
+        if (mounted) {
+          ref.read(selectedCulturePageIdProvider.notifier).state = newId;
+        }
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final pageAsync = ref.watch(culturePageProvider(widget.pageId));
+    final titleIndex = ref.watch(pageTitleIndexProvider);
 
     return pageAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
@@ -156,20 +198,21 @@ class _CulturePageViewState extends ConsumerState<CulturePageView> {
 
             Divider(height: 1, thickness: 1, color: colorScheme.outlineVariant),
 
-            // Content area
+            // Content area with block editor
             Expanded(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.symmetric(
                     horizontal: 24, vertical: 16),
-                child: Text(
-                  page.content.isEmpty
-                      ? '(No content yet)'
-                      : page.content,
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: page.content.isEmpty
-                        ? colorScheme.onSurface.withValues(alpha: 0.35)
-                        : null,
-                  ),
+                child: BlockEditor(
+                  content: page.content,
+                  pageTitleIndex: titleIndex,
+                  onContentChanged: (newContent) {
+                    final db = ref.read(currentDatabaseProvider);
+                    if (db != null) {
+                      db.cultureDao.updatePage(page.id, content: newContent);
+                    }
+                  },
+                  onLinkTap: _handleLinkTap,
                 ),
               ),
             ),

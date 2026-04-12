@@ -47,6 +47,8 @@ dependencies:
   file_selector_linux: ^0.9.4
   file_selector_windows: ^0.9.3+5
   flutter_fancy_tree_view2: ^1.6.3
+  flutter_markdown_plus: ^1.0.7
+  markdown: ^7.0.0
 
 dev_dependencies:
   flutter_test:
