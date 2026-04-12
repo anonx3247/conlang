@@ -1650,6 +1650,7 @@ class _RuleEditorDialogState extends ConsumerState<RuleEditorDialog> {
                               _StandardFormDerivationWarning(
                                 outputPosId: _outputPosId!,
                                 previewRule: previewRule,
+                                outputIntrinsicLevels: _outputIntrinsicLevels,
                               ),
                           ],
                         ),
@@ -2343,10 +2344,16 @@ class _StandardFormDerivationWarning extends ConsumerWidget {
   const _StandardFormDerivationWarning({
     required this.outputPosId,
     required this.previewRule,
+    this.outputIntrinsicLevels = const {},
   });
 
   final int outputPosId;
   final MorphologicalRule previewRule;
+
+  /// Selected output intrinsic levels (dimId -> levelId). When non-empty,
+  /// only the selected level per dimension is checked — avoids false warnings
+  /// about patterns for other levels (e.g. masculine when feminine is selected).
+  final Map<int, int> outputIntrinsicLevels;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -2406,7 +2413,8 @@ class _StandardFormDerivationWarning extends ConsumerWidget {
     if (dao == null) return const SizedBox.shrink();
 
     return FutureBuilder<List<String>>(
-      future: _computeViolations(intrinsicDims, dao, romForm, inventory),
+      future: _computeViolations(
+          intrinsicDims, dao, romForm, inventory, outputIntrinsicLevels),
       builder: (context, snap) {
         final warnings = snap.data ?? const [];
         if (warnings.isEmpty) return const SizedBox.shrink();
@@ -2445,12 +2453,20 @@ class _StandardFormDerivationWarning extends ConsumerWidget {
     StandardFormPatternDao dao,
     String romForm,
     PhonemeInventory inventory,
+    Map<int, int> selectedLevels,
   ) async {
     const matcher = StandardFormMatcher();
     final warnings = <String>[];
     for (final dim in intrinsicDims) {
       final levels = decodeLevelsJson(dim.levelsJson);
-      for (final level in levels) {
+      // Only check the selected level for this dimension (if one was picked).
+      // This prevents false warnings about other levels' patterns (e.g.
+      // "masculine should end with 'o'" when feminine is selected).
+      final selectedLevelId = selectedLevels[dim.id];
+      final levelsToCheck = selectedLevelId != null
+          ? levels.where((l) => l.id == selectedLevelId)
+          : levels;
+      for (final level in levelsToCheck) {
         final branches = await dao.getPattern(dim.id, level.id);
         if (branches == null || branches.isEmpty) continue;
         if (matcher.matches(romForm, branches, inventory)) continue;
