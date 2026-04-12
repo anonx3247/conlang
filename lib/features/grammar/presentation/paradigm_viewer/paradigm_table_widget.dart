@@ -679,8 +679,26 @@ class _ParadigmCellWidget extends ConsumerWidget {
           // the cell's bindings pre-filled. Filled cells try to resolve
           // the topmost rule in the chain so the dialog opens in edit
           // mode; empty cells open in create mode with preFilledBindings.
-          MorphologicalRule? existingRule;
+          //
+          // D-103 (plan 04-18-05): ParadigmUnmarked cells open the dialog
+          // in marker mode (markerId set) so the user edits the matching
+          // marker rather than creating a new rule.
           final localCell = cell;
+
+          if (localCell is ParadigmUnmarked) {
+            // D-103: click on ∅ cell → edit the matching marker.
+            showDialog<void>(
+              context: context,
+              builder: (_) => RuleEditorDialog(
+                kind: RuleKind.inflectional,
+                markerId: localCell.source.id,
+                markerBindings: localCell.source.bindings,
+              ),
+            );
+            break;
+          }
+
+          MorphologicalRule? existingRule;
           if (localCell is ParadigmFilled && localCell.ruleChain.isNotEmpty) {
             final topRuleId = localCell.ruleChain.first.id;
             final rules =
