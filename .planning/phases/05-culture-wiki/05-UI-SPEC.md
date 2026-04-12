@@ -51,7 +51,7 @@ Exceptions:
 - Drag handle affordance zone: 32px touch width
 - Back/forward nav bar height: 36px
 - Link hover preview tooltip max width: 320px, max height: 180px
-- Broken-link `?` badge: 14px diameter
+- Broken-link `?` badge: 16px diameter
 
 Source: Derived from `app_shell.dart` (48px top bar, 40px tab height) and `grammar_shell.dart` (200px sidebar, 40px tiles, 16px padding) patterns.
 
@@ -62,7 +62,7 @@ Source: Derived from `app_shell.dart` (48px top bar, 40px tab height) and `gramm
 | Role | Size | Weight | Line Height | Usage |
 |------|------|--------|-------------|-------|
 | Body | 13px | 400 (normal) | 1.5 | Rendered Markdown paragraph text, list items, page content |
-| Label | 12px | 400 (normal) | 1.4 | Tree sidebar page titles, timestamps, metadata text |
+| Label | 12px | 400 (normal) | 1.4 | Tree sidebar page titles, timestamps, metadata text, CULTURE section header label, broken-link badge text |
 | Heading | 16px | 600 (semibold) | 1.3 | Markdown `##` rendered headings, page title in header |
 | Display | 20px | 600 (semibold) | 1.2 | Page title (`#` H1), section page header |
 
@@ -71,10 +71,10 @@ Typography sizes used: **12, 13, 16, 20** — exactly 4 sizes.
 
 Additional text rules:
 - Markdown editor (edit mode, raw text): 13px, weight 400, line-height 1.6 for readability during typing
-- `CULTURE` section label in sidebar header: 11px, weight 400, letter-spacing 1.2 (matches `labelSmall` in existing shells — source: `grammar_shell.dart:66`)
-- Broken-link `?` badge text: 11px, weight 600, accent color
+- `CULTURE` section label in sidebar header: 12px (Label role), weight 400, letter-spacing 1.2, `colorScheme.onSurface.withValues(alpha: 0.5)` — the letter-spacing and alpha provide sufficient visual distinction from page titles without a 5th font size
+- Broken-link `?` badge text: 12px (Label role), weight 600, `colorScheme.onError` foreground
 
-Source: Matches `app.dart` `textTheme` — `bodyMedium` 13px, `bodySmall` 12px, `labelSmall` 11px. Heading/Display sizes inferred from `headlineSmall` usage in empty states.
+Source: Matches `app.dart` `textTheme` — `bodyMedium` 13px, `bodySmall` 12px. Heading/Display sizes inferred from `headlineSmall` usage in empty states.
 
 ---
 
@@ -113,7 +113,7 @@ The following Flutter widgets are used. No new component libraries are added.
 ### CultureShell (new)
 - Layout: `Row` — 240px `SizedBox` sidebar + `VerticalDivider` + `Expanded` content
 - Sidebar background: `colorScheme.surfaceContainerLow`
-- Section header: `Text('CULTURE', style: labelSmall)` at 11px, alpha 0.5, letter-spacing 1.2
+- Section header: `Text('CULTURE', style: labelSmall)` at 12px, alpha 0.5, letter-spacing 1.2
 - Pattern: mirrors `grammar_shell.dart` exactly
 
 ### PageTreeSidebar (new)
@@ -149,8 +149,8 @@ The following Flutter widgets are used. No new component libraries are added.
 
 ### BrokenLinkBadge (new)
 - Inline `InkWell` wrapping page title text + `?` superscript badge
-- Badge: 14x14px circle, `colorScheme.error` background (alpha 0.8), `colorScheme.onError` foreground, 11px weight 600
-- On tap: `AlertDialog` — "Page not found. Create '{{title}}'?" with Cancel / Create buttons
+- Badge: 16x16px circle, `colorScheme.error` background (alpha 0.8), `colorScheme.onError` foreground, 12px weight 600
+- On tap: `AlertDialog` — "Page not found. Create '{{title}}'?" with Cancel / Create Page buttons
 
 ### HoverPreviewTooltip (new)
 - `MouseRegion` on rendered internal links — `onEnter` triggers 400ms delay then shows overlay
@@ -166,12 +166,12 @@ The following Flutter widgets are used. No new component libraries are added.
 
 ### PageContextMenu (new)
 - Right-click or `...` overflow `IconButton` on tree tile hover
-- `PopupMenuButton` with items: Rename, Set icon, Add child page, Delete
-- Delete item: `colorScheme.error` text color
+- `PopupMenuButton` with items: Rename, Set icon, Add child page, Delete Page
+- Delete Page item: `colorScheme.error` text color
 
 ### DeletePageDialog (new)
 - `AlertDialog` with title "Delete page?", body describing consequence (children orphaned or deleted)
-- Two-button row: Cancel (text button) / Delete (filled button, `colorScheme.error` background)
+- Two-button row: Cancel (text button) / Delete Page (filled button, `colorScheme.error` background)
 
 ---
 
@@ -186,10 +186,10 @@ The following Flutter widgets are used. No new component libraries are added.
 | Error state (load failure) | "Could not load pages. Check the project database is accessible." |
 | Broken-link prompt heading | "Page not found" |
 | Broken-link prompt body | "Create a new page titled '{{title}}'?" |
-| Broken-link confirm | "Create" |
+| Broken-link confirm | "Create Page" |
 | Delete page heading | "Delete '{{title}}'?" |
 | Delete page body | "This page and all its child pages will be permanently deleted. This cannot be undone." |
-| Delete confirm | "Delete" |
+| Delete confirm | "Delete Page" |
 | Delete cancel | "Cancel" |
 | Link autocomplete placeholder | "Search pages..." |
 | Link autocomplete empty | "No matching pages — press Enter to create" |
@@ -259,6 +259,8 @@ The following Flutter widgets are used. No new component libraries are added.
 - Content area: `Expanded`, `surface` background
 - Back/forward bar: full width of content area, 36px height, `surfaceContainer`
 - Page content: `SingleChildScrollView` with 24px horizontal padding, 16px vertical padding
+
+**Primary focal point:** The page H1 title (20px, weight 600, `colorScheme.onSurface`) is the primary visual anchor of the content area. It is the largest and heaviest text element on screen and draws the user's eye immediately upon page navigation.
 
 ---
 
