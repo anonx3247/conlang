@@ -5,6 +5,7 @@ import '../../../../features/morphology/data/morphology_providers.dart';
 import '../../../phonology/data/phonotactic_providers.dart'
     show applyRewritePipelineProvider;
 import '../../../phonology/data/romanization_providers.dart';
+import '../../../grammar/domain/dimension_level.dart' show formatAbbr;
 import '../../data/lexeme_providers.dart';
 
 /// Left panel of the Dictionary master-detail layout.
@@ -450,7 +451,12 @@ class _WordListPanelState extends ConsumerState<WordListPanel> {
                           children: [
                             Expanded(
                               child: Text(
-                                display.rom,
+                                () {
+                                  final posAbbr = formatAbbr(lexeme.partOfSpeech);
+                                  return posAbbr.isNotEmpty
+                                      ? '${display.rom} ($posAbbr)'
+                                      : display.rom;
+                                }(),
                                 style: theme.textTheme.bodyMedium?.copyWith(
                                   fontSize: 13,
                                   fontWeight: isSelected
@@ -498,7 +504,9 @@ class _WordListPanelState extends ConsumerState<WordListPanel> {
                             color: cs.onSurface.withValues(alpha: 0.55),
                           ),
                         ),
-                        if (lexeme.meaning != null && lexeme.meaning!.isNotEmpty)
+                        if (lexeme.meaning != null &&
+                            lexeme.meaning!.isNotEmpty &&
+                            lexeme.derivedViaRuleId == null)
                           Text(
                             lexeme.meaning!,
                             style: theme.textTheme.bodySmall?.copyWith(
@@ -507,19 +515,6 @@ class _WordListPanelState extends ConsumerState<WordListPanel> {
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                          ),
-                        if (lexeme.partOfSpeech != null &&
-                            lexeme.partOfSpeech!.isNotEmpty)
-                          Padding(
-                            padding: const EdgeInsets.only(top: 2),
-                            child: Text(
-                              lexeme.partOfSpeech!,
-                              style: theme.textTheme.labelSmall?.copyWith(
-                                fontSize: 11,
-                                color: cs.onSurface.withValues(alpha: 0.5),
-                                letterSpacing: 0.5,
-                              ),
-                            ),
                           ),
                       ],
                     ),

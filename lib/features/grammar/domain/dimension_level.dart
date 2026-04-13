@@ -80,6 +80,19 @@ String formatAbbr(String? abbr) {
   return '$normalized.';
 }
 
+/// Format an abbreviation for grammar UI contexts (paradigm headers, rule
+/// labels): UPPERCASE without trailing period.
+///
+/// Returns an empty string when [abbr] is null or empty.
+/// Strips any existing periods before converting to uppercase,
+/// so `"sg."` becomes `"SG"` and `"SG."` also becomes `"SG"`.
+String formatAbbrUpper(String? abbr) {
+  if (abbr == null || abbr.isEmpty) return '';
+  final normalized = abbr.toUpperCase().replaceAll('.', '');
+  if (normalized.isEmpty) return '';
+  return normalized;
+}
+
 /// Decode the JSON string stored in `Dimensions.levelsJson` back to a list.
 ///
 /// Defensive against malformed DB state — returns `const []` on empty input,

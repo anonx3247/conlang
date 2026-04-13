@@ -440,7 +440,7 @@ class _DerivedRowState extends ConsumerState<_DerivedRow> {
                 borderRadius: BorderRadius.circular(4),
               ),
               child: Text(
-                '[${formatAbbr(widget.posAbbr)}]',
+                formatAbbr(widget.posAbbr),
                 style: theme.textTheme.labelSmall?.copyWith(
                   fontSize: 10,
                   color: cs.onSurface.withValues(alpha: 0.7),

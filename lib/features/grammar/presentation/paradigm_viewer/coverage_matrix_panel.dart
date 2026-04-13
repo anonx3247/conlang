@@ -5,7 +5,7 @@ import '../../../../db/app_database.dart';
 import '../../data/grammar_providers.dart';
 import '../../data/paradigm_coverage_provider.dart';
 import '../../domain/coverage_matrix.dart';
-import '../../domain/dimension_level.dart' show DimensionLevel, decodeLevelsJson, formatAbbr;
+import '../../domain/dimension_level.dart' show DimensionLevel, decodeLevelsJson, formatAbbrUpper;
 
 /// Coverage matrix side panel (D-15 / D-91).
 ///
@@ -128,7 +128,7 @@ class CoverageMatrixPanel extends ConsumerWidget {
       final levelId = key[dimId];
       if (dim == null || levelId == null) continue;
       final level = levelsByDim[dimId]?[levelId];
-      final abbrFormatted = formatAbbr(level?.abbr);
+      final abbrFormatted = formatAbbrUpper(level?.abbr);
       final levelLabel = abbrFormatted.isNotEmpty
           ? abbrFormatted
           : (level?.name ?? '?');
