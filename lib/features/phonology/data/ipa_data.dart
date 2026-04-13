@@ -21,6 +21,7 @@ enum Manner {
   lateralFricative,
   approximant,
   lateralApproximant,
+  affricate,
   // Non-pulmonic
   click,
   implosive,
@@ -178,6 +179,16 @@ class IpaSound {
     IpaSound(symbol: 'ɻ', name: 'voiced retroflex approximant', type: IpaSoundType.consonant, manner: Manner.approximant, place: Place.retroflex, voiced: true, audioAssetPath: null),
     IpaSound(symbol: 'j', name: 'voiced palatal approximant', type: IpaSoundType.consonant, manner: Manner.approximant, place: Place.palatal, voiced: true, audioAssetPath: 'assets/ipa_audio/voiced_palatal_approximant.ogg'),
     IpaSound(symbol: 'ɰ', name: 'voiced velar approximant', type: IpaSoundType.consonant, manner: Manner.approximant, place: Place.velar, voiced: true, audioAssetPath: 'assets/ipa_audio/voiced_velar_approximant.ogg'),
+
+    // ── Affricates ─────────────────────────────────────────────────────────
+    IpaSound(symbol: 't͡s', name: 'voiceless alveolar affricate', type: IpaSoundType.consonant, manner: Manner.affricate, place: Place.alveolar, voiced: false, audioAssetPath: 'assets/ipa_audio/voiceless_alveolar_affricate.ogg'),
+    IpaSound(symbol: 'd͡z', name: 'voiced alveolar affricate', type: IpaSoundType.consonant, manner: Manner.affricate, place: Place.alveolar, voiced: true, audioAssetPath: 'assets/ipa_audio/voiced_alveolar_affricate.ogg'),
+    IpaSound(symbol: 't͡ʃ', name: 'voiceless postalveolar affricate', type: IpaSoundType.consonant, manner: Manner.affricate, place: Place.postalveolar, voiced: false, audioAssetPath: 'assets/ipa_audio/voiceless_palato-alveolar_affricate.ogg'),
+    IpaSound(symbol: 'd͡ʒ', name: 'voiced postalveolar affricate', type: IpaSoundType.consonant, manner: Manner.affricate, place: Place.postalveolar, voiced: true, audioAssetPath: 'assets/ipa_audio/voiced_palato-alveolar_affricate.ogg'),
+    IpaSound(symbol: 't͡ɕ', name: 'voiceless alveolo-palatal affricate', type: IpaSoundType.consonant, manner: Manner.affricate, place: Place.palatal, voiced: false, audioAssetPath: null),
+    IpaSound(symbol: 'd͡ʑ', name: 'voiced alveolo-palatal affricate', type: IpaSoundType.consonant, manner: Manner.affricate, place: Place.palatal, voiced: true, audioAssetPath: null),
+    IpaSound(symbol: 'p͡f', name: 'voiceless labiodental affricate', type: IpaSoundType.consonant, manner: Manner.affricate, place: Place.labiodental, voiced: false, audioAssetPath: null),
+    IpaSound(symbol: 'b͡v', name: 'voiced labiodental affricate', type: IpaSoundType.consonant, manner: Manner.affricate, place: Place.labiodental, voiced: true, audioAssetPath: null),
 
     // ── Co-articulated Approximants ───────────────────────────────────────
     IpaSound(symbol: 'w', name: 'voiced labial-velar approximant', type: IpaSoundType.consonant, manner: Manner.approximant, place: Place.labialVelar, voiced: true, audioAssetPath: 'assets/ipa_audio/voiced_labial-velar_approximant.ogg'),

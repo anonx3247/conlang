@@ -73,6 +73,7 @@ final _mannerMap = {
   'lateral fricative': Manner.lateralFricative,
   'approximant': Manner.approximant,
   'lateral approximant': Manner.lateralApproximant,
+  'affricate': Manner.affricate,
   'click': Manner.click,
   'implosive': Manner.implosive,
   'ejective': Manner.ejective,
@@ -91,6 +92,8 @@ final _placeMap = {
   'uvular': Place.uvular,
   'pharyngeal': Place.pharyngeal,
   'glottal': Place.glottal,
+  'labial-velar': Place.labialVelar,
+  'labial-palatal': Place.labialPalatal,
 };
 
 /// Maps height string to [VowelHeight] enum.

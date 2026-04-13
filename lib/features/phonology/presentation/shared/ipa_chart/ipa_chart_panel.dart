@@ -113,6 +113,7 @@ class _PulmonicConsonantChart extends StatelessWidget {
     Manner.lateralFricative,
     Manner.approximant,
     Manner.lateralApproximant,
+    Manner.affricate,
   ];
 
   static const _mannerLabels = {
@@ -124,6 +125,7 @@ class _PulmonicConsonantChart extends StatelessWidget {
     Manner.lateralFricative: 'Lat. Fric.',
     Manner.approximant: 'Approx.',
     Manner.lateralApproximant: 'Lat. Approx.',
+    Manner.affricate: 'Affricate',
   };
 
   static const _places = [
@@ -138,6 +140,8 @@ class _PulmonicConsonantChart extends StatelessWidget {
     Place.uvular,
     Place.pharyngeal,
     Place.glottal,
+    Place.labialVelar,
+    Place.labialPalatal,
   ];
 
   static const _placeLabels = {
@@ -152,6 +156,8 @@ class _PulmonicConsonantChart extends StatelessWidget {
     Place.uvular: 'Uv',
     Place.pharyngeal: 'Ph',
     Place.glottal: 'Gl',
+    Place.labialVelar: 'LV',
+    Place.labialPalatal: 'LP',
   };
 
   @override
