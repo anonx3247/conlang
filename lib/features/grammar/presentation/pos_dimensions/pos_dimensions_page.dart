@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../db/app_database.dart';
 import '../../../morphology/data/morphology_providers.dart';
 import '../../../project/data/project_providers.dart';
+import '../../domain/dimension_level.dart' show formatAbbr;
 import 'dimension_editor_panel.dart';
 import 'pos_crud_dialog.dart';
 
@@ -174,7 +175,7 @@ class _PosDimensionsPageState extends ConsumerState<PosDimensionsPage> {
                             final pos = posList[i];
                             final selected = pos.id == _selectedPosId;
                             return ListTile(
-                              title: Text('${pos.name} (${pos.abbreviation})'),
+                              title: Text('${pos.name} (${formatAbbr(pos.abbreviation)})'),
                               selected: selected,
                               selectedTileColor: cs.primaryContainer,
                               onTap: () =>
@@ -283,7 +284,7 @@ class _PosDeleteDialogState extends State<_PosDeleteDialog> {
                   .map(
                     (p) => DropdownMenuItem<int>(
                       value: p.id,
-                      child: Text('${p.name} (${p.abbreviation})'),
+                      child: Text('${p.name} (${formatAbbr(p.abbreviation)})'),
                     ),
                   )
                   .toList(),

@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../db/app_database.dart';
 import '../../../grammar/data/grammar_providers.dart';
-import '../../../grammar/domain/dimension_level.dart';
+import '../../../grammar/domain/dimension_level.dart' show decodeLevelsJson, formatAbbr;
 import '../../../grammar/domain/feature_bindings.dart';
 import '../../../grammar/domain/marker.dart';
 import '../../../grammar/domain/rule_kind.dart';
@@ -328,7 +328,7 @@ class _RulesPageState extends ConsumerState<RulesPage> {
                                                 ),
                                                 if (showPosLabel)
                                                   Text(
-                                                    '${inputAbbr ?? '?'}. → ${outputAbbr ?? '?'}.',
+                                                    '${formatAbbr(inputAbbr) .isEmpty ? '?.' : formatAbbr(inputAbbr)} → ${formatAbbr(outputAbbr).isEmpty ? '?.' : formatAbbr(outputAbbr)}',
                                                     style: theme
                                                         .textTheme.bodySmall
                                                         ?.copyWith(
@@ -570,7 +570,7 @@ class _RulesPageState extends ConsumerState<RulesPage> {
       for (final dim in dims) {
         final levels = decodeLevelsJson(dim.levelsJson);
         for (final lvl in levels) {
-          levelAbbrMap[(dim.id, lvl.id)] = lvl.abbr;
+          levelAbbrMap[(dim.id, lvl.id)] = formatAbbr(lvl.abbr);
         }
       }
     }

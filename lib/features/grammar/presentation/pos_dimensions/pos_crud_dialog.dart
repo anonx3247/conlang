@@ -54,7 +54,7 @@ class _PosCrudDialogState extends ConsumerState<_PosCrudDialog> {
 
   Future<void> _save() async {
     final name = _nameCtrl.text.trim();
-    final abbr = _abbrCtrl.text.trim();
+    final abbr = _abbrCtrl.text.trim().toLowerCase();
     if (name.isEmpty || abbr.isEmpty) return;
 
     setState(() => _saving = true);

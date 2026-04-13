@@ -7,7 +7,7 @@ import '../../../../shared/widgets/violation_text.dart';
 import '../../../grammar/data/grammar_providers.dart';
 import '../../../grammar/data/intrinsic_levels_codec.dart';
 import '../../../grammar/data/standard_form_validation_provider.dart';
-import '../../../grammar/domain/dimension_level.dart';
+import '../../../grammar/domain/dimension_level.dart' show decodeLevelsJson, formatAbbr;
 import '../../../grammar/domain/pos_resolver.dart';
 import '../../../grammar/presentation/paradigm_viewer/paradigm_table_widget.dart';
 import '../../../morphology/application/derivation_promotion_service.dart';
@@ -968,7 +968,7 @@ class _WordDetailPanelState extends ConsumerState<WordDetailPanel> {
                                   in decodeLevelsJson(dim.levelsJson))
                                 DropdownMenuItem<int>(
                                   value: lv.id,
-                                  child: Text('${lv.name} (${lv.abbr})'),
+                                  child: Text('${lv.name} (${formatAbbr(lv.abbr)})'),
                                 ),
                             ],
                             onChanged: (v) => setState(() {

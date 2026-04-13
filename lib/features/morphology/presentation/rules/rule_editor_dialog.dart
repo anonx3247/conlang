@@ -5,7 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../db/app_database.dart' as db;
 import '../../../grammar/data/grammar_providers.dart';
 import '../../../grammar/data/standard_form_pattern_dao.dart';
-import '../../../grammar/domain/dimension_level.dart';
+import '../../../grammar/domain/dimension_level.dart' show decodeLevelsJson, formatAbbr;
 import '../../../grammar/domain/feature_bindings.dart';
 import '../../../grammar/domain/inflectional_rule.dart';
 import '../../../grammar/domain/rule_kind.dart';
@@ -975,7 +975,7 @@ class _RuleEditorDialogState extends ConsumerState<RuleEditorDialog> {
               children: levels.map((l) {
                 final selected = _featureBindings[dim.id] == l.id;
                 return FilterChip(
-                  label: Text(l.abbr),
+                  label: Text(formatAbbr(l.abbr)),
                   selected: selected,
                   visualDensity: VisualDensity.compact,
                   onSelected: (sel) {
@@ -1073,7 +1073,7 @@ class _RuleEditorDialogState extends ConsumerState<RuleEditorDialog> {
         children: [
           for (final pos in posList)
             FilterChip(
-              label: Text('${pos.name} (${pos.abbreviation})'),
+              label: Text('${pos.name} (${formatAbbr(pos.abbreviation)})'),
               tooltip: pos.name,
               selected: _inflectionalPosSet.contains(pos.id),
               onSelected: (on) {
@@ -1193,7 +1193,7 @@ class _RuleEditorDialogState extends ConsumerState<RuleEditorDialog> {
             DropdownMenuItem<int>(
               value: pos.id,
               child: Text(
-                '${pos.name} (${pos.abbreviation})',
+                '${pos.name} (${formatAbbr(pos.abbreviation)})',
                 overflow: TextOverflow.ellipsis,
               ),
             ),
@@ -1231,7 +1231,7 @@ class _RuleEditorDialogState extends ConsumerState<RuleEditorDialog> {
             DropdownMenuItem<int>(
               value: pos.id,
               child: Text(
-                '${pos.name} (${pos.abbreviation})',
+                '${pos.name} (${formatAbbr(pos.abbreviation)})',
                 overflow: TextOverflow.ellipsis,
               ),
             ),
@@ -1298,7 +1298,7 @@ class _RuleEditorDialogState extends ConsumerState<RuleEditorDialog> {
                               DropdownMenuItem<int>(
                                 value: lvl.id,
                                 child: Text(
-                                  '${lvl.name} (${lvl.abbr})',
+                                  '${lvl.name} (${formatAbbr(lvl.abbr)})',
                                   overflow: TextOverflow.ellipsis,
                                 ),
                               ),

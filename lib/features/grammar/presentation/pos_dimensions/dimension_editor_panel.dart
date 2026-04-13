@@ -6,7 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../db/app_database.dart';
 import '../../data/grammar_providers.dart';
-import '../../domain/dimension_level.dart';
+import '../../domain/dimension_level.dart' show DimensionLevel, decodeLevelsJson, encodeLevelsJson, formatAbbr;
 import '../../domain/level_deletion_report.dart';
 import 'dimension_template_picker.dart';
 import 'standard_form_pattern_dialog.dart';
@@ -134,14 +134,15 @@ class DimensionEditorPanel extends ConsumerWidget {
       ),
     );
     if (result == null) return;
-    if (result.name == dim.name && result.abbr == (dim.abbreviation ?? '')) {
+    final normalizedAbbr = result.abbr.toLowerCase();
+    if (result.name == dim.name && normalizedAbbr == (dim.abbreviation ?? '')) {
       return;
     }
     final dao = ref.read(grammarDaoProvider);
     if (dao == null) return;
     await dao.updateDimension(dim.copyWith(
       name: result.name,
-      abbreviation: Value(result.abbr.isEmpty ? null : result.abbr),
+      abbreviation: Value(normalizedAbbr.isEmpty ? null : normalizedAbbr),
     ));
   }
 
@@ -171,9 +172,10 @@ class DimensionEditorPanel extends ConsumerWidget {
     if (result == null) return;
     final dao = ref.read(grammarDaoProvider);
     if (dao == null) return;
+    final normalizedLevelAbbr = result.abbr.toLowerCase();
     final updated = decodeLevelsJson(dim.levelsJson)
         .map((x) => x.id == level.id
-            ? x.copyWith(name: result.name, abbr: result.abbr)
+            ? x.copyWith(name: result.name, abbr: normalizedLevelAbbr)
             : x)
         .toList();
     await dao.updateDimensionLevels(dim.id, updated);
@@ -212,7 +214,7 @@ class DimensionEditorPanel extends ConsumerWidget {
       DimensionLevel(
         id: nextId,
         name: result.name,
-        abbr: result.abbr,
+        abbr: result.abbr.toLowerCase(),
         ordering: nextOrdering,
       ),
     ];
@@ -577,7 +579,7 @@ class _LevelChip extends StatelessWidget {
           const SizedBox(width: 4),
           // CENTER slot: level label text.
           Text(
-            '${level.name} (${level.abbr})',
+            '${level.name} (${formatAbbr(level.abbr)})',
             style: theme.textTheme.bodySmall,
           ),
           // RIGHT slot: D-98 plan 04-17 standard-form pattern affordance,
@@ -863,7 +865,7 @@ class _ReassignLevelDialogState extends State<_ReassignLevelDialog> {
               for (final l in widget.candidates)
                 DropdownMenuItem<int>(
                   value: l.id,
-                  child: Text('${l.name} (${l.abbr})'),
+                  child: Text('${l.name} (${formatAbbr(l.abbr)})'),
                 ),
             ],
             onChanged: (v) => setState(() => _targetId = v),

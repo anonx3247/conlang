@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../db/app_database.dart' hide MorphologicalRule;
+import '../../../grammar/domain/dimension_level.dart' show formatAbbr;
 import '../../../morphology/data/morphology_providers.dart';
 import '../../../phonology/data/romanization_providers.dart';
 import '../../data/lexeme_providers.dart';
@@ -439,7 +440,7 @@ class _DerivedRowState extends ConsumerState<_DerivedRow> {
                 borderRadius: BorderRadius.circular(4),
               ),
               child: Text(
-                '[${widget.posAbbr}]',
+                '[${formatAbbr(widget.posAbbr)}]',
                 style: theme.textTheme.labelSmall?.copyWith(
                   fontSize: 10,
                   color: cs.onSurface.withValues(alpha: 0.7),

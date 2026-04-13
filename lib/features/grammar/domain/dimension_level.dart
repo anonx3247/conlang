@@ -68,6 +68,18 @@ class DimensionLevel {
 String encodeLevelsJson(List<DimensionLevel> levels) =>
     jsonEncode(levels.map((l) => l.toJson()).toList());
 
+/// Format an abbreviation for display: lowercase with a trailing period.
+///
+/// Returns an empty string when [abbr] is null or empty.
+/// Strips any existing trailing periods before appending exactly one,
+/// so `"SG."` becomes `"sg."` and `"SG"` also becomes `"sg."`.
+String formatAbbr(String? abbr) {
+  if (abbr == null || abbr.isEmpty) return '';
+  final normalized = abbr.toLowerCase().replaceAll('.', '');
+  if (normalized.isEmpty) return '';
+  return '$normalized.';
+}
+
 /// Decode the JSON string stored in `Dimensions.levelsJson` back to a list.
 ///
 /// Defensive against malformed DB state — returns `const []` on empty input,

@@ -16,7 +16,7 @@ import '../../data/intrinsic_levels_codec.dart';
 import '../../data/paradigm_cell_override_dao.dart';
 import '../../data/standard_form_validation_provider.dart';
 import '../../data/typology_providers.dart';
-import '../../domain/dimension_level.dart';
+import '../../domain/dimension_level.dart' show DimensionLevel, decodeLevelsJson, formatAbbr;
 import '../../domain/paradigm_axes.dart';
 import '../../domain/paradigm_cell.dart';
 import '../../domain/pos_resolver.dart';
@@ -476,7 +476,7 @@ class ParadigmTableWidget extends ConsumerWidget {
           break;
         }
       }
-      if (level != null) parts.add(level.abbr);
+      if (level != null) parts.add(formatAbbr(level.abbr));
     }
     return parts.join(' · ');
   }
@@ -518,7 +518,7 @@ class ParadigmTableWidget extends ConsumerWidget {
                     alignment: Alignment.center,
                     color: cs.surfaceContainerLow,
                     child: Text(
-                      col.abbr,
+                      formatAbbr(col.abbr),
                       style: theme.textTheme.labelSmall
                           ?.copyWith(fontWeight: FontWeight.w600),
                     ),
@@ -534,7 +534,7 @@ class ParadigmTableWidget extends ConsumerWidget {
                     alignment: Alignment.center,
                     color: cs.surfaceContainerLow,
                     child: Text(
-                      row.abbr,
+                      formatAbbr(row.abbr),
                       style: theme.textTheme.labelSmall
                           ?.copyWith(fontWeight: FontWeight.w600),
                     ),
@@ -592,7 +592,7 @@ class ParadigmTableWidget extends ConsumerWidget {
                     alignment: Alignment.center,
                     color: cs.surfaceContainerLow,
                     child: Text(
-                      lvl.abbr,
+                      formatAbbr(lvl.abbr),
                       style: theme.textTheme.labelSmall
                           ?.copyWith(fontWeight: FontWeight.w600),
                     ),
@@ -1303,7 +1303,7 @@ class _IntrinsicSliceTable extends ConsumerWidget {
                       final lid = sliceKey[d.id];
                       final level =
                           levels.where((l) => l.id == lid).firstOrNull;
-                      return level?.abbr ?? '?';
+                      return formatAbbr(level?.abbr) .isEmpty ? '?' : formatAbbr(level?.abbr);
                     })
                     .join(' · '),
                 style: theme.textTheme.labelSmall,
@@ -1345,7 +1345,7 @@ class _IntrinsicSliceTable extends ConsumerWidget {
                   alignment: Alignment.center,
                   color: cs.surfaceContainerLow,
                   child: Text(
-                    col.abbr,
+                    formatAbbr(col.abbr),
                     style: theme.textTheme.labelSmall
                         ?.copyWith(fontWeight: FontWeight.w600),
                   ),
@@ -1361,7 +1361,7 @@ class _IntrinsicSliceTable extends ConsumerWidget {
                   alignment: Alignment.center,
                   color: cs.surfaceContainerLow,
                   child: Text(
-                    row.abbr,
+                    formatAbbr(row.abbr),
                     style: theme.textTheme.labelSmall
                         ?.copyWith(fontWeight: FontWeight.w600),
                   ),
@@ -1414,7 +1414,7 @@ class _IntrinsicSliceTable extends ConsumerWidget {
                   alignment: Alignment.center,
                   color: cs.surfaceContainerLow,
                   child: Text(
-                    lvl.abbr,
+                    formatAbbr(lvl.abbr),
                     style: theme.textTheme.labelSmall
                         ?.copyWith(fontWeight: FontWeight.w600),
                   ),

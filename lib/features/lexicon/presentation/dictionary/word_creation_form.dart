@@ -6,7 +6,7 @@ import '../../../../db/app_database.dart';
 import '../../../grammar/data/grammar_providers.dart';
 import '../../../morphology/application/derivation_promotion_service.dart';
 import '../../../grammar/data/intrinsic_levels_codec.dart';
-import '../../../grammar/domain/dimension_level.dart';
+import '../../../grammar/domain/dimension_level.dart' show decodeLevelsJson, formatAbbr;
 import '../../../morphology/data/morphology_providers.dart';
 import '../../../phonology/data/phonotactic_providers.dart'
     show applyRewritePipelineProvider;
@@ -454,7 +454,7 @@ class _WordCreationFormState extends ConsumerState<WordCreationForm> {
                                         DropdownMenuItem<int>(
                                           value: lv.id,
                                           child: Text(
-                                              '${lv.name} (${lv.abbr})'),
+                                              '${lv.name} (${formatAbbr(lv.abbr)})'),
                                         ),
                                     ],
                                     onChanged: (v) => setState(() {
