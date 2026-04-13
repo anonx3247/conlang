@@ -22,7 +22,7 @@ class PhonologyShell extends ConsumerStatefulWidget {
 
 class _PhonologyShellState extends ConsumerState<PhonologyShell> {
   double _sidebarWidth = 200;
-  double _ipaChartWidth = 280;
+  double _ipaChartWidth = 360;
 
   static const _sidebarItems = [
     _SidebarItem(label: 'Inventory', icon: Icons.grid_on, path: '/phonology/inventory'),
@@ -110,7 +110,7 @@ class _PhonologyShellState extends ConsumerState<PhonologyShell> {
         ResizableDivider(
           onDrag: (d) => setState(() {
             // Right panel: dragging right makes it smaller, left makes it larger.
-            _ipaChartWidth = (_ipaChartWidth - d).clamp(200, 500);
+            _ipaChartWidth = (_ipaChartWidth - d).clamp(280, 600);
           }),
         ),
 

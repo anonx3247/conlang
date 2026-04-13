@@ -22,6 +22,7 @@ const _mannerOptions = [
   'lateral fricative',
   'approximant',
   'lateral approximant',
+  'affricate',
   'click',
   'implosive',
   'ejective',
@@ -39,6 +40,8 @@ const _placeOptions = [
   'uvular',
   'pharyngeal',
   'glottal',
+  'labial-velar',
+  'labial-palatal',
 ];
 
 const _voicingOptions = ['voiced', 'voiceless'];
