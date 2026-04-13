@@ -831,13 +831,13 @@ class _FilledCell extends ConsumerWidget {
 
     // D-112: romanize the raw phonemic, not the post-rewrite phonetic.
     final romText = romanize(phonemic);
+    // Validate against the phonetic (post-rewrite) form so gemination
+    // checks operate on actual sounds, not romanized spelling.
     final ValidationResult result =
-        isException ? const ValidationResult(violations: []) : validate(word: phonemic);
+        isException ? const ValidationResult(violations: []) : validate(word: form);
 
     // G-04 / D-29: show romanization as the primary top line ONLY when it
-    // actually differs from the phonemic form. Mirrors the "showRomanizedRoot"
-    // idiom in derivation_tree_widget.dart:41-42 so users never see the
-    // same glyphs duplicated when no romanization mapping is configured.
+    // actually differs from the phonemic form.
     final showRom = romText.isNotEmpty && romText != phonemic;
 
     return Padding(
@@ -846,20 +846,24 @@ class _FilledCell extends ConsumerWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           if (showRom) ...[
-            // D-29 top line: rom primary, ViolationText-wrapped for
-            // per-cell phonotactic underlines (D-30).
-            ViolationText(text: romText, violations: result.violations),
-            const SizedBox(height: 2),
-            // D-29 bottom line: phonetic surface in brackets, dimmed.
+            // D-29 top line: rom primary, shown clean (no violation marks).
             Text(
-              '[$form]',
+              romText,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 2),
+            // D-29 bottom line: phonetic surface in brackets with violations.
+            ViolationText(
+              text: '[$form]',
+              violations: result.violations,
               style: theme.textTheme.bodySmall?.copyWith(
                 color: cs.onSurface.withValues(alpha: 0.6),
               ),
             ),
           ] else
-            // No distinct romanization: single phonetic-only dimmed line so
-            // the cell doesn't double-render identical text.
+            // No distinct romanization: single phonetic-only line with violations.
             ViolationText(
               text: '[$form]',
               violations: result.violations,
