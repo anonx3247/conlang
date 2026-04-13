@@ -1,6 +1,3 @@
-import 'dart:io';
-
-import 'package:file_selector_platform_interface/file_selector_platform_interface.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -9,6 +6,7 @@ import 'features/project/data/project_providers.dart';
 import 'features/project/data/project_registry.dart';
 import 'features/project/data/recent_projects_service.dart';
 import 'features/project/domain/project.dart';
+import 'features/project/presentation/project_actions.dart';
 import 'router/app_router.dart';
 
 /// Root application widget. Wraps MaterialApp.router in a PlatformMenuBar
@@ -178,107 +176,21 @@ class ConlangApp extends ConsumerWidget {
   }
 
   // ---------------------------------------------------------------------------
-  // Menu action helpers
+  // Menu action helpers — delegate to shared project_actions.dart helpers
   // ---------------------------------------------------------------------------
 
-  Future<void> _newProject(WidgetRef ref, BuildContext context) async {
-    final saveLocation = await FileSelectorPlatform.instance.getSaveLocation(
-      acceptedTypeGroups: const [
-        XTypeGroup(label: 'Conlang Project', extensions: ['conlang']),
-      ],
-      options: const SaveDialogOptions(suggestedName: 'MyLanguage.conlang'),
-    );
-    if (saveLocation == null) return;
+  Future<void> _newProject(WidgetRef ref, BuildContext context) =>
+      showNewProjectDialog(context, ref);
 
-    final filePath = saveLocation.path.endsWith('.conlang')
-        ? saveLocation.path
-        : '${saveLocation.path}.conlang';
-
-    // Derive project name from filename (strip extension).
-    final name = filePath
-        .split('/')
-        .last
-        .replaceAll(RegExp(r'\.conlang$', caseSensitive: false), '');
-
-    try {
-      final registry = await ref.read(projectRegistryProvider.future);
-      final project = await registry.createProject(
-        name.isEmpty ? 'My Language' : name,
-        filePath,
-      );
-      await ref.read(currentProjectIdProvider.notifier).open(project.id);
-      await registry.updateLastOpened(project.id);
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to create project: $e')),
-        );
-      }
-    }
-  }
-
-  Future<void> _openProject(WidgetRef ref, BuildContext context) async {
-    final file = await FileSelectorPlatform.instance.openFile(
-      acceptedTypeGroups: const [
-        XTypeGroup(label: 'Conlang Project', extensions: ['conlang']),
-      ],
-    );
-    if (file == null) return;
-
-    // Rule 2: validate file exists before opening (T-09-06)
-    if (!File(file.path).existsSync()) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('File not found.')),
-        );
-      }
-      return;
-    }
-
-    try {
-      final registry = await ref.read(projectRegistryProvider.future);
-      final project = await registry.openProjectFile(file.path);
-      await ref.read(currentProjectIdProvider.notifier).open(project.id);
-      await registry.updateLastOpened(project.id);
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to open project: $e')),
-        );
-      }
-    }
-  }
+  Future<void> _openProject(WidgetRef ref, BuildContext context) =>
+      showOpenProjectDialog(context, ref);
 
   Future<void> _saveAs(
     WidgetRef ref,
     BuildContext context,
     String currentId,
-  ) async {
-    final saveLocation = await FileSelectorPlatform.instance.getSaveLocation(
-      acceptedTypeGroups: const [
-        XTypeGroup(label: 'Conlang Project', extensions: ['conlang']),
-      ],
-      options: const SaveDialogOptions(suggestedName: 'MyLanguage.conlang'),
-    );
-    if (saveLocation == null) return;
-
-    final filePath = saveLocation.path.endsWith('.conlang')
-        ? saveLocation.path
-        : '${saveLocation.path}.conlang';
-
-    try {
-      final registry = await ref.read(projectRegistryProvider.future);
-      final copy = await registry.duplicateProject(currentId, filePath);
-      await ref.read(currentProjectIdProvider.notifier).open(copy.id);
-      await registry.updateLastOpened(copy.id);
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Save As failed: $e')),
-        );
-      }
-    }
-  }
+  ) =>
+      showSaveAsDialog(context, ref, currentId);
 
   Future<void> _renameProject(
     WidgetRef ref,
@@ -340,49 +252,14 @@ class ConlangApp extends ConsumerWidget {
     WidgetRef ref,
     BuildContext context,
     Project project,
-  ) async {
-    // Rule 2 / T-09-06: check file exists before opening; remove from recent
-    // list and show error if missing.
-    final fileExists = await _fileExists(project.filePath);
-    if (!fileExists) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Cannot open "${project.name}": file not found at ${project.filePath}',
-            ),
-          ),
-        );
-      }
-      // Remove the stale entry from the registry.
-      try {
-        final registry = await ref.read(projectRegistryProvider.future);
-        await registry.deleteProject(project.id);
-        ref.invalidate(recentProjectsProvider);
-      } catch (_) {}
-      return;
-    }
-
-    try {
-      final registry = await ref.read(projectRegistryProvider.future);
-      await ref.read(currentProjectIdProvider.notifier).open(project.id);
-      await registry.updateLastOpened(project.id);
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to open project: $e')),
-        );
-      }
-    }
-  }
-
-  Future<bool> _fileExists(String filePath) async {
-    try {
-      return File(filePath).existsSync();
-    } catch (_) {
-      return false;
-    }
-  }
+  ) =>
+      openRecentProject(
+        context,
+        ref,
+        projectId: project.id,
+        projectName: project.name,
+        filePath: project.filePath,
+      );
 }
 
 /// Professional dark theme for a desktop linguistic tool.

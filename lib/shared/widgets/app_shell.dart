@@ -6,6 +6,7 @@ import '../../features/glossary/data/glossary_providers.dart';
 import '../../features/glossary/presentation/glossary_drawer.dart';
 import '../../features/project/data/project_providers.dart';
 import '../../features/project/data/project_registry.dart';
+import '../../features/project/presentation/welcome_screen.dart';
 import 'resizable_divider.dart';
 
 /// Top-level application shell with a horizontal tab bar for major sections.
@@ -152,7 +153,7 @@ class _AppShellState extends ConsumerState<AppShell> {
                       ],
                     ],
                   )
-                : _NoProjectEmptyState(),
+                : const WelcomeScreen(),
           ),
         ],
       ),
@@ -222,46 +223,6 @@ class _ProjectNameBadgeState extends State<_ProjectNameBadge> {
           ),
         ),
       ],
-    );
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Empty state (no project open)
-// ---------------------------------------------------------------------------
-
-class _NoProjectEmptyState extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.folder_open_outlined,
-            size: 72,
-            color: colorScheme.onSurface.withValues(alpha: 0.15),
-          ),
-          const SizedBox(height: 24),
-          Text(
-            'No project open',
-            style: theme.textTheme.headlineSmall?.copyWith(
-              color: colorScheme.onSurface.withValues(alpha: 0.4),
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            'Open or create a project from the File menu',
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: colorScheme.onSurface.withValues(alpha: 0.3),
-            ),
-          ),
-        ],
-      ),
     );
   }
 }
