@@ -11,7 +11,7 @@ part of 'project_providers.dart';
 /// Resolves and caches the application documents directory path.
 ///
 /// Returns the absolute path to `{appDocumentsDir}/conlang/` which serves
-/// as the root for all project directories and the registry.json file.
+/// as the root for the registry.json file (and legacy project directories).
 
 @ProviderFor(appDocsDir)
 const appDocsDirProvider = AppDocsDirProvider._();
@@ -19,7 +19,7 @@ const appDocsDirProvider = AppDocsDirProvider._();
 /// Resolves and caches the application documents directory path.
 ///
 /// Returns the absolute path to `{appDocumentsDir}/conlang/` which serves
-/// as the root for all project directories and the registry.json file.
+/// as the root for the registry.json file (and legacy project directories).
 
 final class AppDocsDirProvider
     extends $FunctionalProvider<AsyncValue<String>, String, FutureOr<String>>
@@ -27,7 +27,7 @@ final class AppDocsDirProvider
   /// Resolves and caches the application documents directory path.
   ///
   /// Returns the absolute path to `{appDocumentsDir}/conlang/` which serves
-  /// as the root for all project directories and the registry.json file.
+  /// as the root for the registry.json file (and legacy project directories).
   const AppDocsDirProvider._()
     : super(
         from: null,
@@ -100,7 +100,7 @@ final class CurrentProjectIdProvider
   }
 }
 
-String _$currentProjectIdHash() => r'c0e76859bff832d037fa1e54c738bc770993a986';
+String _$currentProjectIdHash() => r'53be2fdde692f4032531b8585fc38f339a736358';
 
 /// Holds the ID of the currently open project, or null when no project is open.
 ///
@@ -126,6 +126,109 @@ abstract class _$CurrentProjectId extends $Notifier<String?> {
   }
 }
 
+/// Resolves the absolute file path for the project database identified by
+/// [projectId].
+///
+/// Looks up the project in the registry to get its [filePath]. Falls back to
+/// the legacy `{appDocsDir}/{projectId}/project.db` path for projects that
+/// pre-date the .conlang file format (Plan 09-02 backward compat).
+
+@ProviderFor(projectFilePath)
+const projectFilePathProvider = ProjectFilePathFamily._();
+
+/// Resolves the absolute file path for the project database identified by
+/// [projectId].
+///
+/// Looks up the project in the registry to get its [filePath]. Falls back to
+/// the legacy `{appDocsDir}/{projectId}/project.db` path for projects that
+/// pre-date the .conlang file format (Plan 09-02 backward compat).
+
+final class ProjectFilePathProvider
+    extends $FunctionalProvider<AsyncValue<String>, String, FutureOr<String>>
+    with $FutureModifier<String>, $FutureProvider<String> {
+  /// Resolves the absolute file path for the project database identified by
+  /// [projectId].
+  ///
+  /// Looks up the project in the registry to get its [filePath]. Falls back to
+  /// the legacy `{appDocsDir}/{projectId}/project.db` path for projects that
+  /// pre-date the .conlang file format (Plan 09-02 backward compat).
+  const ProjectFilePathProvider._({
+    required ProjectFilePathFamily super.from,
+    required String super.argument,
+  }) : super(
+         retry: null,
+         name: r'projectFilePathProvider',
+         isAutoDispose: true,
+         dependencies: null,
+         $allTransitiveDependencies: null,
+       );
+
+  @override
+  String debugGetCreateSourceHash() => _$projectFilePathHash();
+
+  @override
+  String toString() {
+    return r'projectFilePathProvider'
+        ''
+        '($argument)';
+  }
+
+  @$internal
+  @override
+  $FutureProviderElement<String> $createElement($ProviderPointer pointer) =>
+      $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<String> create(Ref ref) {
+    final argument = this.argument as String;
+    return projectFilePath(ref, argument);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is ProjectFilePathProvider && other.argument == argument;
+  }
+
+  @override
+  int get hashCode {
+    return argument.hashCode;
+  }
+}
+
+String _$projectFilePathHash() => r'60e9fa642e95d206def2ca04937881578e14f35a';
+
+/// Resolves the absolute file path for the project database identified by
+/// [projectId].
+///
+/// Looks up the project in the registry to get its [filePath]. Falls back to
+/// the legacy `{appDocsDir}/{projectId}/project.db` path for projects that
+/// pre-date the .conlang file format (Plan 09-02 backward compat).
+
+final class ProjectFilePathFamily extends $Family
+    with $FunctionalFamilyOverride<FutureOr<String>, String> {
+  const ProjectFilePathFamily._()
+    : super(
+        retry: null,
+        name: r'projectFilePathProvider',
+        dependencies: null,
+        $allTransitiveDependencies: null,
+        isAutoDispose: true,
+      );
+
+  /// Resolves the absolute file path for the project database identified by
+  /// [projectId].
+  ///
+  /// Looks up the project in the registry to get its [filePath]. Falls back to
+  /// the legacy `{appDocsDir}/{projectId}/project.db` path for projects that
+  /// pre-date the .conlang file format (Plan 09-02 backward compat).
+
+  ProjectFilePathProvider call(String projectId) =>
+      ProjectFilePathProvider._(argument: projectId, from: this);
+
+  @override
+  String toString() => r'projectFilePathProvider';
+}
+
 /// Returns an [AppDatabase] instance scoped to [projectId].
 ///
 /// Uses a family provider so that each project gets exactly one database
@@ -134,7 +237,9 @@ abstract class _$CurrentProjectId extends $Notifier<String?> {
 /// to avoid "database is closed" errors when switching projects (Pitfall 1
 /// from Phase 1 research).
 ///
-/// Path: `{appDocsDir}/{projectId}/project.db`
+/// The database path is resolved from the project's [filePath] in the
+/// registry (Plan 09-02). Legacy projects (`{appDocsDir}/{id}/project.db`)
+/// are handled transparently via [projectFilePathProvider]'s fallback logic.
 
 @ProviderFor(projectDatabase)
 const projectDatabaseProvider = ProjectDatabaseFamily._();
@@ -147,7 +252,9 @@ const projectDatabaseProvider = ProjectDatabaseFamily._();
 /// to avoid "database is closed" errors when switching projects (Pitfall 1
 /// from Phase 1 research).
 ///
-/// Path: `{appDocsDir}/{projectId}/project.db`
+/// The database path is resolved from the project's [filePath] in the
+/// registry (Plan 09-02). Legacy projects (`{appDocsDir}/{id}/project.db`)
+/// are handled transparently via [projectFilePathProvider]'s fallback logic.
 
 final class ProjectDatabaseProvider
     extends $FunctionalProvider<AppDatabase, AppDatabase, AppDatabase>
@@ -160,7 +267,9 @@ final class ProjectDatabaseProvider
   /// to avoid "database is closed" errors when switching projects (Pitfall 1
   /// from Phase 1 research).
   ///
-  /// Path: `{appDocsDir}/{projectId}/project.db`
+  /// The database path is resolved from the project's [filePath] in the
+  /// registry (Plan 09-02). Legacy projects (`{appDocsDir}/{id}/project.db`)
+  /// are handled transparently via [projectFilePathProvider]'s fallback logic.
   const ProjectDatabaseProvider._({
     required ProjectDatabaseFamily super.from,
     required String super.argument,
@@ -212,7 +321,7 @@ final class ProjectDatabaseProvider
   }
 }
 
-String _$projectDatabaseHash() => r'b9bba9f97342904760ddc8ad90263acb59cd9e7d';
+String _$projectDatabaseHash() => r'59796d2ecf10589ac81d07bf8ec44b8a0d61cd3a';
 
 /// Returns an [AppDatabase] instance scoped to [projectId].
 ///
@@ -222,7 +331,9 @@ String _$projectDatabaseHash() => r'b9bba9f97342904760ddc8ad90263acb59cd9e7d';
 /// to avoid "database is closed" errors when switching projects (Pitfall 1
 /// from Phase 1 research).
 ///
-/// Path: `{appDocsDir}/{projectId}/project.db`
+/// The database path is resolved from the project's [filePath] in the
+/// registry (Plan 09-02). Legacy projects (`{appDocsDir}/{id}/project.db`)
+/// are handled transparently via [projectFilePathProvider]'s fallback logic.
 
 final class ProjectDatabaseFamily extends $Family
     with $FunctionalFamilyOverride<AppDatabase, String> {
@@ -243,7 +354,9 @@ final class ProjectDatabaseFamily extends $Family
   /// to avoid "database is closed" errors when switching projects (Pitfall 1
   /// from Phase 1 research).
   ///
-  /// Path: `{appDocsDir}/{projectId}/project.db`
+  /// The database path is resolved from the project's [filePath] in the
+  /// registry (Plan 09-02). Legacy projects (`{appDocsDir}/{id}/project.db`)
+  /// are handled transparently via [projectFilePathProvider]'s fallback logic.
 
   ProjectDatabaseProvider call(String projectId) =>
       ProjectDatabaseProvider._(argument: projectId, from: this);

@@ -15,7 +15,7 @@ part 'project_providers.g.dart';
 /// Resolves and caches the application documents directory path.
 ///
 /// Returns the absolute path to `{appDocumentsDir}/conlang/` which serves
-/// as the root for all project directories and the registry.json file.
+/// as the root for the registry.json file (and legacy project directories).
 @riverpod
 Future<String> appDocsDir(Ref ref) async {
   final dir = await getApplicationDocumentsDirectory();
@@ -37,16 +37,29 @@ class CurrentProjectId extends _$CurrentProjectId {
 
   /// Opens (or switches to) the project with the given [id].
   ///
-  /// Phase 4: Before flipping state we run [prepareProjectDb] which
-  /// transparently copies project.db to project.db.v7.bak if the file
-  /// is at a pre-v8 schema. This must happen BEFORE the projectDatabase
-  /// family provider materialises an [AppDatabase] for [id], otherwise
-  /// Drift's onUpgrade would mutate rows we have not backed up yet.
+  /// Resolves the project's [filePath] from the registry so the pre-open
+  /// backup step (Phase 4) operates on the correct file regardless of whether
+  /// the project uses the legacy `{docsDir}/{id}/project.db` layout or a
+  /// user-chosen .conlang path.
   Future<void> open(String id) async {
-    final docsDir = await ref.read(appDocsDirProvider.future);
-    final dbPath = p.join(docsDir, id, 'project.db');
+    // Try to resolve filePath from registry. Fall back to legacy path so
+    // existing projects continue to work even if not yet in the registry.
+    final dbPath = await _resolveDbPath(id);
     await prepareProjectDb(dbPath);
     state = id;
+  }
+
+  Future<String> _resolveDbPath(String id) async {
+    try {
+      final registry = await ref.read(projectRegistryProvider.future);
+      final project = await registry.findById(id);
+      if (project != null) return project.filePath;
+    } catch (_) {
+      // Registry unavailable — fall through to legacy path.
+    }
+    // Legacy fallback: construct old-style path.
+    final docsDir = await ref.read(appDocsDirProvider.future);
+    return p.join(docsDir, id, 'project.db');
   }
 
   /// Synchronous open used by tests / hot-reload paths that already
@@ -68,6 +81,30 @@ Future<void> prepareProjectDb(String dbPath) async {
 }
 
 // ---------------------------------------------------------------------------
+// Per-project file path (async resolver)
+// ---------------------------------------------------------------------------
+
+/// Resolves the absolute file path for the project database identified by
+/// [projectId].
+///
+/// Looks up the project in the registry to get its [filePath]. Falls back to
+/// the legacy `{appDocsDir}/{projectId}/project.db` path for projects that
+/// pre-date the .conlang file format (Plan 09-02 backward compat).
+@riverpod
+Future<String> projectFilePath(Ref ref, String projectId) async {
+  try {
+    final registry = await ref.watch(projectRegistryProvider.future);
+    final project = await registry.findById(projectId);
+    if (project != null) return project.filePath;
+  } catch (_) {
+    // Registry unavailable — fall through to legacy path.
+  }
+  // Legacy fallback.
+  final docsDir = await ref.watch(appDocsDirProvider.future);
+  return p.join(docsDir, projectId, 'project.db');
+}
+
+// ---------------------------------------------------------------------------
 // Per-project database (family provider)
 // ---------------------------------------------------------------------------
 
@@ -79,21 +116,27 @@ Future<void> prepareProjectDb(String dbPath) async {
 /// to avoid "database is closed" errors when switching projects (Pitfall 1
 /// from Phase 1 research).
 ///
-/// Path: `{appDocsDir}/{projectId}/project.db`
+/// The database path is resolved from the project's [filePath] in the
+/// registry (Plan 09-02). Legacy projects (`{appDocsDir}/{id}/project.db`)
+/// are handled transparently via [projectFilePathProvider]'s fallback logic.
 @riverpod
 AppDatabase projectDatabase(Ref ref, String projectId) {
-  // We need the absolute path to the project's database file.
-  // Because appDocsDirProvider is async, we read its cached value.
-  // If it hasn't resolved yet, we use a placeholder path — the LazyDatabase
-  // inside AppDatabase.fromPath defers the actual file open until first use,
-  // at which point the path will be correct.
-  //
-  // In practice, currentDatabase (below) only creates the db after
-  // appDocsDir has resolved, so the fallback path is never actually used.
-  final docsDir = ref.read(appDocsDirProvider).value ??
-      p.join('.', 'conlang'); // fallback, never used in practice
+  // Resolve from registry async provider if already cached; otherwise fall
+  // back to the legacy synchronous path. The LazyDatabase inside
+  // AppDatabase.fromPath defers the actual file open until first query, so
+  // the path just needs to be correct before the first real read/write.
+  final filePathAsync = ref.watch(projectFilePathProvider(projectId));
 
-  final dbPath = p.join(docsDir, projectId, 'project.db');
+  final String dbPath;
+  if (filePathAsync.hasValue) {
+    dbPath = filePathAsync.value!;
+  } else {
+    // Fallback while projectFilePathProvider is resolving (async gap).
+    final docsDir = ref.read(appDocsDirProvider).value ??
+        p.join('.', 'conlang'); // never used in practice
+    dbPath = p.join(docsDir, projectId, 'project.db');
+  }
+
   final db = AppDatabase.fromPath(dbPath);
 
   // CRITICAL: close the SQLite connection when the provider is disposed.
