@@ -74,11 +74,23 @@ A powerful, flexible morphology engine that handles the full spectrum of languag
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| Flutter for desktop | User preference; single codebase, native feel | — Pending |
-| SQLite per project | Better querying for large lexicons vs flat files | — Pending |
-| Morphology pattern mini-language | Regex-like but readable; needed for diverse language types | — Pending |
-| Real IPA audio + TTS split | Authentic sounds for reference, synthesis for conlang speech | — Pending |
-| AI as tutor + co-creator | Dual role: explain linguistics concepts AND actively help build the language | — Pending |
+| Flutter for desktop | User preference; single codebase, native feel | Validated v1.0 |
+| SQLite per project | Better querying for large lexicons vs flat files | Validated v1.0 — .conlang file format |
+| Morphology pattern mini-language | Regex-like but readable; needed for diverse language types | Validated v1.0 |
+| Real IPA audio + TTS split | Authentic sounds for reference, synthesis for conlang speech | Validated v1.0 (audio only, TTS deferred) |
+| AI as tutor + co-creator | Dual role: explain linguistics concepts AND actively help build the language | Deferred to v2 |
+
+## Current State
+
+**v1.0 shipped** — 11 phases, 79 plans, 9 features complete:
+- Phonology: inventory, IPA chart, keyboard, phonotactics, sound rules, natural classes, gemination
+- Morphology: pattern DSL engine (agglutinative, Semitic, fusional, analytic)
+- Lexicon: dictionary, derivations, Swadesh list, thesaurus, Anki export
+- Grammar: POS with N-dimensional features, inflectional rules, paradigm viewer, typology
+- Reference: 162-term linguistic glossary with examples
+- Platform: macOS native menu, .conlang file format, welcome screen, custom app icon
+
+Culture Wiki retired to branch for v2 rework.
 
 ---
-*Last updated: 2026-04-10 after Phase 3.2 (Phonology Enhancements) completion*
+*Last updated: 2026-04-13 after v1.0 milestone completion*
