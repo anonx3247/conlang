@@ -306,7 +306,11 @@ final generatedWordsProvider = Provider<List<String>>((ref) {
       );
   final inventory = ref.watch(phonemeInventoryProvider);
   final geminationConstraints =
-      ref.watch(parsedGeminationConstraintsProvider).asData?.value ?? [];
+      ref.watch(parsedGeminationConstraintsProvider).when(
+            data: (v) => v,
+            loading: () => <GeminationConstraint>[],
+            error: (_, e) => <GeminationConstraint>[],
+          );
 
   return WordGenerator().generateWords(
     templates: templates,

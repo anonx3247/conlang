@@ -22,7 +22,11 @@ final phonotacticValidatorProvider =
     Provider<ValidationResult Function({required String word})>((ref) {
   final constraints = ref.watch(parsedConstraintsProvider).asData?.value ?? [];
   final geminationConstraints =
-      ref.watch(parsedGeminationConstraintsProvider).asData?.value ?? [];
+      ref.watch(parsedGeminationConstraintsProvider).when(
+            data: (v) => v,
+            loading: () => <GeminationConstraint>[],
+            error: (_, e) => <GeminationConstraint>[],
+          );
   final inventory = ref.watch(phonemeInventoryProvider);
   final generator = WordGenerator();
 
