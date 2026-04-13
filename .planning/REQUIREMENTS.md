@@ -83,6 +83,16 @@ Requirements for initial release. Each maps to roadmap phases.
 - [ ] **NIT-05**: Draggable panel separator bars throughout the app (resize panels)
 - [ ] **REFAC-01**: Dead code cleanup from culture wiki removal + rule_editor_dialog.dart refactor into smaller files
 
+### Gemination Restrictions
+
+- [ ] **GEM-01**: User can define gemination restrictions as phonotactic constraints with position options (everywhere, coda, onset, word-initial, word-final)
+
+### Platform Polish
+
+- [ ] **PLAT-01**: File/Edit/View menus in macOS native global menu bar (PlatformMenuBar widget), not in-app
+- [ ] **PLAT-02**: Project management: rename project, save-as, .conlang file format with user-chosen storage location
+- [ ] **PLAT-03**: App name "Conlang Workbench" everywhere (no underscores) + custom app logo/icon
+
 ## v2 Requirements
 
 Deferred to future release. Tracked but not in current roadmap.

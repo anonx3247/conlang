@@ -213,7 +213,9 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4. Phases 5 and 6 depend only on
 | 4. Grammar & Morphology | 25/25 | Complete | 2026-04-12 |
 | 5. Culture Wiki | 3/4 | Gap closure | - |
 | 6. Reference Glossary | 2/2 | Complete | 2026-04-12 |
-| 7. Polish & Refactor | 0/3 | Planning | - |
+| 7. Polish & Refactor | 3/3 | Complete | 2026-04-13 |
+| 8. Gemination Restrictions | 0/? | Not started | - |
+| 9. Platform Polish | 0/? | Not started | - |
 
 ### Phase 7: Polish & Refactor
 **Goal**: Fix all outstanding UI nits (phonology layout, abbreviation formatting, natural classes tab), clean up dead code from culture wiki removal, refactor oversized files (rule_editor_dialog.dart), and address code quality concerns from codebase audit
@@ -232,3 +234,26 @@ Plans:
 - [x] 07-01-PLAN.md — Phonology tab restructure: extract natural classes to own sub-tab, inline romanization below inventory, rom-primary phoneme display replacing alt-key toggle
 - [x] 07-02-PLAN.md — Abbreviation formatting (lowercase + trailing period) + draggable panel separator widget for all shells
 - [x] 07-03-PLAN.md — Dead code cleanup, getSingle() safety fixes, rule_editor_dialog.dart refactor into rule_editor/ subdirectory
+
+### Phase 8: Gemination Restrictions
+**Goal**: Users can define gemination restrictions as phonotactic constraints — prevent geminate consonants globally, positionally (coda, onset, word-initial, word-final), or selectively
+**Depends on**: Phase 7
+**Requirements**: GEM-01
+**Success Criteria** (what must be TRUE):
+  1. User can add a "no gemination" constraint with position options (everywhere, coda only, onset only, word-initial, word-final)
+  2. Word generator respects gemination constraints
+  3. Phonotactic violation highlighting flags geminate violations
+**Plans**: TBD
+
+### Phase 9: Platform Polish
+**Goal**: Move File menu to macOS native menu bar, add project management features (rename, save-as, .conlang file format with user-chosen location), fix app name to "Conlang Workbench" everywhere, and create app logo
+**Depends on**: Phase 8
+**Requirements**: PLAT-01, PLAT-02, PLAT-03
+**Success Criteria** (what must be TRUE):
+  1. File/Edit/View menus appear in macOS global menu bar (not in-app)
+  2. User can rename a project
+  3. User can "Save as" to duplicate a project
+  4. Projects stored as .conlang files (SQLite DB) in user-chosen locations
+  5. App name shows "Conlang Workbench" everywhere (menu bar, title bar, window title) — no underscores
+  6. App has a custom logo/icon
+**Plans**: TBD
