@@ -114,8 +114,8 @@ class _PhonologyShellState extends ConsumerState<PhonologyShell> {
           }),
         ),
 
-        // Persistent IPA reference chart (Plan 03) — self-sizes to 280px internally.
-        const IpaChartPanel(),
+        // Persistent IPA reference chart — width controlled by _ipaChartWidth.
+        SizedBox(width: _ipaChartWidth, child: const IpaChartPanel()),
       ],
     );
   }
