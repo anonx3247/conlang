@@ -1114,7 +1114,6 @@ class _IntrinsicSliceSectionState
               allDims: widget.allDims,
               clickMode: widget.clickMode,
             ),
-            const Divider(),
           ],
         ),
       );
@@ -1189,7 +1188,6 @@ class _IntrinsicSliceSectionState
               allDims: widget.allDims,
               clickMode: widget.clickMode,
             ),
-          const Divider(),
         ],
       ),
     );
