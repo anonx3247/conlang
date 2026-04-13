@@ -139,9 +139,6 @@ class _WordCreationFormState extends ConsumerState<WordCreationForm> {
       return;
     }
 
-    // Plan 04-18-04 Task 1 — POS mandatory validation.
-    // rootOnlyViaDerivations words are exempt: they never surface standalone
-    // so requiring a POS is unnecessary and would frustrate the user.
     if (!_rootOnlyViaDerivations &&
         (_selectedPos == null || _selectedPos!.isEmpty)) {
       setState(() => _posError = 'Part of speech is required');
