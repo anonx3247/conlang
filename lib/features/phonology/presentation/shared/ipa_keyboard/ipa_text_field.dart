@@ -81,6 +81,7 @@ class _IpaTextFieldState extends ConsumerState<IpaTextField> {
 
   final _layerLink = LayerLink();
   final _overlayController = OverlayPortalController();
+  final _fieldKey = GlobalKey();
 
   // Shared tap-region group so that clicks inside the popup are not treated
   // as "outside" the TextField, preventing premature popup dismissal.
@@ -277,6 +278,7 @@ class _IpaTextFieldState extends ConsumerState<IpaTextField> {
       controller: _overlayController,
       overlayChildBuilder: (ctx) => _buildOverlay(ctx, audioPlayer),
       child: CompositedTransformTarget(
+        key: _fieldKey,
         link: _layerLink,
         child: TapRegion(
           groupId: _tapGroupId,
@@ -331,7 +333,7 @@ class _IpaTextFieldState extends ConsumerState<IpaTextField> {
     Alignment targetAnchor = Alignment.bottomLeft;
     Alignment followerAnchor = Alignment.topLeft;
 
-    final renderBox = context.findRenderObject() as RenderBox?;
+    final renderBox = _fieldKey.currentContext?.findRenderObject() as RenderBox?;
     if (renderBox != null && renderBox.hasSize) {
       final fieldBottom = renderBox.localToGlobal(
         Offset(0, renderBox.size.height),

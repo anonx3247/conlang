@@ -8,6 +8,7 @@ import '../../data/ipa_data.dart';
 import '../../data/phoneme_providers.dart';
 import '../../data/romanization_providers.dart';
 import '../../domain/allophone_computer.dart';
+import '../shared/ipa_keyboard/ipa_text_field.dart';
 
 // ---------------------------------------------------------------------------
 // Consonant articulation options
@@ -446,8 +447,9 @@ class _PhonemeEditDialogState extends ConsumerState<PhonemeEditDialog> {
             children: [
               // IPA symbol input — optional shortcut: typing a known symbol
               // auto-fills all feature dropdowns via reverse lookup.
-              TextField(
+              IpaTextField(
                 controller: _symbolController,
+                showIpaKeyboard: true,
                 decoration: const InputDecoration(
                   labelText: 'IPA Symbol (optional)',
                   hintText: 'Type or paste, e.g. b, ʃ, ɑ',
