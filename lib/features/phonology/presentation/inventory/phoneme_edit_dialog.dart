@@ -309,6 +309,10 @@ class _PhonemeEditDialogState extends ConsumerState<PhonemeEditDialog> {
 
   /// The effective IPA symbol to save: derived (if known) or custom.
   String get _effectiveSymbol {
+    // User-typed symbol takes priority — this preserves diacritics like ʰ, ː, ʷ
+    // that the feature-based derivation cannot produce (e.g. pʰ vs p).
+    final typed = _symbolController.text.trim();
+    if (typed.isNotEmpty) return typed;
     final derived = _derivedSymbol;
     if (derived != null) return derived;
     return _customSymbolController.text.trim();
@@ -679,10 +683,15 @@ class _PhonemeEditDialogState extends ConsumerState<PhonemeEditDialog> {
   /// dropdowns via reverse lookup.
   void _onSymbolTyped(String value) {
     final trimmed = value.trim();
-    final features = _symbolToFeatures[trimmed];
+    // Try exact match first (e.g. 'ʃ'), then try base character for
+    // diacritic-modified symbols (e.g. 'pʰ' → look up 'p' for features).
+    var features = _symbolToFeatures[trimmed];
+    if (features == null && trimmed.length > 1) {
+      features = _symbolToFeatures[trimmed.characters.first];
+    }
     if (features != null) {
       setState(() {
-        _type = features.type;
+        _type = features!.type;
         _manner = features.manner;
         _place = features.place;
         _voicing = features.voicing;
