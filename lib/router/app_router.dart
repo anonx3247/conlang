@@ -4,8 +4,10 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../app.dart';
 
+import '../features/grammar/presentation/constructions/constructions_page.dart';
 import '../features/grammar/presentation/grammar_shell.dart';
 import '../features/grammar/presentation/inflections/inflections_page.dart';
+import '../features/grammar/presentation/particles/particles_page.dart';
 import '../features/grammar/presentation/pos_dimensions/pos_dimensions_page.dart';
 import '../features/grammar/presentation/typology/typology_page.dart';
 import '../features/lexicon/presentation/derivations/derivations_page.dart';
@@ -150,6 +152,25 @@ GoRouter appRouter(Ref ref) {
                       ),
                     ],
                   ),
+                  // Phase 10 (D-13): Particles sub-tab — index 2
+                  StatefulShellBranch(
+                    routes: [
+                      GoRoute(
+                        path: '/grammar/particles',
+                        builder: (_, _) => const ParticlesPage(),
+                      ),
+                    ],
+                  ),
+                  // Phase 10 (D-13): Constructions sub-tab — index 3
+                  StatefulShellBranch(
+                    routes: [
+                      GoRoute(
+                        path: '/grammar/constructions',
+                        builder: (_, _) => const ConstructionsPage(),
+                      ),
+                    ],
+                  ),
+                  // Typology sub-tab — index 4 (was 2 before Phase 10)
                   StatefulShellBranch(
                     routes: [
                       GoRoute(

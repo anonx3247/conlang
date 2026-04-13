@@ -8,14 +8,17 @@ import '../../../shared/widgets/resizable_divider.dart';
 /// Grammar sub-shell with a left sidebar for navigation.
 ///
 /// Mirrors the LexiconShell pattern exactly: resizable sidebar + ResizableDivider
-/// + Expanded content area. Plan 04-13 / D-48 collapsed the sidebar from
-/// 4 entries to 3 — `Paradigm Viewer` and `Inflectional Rules` have been
-/// merged into the single `Inflections` sub-tab with a stacked paradigm +
-/// rules layout. Final sidebar:
+/// + Expanded content area. Phase 10 plan 10-01 extends the sidebar from 3 to 5
+/// items per D-13: Particles (index 2) and Constructions (index 3) are inserted
+/// before Typology (pushed to index 4). Final sidebar:
 ///
 ///  1. POS & Dimensions — POS manager + dimension editor
 ///  2. Inflections — stacked paradigm (top) + POS-scoped rules (bottom)
-///  3. Typology — alignment / word order / modality form
+///  3. Particles — closed-class particle/auxiliary inventory (Phase 10)
+///  4. Constructions — phrase construction rules (Phase 10)
+///  5. Typology — alignment / word order / modality form
+///
+/// Index values must exactly match the StatefulShellBranch order in app_router.dart.
 class GrammarShell extends ConsumerStatefulWidget {
   const GrammarShell({
     super.key,
@@ -41,6 +44,18 @@ class _GrammarShellState extends ConsumerState<GrammarShell> {
       label: 'Inflections',
       icon: Icons.auto_fix_high_outlined,
       path: '/grammar/inflections',
+    ),
+    // Phase 10 additions (D-13) — inserted before Typology.
+    // Index must match app_router.dart branch order.
+    _SidebarItem(
+      label: 'Particles',
+      icon: Icons.local_offer_outlined,
+      path: '/grammar/particles',
+    ),
+    _SidebarItem(
+      label: 'Constructions',
+      icon: Icons.account_tree_outlined,
+      path: '/grammar/constructions',
     ),
     _SidebarItem(
       label: 'Typology',
