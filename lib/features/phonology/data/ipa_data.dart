@@ -40,6 +40,9 @@ enum Place {
   uvular,
   pharyngeal,
   glottal,
+  // Co-articulated
+  labialVelar,
+  labialPalatal,
   // Clicks only
   palatoalveolar,
   alveolarlateral,
@@ -175,6 +178,11 @@ class IpaSound {
     IpaSound(symbol: 'ɻ', name: 'voiced retroflex approximant', type: IpaSoundType.consonant, manner: Manner.approximant, place: Place.retroflex, voiced: true, audioAssetPath: null),
     IpaSound(symbol: 'j', name: 'voiced palatal approximant', type: IpaSoundType.consonant, manner: Manner.approximant, place: Place.palatal, voiced: true, audioAssetPath: 'assets/ipa_audio/voiced_palatal_approximant.ogg'),
     IpaSound(symbol: 'ɰ', name: 'voiced velar approximant', type: IpaSoundType.consonant, manner: Manner.approximant, place: Place.velar, voiced: true, audioAssetPath: 'assets/ipa_audio/voiced_velar_approximant.ogg'),
+
+    // ── Co-articulated Approximants ───────────────────────────────────────
+    IpaSound(symbol: 'w', name: 'voiced labial-velar approximant', type: IpaSoundType.consonant, manner: Manner.approximant, place: Place.labialVelar, voiced: true, audioAssetPath: 'assets/ipa_audio/voiced_labial-velar_approximant.ogg'),
+    IpaSound(symbol: 'ʍ', name: 'voiceless labial-velar fricative', type: IpaSoundType.consonant, manner: Manner.fricative, place: Place.labialVelar, voiced: false, audioAssetPath: null),
+    IpaSound(symbol: 'ɥ', name: 'voiced labial-palatal approximant', type: IpaSoundType.consonant, manner: Manner.approximant, place: Place.labialPalatal, voiced: true, audioAssetPath: 'assets/ipa_audio/voiced_labial-palatal_approximant.ogg'),
 
     // ── Lateral Approximants ───────────────────────────────────────────────
     IpaSound(symbol: 'l', name: 'voiced alveolar lateral approximant', type: IpaSoundType.consonant, manner: Manner.lateralApproximant, place: Place.alveolar, voiced: true, audioAssetPath: 'assets/ipa_audio/voiced_alveolar_lateral_approximant.ogg'),
