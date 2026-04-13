@@ -23,6 +23,7 @@ const _mannerOrder = [
   'lateral fricative',
   'approximant',
   'lateral approximant',
+  'affricate',
 ];
 
 const _placeOrder = [
@@ -37,6 +38,8 @@ const _placeOrder = [
   'uvular',
   'pharyngeal',
   'glottal',
+  'labial-velar',
+  'labial-palatal',
 ];
 
 
@@ -53,6 +56,8 @@ String _shortPlace(String p) {
     'uvular': 'Uv',
     'pharyngeal': 'Ph',
     'glottal': 'Gl',
+    'labial-velar': 'LV',
+    'labial-palatal': 'LP',
   };
   if (m.containsKey(p)) return m[p]!;
   // Guard against empty or single-character strings from malformed DB rows:
