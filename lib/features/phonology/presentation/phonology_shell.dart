@@ -3,17 +3,26 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../features/glossary/data/glossary_providers.dart';
+import '../../../shared/widgets/resizable_divider.dart';
 import 'shared/ipa_chart/ipa_chart_panel.dart';
 
 /// Phonology sub-shell with a left sidebar for navigation
 /// and a persistent IPA reference chart placeholder on the right.
-class PhonologyShell extends ConsumerWidget {
+class PhonologyShell extends ConsumerStatefulWidget {
   const PhonologyShell({
     super.key,
     required this.navigationShell,
   });
 
   final StatefulNavigationShell navigationShell;
+
+  @override
+  ConsumerState<PhonologyShell> createState() => _PhonologyShellState();
+}
+
+class _PhonologyShellState extends ConsumerState<PhonologyShell> {
+  double _sidebarWidth = 200;
+  double _ipaChartWidth = 280;
 
   static const _sidebarItems = [
     _SidebarItem(label: 'Inventory', icon: Icons.grid_on, path: '/phonology/inventory'),
@@ -22,22 +31,22 @@ class PhonologyShell extends ConsumerWidget {
   ];
 
   void _onSidebarTap(BuildContext context, int index) {
-    navigationShell.goBranch(
+    widget.navigationShell.goBranch(
       index,
-      initialLocation: index == navigationShell.currentIndex,
+      initialLocation: index == widget.navigationShell.currentIndex,
     );
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
     return Row(
       children: [
-        // Left sidebar (~200px wide)
+        // Left sidebar (resizable)
         SizedBox(
-          width: 200,
+          width: _sidebarWidth,
           child: Material(
             color: colorScheme.surfaceContainerLow,
             child: Column(
@@ -73,7 +82,7 @@ class PhonologyShell extends ConsumerWidget {
                 ),
                 ...List.generate(_sidebarItems.length, (index) {
                   final item = _sidebarItems[index];
-                  final isSelected = navigationShell.currentIndex == index;
+                  final isSelected = widget.navigationShell.currentIndex == index;
                   return _SidebarTile(
                     item: item,
                     isSelected: isSelected,
@@ -85,26 +94,27 @@ class PhonologyShell extends ConsumerWidget {
           ),
         ),
 
-        // Vertical divider
-        VerticalDivider(
-          width: 1,
-          thickness: 1,
-          color: colorScheme.outlineVariant,
+        // Draggable divider between sidebar and content
+        ResizableDivider(
+          onDrag: (d) => setState(() {
+            _sidebarWidth = (_sidebarWidth + d).clamp(140, 320);
+          }),
         ),
 
         // Main content area
         Expanded(
-          child: navigationShell,
+          child: widget.navigationShell,
         ),
 
-        // Vertical divider before IPA panel
-        VerticalDivider(
-          width: 1,
-          thickness: 1,
-          color: colorScheme.outlineVariant,
+        // Draggable divider before IPA panel
+        ResizableDivider(
+          onDrag: (d) => setState(() {
+            // Right panel: dragging right makes it smaller, left makes it larger.
+            _ipaChartWidth = (_ipaChartWidth - d).clamp(200, 500);
+          }),
         ),
 
-        // Persistent IPA reference chart (Plan 03)
+        // Persistent IPA reference chart (Plan 03) — self-sizes to 280px internally.
         const IpaChartPanel(),
       ],
     );

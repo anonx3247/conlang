@@ -7,6 +7,7 @@ import '../../features/glossary/presentation/glossary_drawer.dart';
 import '../../features/project/data/project_providers.dart';
 import '../../features/project/data/project_registry.dart';
 import '../../features/project/presentation/project_menu.dart';
+import 'resizable_divider.dart';
 
 /// Top-level application shell with a horizontal tab bar for major sections.
 ///
@@ -14,13 +15,20 @@ import '../../features/project/presentation/project_menu.dart';
 /// When no project is open, the main content area shows an empty state.
 /// Only the Phonology tab is interactive in Phase 1; other tabs are disabled
 /// with a tooltip indicating when they will be available.
-class AppShell extends ConsumerWidget {
+class AppShell extends ConsumerStatefulWidget {
   const AppShell({
     super.key,
     required this.navigationShell,
   });
 
   final StatefulNavigationShell navigationShell;
+
+  @override
+  ConsumerState<AppShell> createState() => _AppShellState();
+}
+
+class _AppShellState extends ConsumerState<AppShell> {
+  double _glossaryWidth = 320;
 
   static const _tabs = [
     _TabItem(label: 'Phonology', icon: Icons.music_note, enabled: true, phase: null),
@@ -29,7 +37,7 @@ class AppShell extends ConsumerWidget {
   ];
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
@@ -73,15 +81,15 @@ class AppShell extends ConsumerWidget {
                       if (currentProjectId != null) ...[
                         ...List.generate(_tabs.length, (index) {
                           final tab = _tabs[index];
-                          final isSelected = navigationShell.currentIndex == index;
+                          final isSelected = widget.navigationShell.currentIndex == index;
                           return _TabButton(
                             tab: tab,
                             isSelected: isSelected,
                             onTap: tab.enabled
-                                ? () => navigationShell.goBranch(
+                                ? () => widget.navigationShell.goBranch(
                                       index,
                                       initialLocation:
-                                          index == navigationShell.currentIndex,
+                                          index == widget.navigationShell.currentIndex,
                                     )
                                 : null,
                           );
@@ -143,14 +151,19 @@ class AppShell extends ConsumerWidget {
             child: currentProjectId != null
                 ? Row(
                     children: [
-                      Expanded(child: navigationShell),
+                      Expanded(child: widget.navigationShell),
                       if (ref.watch(glossaryOpenProvider)) ...[
-                        VerticalDivider(
-                          width: 1,
-                          thickness: 1,
-                          color: colorScheme.outlineVariant,
+                        ResizableDivider(
+                          onDrag: (d) => setState(() {
+                            // Glossary is on the right: drag right shrinks it,
+                            // drag left grows it.
+                            _glossaryWidth = (_glossaryWidth - d).clamp(240, 500);
+                          }),
                         ),
-                        const GlossaryDrawer(),
+                        SizedBox(
+                          width: _glossaryWidth,
+                          child: const GlossaryDrawer(),
+                        ),
                       ],
                     ],
                   )

@@ -3,10 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../features/glossary/data/glossary_providers.dart';
+import '../../../shared/widgets/resizable_divider.dart';
 
 /// Grammar sub-shell with a left sidebar for navigation.
 ///
-/// Mirrors the LexiconShell pattern exactly: 200px sidebar + VerticalDivider
+/// Mirrors the LexiconShell pattern exactly: resizable sidebar + ResizableDivider
 /// + Expanded content area. Plan 04-13 / D-48 collapsed the sidebar from
 /// 4 entries to 3 — `Paradigm Viewer` and `Inflectional Rules` have been
 /// merged into the single `Inflections` sub-tab with a stacked paradigm +
@@ -15,13 +16,20 @@ import '../../../features/glossary/data/glossary_providers.dart';
 ///  1. POS & Dimensions — POS manager + dimension editor
 ///  2. Inflections — stacked paradigm (top) + POS-scoped rules (bottom)
 ///  3. Typology — alignment / word order / modality form
-class GrammarShell extends ConsumerWidget {
+class GrammarShell extends ConsumerStatefulWidget {
   const GrammarShell({
     super.key,
     required this.navigationShell,
   });
 
   final StatefulNavigationShell navigationShell;
+
+  @override
+  ConsumerState<GrammarShell> createState() => _GrammarShellState();
+}
+
+class _GrammarShellState extends ConsumerState<GrammarShell> {
+  double _sidebarWidth = 200;
 
   static const _sidebarItems = [
     _SidebarItem(
@@ -42,22 +50,22 @@ class GrammarShell extends ConsumerWidget {
   ];
 
   void _onSidebarTap(BuildContext context, int index) {
-    navigationShell.goBranch(
+    widget.navigationShell.goBranch(
       index,
-      initialLocation: index == navigationShell.currentIndex,
+      initialLocation: index == widget.navigationShell.currentIndex,
     );
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
     return Row(
       children: [
-        // Left sidebar (200px wide)
+        // Left sidebar (resizable)
         SizedBox(
-          width: 200,
+          width: _sidebarWidth,
           child: Material(
             color: colorScheme.surfaceContainerLow,
             child: Column(
@@ -93,7 +101,7 @@ class GrammarShell extends ConsumerWidget {
                 ),
                 ...List.generate(_sidebarItems.length, (index) {
                   final item = _sidebarItems[index];
-                  final isSelected = navigationShell.currentIndex == index;
+                  final isSelected = widget.navigationShell.currentIndex == index;
                   return _SidebarTile(
                     item: item,
                     isSelected: isSelected,
@@ -105,16 +113,16 @@ class GrammarShell extends ConsumerWidget {
           ),
         ),
 
-        // Vertical divider
-        VerticalDivider(
-          width: 1,
-          thickness: 1,
-          color: colorScheme.outlineVariant,
+        // Draggable divider between sidebar and content
+        ResizableDivider(
+          onDrag: (d) => setState(() {
+            _sidebarWidth = (_sidebarWidth + d).clamp(140, 320);
+          }),
         ),
 
         // Main content area
         Expanded(
-          child: navigationShell,
+          child: widget.navigationShell,
         ),
       ],
     );
