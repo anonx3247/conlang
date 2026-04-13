@@ -91,6 +91,11 @@ class _WordListPanelState extends ConsumerState<WordListPanel> {
     final filteredLexemes = ref.watch(filteredLexemeListProvider);
     final posAsync = ref.watch(posListProvider);
     final posList = posAsync.asData?.value ?? [];
+    // Build name→abbreviation lookup for inline POS display.
+    final posAbbrMap = {
+      for (final pos in posList)
+        pos.name: pos.abbreviation,
+    };
     final posFilter = ref.watch(lexemePosFilterProvider);
     final searchQuery = ref.watch(lexemeSearchQueryProvider);
     final derivedMatches = ref.watch(derivedSearchMatchesProvider);
@@ -294,8 +299,8 @@ class _WordListPanelState extends ConsumerState<WordListPanel> {
             child: filteredLexemes.isEmpty
                 ? _buildEmptyState(context, searchQuery)
                 : _isTableView
-                    ? _buildTableView(context, filteredLexemes)
-                    : _buildListView(context, filteredLexemes, derivedMatches),
+                    ? _buildTableView(context, filteredLexemes, posAbbrMap)
+                    : _buildListView(context, filteredLexemes, derivedMatches, posAbbrMap),
           ),
 
           // ---- Selection mode bottom bar --------------------------------
@@ -366,6 +371,7 @@ class _WordListPanelState extends ConsumerState<WordListPanel> {
     BuildContext context,
     List<dynamic> lexemes,
     Set<int> derivedMatches,
+    Map<String, String?> posAbbrMap,
   ) {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
@@ -452,9 +458,12 @@ class _WordListPanelState extends ConsumerState<WordListPanel> {
                             Expanded(
                               child: Text(
                                 () {
-                                  final posAbbr = formatAbbr(lexeme.partOfSpeech);
-                                  return posAbbr.isNotEmpty
-                                      ? '${display.rom} ($posAbbr)'
+                                  final abbr = posAbbrMap[lexeme.partOfSpeech];
+                                  final posLabel = abbr != null && abbr.isNotEmpty
+                                      ? formatAbbr(abbr)
+                                      : formatAbbr(lexeme.partOfSpeech);
+                                  return posLabel.isNotEmpty
+                                      ? '${display.rom} ($posLabel)'
                                       : display.rom;
                                 }(),
                                 style: theme.textTheme.bodyMedium?.copyWith(
@@ -529,7 +538,7 @@ class _WordListPanelState extends ConsumerState<WordListPanel> {
     );
   }
 
-  Widget _buildTableView(BuildContext context, List<dynamic> lexemes) {
+  Widget _buildTableView(BuildContext context, List<dynamic> lexemes, Map<String, String?> posAbbrMap) {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
 
