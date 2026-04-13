@@ -70,8 +70,9 @@ class _SlotEditorState extends ConsumerState<SlotEditor> {
     int newIndex,
   ) async {
     if (newIndex > oldIndex) newIndex -= 1;
-    final reordered = List<ConstructionSlot>.from(slots)
-      ..insert(newIndex, (slots..removeAt(oldIndex)).first);
+    final reordered = List<ConstructionSlot>.from(slots);
+    final item = reordered.removeAt(oldIndex);
+    reordered.insert(newIndex, item);
     await dao.reorderSlots(reordered);
   }
 
@@ -84,7 +85,7 @@ class _SlotEditorState extends ConsumerState<SlotEditor> {
     final posList = posListAsync.asData?.value ?? [];
 
     // The Leipzig gloss abbreviations catalog imported from leipzig_catalog.dart
-    final leipzigGlossAbbreviations = leipzigGlossCatalog;
+    final glossAbbreviations = leipzigGlossAbbreviations;
 
     return slotsAsync.when(
       loading: () => const SizedBox.shrink(),
@@ -149,7 +150,7 @@ class _SlotEditorState extends ConsumerState<SlotEditor> {
                 value: _newSlotValue,
                 valueController: _valueController,
                 posList: posList,
-                leipzigGlossAbbreviations: leipzigGlossAbbreviations,
+                leipzigGlossAbbreviations: glossAbbreviations,
                 onSlotTypeChanged: (type) => setState(() {
                   _newSlotType = type;
                   _newSlotValue = '';

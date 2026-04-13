@@ -25,6 +25,7 @@ class _ConstructionsPageState extends ConsumerState<ConstructionsPage> {
   int? _selectedConstructionId;
   final Map<int, TextEditingController> _nameControllers = {};
   final Map<int, FocusNode> _nameFocusNodes = {};
+  FocusNode? _dummyFocusNode;
 
   @override
   void dispose() {
@@ -34,6 +35,7 @@ class _ConstructionsPageState extends ConsumerState<ConstructionsPage> {
     for (final f in _nameFocusNodes.values) {
       f.dispose();
     }
+    _dummyFocusNode?.dispose();
     super.dispose();
   }
 
@@ -277,7 +279,7 @@ class _ConstructionsPageState extends ConsumerState<ConstructionsPage> {
 
     final nameController = _controllerFor(construction);
     final focusNode =
-        dao != null ? _focusNodeFor(construction, dao) : FocusNode();
+        dao != null ? _focusNodeFor(construction, dao) : (_dummyFocusNode ??= FocusNode());
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
