@@ -182,33 +182,30 @@ class _ConstructionsPageState extends ConsumerState<ConstructionsPage> {
             // Left panel — construction list
             // ----------------------------------------------------------------
             SizedBox(
-              width: 250,
+              width: 320,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   // Header
                   Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 16, 8, 8),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            'Constructions',
-                            style: theme.textTheme.headlineSmall,
-                          ),
-                        ),
-                        FilledButton.icon(
-                          onPressed: dao == null
-                              ? null
-                              : () => _addConstruction(
-                                    context,
-                                    dao,
-                                    constructions,
-                                  ),
-                          icon: const Icon(Icons.add, size: 16),
-                          label: const Text('Add Construction'),
-                        ),
-                      ],
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                    child: Text(
+                      'Constructions',
+                      style: theme.textTheme.headlineSmall,
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                    child: FilledButton.icon(
+                      onPressed: dao == null
+                          ? null
+                          : () => _addConstruction(
+                                context,
+                                dao,
+                                constructions,
+                              ),
+                      icon: const Icon(Icons.add, size: 16),
+                      label: const Text('Add Construction'),
                     ),
                   ),
                   const Divider(height: 1),
