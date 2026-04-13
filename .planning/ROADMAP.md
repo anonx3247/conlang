@@ -212,6 +212,21 @@ Plans:
 - [x] 10-03-PLAN.md — Constructions page: master-detail layout, visual slot editor with drag-and-drop, live preview with real words
 - [x] 10-04-PLAN.md — Typology page extension: Word Order section with head-directionality, adposition type, adjective/genitive placement dropdowns
 
+### Phase 10.1: Construction-Realized Paradigm Cells (INSERTED)
+
+**Goal**: Users can realize paradigm cells analytically via existing phrase constructions — a cell for "future tense" can be defined as AUX:FUT + [present form of this word] rather than a morphological rule
+**Depends on**: Phase 10
+**Requirements**: TBD
+**Success Criteria** (what must be TRUE):
+  1. In the paradigm viewer, a cell can be assigned a "via construction" realization strategy alongside morphological rules and manual exceptions
+  2. The construction's word slot resolves to a user-chosen form of the word being conjugated — either base/uninflected form or any existing realized paradigm form (e.g. imperfective, conditional)
+  3. The paradigm cell renders a real example using the actual particle from the lexicon combined with the resolved word form, consistent with Phase 10's construction preview behavior
+  4. Circular cell dependencies (cell A references cell B which references cell A) are detected and the cell renders as unresolvable rather than causing an infinite loop
+**Plans**: TBD
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 10.1 to break down)
+
 ### Phase 11: Lexicon Etymology Chain
 **Goal**: Users can see the full derivational history of any word as a visual lineage display tracing root through derived forms to compounds
 **Depends on**: Phase 10

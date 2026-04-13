@@ -37,6 +37,7 @@ Progress: [█░░░░░░░░░] 14%
 - v1.0 completed: 11 phases (1-9 + 3.1, 3.2), 79 plans — all shipped 2026-04-13
 - Phase 5 (Culture Wiki) retired to `culture-wiki-v2-staging` branch — will return in v3
 - v2.0 roadmap: Phases 10-16, covering analytic grammar, scratchpad, writing system, AI/MCP, and language evolution
+- Phase 10.1 inserted after Phase 10: Construction-Realized Paradigm Cells (URGENT) — bridges Phase 4 paradigm viewer with Phase 10 constructions; paradigm cells can be analytically realized via constructions with word-slot form resolution
 
 ### Decisions
 
