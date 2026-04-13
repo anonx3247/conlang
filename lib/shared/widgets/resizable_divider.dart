@@ -39,16 +39,17 @@ class _ResizableDividerState extends State<ResizableDivider> {
       onEnter: (_) => setState(() => _hovered = true),
       onExit: (_) => setState(() => _hovered = false),
       child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
         onHorizontalDragUpdate: (details) => widget.onDrag(details.delta.dx),
         child: SizedBox(
-          width: 4,
+          width: 8,
           child: Center(
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 120),
-              width: 1,
+              width: _hovered ? 2 : 1,
               color: _hovered
                   ? outlineVariant
-                  : outlineVariant.withValues(alpha: 0),
+                  : outlineVariant.withValues(alpha: 0.3),
             ),
           ),
         ),
