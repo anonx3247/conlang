@@ -39,6 +39,12 @@ class _WordGeneratorPanelState extends ConsumerState<WordGeneratorPanel> {
           loading: () => <ConstraintRule>[],
           error: (_, e) => <ConstraintRule>[],
         );
+    final geminationConstraints =
+        ref.watch(parsedGeminationConstraintsProvider).when(
+              data: (v) => v,
+              loading: () => <GeminationConstraint>[],
+              error: (_, e) => <GeminationConstraint>[],
+            );
     final inventory = ref.watch(phonemeInventoryProvider);
     final templates = ref.watch(parsedTemplatesProvider).when(
           data: (v) => v,
@@ -67,6 +73,7 @@ class _WordGeneratorPanelState extends ConsumerState<WordGeneratorPanel> {
       minSyllables: _minSyllables,
       maxSyllables: _maxSyllables,
       constraints: constraints,
+      geminationConstraints: geminationConstraints,
     );
     final phoneticWords = rawWords
         .map((w) => gen.applyRewriteRules(
@@ -184,6 +191,7 @@ class _WordGeneratorPanelState extends ConsumerState<WordGeneratorPanel> {
                       word: phoneticWord,
                       constraints: constraints,
                       inventory: inventory,
+                      geminationConstraints: geminationConstraints,
                     );
                     // Romanize the raw phonemic form, NOT the rewritten
                     // form. See the rawWords comment above.

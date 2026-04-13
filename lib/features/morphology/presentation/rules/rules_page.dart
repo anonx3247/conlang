@@ -513,7 +513,49 @@ class _RulesPageState extends ConsumerState<RulesPage> {
             });
           }).toList();
 
-    if (rules.isEmpty) {
+    // D-102 (plan 04-18-05): pull markers for each POS and merge them into
+    // the grouped list alongside rules. markersForPosProvider is reactive —
+    // adding/editing/deleting a marker causes this section to rebuild.
+    //
+    // IMPORTANT: ref.watch calls must be unconditional (called in the same
+    // order every build). This map is built BEFORE the rules.isEmpty check
+    // so that the early return does not short-circuit the provider watches.
+    // When only markers exist (no rules), we still show them (see below).
+    //
+    // Build a map: posId -> List<MarkerDecl> so we can append markers to each
+    // group that matches their POS. For multi-POS rules, the first posId in
+    // the group's posIds set is used as the host; markers always belong to a
+    // single POS (insertMarker takes a single posId).
+    final markersByPosId = <int, List<MarkerDecl>>{};
+    for (final pos in posList) {
+      final markersAsync = ref.watch(markersForPosProvider(pos.id));
+      final markers = markersAsync.asData?.value ?? const <MarkerDecl>[];
+      if (markers.isNotEmpty) {
+        markersByPosId[pos.id] = markers;
+      }
+    }
+
+    // Build (dimId, levelId) -> abbreviation map across all POS dimensions so
+    // that bindingSummary can resolve level IDs to abbreviations. Level IDs are
+    // only unique within a dimension, so we key by (dimId, levelId) to avoid
+    // collisions between dimensions that reuse the same integer IDs.
+    //
+    // Also built before the early return (same reason as markersByPosId).
+    final levelAbbrMap = <(int, int), String>{};
+    for (final pos in posList) {
+      final dimsAsync = ref.watch(dimensionsForPosProvider(pos.id));
+      final dims = dimsAsync.asData?.value ?? const [];
+      for (final dim in dims) {
+        final levels = decodeLevelsJson(dim.levelsJson);
+        for (final lvl in levels) {
+          levelAbbrMap[(dim.id, lvl.id)] = formatAbbrUpper(lvl.abbr);
+        }
+      }
+    }
+
+    // Only show the empty state when there are truly no rules AND no markers.
+    // If markers exist with no rules, fall through to render the marker rows.
+    if (rules.isEmpty && markersByPosId.isEmpty) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -540,39 +582,6 @@ class _RulesPageState extends ConsumerState<RulesPage> {
           ],
         ),
       );
-    }
-
-    // D-102 (plan 04-18-05): pull markers for each POS and merge them into
-    // the grouped list alongside rules. markersForPosProvider is reactive —
-    // adding/editing/deleting a marker causes this section to rebuild.
-    //
-    // Build a map: posId -> List<MarkerDecl> so we can append markers to each
-    // group that matches their POS. For multi-POS rules, the first posId in
-    // the group's posIds set is used as the host; markers always belong to a
-    // single POS (insertMarker takes a single posId).
-    final markersByPosId = <int, List<MarkerDecl>>{};
-    for (final pos in posList) {
-      final markersAsync = ref.watch(markersForPosProvider(pos.id));
-      final markers = markersAsync.asData?.value ?? const <MarkerDecl>[];
-      if (markers.isNotEmpty) {
-        markersByPosId[pos.id] = markers;
-      }
-    }
-
-    // Build (dimId, levelId) -> abbreviation map across all POS dimensions so
-    // that bindingSummary can resolve level IDs to abbreviations. Level IDs are
-    // only unique within a dimension, so we key by (dimId, levelId) to avoid
-    // collisions between dimensions that reuse the same integer IDs.
-    final levelAbbrMap = <(int, int), String>{};
-    for (final pos in posList) {
-      final dimsAsync = ref.watch(dimensionsForPosProvider(pos.id));
-      final dims = dimsAsync.asData?.value ?? const [];
-      for (final dim in dims) {
-        final levels = decodeLevelsJson(dim.levelsJson);
-        for (final lvl in levels) {
-          levelAbbrMap[(dim.id, lvl.id)] = formatAbbrUpper(lvl.abbr);
-        }
-      }
     }
 
     // Helper: produce a human-readable binding summary from a FeatureBindings,
@@ -804,6 +813,111 @@ class _RulesPageState extends ConsumerState<RulesPage> {
             ),
           ));
         }
+      }
+    }
+
+    // Fallback: render markers whose POS had no rule group (e.g. only
+    // unmarking rules exist for that POS). This is the fix for the bug
+    // where a POS with only markers and no inflectional rules produces an
+    // empty groups list, causing all markers to be silently skipped.
+    final posNameById = {for (final p in posList) p.id: p.name};
+    for (final posId in markersByPosId.keys) {
+      if (renderedMarkerPosIds.contains(posId)) continue;
+      // Apply scope filter: skip POS that doesn't match the scope.
+      if (scope != null && posId != scope) continue;
+      final orphanMarkers = markersByPosId[posId]!;
+      final header = posNameById[posId] ?? 'POS#$posId';
+      items.add(Padding(
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
+        child: Text(
+          header.toUpperCase(),
+          style: theme.textTheme.labelSmall?.copyWith(
+            color: cs.onSurface.withValues(alpha: 0.55),
+            letterSpacing: 1.1,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ));
+      for (final marker in orphanMarkers) {
+        renderedMarkerPosIds.add(posId);
+        final summary = bindingSummary(marker.bindings);
+        items.add(Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 3),
+          child: Card(
+            margin: EdgeInsets.zero,
+            child: Padding(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: cs.onSurface.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Text(
+                      '∅',
+                      style: theme.textTheme.labelMedium?.copyWith(
+                        color: cs.onSurface.withValues(alpha: 0.6),
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          marker.name,
+                          style: theme.textTheme.bodyLarge?.copyWith(
+                            color: cs.onSurface.withValues(alpha: 0.6),
+                          ),
+                        ),
+                        if (summary.isNotEmpty)
+                          Text(
+                            summary,
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: cs.onSurface.withValues(alpha: 0.45),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.edit_outlined),
+                    tooltip: 'Edit marker',
+                    onPressed: () async {
+                      await showDialog<void>(
+                        context: context,
+                        builder: (_) => RuleEditorDialog(
+                          kind: RuleKind.inflectional,
+                          markerId: marker.id,
+                          markerBindings: marker.bindings,
+                        ),
+                      );
+                    },
+                  ),
+                  IconButton(
+                    icon: Icon(Icons.delete_outline, color: cs.error),
+                    tooltip: 'Delete marker',
+                    onPressed: () async {
+                      final confirmed = await _confirmDelete(
+                          context, 'Unmarked marker');
+                      if (confirmed && context.mounted) {
+                        await ref
+                            .read(markerDaoProvider)
+                            ?.deleteMarker(marker.id);
+                      }
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ));
       }
     }
 

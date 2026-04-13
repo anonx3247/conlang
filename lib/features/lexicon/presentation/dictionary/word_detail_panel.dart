@@ -455,11 +455,12 @@ class _WordDetailPanelState extends ConsumerState<WordDetailPanel> {
     final promoted = ref.watch(promotedDerivedFormProvider(lexeme.id));
     final display = resolveDisplayForms(lexeme, promoted);
 
-    // Phonotactic validation against the displayed form (derived for promoted
-    // rows, stored otherwise) so violations match what the user actually sees.
-    // D-99 -- 04-17: combine phonotactic + standard-form violations.
+    // Phonotactic validation against the post-rewrite phonetic form so
+    // gemination checks operate on actual sounds, not the phonemic
+    // representation. D-99 -- 04-17: combine phonotactic + standard-form.
     final validate = ref.watch(phonotacticValidatorProvider);
-    final phonoValidation = validate(word: display.ipa);
+    final applyRewrite = ref.watch(applyRewritePipelineProvider);
+    final phonoValidation = validate(word: applyRewrite(display.ipa));
     final sfViolations = ref.watch(standardFormViolationsProvider(lexeme.id)).asData?.value ?? const [];
     final validation = ValidationResult(violations: [
       ...phonoValidation.violations,

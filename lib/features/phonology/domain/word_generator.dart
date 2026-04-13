@@ -443,6 +443,47 @@ class WordGenerator {
     return tokens;
   }
 
+  /// Like [_tokenize] but also treats [extraLiterals] as known atomic tokens,
+  /// sorted longest-first alongside inventory phonemes.
+  ///
+  /// Used by [_applyOneRule] so that multi-char literal clusters written in a
+  /// rewrite rule (e.g. "ei" in `ei -> ej`) are recognised as a single token
+  /// even when they are not a single phoneme in the inventory.
+  List<(String symbol, int offset)> _tokenizeWithExtras(
+    String word,
+    PhonemeInventory inventory,
+    List<String> extraLiterals,
+  ) {
+    final allPhonemes = <String>[
+      ...inventory.consonants,
+      ...inventory.vowels,
+      for (final list in inventory.naturalClasses.values) ...list,
+      ...extraLiterals,
+    ];
+    final sorted = allPhonemes.toSet().toList()
+      ..sort((a, b) => b.length.compareTo(a.length));
+
+    final tokens = <(String, int)>[];
+    var i = 0;
+    while (i < word.length) {
+      String? matched;
+      for (final p in sorted) {
+        if (word.startsWith(p, i)) {
+          matched = p;
+          break;
+        }
+      }
+      if (matched != null) {
+        tokens.add((matched, i));
+        i += matched.length;
+      } else {
+        tokens.add((word[i], i));
+        i++;
+      }
+    }
+    return tokens;
+  }
+
   /// Returns a list of (charStart, charLength) for each location in [phonemes]
   /// where [constraint]'s pattern matches, respecting [constraint.position].
   List<(int, int)> _findPatternMatches(
@@ -526,7 +567,21 @@ class WordGenerator {
     PhonologicalRewriteRule rule,
     PhonemeInventory inventory,
   ) {
-    final tokens = _tokenize(word, inventory);
+    // Collect any multi-char literal phonemes from the rule's input and context
+    // slots. These may not be in the inventory (e.g. "ei" is two separate
+    // phonemes but the rule treats the cluster as a single atomic unit).
+    // We pass them as extra candidates to _tokenizeWithExtras so the tokenizer
+    // can emit "ei" as a single token and _slotMatches can find it.
+    final extraLiterals = <String>[];
+    for (final slot in [...rule.input, ...rule.leftContext, ...rule.rightContext]) {
+      if (slot.isLiteral) {
+        final lit = slot.literalPhoneme!;
+        if (lit.length > 1) extraLiterals.add(lit);
+      }
+    }
+    final tokens = extraLiterals.isEmpty
+        ? _tokenize(word, inventory)
+        : _tokenizeWithExtras(word, inventory, extraLiterals);
     if (tokens.isEmpty || rule.input.isEmpty) return word;
 
     final inputLen = rule.input.length;

@@ -142,11 +142,12 @@ Future<ParadigmAxes> readParadigmAxes(
     return ParadigmAxes.fromJsonString(rows.first.value);
   }
   // Fall back to defaults derived from the POS's dimensions.
+  // D-94 fix: exclude intrinsic dims — they are never paradigm axes.
   final dims = await (db.select(db.dimensions)
         ..where((t) => t.posId.equals(posId))
         ..orderBy([(t) => OrderingTerm.asc(t.ordering)]))
       .get();
-  return ParadigmAxes.defaultsFor(dims);
+  return ParadigmAxes.defaultsFor(dims.where((d) => !d.intrinsic).toList());
 }
 
 /// Upserts a paradigm axis config for a POS.
@@ -359,11 +360,12 @@ final paradigmAxesProvider =
       if (row.key == key) return ParadigmAxes.fromJsonString(row.value);
     }
     // No stored axis config — derive defaults from the POS's dimensions.
+    // D-94 fix: exclude intrinsic dims — they are never paradigm axes.
     final dims = await (db.select(db.dimensions)
           ..where((t) => t.posId.equals(posId))
           ..orderBy([(t) => OrderingTerm.asc(t.ordering)]))
         .get();
-    return ParadigmAxes.defaultsFor(dims);
+    return ParadigmAxes.defaultsFor(dims.where((d) => !d.intrinsic).toList());
   });
 });
 

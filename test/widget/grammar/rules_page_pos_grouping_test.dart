@@ -6,6 +6,7 @@
 
 import 'package:conlang_workbench/db/app_database.dart';
 import 'package:conlang_workbench/features/grammar/data/inflectional_rule_pos_dao.dart';
+import 'package:conlang_workbench/features/grammar/domain/feature_bindings.dart';
 import 'package:conlang_workbench/features/grammar/domain/rule_kind.dart';
 import 'package:conlang_workbench/features/morphology/presentation/rules/rules_page.dart';
 import 'package:conlang_workbench/features/project/data/project_providers.dart';
@@ -287,6 +288,89 @@ void main() {
         expect(find.text('Agreement'), findsOneWidget);
         // Past (Verb-only) is filtered out.
         expect(find.text('Past'), findsNothing);
+
+        await teardownWidget(tester);
+      },
+    );
+
+    testWidgets(
+      'Test 6 — marker-only POS (no rules) still renders the marker card and POS header',
+      (tester) async {
+        // Regression test for the bug where `if (rules.isEmpty)` returned the
+        // empty-state widget before ever reading or rendering markers.
+        // When only an unmarking marker exists (no morphological rules), the
+        // POS header and the ∅ marker card must still be visible.
+        final markerDao = db.markerDao;
+        await markerDao.insertMarker(
+          posId: nounId,
+          bindings: const FeatureBindings(pos: [], dims: {}),
+          name: 'Nominative Unmarked',
+        );
+
+        await tester.pumpWidget(
+          buildApp(const RulesPage(kind: RuleKind.inflectional)),
+        );
+        await settle(tester);
+
+        // POS header must appear.
+        expect(
+          find.text('NOUN'),
+          findsOneWidget,
+          reason: 'POS header should render even when only markers exist',
+        );
+        // The ∅ badge must appear.
+        expect(
+          find.text('∅'),
+          findsOneWidget,
+          reason: '∅ badge should render for the marker card',
+        );
+        // The marker name must appear.
+        expect(
+          find.text('Nominative Unmarked'),
+          findsOneWidget,
+          reason: 'Marker name should be visible in the list',
+        );
+        // The empty-state text must NOT appear.
+        expect(
+          find.text('No inflectional rules yet.'),
+          findsNothing,
+          reason: 'Empty state must not appear when markers exist',
+        );
+
+        await teardownWidget(tester);
+      },
+    );
+
+    testWidgets(
+      'Test 7 — marker-only POS with posScopeFilter: only that POS\'s markers shown',
+      (tester) async {
+        // When posScopeFilter is set and only markers exist (no rules),
+        // only the scoped POS's markers appear; other POS markers are hidden.
+        final markerDao = db.markerDao;
+        await markerDao.insertMarker(
+          posId: nounId,
+          bindings: const FeatureBindings(pos: [], dims: {}),
+          name: 'Noun Marker',
+        );
+        await markerDao.insertMarker(
+          posId: verbId,
+          bindings: const FeatureBindings(pos: [], dims: {}),
+          name: 'Verb Marker',
+        );
+
+        await tester.pumpWidget(
+          buildApp(RulesPage(
+            kind: RuleKind.inflectional,
+            posScopeFilter: nounId,
+          )),
+        );
+        await settle(tester);
+
+        expect(find.text('NOUN'), findsOneWidget);
+        expect(find.text('Noun Marker'), findsOneWidget);
+        // Verb marker is filtered out by scope.
+        expect(find.text('VERB'), findsNothing);
+        expect(find.text('Verb Marker'), findsNothing);
 
         await teardownWidget(tester);
       },

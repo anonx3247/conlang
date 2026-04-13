@@ -439,8 +439,11 @@ final promotedDerivedFormProvider =
 final lexemeViolationsProvider = Provider<Map<int, ValidationResult>>((ref) {
   final allLexemes = ref.watch(allLexemeListProvider).asData?.value ?? [];
   final validate = ref.watch(phonotacticValidatorProvider);
+  final applyRewrite = ref.watch(applyRewritePipelineProvider);
+  // Validate the post-rewrite phonetic form so gemination checks operate on
+  // actual sounds, not the underlying phonemic representation.
   return {
     for (final l in allLexemes)
-      if (!l.isPhonologicalException) l.id: validate(word: l.ipa),
+      if (!l.isPhonologicalException) l.id: validate(word: applyRewrite(l.ipa)),
   };
 });

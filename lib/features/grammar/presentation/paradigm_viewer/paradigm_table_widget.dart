@@ -8,6 +8,8 @@ import '../../../lexicon/data/phonotactic_validation_provider.dart';
 import '../../../lexicon/presentation/widgets/lexeme_display_label.dart';
 import '../../../morphology/data/morphology_providers.dart';
 import '../../../morphology/presentation/rules/rule_editor_dialog.dart';
+import '../../../phonology/data/phonotactic_providers.dart'
+    show applyRewritePipelineProvider;
 import '../../../phonology/data/romanization_providers.dart';
 import '../../../phonology/domain/word_generator.dart';
 import '../../../project/data/project_providers.dart';
@@ -775,6 +777,13 @@ class _ParadigmCellWidget extends ConsumerWidget {
           '—',
           style: theme.textTheme.bodyMedium?.copyWith(
             color: cs.onSurface.withValues(alpha: 0.3),
+            // Override fontFamily to null so the em dash character
+            // uses the system default font rather than inheriting
+            // 'monospace' from the dark theme. Monospace fonts
+            // (e.g. Menlo, Courier New) may not include U+2014 EM DASH,
+            // causing a broken-glyph placeholder box to appear.
+            fontFamily: null,
+            fontFamilyFallback: null,
           ),
         ),
         Positioned(
@@ -824,6 +833,7 @@ class _FilledCell extends ConsumerWidget {
     final cs = theme.colorScheme;
 
     final romanize = ref.watch(romanizeProvider);
+    final romMappings = ref.watch(romanizationMappingsProvider).asData?.value;
     final validate = ref.watch(phonotacticValidatorProvider);
     final lexemeAsync = ref.watch(lexemeByIdProvider(lexemeId));
     final lexeme = lexemeAsync.asData?.value;
@@ -836,9 +846,14 @@ class _FilledCell extends ConsumerWidget {
     final ValidationResult result =
         isException ? const ValidationResult(violations: []) : validate(word: form);
 
-    // G-04 / D-29: show romanization as the primary top line ONLY when it
-    // actually differs from the phonemic form.
-    final showRom = romText.isNotEmpty && romText != phonemic;
+    // G-04 / D-29: show romanization as the primary top line when either:
+    //   (a) romanization mappings are configured — always show the rom line so
+    //       cells like [vala] display "vala" above even when rom == phonemic, OR
+    //   (b) no mappings but romText differs from phonemic (defensive fallback).
+    // Suppressing only when mappings are absent avoids double-rendering identical
+    // text when no romanization scheme has been set up at all.
+    final romMappingsConfigured = romMappings != null && romMappings.isNotEmpty;
+    final showRom = romText.isNotEmpty && (romMappingsConfigured || romText != phonemic);
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 2),
@@ -904,19 +919,24 @@ class _UnmarkedCell extends ConsumerWidget {
     final cs = theme.colorScheme;
 
     final romanize = ref.watch(romanizeProvider);
+    final romMappings = ref.watch(romanizationMappingsProvider).asData?.value;
     final validate = ref.watch(phonotacticValidatorProvider);
+    final applyRewrite = ref.watch(applyRewritePipelineProvider);
     final lexemeAsync = ref.watch(lexemeByIdProvider(lexemeId));
     final lexeme = lexemeAsync.asData?.value;
     final isException = lexeme?.isPhonologicalException ?? false;
 
     final romText = romanize(root);
-    // D-29 parity with _FilledCell: only show rom as a separate primary
-    // line when it actually differs from the IPA form — avoids double
-    // rendering when no romanization mapping is configured.
-    final showRom = romText.isNotEmpty && romText != root;
+    // D-29 parity with _FilledCell: show rom as a separate primary line when
+    // mappings are configured (even if rom == root) — avoids double-rendering
+    // only when no romanization scheme has been set up at all.
+    final romMappingsConfigured = romMappings != null && romMappings.isNotEmpty;
+    final showRom = romText.isNotEmpty && (romMappingsConfigured || romText != root);
+    // Validate against the post-rewrite phonetic form so gemination checks
+    // operate on actual sounds, not the underlying phonemic representation.
     final ValidationResult result = isException
         ? const ValidationResult(violations: [])
-        : validate(word: root);
+        : validate(word: applyRewrite(root));
 
     return Stack(
       children: [
@@ -939,7 +959,7 @@ class _UnmarkedCell extends ConsumerWidget {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    '[$root]',
+                    '[${applyRewrite(root)}]',
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: cs.onSurface.withValues(alpha: 0.35),
                     ),
@@ -948,7 +968,7 @@ class _UnmarkedCell extends ConsumerWidget {
                   // No distinct romanization — single IPA-only dimmed line
                   // so the cell never double-renders identical text.
                   ViolationText(
-                    text: '[$root]',
+                    text: '[${applyRewrite(root)}]',
                     violations: result.violations,
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: cs.onSurface.withValues(alpha: 0.45),
@@ -1460,7 +1480,10 @@ class _BaseFormViolationBadge extends ConsumerWidget {
     if (lexeme.isPhonologicalException) return const SizedBox.shrink();
 
     final validate = ref.watch(phonotacticValidatorProvider);
-    final phonoResult = validate(word: lexeme.ipa);
+    final applyRewrite = ref.watch(applyRewritePipelineProvider);
+    // Validate the post-rewrite phonetic form so gemination checks operate on
+    // actual sounds, not the underlying phonemic representation.
+    final phonoResult = validate(word: applyRewrite(lexeme.ipa));
     final sfViolations =
         ref.watch(standardFormViolationsProvider(lexemeId)).asData?.value ??
             const [];
