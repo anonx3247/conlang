@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../shared/widgets/resizable_divider.dart';
 import '../../data/anki_exporter.dart';
 import '../../data/lexeme_providers.dart';
 import '../../../morphology/data/morphology_providers.dart';
@@ -42,6 +43,9 @@ class _DictionaryPageState extends ConsumerState<DictionaryPage> {
   int? _selectedLexemeId;
   bool _isCreating = false;
   String? _prefillMeaning;
+
+  /// Width of the word list panel — resizable via ResizableDivider.
+  double _wordListWidth = 280;
 
   /// IDs of lexemes currently selected for Anki export (D-18).
   Set<int> _selectedForExport = {};
@@ -311,7 +315,7 @@ class _DictionaryPageState extends ConsumerState<DictionaryPage> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         SizedBox(
-          width: 280,
+          width: _wordListWidth,
           child: WordListPanel(
             selectedLexemeId: _selectedLexemeId,
             onWordSelected: _onWordSelected,
@@ -326,10 +330,10 @@ class _DictionaryPageState extends ConsumerState<DictionaryPage> {
             onExitSelectionMode: _exitSelectionMode,
           ),
         ),
-        VerticalDivider(
-          width: 1,
-          thickness: 1,
-          color: cs.outlineVariant,
+        ResizableDivider(
+          onDrag: (d) => setState(() {
+            _wordListWidth = (_wordListWidth + d).clamp(200, 400);
+          }),
         ),
         Expanded(child: rightPanel),
       ],
