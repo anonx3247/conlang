@@ -296,6 +296,188 @@ ParsedConstraint parseConstraintRule(String input) {
 }
 
 // ---------------------------------------------------------------------------
+// Gemination constraint data model
+// ---------------------------------------------------------------------------
+
+/// Position scope for a gemination constraint.
+///
+/// `everywhere` means the constraint applies regardless of syllable position.
+/// All other values restrict the constraint to a specific syllable/word position.
+/// Per D-03, if `everywhere` is in the set it is the only position (mutual exclusion).
+enum GeminationPosition {
+  everywhere,
+  coda,
+  onset,
+  initial,
+  /// Word-final position. Named `final_` to avoid conflict with the Dart keyword.
+  final_,
+}
+
+/// A gemination (adjacent-identical-consonant) prohibition constraint.
+///
+/// Serializes to/from the `!GG` DSL notation with an optional position suffix,
+/// e.g. `!GG`, `!GG/coda`, `!GG/onset,initial`.
+class GeminationConstraint {
+  const GeminationConstraint({
+    required this.positions,
+    required this.source,
+  });
+
+  /// The set of syllable/word positions where gemination is forbidden.
+  /// If `{everywhere}`, gemination is prohibited in all positions.
+  final Set<GeminationPosition> positions;
+
+  /// Original source string for display/round-tripping.
+  final String source;
+
+  /// Serializes this constraint back to its DSL source form.
+  String toSource() {
+    if (positions.isEmpty || positions.contains(GeminationPosition.everywhere)) {
+      return '!GG';
+    }
+    final posNames = positions.map(_positionToString).join(',');
+    return '!GG/$posNames';
+  }
+
+  @override
+  String toString() => toSource();
+}
+
+/// Maps a [GeminationPosition] value to its serialized name.
+String _positionToString(GeminationPosition pos) => switch (pos) {
+      GeminationPosition.everywhere => 'everywhere',
+      GeminationPosition.coda => 'coda',
+      GeminationPosition.onset => 'onset',
+      GeminationPosition.initial => 'initial',
+      GeminationPosition.final_ => 'final',
+    };
+
+/// Maps a serialized position name to a [GeminationPosition] value.
+/// Returns null for unknown names.
+GeminationPosition? _positionFromString(String name) => switch (name.trim().toLowerCase()) {
+      'everywhere' => GeminationPosition.everywhere,
+      'coda' => GeminationPosition.coda,
+      'onset' => GeminationPosition.onset,
+      'initial' => GeminationPosition.initial,
+      'final' => GeminationPosition.final_,
+      _ => null,
+    };
+
+/// Serializes a set of [GeminationPosition] values to a comma-separated string.
+/// Suitable for the `position` column in the PhonotacticConstraints table.
+String serializeGeminationPositions(Set<GeminationPosition> positions) {
+  if (positions.isEmpty || positions.contains(GeminationPosition.everywhere)) {
+    return 'everywhere';
+  }
+  return positions.map(_positionToString).join(',');
+}
+
+/// Deserializes a comma-separated position string to a [GeminationPosition] set.
+/// Returns `{everywhere}` for an empty or unrecognized string.
+Set<GeminationPosition> deserializeGeminationPositions(String serialized) {
+  if (serialized.trim().isEmpty) return {GeminationPosition.everywhere};
+  final parts = serialized.split(',').map((s) => s.trim()).where((s) => s.isNotEmpty);
+  final positions = <GeminationPosition>{};
+  for (final part in parts) {
+    final pos = _positionFromString(part);
+    if (pos != null) positions.add(pos);
+  }
+  if (positions.isEmpty) return {GeminationPosition.everywhere};
+  // D-03 mutual exclusion: if everywhere is present it dominates.
+  if (positions.contains(GeminationPosition.everywhere)) {
+    return {GeminationPosition.everywhere};
+  }
+  return positions;
+}
+
+/// Result of parsing a gemination constraint string.
+class ParsedGeminationConstraint {
+  const ParsedGeminationConstraint.success({
+    required this.source,
+    required this.constraint,
+  }) : error = null;
+
+  const ParsedGeminationConstraint.failure({
+    required this.source,
+    required this.error,
+  }) : constraint = null;
+
+  final String source;
+  final GeminationConstraint? constraint;
+  final String? error;
+
+  bool get isValid => error == null;
+}
+
+/// Parses a gemination constraint DSL string such as `!GG`, `!GG/coda`,
+/// or `!GG/onset,initial`.
+///
+/// Returns a [ParsedGeminationConstraint] — check [isValid] before use.
+ParsedGeminationConstraint parseGeminationConstraint(String input) {
+  final trimmed = input.trim();
+  if (trimmed.isEmpty) {
+    return ParsedGeminationConstraint.failure(
+      source: input,
+      error: 'Input is empty',
+    );
+  }
+
+  if (!trimmed.startsWith('!GG')) {
+    return ParsedGeminationConstraint.failure(
+      source: input,
+      error: 'Gemination constraint must start with !GG',
+    );
+  }
+
+  final rest = trimmed.substring(3); // everything after "!GG"
+
+  Set<GeminationPosition> positions;
+
+  if (rest.isEmpty) {
+    // Plain `!GG` — applies everywhere.
+    positions = {GeminationPosition.everywhere};
+  } else if (rest.startsWith('/')) {
+    final posString = rest.substring(1); // remove leading '/'
+    if (posString.trim().isEmpty) {
+      return ParsedGeminationConstraint.failure(
+        source: input,
+        error: 'Position suffix is empty after /',
+      );
+    }
+    final parts = posString.split(',').map((s) => s.trim()).where((s) => s.isNotEmpty).toList();
+    final parsed = <GeminationPosition>{};
+    for (final part in parts) {
+      final pos = _positionFromString(part);
+      if (pos == null) {
+        return ParsedGeminationConstraint.failure(
+          source: input,
+          error: 'Unknown position: $part. Valid values: everywhere, coda, onset, initial, final',
+        );
+      }
+      parsed.add(pos);
+    }
+    if (parsed.isEmpty) {
+      positions = {GeminationPosition.everywhere};
+    } else if (parsed.contains(GeminationPosition.everywhere)) {
+      // D-03 mutual exclusion: everywhere dominates all others.
+      positions = {GeminationPosition.everywhere};
+    } else {
+      positions = parsed;
+    }
+  } else {
+    return ParsedGeminationConstraint.failure(
+      source: input,
+      error: 'Unexpected characters after !GG: use /position syntax (e.g. !GG/coda)',
+    );
+  }
+
+  return ParsedGeminationConstraint.success(
+    source: input,
+    constraint: GeminationConstraint(positions: positions, source: input),
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Rewrite rule data model
 // ---------------------------------------------------------------------------
 

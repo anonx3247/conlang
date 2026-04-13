@@ -5,6 +5,10 @@ import 'package:flutter/foundation.dart';
 import '../../phonology/domain/phonotactic_dsl.dart';
 import 'default_natural_classes.dart' show defaultNaturalClassAliases;
 
+// Re-export GeminationConstraint so callers only need to import word_generator.
+export '../../phonology/domain/phonotactic_dsl.dart'
+    show GeminationConstraint, GeminationPosition;
+
 // ---------------------------------------------------------------------------
 // Inventory model (passed in from providers)
 // ---------------------------------------------------------------------------
@@ -107,6 +111,7 @@ class WordGenerator {
     int minSyllables = 1,
     int maxSyllables = 3,
     List<ConstraintRule> constraints = const [],
+    List<GeminationConstraint> geminationConstraints = const [],
   }) {
     final activeTemplates =
         templates.where((t) => t.isValid && t.slots.isNotEmpty).toList();
@@ -120,11 +125,14 @@ class WordGenerator {
         .where((c) => c.isForbidden && c.pattern.isNotEmpty)
         .toList();
 
+    final hasAnyConstraints =
+        activeConstraints.isNotEmpty || geminationConstraints.isNotEmpty;
+
     final results = <String>[];
     // Over-generate aggressively when constraints are active so a tight
     // rule set still yields a usable batch. `* 10` is an empirical budget:
     // if even this isn't enough, the rule set is effectively impossible.
-    final maxAttempts = activeConstraints.isEmpty ? count : count * 10;
+    final maxAttempts = hasAnyConstraints ? count * 10 : count;
     for (var i = 0; i < maxAttempts && results.length < count; i++) {
       final word = _generateWord(
         activeTemplates,
@@ -134,11 +142,12 @@ class WordGenerator {
       );
       if (word.isEmpty) continue;
 
-      if (activeConstraints.isNotEmpty) {
+      if (hasAnyConstraints) {
         final validation = validateWord(
           word: word,
           constraints: activeConstraints,
           inventory: inventory,
+          geminationConstraints: geminationConstraints,
         );
         if (!validation.isValid) continue;
       }
@@ -161,10 +170,14 @@ class WordGenerator {
     required String word,
     required List<ConstraintRule> constraints,
     required PhonemeInventory inventory,
+    List<GeminationConstraint> geminationConstraints = const [],
   }) {
-    if (word.isEmpty || constraints.isEmpty) {
+    if (word.isEmpty &&
+        constraints.isEmpty &&
+        geminationConstraints.isEmpty) {
       return const ValidationResult(violations: []);
     }
+    if (word.isEmpty) return const ValidationResult(violations: []);
 
     final violations = <Violation>[];
 
@@ -188,7 +201,104 @@ class WordGenerator {
       }
     }
 
+    // Gemination violations.
+    if (geminationConstraints.isNotEmpty) {
+      violations.addAll(
+        _checkGemination(phonemes, inventory, geminationConstraints),
+      );
+    }
+
     return ValidationResult(violations: violations);
+  }
+
+  /// Checks [phonemes] for adjacent identical consonants that violate any of
+  /// the given [geminationConstraints].
+  ///
+  /// Returns a list of [Violation]s — one per violating geminate pair.
+  List<Violation> _checkGemination(
+    List<(String symbol, int offset)> phonemes,
+    PhonemeInventory inventory,
+    List<GeminationConstraint> geminationConstraints,
+  ) {
+    if (phonemes.length < 2 || geminationConstraints.isEmpty) return const [];
+
+    final consonantSet = inventory.consonants.toSet();
+    final violations = <Violation>[];
+    final lastIndex = phonemes.length - 1;
+
+    for (var i = 0; i < lastIndex; i++) {
+      final (symbolA, offsetA) = phonemes[i];
+      final (symbolB, _) = phonemes[i + 1];
+
+      // Only flag identical consonant pairs.
+      if (symbolA != symbolB) continue;
+      if (!consonantSet.contains(symbolA)) continue;
+
+      // Determine the syllabic position of this geminate pair.
+      // Simplified heuristics (per plan D-07 / task action step 2):
+      //   initial  : token index 0 (pair at 0-1)
+      //   final_   : pair ends the word (i == lastIndex - 1)
+      //   onset    : pair starts a syllable — at word start OR immediately after a vowel
+      //   coda     : pair ends a syllable — at word end OR followed by a consonant
+      //              (cluster before a vowel is onset, not coda)
+      final isAtWordStart = (i == 0);
+      final isAtWordEnd = (i == lastIndex - 1);
+      final prevIsVowel =
+          i > 0 && inventory.vowels.contains(phonemes[i - 1].$1);
+      // Token immediately after the geminate pair (index i+2).
+      final nextTokenIdx = i + 2;
+      final nextIsVowel =
+          nextTokenIdx < phonemes.length &&
+          inventory.vowels.contains(phonemes[nextTokenIdx].$1);
+      final nextIsConsonant =
+          nextTokenIdx < phonemes.length &&
+          inventory.consonants.contains(phonemes[nextTokenIdx].$1);
+
+      final isInitial = isAtWordStart;
+      final isFinal = isAtWordEnd;
+      // Onset: pair immediately follows a vowel (V→CC) or is word-initial.
+      final isOnset = isAtWordStart || prevIsVowel;
+      // Coda: pair closes a syllable = word-final, or followed by a consonant
+      // (C→CC in an inter-syllabic cluster — the pair belongs to the preceding coda).
+      // A pair before a vowel (V·CC·V) is typically onset of the next syllable.
+      final isCoda = isAtWordEnd || nextIsConsonant || (!nextIsVowel && nextTokenIdx < phonemes.length);
+
+      for (final constraint in geminationConstraints) {
+        bool fires = false;
+        for (final pos in constraint.positions) {
+          fires = switch (pos) {
+            GeminationPosition.everywhere => true,
+            GeminationPosition.initial => isInitial,
+            GeminationPosition.final_ => isFinal,
+            GeminationPosition.onset => isOnset,
+            GeminationPosition.coda => isCoda,
+          };
+          if (fires) break;
+        }
+
+        if (fires) {
+          final positionLabel = constraint.positions.contains(GeminationPosition.everywhere)
+              ? 'everywhere'
+              : constraint.positions.map((p) => switch (p) {
+                    GeminationPosition.everywhere => 'everywhere',
+                    GeminationPosition.coda => 'coda',
+                    GeminationPosition.onset => 'onset',
+                    GeminationPosition.initial => 'initial',
+                    GeminationPosition.final_ => 'final',
+                  }).join('/');
+          violations.add(
+            Violation(
+              position: offsetA,
+              length: symbolA.length * 2,
+              ruleDescription: 'gemination violation ($positionLabel)',
+            ),
+          );
+          break; // One violation per geminate pair per word is enough.
+        }
+      }
+    }
+
+    return violations;
   }
 
   // ---------------------------------------------------------------------------

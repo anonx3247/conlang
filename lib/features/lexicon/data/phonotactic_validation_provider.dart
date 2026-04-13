@@ -21,6 +21,8 @@ import '../../phonology/domain/word_generator.dart';
 final phonotacticValidatorProvider =
     Provider<ValidationResult Function({required String word})>((ref) {
   final constraints = ref.watch(parsedConstraintsProvider).asData?.value ?? [];
+  final geminationConstraints =
+      ref.watch(parsedGeminationConstraintsProvider).asData?.value ?? [];
   final inventory = ref.watch(phonemeInventoryProvider);
   final generator = WordGenerator();
 
@@ -28,5 +30,6 @@ final phonotacticValidatorProvider =
         word: word,
         constraints: constraints,
         inventory: inventory,
+        geminationConstraints: geminationConstraints,
       );
 });

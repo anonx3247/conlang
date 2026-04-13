@@ -135,6 +135,7 @@ final activeConstraintsProvider =
 /// Parses the active constraint rule strings via the DSL parser.
 ///
 /// Invalid constraints are silently skipped — they can't match anything.
+/// Only processes rows with type='sequence' (or no type column — legacy rows).
 final parsedConstraintsProvider =
     StreamProvider<List<ConstraintRule>>((ref) async* {
   final constraintsAsync = ref.watch(activeConstraintsProvider);
@@ -144,6 +145,7 @@ final parsedConstraintsProvider =
     error: (_, e) => const Stream<List<PhonotacticConstraint>>.empty(),
   )) {
     yield list
+        .where((c) => c.type == 'sequence')
         .map((c) {
           final parsed = parseConstraintRule(c.pattern);
           if (!parsed.isValid) return null;
@@ -162,6 +164,29 @@ final parsedConstraintsProvider =
           );
         })
         .whereType<ConstraintRule>()
+        .toList();
+  }
+});
+
+/// Parses active gemination constraints (type='gemination') from the DB.
+///
+/// Returns an empty list when no project is open or no gemination constraints exist.
+final parsedGeminationConstraintsProvider =
+    StreamProvider<List<GeminationConstraint>>((ref) async* {
+  final constraintsAsync = ref.watch(activeConstraintsProvider);
+  await for (final list in constraintsAsync.when(
+    data: (v) => Stream.value(v),
+    loading: () => const Stream<List<PhonotacticConstraint>>.empty(),
+    error: (_, e) => const Stream<List<PhonotacticConstraint>>.empty(),
+  )) {
+    yield list
+        .where((c) => c.type == 'gemination')
+        .map((c) {
+          final parsed = parseGeminationConstraint(c.pattern);
+          if (!parsed.isValid) return null;
+          return parsed.constraint;
+        })
+        .whereType<GeminationConstraint>()
         .toList();
   }
 });
@@ -272,7 +297,7 @@ PhonemeInventory buildInventory(
 /// Generates sample IPA words from the current active templates and inventory.
 ///
 /// Returns an empty list when no templates or no phonemes are defined.
-/// Auto-refreshes whenever templates or the inventory changes.
+/// Auto-refreshes whenever templates, inventory, or constraints change.
 final generatedWordsProvider = Provider<List<String>>((ref) {
   final templates = ref.watch(parsedTemplatesProvider).when(
         data: (v) => v,
@@ -280,10 +305,13 @@ final generatedWordsProvider = Provider<List<String>>((ref) {
         error: (_, e) => <ParsedTemplate>[],
       );
   final inventory = ref.watch(phonemeInventoryProvider);
+  final geminationConstraints =
+      ref.watch(parsedGeminationConstraintsProvider).asData?.value ?? [];
 
   return WordGenerator().generateWords(
     templates: templates,
     inventory: inventory,
     count: 20,
+    geminationConstraints: geminationConstraints,
   );
 });
