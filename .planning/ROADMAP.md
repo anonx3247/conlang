@@ -235,8 +235,8 @@ Plans:
 - [x] 07-02-PLAN.md — Abbreviation formatting (lowercase + trailing period) + draggable panel separator widget for all shells
 - [x] 07-03-PLAN.md — Dead code cleanup, getSingle() safety fixes, rule_editor_dialog.dart refactor into rule_editor/ subdirectory
 - [ ] 07-04-PLAN.md — [UAT GAP] Context-aware abbreviation display (CAPITALS in paradigm/rules, lowercase in lexicon) + lexicon word list inline POS + derived word display fixes
-- [ ] 07-05-PLAN.md — [UAT GAP] Remove stray paradigm viewer divider + fix ResizableDivider panel constraints (IPA chart, dictionary word list)
-- [ ] 07-06-PLAN.md — [UAT GAP] Lexicon table: no auto-select on load, checkboxes only during Anki export mode
+- [x] 07-05-PLAN.md — [UAT GAP] Remove stray paradigm viewer divider + fix ResizableDivider panel constraints (IPA chart, dictionary word list)
+- [x] 07-06-PLAN.md — [UAT GAP] Lexicon table: no auto-select on load, checkboxes only during Anki export mode
 
 ### Phase 8: Gemination Restrictions
 **Goal**: Users can define gemination restrictions as phonotactic constraints — prevent geminate consonants globally, positionally (coda, onset, word-initial, word-final), or selectively
