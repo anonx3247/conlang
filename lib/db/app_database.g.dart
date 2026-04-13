@@ -3004,6 +3004,32 @@ class $LexemesTable extends Lexemes with TableInfo<$LexemesTable, Lexeme> {
         type: DriftSqlType.string,
         requiredDuringInsert: false,
       );
+  static const VerificationMeta _isClosedClassMeta = const VerificationMeta(
+    'isClosedClass',
+  );
+  @override
+  late final GeneratedColumn<bool> isClosedClass = GeneratedColumn<bool>(
+    'is_closed_class',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_closed_class" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _glossTagMeta = const VerificationMeta(
+    'glossTag',
+  );
+  @override
+  late final GeneratedColumn<String> glossTag = GeneratedColumn<String>(
+    'gloss_tag',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -3020,6 +3046,8 @@ class $LexemesTable extends Lexemes with TableInfo<$LexemesTable, Lexeme> {
     derivedViaRuleId,
     rootOnlyViaDerivations,
     intrinsicLevelsJson,
+    isClosedClass,
+    glossTag,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -3143,6 +3171,21 @@ class $LexemesTable extends Lexemes with TableInfo<$LexemesTable, Lexeme> {
         ),
       );
     }
+    if (data.containsKey('is_closed_class')) {
+      context.handle(
+        _isClosedClassMeta,
+        isClosedClass.isAcceptableOrUnknown(
+          data['is_closed_class']!,
+          _isClosedClassMeta,
+        ),
+      );
+    }
+    if (data.containsKey('gloss_tag')) {
+      context.handle(
+        _glossTagMeta,
+        glossTag.isAcceptableOrUnknown(data['gloss_tag']!, _glossTagMeta),
+      );
+    }
     return context;
   }
 
@@ -3208,6 +3251,14 @@ class $LexemesTable extends Lexemes with TableInfo<$LexemesTable, Lexeme> {
         DriftSqlType.string,
         data['${effectivePrefix}intrinsic_levels_json'],
       ),
+      isClosedClass: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_closed_class'],
+      )!,
+      glossTag: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}gloss_tag'],
+      ),
     );
   }
 
@@ -3264,6 +3315,12 @@ class Lexeme extends DataClass implements Insertable<Lexeme> {
   /// words of POSes with no intrinsic dims or legacy words pre-v10).
   /// See IntrinsicLevelsCodec for encode/decode helpers.
   final String? intrinsicLevelsJson;
+
+  /// Phase 10 D-02: marks this word as a closed-class particle/auxiliary/etc.
+  final bool isClosedClass;
+
+  /// Phase 10 D-03: Leipzig gloss tag (e.g. 'NEG', 'DEF', 'PROG').
+  final String? glossTag;
   const Lexeme({
     required this.id,
     required this.ipa,
@@ -3279,6 +3336,8 @@ class Lexeme extends DataClass implements Insertable<Lexeme> {
     this.derivedViaRuleId,
     required this.rootOnlyViaDerivations,
     this.intrinsicLevelsJson,
+    required this.isClosedClass,
+    this.glossTag,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -3316,6 +3375,10 @@ class Lexeme extends DataClass implements Insertable<Lexeme> {
     map['root_only_via_derivations'] = Variable<bool>(rootOnlyViaDerivations);
     if (!nullToAbsent || intrinsicLevelsJson != null) {
       map['intrinsic_levels_json'] = Variable<String>(intrinsicLevelsJson);
+    }
+    map['is_closed_class'] = Variable<bool>(isClosedClass);
+    if (!nullToAbsent || glossTag != null) {
+      map['gloss_tag'] = Variable<String>(glossTag);
     }
     return map;
   }
@@ -3356,6 +3419,10 @@ class Lexeme extends DataClass implements Insertable<Lexeme> {
       intrinsicLevelsJson: intrinsicLevelsJson == null && nullToAbsent
           ? const Value.absent()
           : Value(intrinsicLevelsJson),
+      isClosedClass: Value(isClosedClass),
+      glossTag: glossTag == null && nullToAbsent
+          ? const Value.absent()
+          : Value(glossTag),
     );
   }
 
@@ -3389,6 +3456,8 @@ class Lexeme extends DataClass implements Insertable<Lexeme> {
       intrinsicLevelsJson: serializer.fromJson<String?>(
         json['intrinsicLevelsJson'],
       ),
+      isClosedClass: serializer.fromJson<bool>(json['isClosedClass']),
+      glossTag: serializer.fromJson<String?>(json['glossTag']),
     );
   }
   @override
@@ -3413,6 +3482,8 @@ class Lexeme extends DataClass implements Insertable<Lexeme> {
       'derivedViaRuleId': serializer.toJson<int?>(derivedViaRuleId),
       'rootOnlyViaDerivations': serializer.toJson<bool>(rootOnlyViaDerivations),
       'intrinsicLevelsJson': serializer.toJson<String?>(intrinsicLevelsJson),
+      'isClosedClass': serializer.toJson<bool>(isClosedClass),
+      'glossTag': serializer.toJson<String?>(glossTag),
     };
   }
 
@@ -3431,6 +3502,8 @@ class Lexeme extends DataClass implements Insertable<Lexeme> {
     Value<int?> derivedViaRuleId = const Value.absent(),
     bool? rootOnlyViaDerivations,
     Value<String?> intrinsicLevelsJson = const Value.absent(),
+    bool? isClosedClass,
+    Value<String?> glossTag = const Value.absent(),
   }) => Lexeme(
     id: id ?? this.id,
     ipa: ipa ?? this.ipa,
@@ -3456,6 +3529,8 @@ class Lexeme extends DataClass implements Insertable<Lexeme> {
     intrinsicLevelsJson: intrinsicLevelsJson.present
         ? intrinsicLevelsJson.value
         : this.intrinsicLevelsJson,
+    isClosedClass: isClosedClass ?? this.isClosedClass,
+    glossTag: glossTag.present ? glossTag.value : this.glossTag,
   );
   Lexeme copyWithCompanion(LexemesCompanion data) {
     return Lexeme(
@@ -3491,6 +3566,10 @@ class Lexeme extends DataClass implements Insertable<Lexeme> {
       intrinsicLevelsJson: data.intrinsicLevelsJson.present
           ? data.intrinsicLevelsJson.value
           : this.intrinsicLevelsJson,
+      isClosedClass: data.isClosedClass.present
+          ? data.isClosedClass.value
+          : this.isClosedClass,
+      glossTag: data.glossTag.present ? data.glossTag.value : this.glossTag,
     );
   }
 
@@ -3510,7 +3589,9 @@ class Lexeme extends DataClass implements Insertable<Lexeme> {
           ..write('derivedFromLexemeId: $derivedFromLexemeId, ')
           ..write('derivedViaRuleId: $derivedViaRuleId, ')
           ..write('rootOnlyViaDerivations: $rootOnlyViaDerivations, ')
-          ..write('intrinsicLevelsJson: $intrinsicLevelsJson')
+          ..write('intrinsicLevelsJson: $intrinsicLevelsJson, ')
+          ..write('isClosedClass: $isClosedClass, ')
+          ..write('glossTag: $glossTag')
           ..write(')'))
         .toString();
   }
@@ -3531,6 +3612,8 @@ class Lexeme extends DataClass implements Insertable<Lexeme> {
     derivedViaRuleId,
     rootOnlyViaDerivations,
     intrinsicLevelsJson,
+    isClosedClass,
+    glossTag,
   );
   @override
   bool operator ==(Object other) =>
@@ -3549,7 +3632,9 @@ class Lexeme extends DataClass implements Insertable<Lexeme> {
           other.derivedFromLexemeId == this.derivedFromLexemeId &&
           other.derivedViaRuleId == this.derivedViaRuleId &&
           other.rootOnlyViaDerivations == this.rootOnlyViaDerivations &&
-          other.intrinsicLevelsJson == this.intrinsicLevelsJson);
+          other.intrinsicLevelsJson == this.intrinsicLevelsJson &&
+          other.isClosedClass == this.isClosedClass &&
+          other.glossTag == this.glossTag);
 }
 
 class LexemesCompanion extends UpdateCompanion<Lexeme> {
@@ -3567,6 +3652,8 @@ class LexemesCompanion extends UpdateCompanion<Lexeme> {
   final Value<int?> derivedViaRuleId;
   final Value<bool> rootOnlyViaDerivations;
   final Value<String?> intrinsicLevelsJson;
+  final Value<bool> isClosedClass;
+  final Value<String?> glossTag;
   const LexemesCompanion({
     this.id = const Value.absent(),
     this.ipa = const Value.absent(),
@@ -3582,6 +3669,8 @@ class LexemesCompanion extends UpdateCompanion<Lexeme> {
     this.derivedViaRuleId = const Value.absent(),
     this.rootOnlyViaDerivations = const Value.absent(),
     this.intrinsicLevelsJson = const Value.absent(),
+    this.isClosedClass = const Value.absent(),
+    this.glossTag = const Value.absent(),
   });
   LexemesCompanion.insert({
     this.id = const Value.absent(),
@@ -3598,6 +3687,8 @@ class LexemesCompanion extends UpdateCompanion<Lexeme> {
     this.derivedViaRuleId = const Value.absent(),
     this.rootOnlyViaDerivations = const Value.absent(),
     this.intrinsicLevelsJson = const Value.absent(),
+    this.isClosedClass = const Value.absent(),
+    this.glossTag = const Value.absent(),
   }) : ipa = Value(ipa);
   static Insertable<Lexeme> custom({
     Expression<int>? id,
@@ -3614,6 +3705,8 @@ class LexemesCompanion extends UpdateCompanion<Lexeme> {
     Expression<int>? derivedViaRuleId,
     Expression<bool>? rootOnlyViaDerivations,
     Expression<String>? intrinsicLevelsJson,
+    Expression<bool>? isClosedClass,
+    Expression<String>? glossTag,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -3635,6 +3728,8 @@ class LexemesCompanion extends UpdateCompanion<Lexeme> {
         'root_only_via_derivations': rootOnlyViaDerivations,
       if (intrinsicLevelsJson != null)
         'intrinsic_levels_json': intrinsicLevelsJson,
+      if (isClosedClass != null) 'is_closed_class': isClosedClass,
+      if (glossTag != null) 'gloss_tag': glossTag,
     });
   }
 
@@ -3653,6 +3748,8 @@ class LexemesCompanion extends UpdateCompanion<Lexeme> {
     Value<int?>? derivedViaRuleId,
     Value<bool>? rootOnlyViaDerivations,
     Value<String?>? intrinsicLevelsJson,
+    Value<bool>? isClosedClass,
+    Value<String?>? glossTag,
   }) {
     return LexemesCompanion(
       id: id ?? this.id,
@@ -3672,6 +3769,8 @@ class LexemesCompanion extends UpdateCompanion<Lexeme> {
       rootOnlyViaDerivations:
           rootOnlyViaDerivations ?? this.rootOnlyViaDerivations,
       intrinsicLevelsJson: intrinsicLevelsJson ?? this.intrinsicLevelsJson,
+      isClosedClass: isClosedClass ?? this.isClosedClass,
+      glossTag: glossTag ?? this.glossTag,
     );
   }
 
@@ -3728,6 +3827,12 @@ class LexemesCompanion extends UpdateCompanion<Lexeme> {
         intrinsicLevelsJson.value,
       );
     }
+    if (isClosedClass.present) {
+      map['is_closed_class'] = Variable<bool>(isClosedClass.value);
+    }
+    if (glossTag.present) {
+      map['gloss_tag'] = Variable<String>(glossTag.value);
+    }
     return map;
   }
 
@@ -3747,7 +3852,9 @@ class LexemesCompanion extends UpdateCompanion<Lexeme> {
           ..write('derivedFromLexemeId: $derivedFromLexemeId, ')
           ..write('derivedViaRuleId: $derivedViaRuleId, ')
           ..write('rootOnlyViaDerivations: $rootOnlyViaDerivations, ')
-          ..write('intrinsicLevelsJson: $intrinsicLevelsJson')
+          ..write('intrinsicLevelsJson: $intrinsicLevelsJson, ')
+          ..write('isClosedClass: $isClosedClass, ')
+          ..write('glossTag: $glossTag')
           ..write(')'))
         .toString();
   }
@@ -6725,6 +6832,660 @@ class StandardFormPatternsCompanion
   }
 }
 
+class $PhraseConstructionsTable extends PhraseConstructions
+    with TableInfo<$PhraseConstructionsTable, PhraseConstruction> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $PhraseConstructionsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _nameMeta = const VerificationMeta('name');
+  @override
+  late final GeneratedColumn<String> name = GeneratedColumn<String>(
+    'name',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _orderingMeta = const VerificationMeta(
+    'ordering',
+  );
+  @override
+  late final GeneratedColumn<int> ordering = GeneratedColumn<int>(
+    'ordering',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [id, name, ordering];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'phrase_constructions';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<PhraseConstruction> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('name')) {
+      context.handle(
+        _nameMeta,
+        name.isAcceptableOrUnknown(data['name']!, _nameMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_nameMeta);
+    }
+    if (data.containsKey('ordering')) {
+      context.handle(
+        _orderingMeta,
+        ordering.isAcceptableOrUnknown(data['ordering']!, _orderingMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  PhraseConstruction map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return PhraseConstruction(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      name: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}name'],
+      )!,
+      ordering: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}ordering'],
+      )!,
+    );
+  }
+
+  @override
+  $PhraseConstructionsTable createAlias(String alias) {
+    return $PhraseConstructionsTable(attachedDatabase, alias);
+  }
+}
+
+class PhraseConstruction extends DataClass
+    implements Insertable<PhraseConstruction> {
+  final int id;
+  final String name;
+  final int ordering;
+  const PhraseConstruction({
+    required this.id,
+    required this.name,
+    required this.ordering,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['name'] = Variable<String>(name);
+    map['ordering'] = Variable<int>(ordering);
+    return map;
+  }
+
+  PhraseConstructionsCompanion toCompanion(bool nullToAbsent) {
+    return PhraseConstructionsCompanion(
+      id: Value(id),
+      name: Value(name),
+      ordering: Value(ordering),
+    );
+  }
+
+  factory PhraseConstruction.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return PhraseConstruction(
+      id: serializer.fromJson<int>(json['id']),
+      name: serializer.fromJson<String>(json['name']),
+      ordering: serializer.fromJson<int>(json['ordering']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'name': serializer.toJson<String>(name),
+      'ordering': serializer.toJson<int>(ordering),
+    };
+  }
+
+  PhraseConstruction copyWith({int? id, String? name, int? ordering}) =>
+      PhraseConstruction(
+        id: id ?? this.id,
+        name: name ?? this.name,
+        ordering: ordering ?? this.ordering,
+      );
+  PhraseConstruction copyWithCompanion(PhraseConstructionsCompanion data) {
+    return PhraseConstruction(
+      id: data.id.present ? data.id.value : this.id,
+      name: data.name.present ? data.name.value : this.name,
+      ordering: data.ordering.present ? data.ordering.value : this.ordering,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('PhraseConstruction(')
+          ..write('id: $id, ')
+          ..write('name: $name, ')
+          ..write('ordering: $ordering')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, name, ordering);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is PhraseConstruction &&
+          other.id == this.id &&
+          other.name == this.name &&
+          other.ordering == this.ordering);
+}
+
+class PhraseConstructionsCompanion extends UpdateCompanion<PhraseConstruction> {
+  final Value<int> id;
+  final Value<String> name;
+  final Value<int> ordering;
+  const PhraseConstructionsCompanion({
+    this.id = const Value.absent(),
+    this.name = const Value.absent(),
+    this.ordering = const Value.absent(),
+  });
+  PhraseConstructionsCompanion.insert({
+    this.id = const Value.absent(),
+    required String name,
+    this.ordering = const Value.absent(),
+  }) : name = Value(name);
+  static Insertable<PhraseConstruction> custom({
+    Expression<int>? id,
+    Expression<String>? name,
+    Expression<int>? ordering,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (name != null) 'name': name,
+      if (ordering != null) 'ordering': ordering,
+    });
+  }
+
+  PhraseConstructionsCompanion copyWith({
+    Value<int>? id,
+    Value<String>? name,
+    Value<int>? ordering,
+  }) {
+    return PhraseConstructionsCompanion(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      ordering: ordering ?? this.ordering,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (name.present) {
+      map['name'] = Variable<String>(name.value);
+    }
+    if (ordering.present) {
+      map['ordering'] = Variable<int>(ordering.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('PhraseConstructionsCompanion(')
+          ..write('id: $id, ')
+          ..write('name: $name, ')
+          ..write('ordering: $ordering')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $ConstructionSlotsTable extends ConstructionSlots
+    with TableInfo<$ConstructionSlotsTable, ConstructionSlot> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $ConstructionSlotsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _constructionIdMeta = const VerificationMeta(
+    'constructionId',
+  );
+  @override
+  late final GeneratedColumn<int> constructionId = GeneratedColumn<int>(
+    'construction_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES phrase_constructions (id) ON DELETE CASCADE',
+    ),
+  );
+  static const VerificationMeta _slotTypeMeta = const VerificationMeta(
+    'slotType',
+  );
+  @override
+  late final GeneratedColumn<String> slotType = GeneratedColumn<String>(
+    'slot_type',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _slotValueMeta = const VerificationMeta(
+    'slotValue',
+  );
+  @override
+  late final GeneratedColumn<String> slotValue = GeneratedColumn<String>(
+    'slot_value',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _labelMeta = const VerificationMeta('label');
+  @override
+  late final GeneratedColumn<String> label = GeneratedColumn<String>(
+    'label',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _orderingMeta = const VerificationMeta(
+    'ordering',
+  );
+  @override
+  late final GeneratedColumn<int> ordering = GeneratedColumn<int>(
+    'ordering',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    constructionId,
+    slotType,
+    slotValue,
+    label,
+    ordering,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'construction_slots';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<ConstructionSlot> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('construction_id')) {
+      context.handle(
+        _constructionIdMeta,
+        constructionId.isAcceptableOrUnknown(
+          data['construction_id']!,
+          _constructionIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_constructionIdMeta);
+    }
+    if (data.containsKey('slot_type')) {
+      context.handle(
+        _slotTypeMeta,
+        slotType.isAcceptableOrUnknown(data['slot_type']!, _slotTypeMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_slotTypeMeta);
+    }
+    if (data.containsKey('slot_value')) {
+      context.handle(
+        _slotValueMeta,
+        slotValue.isAcceptableOrUnknown(data['slot_value']!, _slotValueMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_slotValueMeta);
+    }
+    if (data.containsKey('label')) {
+      context.handle(
+        _labelMeta,
+        label.isAcceptableOrUnknown(data['label']!, _labelMeta),
+      );
+    }
+    if (data.containsKey('ordering')) {
+      context.handle(
+        _orderingMeta,
+        ordering.isAcceptableOrUnknown(data['ordering']!, _orderingMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  ConstructionSlot map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return ConstructionSlot(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      constructionId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}construction_id'],
+      )!,
+      slotType: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}slot_type'],
+      )!,
+      slotValue: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}slot_value'],
+      )!,
+      label: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}label'],
+      ),
+      ordering: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}ordering'],
+      )!,
+    );
+  }
+
+  @override
+  $ConstructionSlotsTable createAlias(String alias) {
+    return $ConstructionSlotsTable(attachedDatabase, alias);
+  }
+}
+
+class ConstructionSlot extends DataClass
+    implements Insertable<ConstructionSlot> {
+  final int id;
+  final int constructionId;
+  final String slotType;
+  final String slotValue;
+  final String? label;
+  final int ordering;
+  const ConstructionSlot({
+    required this.id,
+    required this.constructionId,
+    required this.slotType,
+    required this.slotValue,
+    this.label,
+    required this.ordering,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['construction_id'] = Variable<int>(constructionId);
+    map['slot_type'] = Variable<String>(slotType);
+    map['slot_value'] = Variable<String>(slotValue);
+    if (!nullToAbsent || label != null) {
+      map['label'] = Variable<String>(label);
+    }
+    map['ordering'] = Variable<int>(ordering);
+    return map;
+  }
+
+  ConstructionSlotsCompanion toCompanion(bool nullToAbsent) {
+    return ConstructionSlotsCompanion(
+      id: Value(id),
+      constructionId: Value(constructionId),
+      slotType: Value(slotType),
+      slotValue: Value(slotValue),
+      label: label == null && nullToAbsent
+          ? const Value.absent()
+          : Value(label),
+      ordering: Value(ordering),
+    );
+  }
+
+  factory ConstructionSlot.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return ConstructionSlot(
+      id: serializer.fromJson<int>(json['id']),
+      constructionId: serializer.fromJson<int>(json['constructionId']),
+      slotType: serializer.fromJson<String>(json['slotType']),
+      slotValue: serializer.fromJson<String>(json['slotValue']),
+      label: serializer.fromJson<String?>(json['label']),
+      ordering: serializer.fromJson<int>(json['ordering']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'constructionId': serializer.toJson<int>(constructionId),
+      'slotType': serializer.toJson<String>(slotType),
+      'slotValue': serializer.toJson<String>(slotValue),
+      'label': serializer.toJson<String?>(label),
+      'ordering': serializer.toJson<int>(ordering),
+    };
+  }
+
+  ConstructionSlot copyWith({
+    int? id,
+    int? constructionId,
+    String? slotType,
+    String? slotValue,
+    Value<String?> label = const Value.absent(),
+    int? ordering,
+  }) => ConstructionSlot(
+    id: id ?? this.id,
+    constructionId: constructionId ?? this.constructionId,
+    slotType: slotType ?? this.slotType,
+    slotValue: slotValue ?? this.slotValue,
+    label: label.present ? label.value : this.label,
+    ordering: ordering ?? this.ordering,
+  );
+  ConstructionSlot copyWithCompanion(ConstructionSlotsCompanion data) {
+    return ConstructionSlot(
+      id: data.id.present ? data.id.value : this.id,
+      constructionId: data.constructionId.present
+          ? data.constructionId.value
+          : this.constructionId,
+      slotType: data.slotType.present ? data.slotType.value : this.slotType,
+      slotValue: data.slotValue.present ? data.slotValue.value : this.slotValue,
+      label: data.label.present ? data.label.value : this.label,
+      ordering: data.ordering.present ? data.ordering.value : this.ordering,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ConstructionSlot(')
+          ..write('id: $id, ')
+          ..write('constructionId: $constructionId, ')
+          ..write('slotType: $slotType, ')
+          ..write('slotValue: $slotValue, ')
+          ..write('label: $label, ')
+          ..write('ordering: $ordering')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(id, constructionId, slotType, slotValue, label, ordering);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ConstructionSlot &&
+          other.id == this.id &&
+          other.constructionId == this.constructionId &&
+          other.slotType == this.slotType &&
+          other.slotValue == this.slotValue &&
+          other.label == this.label &&
+          other.ordering == this.ordering);
+}
+
+class ConstructionSlotsCompanion extends UpdateCompanion<ConstructionSlot> {
+  final Value<int> id;
+  final Value<int> constructionId;
+  final Value<String> slotType;
+  final Value<String> slotValue;
+  final Value<String?> label;
+  final Value<int> ordering;
+  const ConstructionSlotsCompanion({
+    this.id = const Value.absent(),
+    this.constructionId = const Value.absent(),
+    this.slotType = const Value.absent(),
+    this.slotValue = const Value.absent(),
+    this.label = const Value.absent(),
+    this.ordering = const Value.absent(),
+  });
+  ConstructionSlotsCompanion.insert({
+    this.id = const Value.absent(),
+    required int constructionId,
+    required String slotType,
+    required String slotValue,
+    this.label = const Value.absent(),
+    this.ordering = const Value.absent(),
+  }) : constructionId = Value(constructionId),
+       slotType = Value(slotType),
+       slotValue = Value(slotValue);
+  static Insertable<ConstructionSlot> custom({
+    Expression<int>? id,
+    Expression<int>? constructionId,
+    Expression<String>? slotType,
+    Expression<String>? slotValue,
+    Expression<String>? label,
+    Expression<int>? ordering,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (constructionId != null) 'construction_id': constructionId,
+      if (slotType != null) 'slot_type': slotType,
+      if (slotValue != null) 'slot_value': slotValue,
+      if (label != null) 'label': label,
+      if (ordering != null) 'ordering': ordering,
+    });
+  }
+
+  ConstructionSlotsCompanion copyWith({
+    Value<int>? id,
+    Value<int>? constructionId,
+    Value<String>? slotType,
+    Value<String>? slotValue,
+    Value<String?>? label,
+    Value<int>? ordering,
+  }) {
+    return ConstructionSlotsCompanion(
+      id: id ?? this.id,
+      constructionId: constructionId ?? this.constructionId,
+      slotType: slotType ?? this.slotType,
+      slotValue: slotValue ?? this.slotValue,
+      label: label ?? this.label,
+      ordering: ordering ?? this.ordering,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (constructionId.present) {
+      map['construction_id'] = Variable<int>(constructionId.value);
+    }
+    if (slotType.present) {
+      map['slot_type'] = Variable<String>(slotType.value);
+    }
+    if (slotValue.present) {
+      map['slot_value'] = Variable<String>(slotValue.value);
+    }
+    if (label.present) {
+      map['label'] = Variable<String>(label.value);
+    }
+    if (ordering.present) {
+      map['ordering'] = Variable<int>(ordering.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ConstructionSlotsCompanion(')
+          ..write('id: $id, ')
+          ..write('constructionId: $constructionId, ')
+          ..write('slotType: $slotType, ')
+          ..write('slotValue: $slotValue, ')
+          ..write('label: $label, ')
+          ..write('ordering: $ordering')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -6755,6 +7516,10 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $LexemeParentsTable lexemeParents = $LexemeParentsTable(this);
   late final $StandardFormPatternsTable standardFormPatterns =
       $StandardFormPatternsTable(this);
+  late final $PhraseConstructionsTable phraseConstructions =
+      $PhraseConstructionsTable(this);
+  late final $ConstructionSlotsTable constructionSlots =
+      $ConstructionSlotsTable(this);
   late final PhonemeDao phonemeDao = PhonemeDao(this as AppDatabase);
   late final NaturalClassDao naturalClassDao = NaturalClassDao(
     this as AppDatabase,
@@ -6781,6 +7546,9 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final MarkerDao markerDao = MarkerDao(this as AppDatabase);
   late final StandardFormPatternDao standardFormPatternDao =
       StandardFormPatternDao(this as AppDatabase);
+  late final ConstructionDao constructionDao = ConstructionDao(
+    this as AppDatabase,
+  );
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -6803,6 +7571,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     inflectionalRulePOS,
     lexemeParents,
     standardFormPatterns,
+    phraseConstructions,
+    constructionSlots,
   ];
   @override
   StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules([
@@ -6861,6 +7631,13 @@ abstract class _$AppDatabase extends GeneratedDatabase {
         limitUpdateKind: UpdateKind.delete,
       ),
       result: [TableUpdate('standard_form_patterns', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'phrase_constructions',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('construction_slots', kind: UpdateKind.delete)],
     ),
   ]);
 }
@@ -9270,6 +10047,8 @@ typedef $$LexemesTableCreateCompanionBuilder =
       Value<int?> derivedViaRuleId,
       Value<bool> rootOnlyViaDerivations,
       Value<String?> intrinsicLevelsJson,
+      Value<bool> isClosedClass,
+      Value<String?> glossTag,
     });
 typedef $$LexemesTableUpdateCompanionBuilder =
     LexemesCompanion Function({
@@ -9287,6 +10066,8 @@ typedef $$LexemesTableUpdateCompanionBuilder =
       Value<int?> derivedViaRuleId,
       Value<bool> rootOnlyViaDerivations,
       Value<String?> intrinsicLevelsJson,
+      Value<bool> isClosedClass,
+      Value<String?> glossTag,
     });
 
 final class $$LexemesTableReferences
@@ -9432,6 +10213,16 @@ class $$LexemesTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
+  ColumnFilters<bool> get isClosedClass => $composableBuilder(
+    column: $table.isClosedClass,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get glossTag => $composableBuilder(
+    column: $table.glossTag,
+    builder: (column) => ColumnFilters(column),
+  );
+
   $$LexemesTableFilterComposer get derivedFromLexemeId {
     final $$LexemesTableFilterComposer composer = $composerBuilder(
       composer: this,
@@ -9574,6 +10365,16 @@ class $$LexemesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<bool> get isClosedClass => $composableBuilder(
+    column: $table.isClosedClass,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get glossTag => $composableBuilder(
+    column: $table.glossTag,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   $$LexemesTableOrderingComposer get derivedFromLexemeId {
     final $$LexemesTableOrderingComposer composer = $composerBuilder(
       composer: this,
@@ -9679,6 +10480,14 @@ class $$LexemesTableAnnotationComposer
     column: $table.intrinsicLevelsJson,
     builder: (column) => column,
   );
+
+  GeneratedColumn<bool> get isClosedClass => $composableBuilder(
+    column: $table.isClosedClass,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get glossTag =>
+      $composableBuilder(column: $table.glossTag, builder: (column) => column);
 
   $$LexemesTableAnnotationComposer get derivedFromLexemeId {
     final $$LexemesTableAnnotationComposer composer = $composerBuilder(
@@ -9800,6 +10609,8 @@ class $$LexemesTableTableManager
                 Value<int?> derivedViaRuleId = const Value.absent(),
                 Value<bool> rootOnlyViaDerivations = const Value.absent(),
                 Value<String?> intrinsicLevelsJson = const Value.absent(),
+                Value<bool> isClosedClass = const Value.absent(),
+                Value<String?> glossTag = const Value.absent(),
               }) => LexemesCompanion(
                 id: id,
                 ipa: ipa,
@@ -9815,6 +10626,8 @@ class $$LexemesTableTableManager
                 derivedViaRuleId: derivedViaRuleId,
                 rootOnlyViaDerivations: rootOnlyViaDerivations,
                 intrinsicLevelsJson: intrinsicLevelsJson,
+                isClosedClass: isClosedClass,
+                glossTag: glossTag,
               ),
           createCompanionCallback:
               ({
@@ -9832,6 +10645,8 @@ class $$LexemesTableTableManager
                 Value<int?> derivedViaRuleId = const Value.absent(),
                 Value<bool> rootOnlyViaDerivations = const Value.absent(),
                 Value<String?> intrinsicLevelsJson = const Value.absent(),
+                Value<bool> isClosedClass = const Value.absent(),
+                Value<String?> glossTag = const Value.absent(),
               }) => LexemesCompanion.insert(
                 id: id,
                 ipa: ipa,
@@ -9847,6 +10662,8 @@ class $$LexemesTableTableManager
                 derivedViaRuleId: derivedViaRuleId,
                 rootOnlyViaDerivations: rootOnlyViaDerivations,
                 intrinsicLevelsJson: intrinsicLevelsJson,
+                isClosedClass: isClosedClass,
+                glossTag: glossTag,
               ),
           withReferenceMapper: (p0) => p0
               .map(
@@ -12709,6 +13526,644 @@ typedef $$StandardFormPatternsTableProcessedTableManager =
       StandardFormPattern,
       PrefetchHooks Function({bool dimensionId})
     >;
+typedef $$PhraseConstructionsTableCreateCompanionBuilder =
+    PhraseConstructionsCompanion Function({
+      Value<int> id,
+      required String name,
+      Value<int> ordering,
+    });
+typedef $$PhraseConstructionsTableUpdateCompanionBuilder =
+    PhraseConstructionsCompanion Function({
+      Value<int> id,
+      Value<String> name,
+      Value<int> ordering,
+    });
+
+final class $$PhraseConstructionsTableReferences
+    extends
+        BaseReferences<
+          _$AppDatabase,
+          $PhraseConstructionsTable,
+          PhraseConstruction
+        > {
+  $$PhraseConstructionsTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static MultiTypedResultKey<$ConstructionSlotsTable, List<ConstructionSlot>>
+  _constructionSlotsRefsTable(_$AppDatabase db) =>
+      MultiTypedResultKey.fromTable(
+        db.constructionSlots,
+        aliasName: $_aliasNameGenerator(
+          db.phraseConstructions.id,
+          db.constructionSlots.constructionId,
+        ),
+      );
+
+  $$ConstructionSlotsTableProcessedTableManager get constructionSlotsRefs {
+    final manager = $$ConstructionSlotsTableTableManager(
+      $_db,
+      $_db.constructionSlots,
+    ).filter((f) => f.constructionId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _constructionSlotsRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+}
+
+class $$PhraseConstructionsTableFilterComposer
+    extends Composer<_$AppDatabase, $PhraseConstructionsTable> {
+  $$PhraseConstructionsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get ordering => $composableBuilder(
+    column: $table.ordering,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  Expression<bool> constructionSlotsRefs(
+    Expression<bool> Function($$ConstructionSlotsTableFilterComposer f) f,
+  ) {
+    final $$ConstructionSlotsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.constructionSlots,
+      getReferencedColumn: (t) => t.constructionId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ConstructionSlotsTableFilterComposer(
+            $db: $db,
+            $table: $db.constructionSlots,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+}
+
+class $$PhraseConstructionsTableOrderingComposer
+    extends Composer<_$AppDatabase, $PhraseConstructionsTable> {
+  $$PhraseConstructionsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get ordering => $composableBuilder(
+    column: $table.ordering,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$PhraseConstructionsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $PhraseConstructionsTable> {
+  $$PhraseConstructionsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumn<int> get ordering =>
+      $composableBuilder(column: $table.ordering, builder: (column) => column);
+
+  Expression<T> constructionSlotsRefs<T extends Object>(
+    Expression<T> Function($$ConstructionSlotsTableAnnotationComposer a) f,
+  ) {
+    final $$ConstructionSlotsTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.constructionSlots,
+          getReferencedColumn: (t) => t.constructionId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$ConstructionSlotsTableAnnotationComposer(
+                $db: $db,
+                $table: $db.constructionSlots,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
+}
+
+class $$PhraseConstructionsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $PhraseConstructionsTable,
+          PhraseConstruction,
+          $$PhraseConstructionsTableFilterComposer,
+          $$PhraseConstructionsTableOrderingComposer,
+          $$PhraseConstructionsTableAnnotationComposer,
+          $$PhraseConstructionsTableCreateCompanionBuilder,
+          $$PhraseConstructionsTableUpdateCompanionBuilder,
+          (PhraseConstruction, $$PhraseConstructionsTableReferences),
+          PhraseConstruction,
+          PrefetchHooks Function({bool constructionSlotsRefs})
+        > {
+  $$PhraseConstructionsTableTableManager(
+    _$AppDatabase db,
+    $PhraseConstructionsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$PhraseConstructionsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$PhraseConstructionsTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$PhraseConstructionsTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<String> name = const Value.absent(),
+                Value<int> ordering = const Value.absent(),
+              }) => PhraseConstructionsCompanion(
+                id: id,
+                name: name,
+                ordering: ordering,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required String name,
+                Value<int> ordering = const Value.absent(),
+              }) => PhraseConstructionsCompanion.insert(
+                id: id,
+                name: name,
+                ordering: ordering,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$PhraseConstructionsTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({constructionSlotsRefs = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [
+                if (constructionSlotsRefs) db.constructionSlots,
+              ],
+              addJoins: null,
+              getPrefetchedDataCallback: (items) async {
+                return [
+                  if (constructionSlotsRefs)
+                    await $_getPrefetchedData<
+                      PhraseConstruction,
+                      $PhraseConstructionsTable,
+                      ConstructionSlot
+                    >(
+                      currentTable: table,
+                      referencedTable: $$PhraseConstructionsTableReferences
+                          ._constructionSlotsRefsTable(db),
+                      managerFromTypedResult: (p0) =>
+                          $$PhraseConstructionsTableReferences(
+                            db,
+                            table,
+                            p0,
+                          ).constructionSlotsRefs,
+                      referencedItemsForCurrentItem: (item, referencedItems) =>
+                          referencedItems.where(
+                            (e) => e.constructionId == item.id,
+                          ),
+                      typedResults: items,
+                    ),
+                ];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$PhraseConstructionsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $PhraseConstructionsTable,
+      PhraseConstruction,
+      $$PhraseConstructionsTableFilterComposer,
+      $$PhraseConstructionsTableOrderingComposer,
+      $$PhraseConstructionsTableAnnotationComposer,
+      $$PhraseConstructionsTableCreateCompanionBuilder,
+      $$PhraseConstructionsTableUpdateCompanionBuilder,
+      (PhraseConstruction, $$PhraseConstructionsTableReferences),
+      PhraseConstruction,
+      PrefetchHooks Function({bool constructionSlotsRefs})
+    >;
+typedef $$ConstructionSlotsTableCreateCompanionBuilder =
+    ConstructionSlotsCompanion Function({
+      Value<int> id,
+      required int constructionId,
+      required String slotType,
+      required String slotValue,
+      Value<String?> label,
+      Value<int> ordering,
+    });
+typedef $$ConstructionSlotsTableUpdateCompanionBuilder =
+    ConstructionSlotsCompanion Function({
+      Value<int> id,
+      Value<int> constructionId,
+      Value<String> slotType,
+      Value<String> slotValue,
+      Value<String?> label,
+      Value<int> ordering,
+    });
+
+final class $$ConstructionSlotsTableReferences
+    extends
+        BaseReferences<
+          _$AppDatabase,
+          $ConstructionSlotsTable,
+          ConstructionSlot
+        > {
+  $$ConstructionSlotsTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static $PhraseConstructionsTable _constructionIdTable(_$AppDatabase db) =>
+      db.phraseConstructions.createAlias(
+        $_aliasNameGenerator(
+          db.constructionSlots.constructionId,
+          db.phraseConstructions.id,
+        ),
+      );
+
+  $$PhraseConstructionsTableProcessedTableManager get constructionId {
+    final $_column = $_itemColumn<int>('construction_id')!;
+
+    final manager = $$PhraseConstructionsTableTableManager(
+      $_db,
+      $_db.phraseConstructions,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_constructionIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$ConstructionSlotsTableFilterComposer
+    extends Composer<_$AppDatabase, $ConstructionSlotsTable> {
+  $$ConstructionSlotsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get slotType => $composableBuilder(
+    column: $table.slotType,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get slotValue => $composableBuilder(
+    column: $table.slotValue,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get label => $composableBuilder(
+    column: $table.label,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get ordering => $composableBuilder(
+    column: $table.ordering,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$PhraseConstructionsTableFilterComposer get constructionId {
+    final $$PhraseConstructionsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.constructionId,
+      referencedTable: $db.phraseConstructions,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$PhraseConstructionsTableFilterComposer(
+            $db: $db,
+            $table: $db.phraseConstructions,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$ConstructionSlotsTableOrderingComposer
+    extends Composer<_$AppDatabase, $ConstructionSlotsTable> {
+  $$ConstructionSlotsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get slotType => $composableBuilder(
+    column: $table.slotType,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get slotValue => $composableBuilder(
+    column: $table.slotValue,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get label => $composableBuilder(
+    column: $table.label,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get ordering => $composableBuilder(
+    column: $table.ordering,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$PhraseConstructionsTableOrderingComposer get constructionId {
+    final $$PhraseConstructionsTableOrderingComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.constructionId,
+          referencedTable: $db.phraseConstructions,
+          getReferencedColumn: (t) => t.id,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$PhraseConstructionsTableOrderingComposer(
+                $db: $db,
+                $table: $db.phraseConstructions,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return composer;
+  }
+}
+
+class $$ConstructionSlotsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $ConstructionSlotsTable> {
+  $$ConstructionSlotsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get slotType =>
+      $composableBuilder(column: $table.slotType, builder: (column) => column);
+
+  GeneratedColumn<String> get slotValue =>
+      $composableBuilder(column: $table.slotValue, builder: (column) => column);
+
+  GeneratedColumn<String> get label =>
+      $composableBuilder(column: $table.label, builder: (column) => column);
+
+  GeneratedColumn<int> get ordering =>
+      $composableBuilder(column: $table.ordering, builder: (column) => column);
+
+  $$PhraseConstructionsTableAnnotationComposer get constructionId {
+    final $$PhraseConstructionsTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.constructionId,
+          referencedTable: $db.phraseConstructions,
+          getReferencedColumn: (t) => t.id,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$PhraseConstructionsTableAnnotationComposer(
+                $db: $db,
+                $table: $db.phraseConstructions,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return composer;
+  }
+}
+
+class $$ConstructionSlotsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $ConstructionSlotsTable,
+          ConstructionSlot,
+          $$ConstructionSlotsTableFilterComposer,
+          $$ConstructionSlotsTableOrderingComposer,
+          $$ConstructionSlotsTableAnnotationComposer,
+          $$ConstructionSlotsTableCreateCompanionBuilder,
+          $$ConstructionSlotsTableUpdateCompanionBuilder,
+          (ConstructionSlot, $$ConstructionSlotsTableReferences),
+          ConstructionSlot,
+          PrefetchHooks Function({bool constructionId})
+        > {
+  $$ConstructionSlotsTableTableManager(
+    _$AppDatabase db,
+    $ConstructionSlotsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$ConstructionSlotsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$ConstructionSlotsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$ConstructionSlotsTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<int> constructionId = const Value.absent(),
+                Value<String> slotType = const Value.absent(),
+                Value<String> slotValue = const Value.absent(),
+                Value<String?> label = const Value.absent(),
+                Value<int> ordering = const Value.absent(),
+              }) => ConstructionSlotsCompanion(
+                id: id,
+                constructionId: constructionId,
+                slotType: slotType,
+                slotValue: slotValue,
+                label: label,
+                ordering: ordering,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required int constructionId,
+                required String slotType,
+                required String slotValue,
+                Value<String?> label = const Value.absent(),
+                Value<int> ordering = const Value.absent(),
+              }) => ConstructionSlotsCompanion.insert(
+                id: id,
+                constructionId: constructionId,
+                slotType: slotType,
+                slotValue: slotValue,
+                label: label,
+                ordering: ordering,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$ConstructionSlotsTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({constructionId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (constructionId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.constructionId,
+                                referencedTable:
+                                    $$ConstructionSlotsTableReferences
+                                        ._constructionIdTable(db),
+                                referencedColumn:
+                                    $$ConstructionSlotsTableReferences
+                                        ._constructionIdTable(db)
+                                        .id,
+                              )
+                              as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$ConstructionSlotsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $ConstructionSlotsTable,
+      ConstructionSlot,
+      $$ConstructionSlotsTableFilterComposer,
+      $$ConstructionSlotsTableOrderingComposer,
+      $$ConstructionSlotsTableAnnotationComposer,
+      $$ConstructionSlotsTableCreateCompanionBuilder,
+      $$ConstructionSlotsTableUpdateCompanionBuilder,
+      (ConstructionSlot, $$ConstructionSlotsTableReferences),
+      ConstructionSlot,
+      PrefetchHooks Function({bool constructionId})
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -12754,4 +14209,8 @@ class $AppDatabaseManager {
       $$LexemeParentsTableTableManager(_db, _db.lexemeParents);
   $$StandardFormPatternsTableTableManager get standardFormPatterns =>
       $$StandardFormPatternsTableTableManager(_db, _db.standardFormPatterns);
+  $$PhraseConstructionsTableTableManager get phraseConstructions =>
+      $$PhraseConstructionsTableTableManager(_db, _db.phraseConstructions);
+  $$ConstructionSlotsTableTableManager get constructionSlots =>
+      $$ConstructionSlotsTableTableManager(_db, _db.constructionSlots);
 }

@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:drift/drift.dart';
 import 'package:drift_flutter/drift_flutter.dart';
 
+import '../features/grammar/data/construction_dao.dart';
 import '../features/grammar/data/grammar_dao.dart';
 import '../features/grammar/data/inflectional_rule_pos_dao.dart';
 import '../features/grammar/data/lexeme_parents_dao.dart';
@@ -381,6 +382,13 @@ class Lexemes extends Table {
   /// words of POSes with no intrinsic dims or legacy words pre-v10).
   /// See IntrinsicLevelsCodec for encode/decode helpers.
   TextColumn get intrinsicLevelsJson => text().nullable()();
+
+  /// Phase 10 D-02: marks this word as a closed-class particle/auxiliary/etc.
+  BoolColumn get isClosedClass =>
+      boolean().withDefault(const Constant(false))();
+
+  /// Phase 10 D-03: Leipzig gloss tag (e.g. 'NEG', 'DEF', 'PROG').
+  TextColumn get glossTag => text().nullable()();
 }
 
 /// v10 — Phase 4 04-17 D-97. Standard-form pattern rows keyed by
@@ -397,6 +405,25 @@ class StandardFormPatterns extends Table {
 
   @override
   Set<Column> get primaryKey => {dimensionId, levelId};
+}
+
+/// Phase 10 — named phrase construction rule (D-06, D-08).
+class PhraseConstructions extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  TextColumn get name => text()();
+  IntColumn get ordering => integer().withDefault(const Constant(0))();
+}
+
+/// Phase 10 — one slot in a phrase construction (D-06, D-07).
+class ConstructionSlots extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  IntColumn get constructionId =>
+      integer().references(PhraseConstructions, #id,
+          onDelete: KeyAction.cascade)();
+  TextColumn get slotType => text()(); // 'gloss_tag' | 'pos'
+  TextColumn get slotValue => text()(); // e.g. 'NEG', 'V', 'DEF'
+  TextColumn get label => text().nullable()();
+  IntColumn get ordering => integer().withDefault(const Constant(0))();
 }
 
 // ---------------------------------------------------------------------------
@@ -422,6 +449,8 @@ class StandardFormPatterns extends Table {
     InflectionalRulePOS, // v9
     LexemeParents, // v9
     StandardFormPatterns, // v10 (04-17)
+    PhraseConstructions, // v15 (Phase 10)
+    ConstructionSlots, // v15 (Phase 10)
   ],
   daos: [
     PhonemeDao,
@@ -437,6 +466,7 @@ class StandardFormPatterns extends Table {
     LexemeParentsDao, // v9 gap D-62
     MarkerDao, // v9 gap D-44 (re-registered after 04-11 regression)
     StandardFormPatternDao, // v10 (04-17)
+    ConstructionDao, // v15 (Phase 10)
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -447,7 +477,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase(super.e);
 
   @override
-  int get schemaVersion => 14;
+  int get schemaVersion => 15;
 
   @override
   MigrationStrategy get migration {
@@ -675,6 +705,13 @@ class AppDatabase extends _$AppDatabase {
           // v14: PhonotacticConstraints.type — distinguishes 'sequence' (existing
           // forbidden-sequence constraints) from 'gemination' constraints.
           await m.addColumn(phonotacticConstraints, phonotacticConstraints.type);
+        }
+        if (from < 15) {
+          // v15: Phase 10 — closed-class columns + construction tables.
+          await m.addColumn(lexemes, lexemes.isClosedClass);
+          await m.addColumn(lexemes, lexemes.glossTag);
+          await m.createTable(phraseConstructions);
+          await m.createTable(constructionSlots);
         }
       },
       beforeOpen: (details) async {
