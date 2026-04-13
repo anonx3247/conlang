@@ -162,28 +162,28 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| AGRAM-01 | TBD | Pending |
-| AGRAM-02 | TBD | Pending |
-| AGRAM-03 | TBD | Pending |
-| WRIT-01 | TBD | Pending |
-| WRIT-02 | TBD | Pending |
-| WRIT-03 | TBD | Pending |
-| WRIT-04 | TBD | Pending |
-| AI-01 | TBD | Pending |
-| AI-02 | TBD | Pending |
-| WSYS-01 | TBD | Pending |
-| WSYS-02 | TBD | Pending |
-| WSYS-03 | TBD | Pending |
-| LEX-09 | TBD | Pending |
-| EVOL-01 | TBD | Pending |
-| EVOL-02 | TBD | Pending |
-| EVOL-03 | TBD | Pending |
+| AGRAM-01 | Phase 10 | Pending |
+| AGRAM-02 | Phase 10 | Pending |
+| AGRAM-03 | Phase 10 | Pending |
+| LEX-09 | Phase 11 | Pending |
+| WRIT-01 | Phase 12 | Pending |
+| WRIT-02 | Phase 12 | Pending |
+| WRIT-03 | Phase 12 | Pending |
+| WRIT-04 | Phase 12 | Pending |
+| WSYS-01 | Phase 13 | Pending |
+| WSYS-02 | Phase 13 | Pending |
+| WSYS-03 | Phase 13 | Pending |
+| AI-01 | Phase 14 | Pending |
+| AI-02 | Phase 14 | Pending |
+| EVOL-01 | Phase 15 | Pending |
+| EVOL-02 | Phase 15 | Pending |
+| EVOL-03 | Phase 16 | Pending |
 
 **Coverage:**
 - v2.0 requirements: 16 total
-- Mapped to phases: 0
-- Unmapped: 16 ⚠️
+- Mapped to phases: 16
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-04-08*
-*Last updated: 2026-04-13 after v2.0 milestone requirements definition*
+*Last updated: 2026-04-13 after v2.0 roadmap creation*
