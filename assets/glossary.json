@@ -1,0 +1,1712 @@
+[
+  {
+    "term": "phoneme",
+    "category": "Phonology",
+    "definition": "The smallest unit of sound in a language that distinguishes one word from another. Phonemes are abstract mental representations; their physical realizations are allophones.",
+    "seeAlso": [
+      "allophone",
+      "minimal pair",
+      "phonological rule"
+    ],
+    "example": "In English, /p/ and /b/ are separate phonemes: 'pat' and 'bat' have different meanings due to this single sound difference."
+  },
+  {
+    "term": "allophone",
+    "category": "Phonology",
+    "definition": "A phonetic variant of a phoneme that does not change meaning. Allophones occur in predictable phonetic environments defined by phonological rules.",
+    "seeAlso": [
+      "phoneme",
+      "phonological rule",
+      "complementary distribution"
+    ],
+    "example": "In English, the /p/ in 'pin' is aspirated [pʰ] but the /p/ in 'spin' is unaspirated [p] — two sounds, one phoneme."
+  },
+  {
+    "term": "minimal pair",
+    "category": "Phonology",
+    "definition": "Two words that differ by only a single phoneme in the same position, used to demonstrate that two sounds are distinct phonemes in a language.",
+    "seeAlso": [
+      "phoneme"
+    ],
+    "example": "'Bat' and 'pat' form a minimal pair in English, proving that /b/ and /p/ are distinct phonemes."
+  },
+  {
+    "term": "phonological rule",
+    "category": "Phonology",
+    "definition": "A formal statement describing how phonemes are systematically altered in certain phonetic environments. Written as A → B / C _ D, meaning A becomes B when preceded by C and followed by D.",
+    "seeAlso": [
+      "allophone",
+      "assimilation",
+      "dissimilation"
+    ],
+    "example": "In English, the vowel in 'divine' [dɪˈvaɪn] shortens in 'divinity' [dɪˈvɪnɪti] — a rule triggered by the shift in stress."
+  },
+  {
+    "term": "assimilation",
+    "category": "Phonology",
+    "definition": "A phonological process in which a sound becomes more similar to a neighboring sound in terms of place or manner of articulation. Can be regressive (anticipatory) or progressive.",
+    "seeAlso": [
+      "dissimilation",
+      "phonological rule",
+      "nasal assimilation"
+    ],
+    "example": "The prefix 'in-' becomes 'im-' before bilabials: 'impossible', 'imbalance' — the nasal assimilates to the following consonant's place."
+  },
+  {
+    "term": "dissimilation",
+    "category": "Phonology",
+    "definition": "A phonological process in which a sound becomes less similar to a neighboring sound, often to make the two sounds easier to distinguish.",
+    "seeAlso": [
+      "assimilation",
+      "phonological rule"
+    ],
+    "example": "Latin 'peregrīnus' became 'pelegrīnus' (and later 'pilgrim') — the first /r/ changed to /l/ to avoid two /r/ sounds nearby."
+  },
+  {
+    "term": "vowel harmony",
+    "category": "Phonology",
+    "definition": "A phonological process in which all vowels within a word must share a common feature (e.g., front/back or ATR). Common in Turkic and Mongolian languages.",
+    "seeAlso": [
+      "assimilation",
+      "ATR",
+      "rounding harmony"
+    ],
+    "example": "In Turkish, 'ev' (house) takes the suffix '-ler' (plural: 'evler'), but 'at' (horse) takes '-lar' ('atlar') because back vowels require back suffixes."
+  },
+  {
+    "term": "nasal assimilation",
+    "category": "Phonology",
+    "definition": "A process by which a nasal consonant takes on the place of articulation of a following stop consonant.",
+    "seeAlso": [
+      "assimilation",
+      "place of articulation"
+    ],
+    "example": "In English, 'input' is often pronounced [ˈɪmpʊt] — the /n/ becomes [m] to match the bilabial place of the following /p/."
+  },
+  {
+    "term": "lenition",
+    "category": "Phonology",
+    "definition": "A weakening of consonants, often as a result of being in a medial or intervocalic position. Examples include voicing of stops and spirantization.",
+    "seeAlso": [
+      "spirantization",
+      "voicing"
+    ],
+    "example": "In Spanish, the /d/ in 'nada' is pronounced as a fricative [ð] between vowels: [ˈnaða], weakened from its stop form."
+  },
+  {
+    "term": "spirantization",
+    "category": "Phonology",
+    "definition": "The change of a stop consonant into a fricative or spirant, a common type of lenition.",
+    "seeAlso": [
+      "lenition",
+      "fricative"
+    ],
+    "example": "In Celtic languages, an original stop /k/ became a fricative /x/: Irish 'a chat' [ə xat] from 'cat' after lenition."
+  },
+  {
+    "term": "metathesis",
+    "category": "Phonology",
+    "definition": "A phonological process in which two sounds switch positions within a word.",
+    "seeAlso": [
+      "phonological rule"
+    ],
+    "example": "Old English 'bridd' became Modern English 'bird' — the /r/ and /i/ switched positions."
+  },
+  {
+    "term": "epenthesis",
+    "category": "Phonology",
+    "definition": "The insertion of a sound (usually a vowel) into a word, often to break up an otherwise impermissible consonant cluster.",
+    "seeAlso": [
+      "phonotactics",
+      "cluster"
+    ],
+    "example": "When English speakers say 'film' as [fɪləm], they insert a vowel to break up the /lm/ cluster."
+  },
+  {
+    "term": "syncope",
+    "category": "Phonology",
+    "definition": "The deletion of a vowel, typically an unstressed one, from within a word (not at the beginning or end).",
+    "seeAlso": [
+      "apocope",
+      "elision"
+    ],
+    "example": "In casual English, 'every' is often pronounced [ˈɛvɹi] rather than [ˈɛvəɹi], deleting the middle vowel."
+  },
+  {
+    "term": "apocope",
+    "category": "Phonology",
+    "definition": "The loss of a sound or sounds at the end of a word.",
+    "seeAlso": [
+      "syncope",
+      "elision"
+    ],
+    "example": "Old French 'grande' lost its final vowel to become Modern French 'grand' [ɡʁɑ̃]."
+  },
+  {
+    "term": "phonotactics",
+    "category": "Phonology",
+    "definition": "The constraints on permissible sound sequences in a language. Phonotactic rules specify which sounds may appear in which positions (onset, nucleus, coda) and what clusters are allowed.",
+    "seeAlso": [
+      "syllable structure",
+      "onset",
+      "coda",
+      "nucleus"
+    ],
+    "example": "English allows 'str-' onsets ('string') but not 'sr-' — you'll never find a native English word starting with /sr/."
+  },
+  {
+    "term": "syllable structure",
+    "category": "Phonology",
+    "definition": "The internal organization of a syllable into onset, nucleus, and coda. Commonly represented as (C)V(C) or through moraic theory.",
+    "seeAlso": [
+      "onset",
+      "nucleus",
+      "coda",
+      "mora",
+      "phonotactics"
+    ],
+    "example": "The English word 'strengths' has the structure CCCVCCC — a complex onset and coda that many languages would not permit."
+  },
+  {
+    "term": "onset",
+    "category": "Phonology",
+    "definition": "The consonant or consonant cluster that begins a syllable, preceding the nucleus.",
+    "seeAlso": [
+      "coda",
+      "nucleus",
+      "syllable structure"
+    ],
+    "example": "In 'plan', the onset is /pl/; in 'an', there is no onset (the syllable starts directly with the vowel)."
+  },
+  {
+    "term": "coda",
+    "category": "Phonology",
+    "definition": "The consonant or consonant cluster that follows the nucleus of a syllable.",
+    "seeAlso": [
+      "onset",
+      "nucleus",
+      "syllable structure"
+    ],
+    "example": "In 'cat', the coda is /t/; in 'sea', there is no coda (the syllable is open)."
+  },
+  {
+    "term": "nucleus",
+    "category": "Phonology",
+    "definition": "The core of a syllable, typically a vowel or syllabic consonant. The nucleus is the only obligatory part of a syllable.",
+    "seeAlso": [
+      "onset",
+      "coda",
+      "syllable structure"
+    ],
+    "example": "In the syllable 'cat' /kæt/, the vowel /æ/ is the nucleus — the loudest, most sonorous part."
+  },
+  {
+    "term": "mora",
+    "category": "Phonology",
+    "definition": "A unit of syllabic weight. Short vowels are monomoraic; long vowels and diphthongs are bimoraic. Used in quantity-sensitive phonological processes.",
+    "seeAlso": [
+      "syllable structure",
+      "weight"
+    ],
+    "example": "In Japanese, 'ka' (か) is one mora while 'kaa' (かあ) is two moras — this length difference is meaningful for pitch accent and poetry."
+  },
+  {
+    "term": "stress",
+    "category": "Phonology",
+    "definition": "The relative prominence of a syllable, typically realized through greater loudness, pitch, or duration. Languages vary in whether stress is fixed, free, or predictable.",
+    "seeAlso": [
+      "tone",
+      "pitch accent",
+      "mora"
+    ],
+    "example": "In English, 'REcord' (noun) vs. 're-CORD' (verb) shows how stress placement can distinguish meaning."
+  },
+  {
+    "term": "tone",
+    "category": "Phonology",
+    "definition": "The use of pitch to distinguish lexical or grammatical meaning. Tonal languages include Mandarin, Yoruba, and many Southeast Asian languages.",
+    "seeAlso": [
+      "pitch accent",
+      "stress",
+      "register tone"
+    ],
+    "example": "In Mandarin, 'mā' (high tone) means 'mother', while 'mǎ' (dipping tone) means 'horse' — same segments, different pitch, different word."
+  },
+  {
+    "term": "pitch accent",
+    "category": "Phonology",
+    "definition": "A system in which pitch is used to distinguish words but each word has only one accented syllable rather than multiple tones.",
+    "seeAlso": [
+      "tone",
+      "stress"
+    ],
+    "example": "In Japanese, 'háshi' (with pitch drop after 'ha') means 'chopsticks', while 'hashí' (with late pitch drop) means 'bridge'."
+  },
+  {
+    "term": "place of articulation",
+    "category": "Phonology",
+    "definition": "The location in the vocal tract where airflow is most constricted during the production of a consonant. Includes bilabial, labiodental, dental, alveolar, palatal, velar, and uvular.",
+    "seeAlso": [
+      "manner of articulation",
+      "voicing"
+    ],
+    "example": "English /p/ is bilabial (both lips), /t/ is alveolar (tongue tip at the ridge behind the teeth), and /k/ is velar (tongue body at the soft palate)."
+  },
+  {
+    "term": "manner of articulation",
+    "category": "Phonology",
+    "definition": "The way airflow is modified in producing a consonant: stop, fricative, affricate, nasal, approximant, trill, tap, etc.",
+    "seeAlso": [
+      "place of articulation",
+      "voicing"
+    ],
+    "example": "English /t/ is a stop (complete closure), /s/ is a fricative (narrow gap), and /l/ is an approximant (open gap) — all at the alveolar place."
+  },
+  {
+    "term": "voicing",
+    "category": "Phonology",
+    "definition": "The vibration of the vocal folds during the production of a sound. Voiced sounds (e.g. /b/, /d/) involve vibration; voiceless sounds (e.g. /p/, /t/) do not.",
+    "seeAlso": [
+      "place of articulation",
+      "manner of articulation"
+    ],
+    "example": "Hold your hand on your throat: /z/ in 'zoo' vibrates (voiced), while /s/ in 'sue' does not (voiceless)."
+  },
+  {
+    "term": "complementary distribution",
+    "category": "Phonology",
+    "definition": "Two sounds are in complementary distribution when they never appear in the same phonetic environment. This is evidence that they are allophones of the same phoneme.",
+    "seeAlso": [
+      "allophone",
+      "free variation"
+    ],
+    "example": "English [l] (clear, before vowels: 'lip') and [ɫ] (dark, after vowels: 'pill') never appear in each other's environment — they are allophones of /l/."
+  },
+  {
+    "term": "free variation",
+    "category": "Phonology",
+    "definition": "Two sounds are in free variation when they can substitute for each other without changing word meaning and without being conditioned by phonetic environment.",
+    "seeAlso": [
+      "complementary distribution",
+      "allophone"
+    ],
+    "example": "Some English speakers pronounce 'either' as [ˈiːðɚ] and others as [ˈaɪðɚ] — both are acceptable with no change in meaning."
+  },
+  {
+    "term": "ATR",
+    "category": "Phonology",
+    "definition": "Advanced Tongue Root — a phonological feature distinguishing vowels produced with the tongue root pushed forward (+ATR) from those with it retracted (-ATR). Significant in vowel harmony systems of West African and East African languages.",
+    "seeAlso": [
+      "vowel harmony"
+    ],
+    "example": "In Akan (Ghana), the vowels [i, e, o, u] are +ATR, while [ɪ, ɛ, ɔ, ʊ] are -ATR; all vowels in a word must agree in this feature."
+  },
+  {
+    "term": "cluster",
+    "category": "Phonology",
+    "definition": "A sequence of two or more consonants without an intervening vowel. Languages vary in which clusters are permitted by their phonotactics.",
+    "seeAlso": [
+      "phonotactics",
+      "epenthesis",
+      "onset"
+    ],
+    "example": "English allows the onset cluster /spl/ as in 'splash', but Japanese has no onset clusters at all — every consonant must be followed by a vowel."
+  },
+  {
+    "term": "morpheme",
+    "category": "Morphology",
+    "definition": "The smallest meaningful unit in a language. Morphemes can be free (can stand alone as a word) or bound (must attach to another morpheme).",
+    "seeAlso": [
+      "free morpheme",
+      "bound morpheme",
+      "allomorph"
+    ],
+    "example": "'Unbreakable' contains three morphemes: 'un-' (not), 'break' (core meaning), and '-able' (capable of)."
+  },
+  {
+    "term": "free morpheme",
+    "category": "Morphology",
+    "definition": "A morpheme that can stand alone as a word (e.g., 'book', 'run', 'happy').",
+    "seeAlso": [
+      "morpheme",
+      "bound morpheme"
+    ],
+    "example": "'Book', 'run', and 'happy' are free morphemes — each can stand alone as a complete word."
+  },
+  {
+    "term": "bound morpheme",
+    "category": "Morphology",
+    "definition": "A morpheme that cannot stand alone and must attach to another morpheme. Includes prefixes, suffixes, infixes, and circumfixes.",
+    "seeAlso": [
+      "morpheme",
+      "affix",
+      "free morpheme"
+    ],
+    "example": "In 'unhappiness', both 'un-' and '-ness' are bound morphemes — neither can be used as a standalone word."
+  },
+  {
+    "term": "affix",
+    "category": "Morphology",
+    "definition": "A bound morpheme attached to a base or stem to derive a new form or mark grammatical categories. Types include prefix, suffix, infix, circumfix, suprafix, and transfix.",
+    "seeAlso": [
+      "prefix",
+      "suffix",
+      "infix",
+      "circumfix",
+      "bound morpheme"
+    ],
+    "example": "In 'redo', 're-' is a prefix affix; in 'kindness', '-ness' is a suffix affix — both attach to a base to form a new word."
+  },
+  {
+    "term": "prefix",
+    "category": "Morphology",
+    "definition": "An affix attached to the beginning of a base or stem.",
+    "seeAlso": [
+      "suffix",
+      "infix",
+      "affix"
+    ],
+    "example": "In 'unhappy', 'un-' is a prefix that reverses the meaning of 'happy'."
+  },
+  {
+    "term": "suffix",
+    "category": "Morphology",
+    "definition": "An affix attached to the end of a base or stem.",
+    "seeAlso": [
+      "prefix",
+      "infix",
+      "affix"
+    ],
+    "example": "In 'kindness', '-ness' is a suffix that turns the adjective 'kind' into a noun."
+  },
+  {
+    "term": "infix",
+    "category": "Morphology",
+    "definition": "An affix inserted within the base of a word rather than at its edges. Common in Tagalog and some Native American languages.",
+    "seeAlso": [
+      "prefix",
+      "suffix",
+      "affix"
+    ],
+    "example": "In Tagalog, 'sulat' (write) becomes 'sumulat' (wrote) by inserting '-um-' after the first consonant."
+  },
+  {
+    "term": "circumfix",
+    "category": "Morphology",
+    "definition": "An affix consisting of two parts that attach to both ends of a base simultaneously. Also called a discontinuous affix.",
+    "seeAlso": [
+      "prefix",
+      "suffix",
+      "affix"
+    ],
+    "example": "In German, 'spielen' (to play) becomes 'gespielt' (played) using the circumfix 'ge-...-t' wrapped around the stem."
+  },
+  {
+    "term": "allomorph",
+    "category": "Morphology",
+    "definition": "A phonological variant of a morpheme. For example, the English plural morpheme has allomorphs /-s/, /-z/, and /-ɪz/ depending on the final sound of the base.",
+    "seeAlso": [
+      "morpheme",
+      "phonological rule"
+    ],
+    "example": "The English plural has three allomorphs: /s/ after voiceless sounds ('cats'), /z/ after voiced sounds ('dogs'), and /ɪz/ after sibilants ('buses')."
+  },
+  {
+    "term": "root",
+    "category": "Morphology",
+    "definition": "The core morpheme of a word that carries its basic lexical meaning, to which affixes may be added. Distinct from stem, which may include some affixes.",
+    "seeAlso": [
+      "stem",
+      "base",
+      "morpheme"
+    ],
+    "example": "In 'unhappiness', the root is 'happy' — it carries the core meaning to which 'un-' and '-ness' are added."
+  },
+  {
+    "term": "stem",
+    "category": "Morphology",
+    "definition": "The form of a word to which inflectional affixes are attached. A stem may be identical to the root or may include derivational affixes.",
+    "seeAlso": [
+      "root",
+      "base",
+      "inflection"
+    ],
+    "example": "In 'replayable', the stem for '-able' is 'replay' (root 'play' + prefix 're-'), not the bare root 'play'."
+  },
+  {
+    "term": "base",
+    "category": "Morphology",
+    "definition": "The form to which any morphological operation applies. A base is more general than root or stem, as it can be a simple root, a derived form, or even a compound.",
+    "seeAlso": [
+      "root",
+      "stem"
+    ],
+    "example": "In 'unplayable', 'playable' serves as the base for the prefix 'un-', even though 'playable' is itself a derived form."
+  },
+  {
+    "term": "inflection",
+    "category": "Morphology",
+    "definition": "The process of adding morphological material to a word to mark grammatical categories such as tense, aspect, number, case, gender, or agreement, without changing the word's core meaning or part of speech.",
+    "seeAlso": [
+      "derivation",
+      "paradigm",
+      "declension",
+      "conjugation"
+    ],
+    "example": "'Walk', 'walks', 'walked', 'walking' — the word stays a verb throughout; only tense, aspect, and agreement change."
+  },
+  {
+    "term": "derivation",
+    "category": "Morphology",
+    "definition": "The process of forming a new word from an existing one, typically changing its meaning or part of speech (e.g., 'happy' → 'happiness').",
+    "seeAlso": [
+      "inflection",
+      "root",
+      "word formation"
+    ],
+    "example": "Adding '-ness' to the adjective 'dark' creates the noun 'darkness' — the part of speech has changed."
+  },
+  {
+    "term": "paradigm",
+    "category": "Morphology",
+    "definition": "The complete set of inflected forms of a word. For example, the paradigm of a Latin noun includes all case and number forms.",
+    "seeAlso": [
+      "inflection",
+      "declension",
+      "conjugation"
+    ],
+    "example": "The Latin noun 'puella' (girl) has the paradigm: puella, puellam, puellae, puellae, puellā — one form for each case in the singular."
+  },
+  {
+    "term": "declension",
+    "category": "Morphology",
+    "definition": "The inflection of nouns, pronouns, and adjectives for case, number, and gender. Languages that organize nouns into classes with similar paradigms are said to have declension classes.",
+    "seeAlso": [
+      "paradigm",
+      "case",
+      "inflection"
+    ],
+    "example": "Russian nouns like 'kniga' (book) decline: kniga (nom.), knigu (acc.), knigi (gen.) — each case form is part of its declension."
+  },
+  {
+    "term": "conjugation",
+    "category": "Morphology",
+    "definition": "The inflection of verbs for categories such as tense, aspect, mood, voice, person, and number.",
+    "seeAlso": [
+      "paradigm",
+      "inflection",
+      "tense",
+      "aspect"
+    ],
+    "example": "Spanish 'hablar' (to speak) conjugates: hablo, hablas, habla, hablamos, habláis, hablan — one form for each person/number."
+  },
+  {
+    "term": "ablaut",
+    "category": "Morphology",
+    "definition": "A systematic vowel alternation within a root that signals grammatical distinctions. The English strong verb system shows ablaut: sing/sang/sung.",
+    "seeAlso": [
+      "umlaut",
+      "apophony",
+      "root"
+    ],
+    "example": "English 'sing, sang, sung' shows ablaut — the vowel changes to mark past tense and past participle without any suffix."
+  },
+  {
+    "term": "umlaut",
+    "category": "Morphology",
+    "definition": "A type of vowel alternation in which a vowel is fronted due to a front vowel or /j/ in a following syllable. The German plural umlaut (Fuß → Füße) is a well-known example.",
+    "seeAlso": [
+      "ablaut",
+      "vowel harmony",
+      "apophony"
+    ],
+    "example": "German 'Mutter' (mother) becomes 'Mütter' (mothers) — the /u/ fronts to /y/ (spelled ü) to mark plural."
+  },
+  {
+    "term": "apophony",
+    "category": "Morphology",
+    "definition": "Any systematic alternation of sounds within a morpheme to signal a grammatical or lexical contrast. Includes ablaut and umlaut as subtypes.",
+    "seeAlso": [
+      "ablaut",
+      "umlaut"
+    ],
+    "example": "English uses vowel alternation for both tense ('drive/drove') and derivation ('food/feed') — both are types of apophony."
+  },
+  {
+    "term": "suppletion",
+    "category": "Morphology",
+    "definition": "An inflectional relationship between two forms of the same lexeme where the forms share no phonological resemblance (e.g., English 'go'/'went', 'good'/'better').",
+    "seeAlso": [
+      "paradigm",
+      "inflection"
+    ],
+    "example": "The past tense of 'go' is 'went' (from a completely different root), not '*goed' — there is no phonological resemblance."
+  },
+  {
+    "term": "reduplication",
+    "category": "Morphology",
+    "definition": "A morphological process that copies all or part of a base to signal a grammatical or lexical meaning, such as plurality, intensity, or repetition.",
+    "seeAlso": [
+      "morpheme",
+      "affix"
+    ],
+    "example": "In Indonesian, 'rumah' means 'house' and 'rumah-rumah' means 'houses' — the whole word is copied to mark plural."
+  },
+  {
+    "term": "agglutinative",
+    "category": "Morphology",
+    "definition": "A morphological type in which words are formed by stringing together morphemes that are clearly separable and each corresponds to a single grammatical meaning. Finnish and Swahili are classic examples.",
+    "seeAlso": [
+      "fusional",
+      "isolating",
+      "polysynthetic",
+      "morphological type"
+    ],
+    "example": "Turkish 'evlerinizden' breaks down as ev-ler-iniz-den (house-PL-your-from), meaning 'from your houses' — each suffix adds one meaning."
+  },
+  {
+    "term": "fusional",
+    "category": "Morphology",
+    "definition": "A morphological type (also called inflecting or synthetic) in which a single morpheme expresses multiple grammatical meanings simultaneously. Latin case endings are a typical example.",
+    "seeAlso": [
+      "agglutinative",
+      "isolating",
+      "morphological type"
+    ],
+    "example": "The Latin ending '-ō' in 'amō' (I love) simultaneously marks first person, singular, present tense, active voice, and indicative mood."
+  },
+  {
+    "term": "isolating",
+    "category": "Morphology",
+    "definition": "A morphological type in which words consist of single morphemes with no inflection. Grammatical relations are expressed through word order and particles. Mandarin is a prototypical example.",
+    "seeAlso": [
+      "agglutinative",
+      "fusional",
+      "morphological type"
+    ],
+    "example": "In Mandarin, 'wǒ gěi nǐ shū' (I give you book) uses separate unchanged words — no inflection on any of them."
+  },
+  {
+    "term": "polysynthetic",
+    "category": "Morphology",
+    "definition": "A morphological type in which words contain many morphemes and can express what other languages might say in an entire sentence. Common in indigenous North American languages.",
+    "seeAlso": [
+      "agglutinative",
+      "morphological type",
+      "incorporation"
+    ],
+    "example": "In Mohawk, 'washakotya'tawitsherahetkvhta'se' is a single word meaning 'he made the thing that one puts on one's body ugly for her'."
+  },
+  {
+    "term": "morphological type",
+    "category": "Morphology",
+    "definition": "The classification of languages according to their dominant morphological strategy: isolating, agglutinative, fusional, or polysynthetic. Most languages exhibit features of more than one type.",
+    "seeAlso": [
+      "agglutinative",
+      "fusional",
+      "isolating",
+      "polysynthetic"
+    ],
+    "example": "English is mostly analytic/isolating ('I will go') but shows fusional traits ('went') and some agglutination ('un-break-able')."
+  },
+  {
+    "term": "incorporation",
+    "category": "Morphology",
+    "definition": "A process in which a nominal (noun) is incorporated into a verb to form a compound predicate. Particularly common in polysynthetic languages.",
+    "seeAlso": [
+      "polysynthetic",
+      "compound"
+    ],
+    "example": "In Mohawk, 'wahr-ake' (I eat) can incorporate a noun to become 'wa-k-ahkw-ahni-rake' (I meat-eat), fusing object and verb into one word."
+  },
+  {
+    "term": "compound",
+    "category": "Morphology",
+    "definition": "A word formed by combining two or more free morphemes or roots. Compounds may be endocentric (the meaning is a hyponym of one constituent) or exocentric.",
+    "seeAlso": [
+      "derivation",
+      "root",
+      "word formation"
+    ],
+    "example": "'Blackbird' is an endocentric compound (it is a type of bird); 'pickpocket' is exocentric (it is not a type of pocket)."
+  },
+  {
+    "term": "word formation",
+    "category": "Morphology",
+    "definition": "The set of morphological and phonological processes used to create new words, including derivation, compounding, reduplication, and conversion.",
+    "seeAlso": [
+      "derivation",
+      "compound",
+      "inflection"
+    ],
+    "example": "English creates new words through compounding ('sun+flower'), derivation ('hope+ful'), and conversion ('to google' from the noun 'Google')."
+  },
+  {
+    "term": "zero morpheme",
+    "category": "Morphology",
+    "definition": "An invisible or phonologically null morpheme that nonetheless carries grammatical meaning, as in English 'sheep' (plural unmarked) or 'cut' (past tense unmarked).",
+    "seeAlso": [
+      "morpheme",
+      "inflection"
+    ],
+    "example": "English 'sheep' is both singular and plural — the plural is marked by a zero morpheme (∅), with no visible change."
+  },
+  {
+    "term": "clitic",
+    "category": "Morphology",
+    "definition": "A morpheme that behaves phonologically like an affix (attached to a host) but syntactically like an independent word. English 's (possessive) and 'll (future) are clitics.",
+    "seeAlso": [
+      "bound morpheme",
+      "affix",
+      "word"
+    ],
+    "example": "In English 'she'll go', the contracted 'll' is a clitic — it behaves like a separate word syntactically but attaches phonologically to 'she'."
+  },
+  {
+    "term": "phrase structure",
+    "category": "Syntax",
+    "definition": "The hierarchical organization of words into phrases and clauses. Phrase structure rules specify how constituents are combined; commonly represented in tree diagrams.",
+    "seeAlso": [
+      "constituent",
+      "head",
+      "X-bar theory"
+    ],
+    "example": "'The big cat sat' has the structure [S [NP [Det the] [AP big] [N cat]] [VP [V sat]]] — words group into nested phrases."
+  },
+  {
+    "term": "constituent",
+    "category": "Syntax",
+    "definition": "A syntactic unit that functions as part of a larger construction. Constituents are identified by constituency tests such as substitution, movement, and coordination.",
+    "seeAlso": [
+      "phrase structure",
+      "head"
+    ],
+    "example": "In 'the old man', you can replace the whole phrase with 'he', showing that 'the old man' is a single constituent (NP)."
+  },
+  {
+    "term": "head",
+    "category": "Syntax",
+    "definition": "The obligatory, central element of a phrase that determines the phrase's category and distributional properties. Phrases are named after their heads: NP, VP, AP, PP.",
+    "seeAlso": [
+      "phrase structure",
+      "complement",
+      "specifier"
+    ],
+    "example": "In 'very tall buildings', 'buildings' is the head of the noun phrase — it determines that the whole phrase is an NP."
+  },
+  {
+    "term": "complement",
+    "category": "Syntax",
+    "definition": "A syntactic argument that completes the meaning of the head. The complement is typically selected (subcategorized) by the head.",
+    "seeAlso": [
+      "head",
+      "adjunct",
+      "specifier"
+    ],
+    "example": "In 'put the book on the shelf', 'on the shelf' is the complement of 'put' — the sentence is incomplete without it."
+  },
+  {
+    "term": "adjunct",
+    "category": "Syntax",
+    "definition": "An optional syntactic constituent that modifies a head or phrase without being selected by it. Adjuncts are typically adverbs, adverbials, or prepositional phrases.",
+    "seeAlso": [
+      "complement",
+      "head"
+    ],
+    "example": "In 'She sang beautifully in the park', both 'beautifully' and 'in the park' are adjuncts — removable modifiers of the verb."
+  },
+  {
+    "term": "specifier",
+    "category": "Syntax",
+    "definition": "In X-bar theory, the position at the edge of a maximal projection that is occupied by determiners, degree modifiers, or subjects.",
+    "seeAlso": [
+      "head",
+      "X-bar theory",
+      "determiner"
+    ],
+    "example": "In 'the cat', 'the' is the specifier of the noun phrase, sitting in the Spec position of the determiner phrase."
+  },
+  {
+    "term": "X-bar theory",
+    "category": "Syntax",
+    "definition": "A theory of phrase structure in which every phrase has an intermediate bar-level (X') between the head (X) and the maximal projection (XP), allowing for a uniform hierarchical template.",
+    "seeAlso": [
+      "phrase structure",
+      "head",
+      "specifier"
+    ],
+    "example": "An NP like 'the student of physics' has structure [NP [Spec the] [N' [N student] [PP of physics]]], with N' as the intermediate bar level."
+  },
+  {
+    "term": "word order",
+    "category": "Syntax",
+    "definition": "The canonical order of subject, verb, and object in declarative clauses. Common typological patterns are SOV, SVO, VSO, VOS, OVS, and OVS.",
+    "seeAlso": [
+      "SOV",
+      "SVO",
+      "VSO",
+      "typological parameter"
+    ],
+    "example": "English is SVO ('The cat chased the dog'), Japanese is SOV ('Neko ga inu o oikaketa'), and Welsh is VSO ('Gwelodd y gath y ci')."
+  },
+  {
+    "term": "SOV",
+    "category": "Syntax",
+    "definition": "Subject-Object-Verb word order. The most common order cross-linguistically, found in Japanese, Turkish, and Hindi.",
+    "seeAlso": [
+      "word order",
+      "SVO",
+      "VSO"
+    ],
+    "example": "In Japanese, 'Neko ga sakana o tabeta' (cat SUBJ fish OBJ ate) places the verb last: 'The cat ate the fish.'"
+  },
+  {
+    "term": "SVO",
+    "category": "Syntax",
+    "definition": "Subject-Verb-Object word order. Characteristic of English, French, Mandarin, and Swahili.",
+    "seeAlso": [
+      "word order",
+      "SOV",
+      "VSO"
+    ],
+    "example": "English 'The dog bit the man' follows Subject-Verb-Object order — rearranging to 'The man bit the dog' changes who did the biting."
+  },
+  {
+    "term": "VSO",
+    "category": "Syntax",
+    "definition": "Verb-Subject-Object word order. Common in Classical Arabic, Welsh, and many Austronesian languages.",
+    "seeAlso": [
+      "word order",
+      "SOV",
+      "SVO"
+    ],
+    "example": "In Welsh, 'Gwelodd y dyn y ci' (saw the man the dog) starts with the verb: 'The man saw the dog.'"
+  },
+  {
+    "term": "agreement",
+    "category": "Syntax",
+    "definition": "A grammatical relationship in which one word (the controller) determines the morphological form of another word (the target). Common agreement features include person, number, gender, and case.",
+    "seeAlso": [
+      "inflection",
+      "feature",
+      "subject"
+    ],
+    "example": "In Spanish, 'Las casas rojas son bonitas' — the adjectives and verb all agree with the feminine plural noun 'casas'."
+  },
+  {
+    "term": "argument structure",
+    "category": "Syntax",
+    "definition": "The specification of the number and type of arguments (subject, object, indirect object) that a predicate requires. Closely related to the verb's semantic role assignment.",
+    "seeAlso": [
+      "theta role",
+      "valency",
+      "predicate"
+    ],
+    "example": "'Give' requires three arguments (giver, thing, recipient): 'She gave him the book' — omitting any one makes the sentence incomplete."
+  },
+  {
+    "term": "valency",
+    "category": "Syntax",
+    "definition": "The number of arguments a predicate takes. Intransitive verbs have valency 1; transitive verbs have valency 2; ditransitive verbs have valency 3.",
+    "seeAlso": [
+      "argument structure",
+      "transitivity"
+    ],
+    "example": "'Sleep' has valency 1 (just a subject), 'eat' has valency 2 (subject + object), 'give' has valency 3 (subject + object + recipient)."
+  },
+  {
+    "term": "transitivity",
+    "category": "Syntax",
+    "definition": "The property of a verb that determines whether it takes a direct object. Transitive verbs require an object; intransitive verbs do not.",
+    "seeAlso": [
+      "valency",
+      "argument structure"
+    ],
+    "example": "'She ate the cake' is transitive (has a direct object); 'She slept' is intransitive (no direct object)."
+  },
+  {
+    "term": "relative clause",
+    "category": "Syntax",
+    "definition": "A subordinate clause that modifies a noun (the head noun) and is typically introduced by a relative pronoun. Relative clauses are classified as prenominal, postnominal, or internally headed.",
+    "seeAlso": [
+      "subordination",
+      "head",
+      "constituent"
+    ],
+    "example": "In 'The book that I read was great', 'that I read' is a relative clause modifying 'book'."
+  },
+  {
+    "term": "subordination",
+    "category": "Syntax",
+    "definition": "The syntactic relationship in which one clause (the subordinate) is embedded within another (the main clause).",
+    "seeAlso": [
+      "relative clause",
+      "complementizer",
+      "coordination"
+    ],
+    "example": "In 'I know that she left', the clause 'that she left' is subordinate — it is embedded within the main clause as its object."
+  },
+  {
+    "term": "coordination",
+    "category": "Syntax",
+    "definition": "The joining of two or more clauses or phrases of equal syntactic status using a coordinating conjunction (and, or, but).",
+    "seeAlso": [
+      "subordination",
+      "conjunction"
+    ],
+    "example": "In 'She sings and he dances', two independent clauses of equal status are joined by the coordinator 'and'."
+  },
+  {
+    "term": "case",
+    "category": "Syntax",
+    "definition": "A grammatical category that marks the syntactic role of a noun phrase (subject, object, indirect object, possessor, etc.). Realized morphologically (through declension) or syntactically (through position).",
+    "seeAlso": [
+      "nominative",
+      "accusative",
+      "ergative",
+      "dative",
+      "genitive"
+    ],
+    "example": "In German, 'Der Hund' (nominative, the dog as subject) changes to 'Den Hund' (accusative, the dog as object) — case marks syntactic role."
+  },
+  {
+    "term": "nominative",
+    "category": "Syntax",
+    "definition": "The case assigned to the subject of a clause in nominative-accusative alignment systems.",
+    "seeAlso": [
+      "case",
+      "accusative",
+      "ergative",
+      "nominative-accusative"
+    ],
+    "example": "In Latin, 'puella' (nominative) in 'Puella cantat' (The girl sings) marks the girl as the subject."
+  },
+  {
+    "term": "accusative",
+    "category": "Syntax",
+    "definition": "The case assigned to the direct object of a verb in nominative-accusative alignment systems.",
+    "seeAlso": [
+      "case",
+      "nominative",
+      "nominative-accusative"
+    ],
+    "example": "In Latin, 'puellam' (accusative) in 'Video puellam' (I see the girl) marks the girl as the direct object."
+  },
+  {
+    "term": "dative",
+    "category": "Syntax",
+    "definition": "The case assigned to the indirect object or recipient argument in many languages, also used for beneficiaries and goals.",
+    "seeAlso": [
+      "case",
+      "nominative",
+      "accusative"
+    ],
+    "example": "In German, 'dem Kind' (dative) in 'Ich gab dem Kind ein Buch' (I gave the child a book) marks the recipient."
+  },
+  {
+    "term": "genitive",
+    "category": "Syntax",
+    "definition": "The case that typically marks possessors or associates. Also used to express partitivity and measure in many languages.",
+    "seeAlso": [
+      "case",
+      "possession"
+    ],
+    "example": "In Latin, 'puellae' (genitive) in 'liber puellae' (the book of the girl) marks possession."
+  },
+  {
+    "term": "tense",
+    "category": "Syntax",
+    "definition": "A grammatical category that locates an event in time, typically relative to the moment of speech (present, past, future) or to another reference point.",
+    "seeAlso": [
+      "aspect",
+      "mood",
+      "conjugation"
+    ],
+    "example": "English distinguishes past ('walked'), present ('walk/walks'), and future ('will walk') to locate events in time."
+  },
+  {
+    "term": "aspect",
+    "category": "Syntax",
+    "definition": "A grammatical category that expresses the internal temporal structure of an event: whether it is complete (perfective), ongoing (imperfective), habitual, etc.",
+    "seeAlso": [
+      "tense",
+      "mood",
+      "aktionsart"
+    ],
+    "example": "In Russian, 'pisát'' (imperfective, was writing) vs. 'napísát'' (perfective, finished writing) differ in aspect, not tense."
+  },
+  {
+    "term": "mood",
+    "category": "Syntax",
+    "definition": "A grammatical category that expresses the speaker's attitude toward the proposition: indicative (factual), subjunctive (hypothetical), imperative (command), conditional, etc.",
+    "seeAlso": [
+      "tense",
+      "aspect",
+      "modality"
+    ],
+    "example": "In Spanish, 'habla' (indicative: he speaks) vs. 'hable' (subjunctive: that he speak) marks the difference between fact and hypothesis."
+  },
+  {
+    "term": "voice",
+    "category": "Syntax",
+    "definition": "A grammatical category relating to the relationship between the verb and its arguments, particularly which argument is the syntactic subject. Includes active, passive, and middle voice.",
+    "seeAlso": [
+      "passive",
+      "argument structure",
+      "valency"
+    ],
+    "example": "English active 'The cat ate the fish' becomes passive 'The fish was eaten by the cat' — the patient is promoted to subject."
+  },
+  {
+    "term": "passive",
+    "category": "Syntax",
+    "definition": "A voice construction in which the patient or theme argument is promoted to subject position and the agent is demoted or omitted.",
+    "seeAlso": [
+      "voice",
+      "argument structure"
+    ],
+    "example": "'The window was broken (by the ball)' — the patient 'window' becomes the subject, and the agent 'ball' is optional."
+  },
+  {
+    "term": "semantic role",
+    "category": "Semantics",
+    "definition": "The underlying thematic relationship between a noun phrase and the predicate (verb). Core semantic roles include agent, patient, theme, experiencer, recipient, goal, and source.",
+    "seeAlso": [
+      "theta role",
+      "agent",
+      "patient",
+      "argument structure"
+    ],
+    "example": "In 'The chef sliced the bread with a knife', 'the chef' is the agent, 'the bread' is the patient, and 'a knife' is the instrument."
+  },
+  {
+    "term": "theta role",
+    "category": "Semantics",
+    "definition": "A formal label for the semantic relationship between a predicate and its arguments. The theta-criterion holds that each argument receives exactly one theta role.",
+    "seeAlso": [
+      "semantic role",
+      "argument structure"
+    ],
+    "example": "The verb 'give' assigns three theta roles: agent (giver), theme (thing given), and goal (recipient) — each argument gets exactly one."
+  },
+  {
+    "term": "agent",
+    "category": "Semantics",
+    "definition": "The semantic role assigned to the willful initiator or performer of an action.",
+    "seeAlso": [
+      "semantic role",
+      "patient",
+      "theta role"
+    ],
+    "example": "In 'The child kicked the ball', 'the child' is the agent — the one willfully performing the kicking."
+  },
+  {
+    "term": "patient",
+    "category": "Semantics",
+    "definition": "The semantic role assigned to the entity that is affected by or undergoes the action or change described by the verb.",
+    "seeAlso": [
+      "semantic role",
+      "agent",
+      "theta role"
+    ],
+    "example": "In 'The child kicked the ball', 'the ball' is the patient — the entity affected by the kicking."
+  },
+  {
+    "term": "experiencer",
+    "category": "Semantics",
+    "definition": "The semantic role assigned to the entity that perceives or has an internal experience described by a psychological predicate (e.g., 'John knows the answer').",
+    "seeAlso": [
+      "semantic role",
+      "agent",
+      "patient"
+    ],
+    "example": "In 'John fears spiders', 'John' is the experiencer — he undergoes a psychological state rather than performing a physical action."
+  },
+  {
+    "term": "lexical semantics",
+    "category": "Semantics",
+    "definition": "The study of word meaning, including sense relations (synonymy, antonymy, hyponymy), componential analysis, prototype theory, and lexical fields.",
+    "seeAlso": [
+      "sense",
+      "synonymy",
+      "antonymy",
+      "hyponymy"
+    ],
+    "example": "The words 'couch' and 'sofa' are near-synonyms, 'hot' and 'cold' are antonyms, and 'poodle' is a hyponym of 'dog' — all are lexical relations."
+  },
+  {
+    "term": "sense",
+    "category": "Semantics",
+    "definition": "The meaning of a linguistic expression defined by its relationship to other expressions in the language system, as opposed to reference (the real-world entity it denotes).",
+    "seeAlso": [
+      "reference",
+      "lexical semantics",
+      "denotation"
+    ],
+    "example": "The word 'bank' has one sense meaning 'financial institution' and another meaning 'river edge' — these are different senses of the same form."
+  },
+  {
+    "term": "reference",
+    "category": "Semantics",
+    "definition": "The real-world entity or set of entities that a linguistic expression picks out in a given context.",
+    "seeAlso": [
+      "sense",
+      "denotation",
+      "deixis"
+    ],
+    "example": "In 'The morning star is bright', 'the morning star' refers to the planet Venus — the actual object in the world."
+  },
+  {
+    "term": "denotation",
+    "category": "Semantics",
+    "definition": "The literal or primary meaning of a word, as opposed to its connotations. The denotation of 'dog' is any member of the species Canis lupus familiaris.",
+    "seeAlso": [
+      "connotation",
+      "sense",
+      "reference"
+    ],
+    "example": "The denotation of 'dog' is the set of all dogs — any animal that is a member of the species qualifies."
+  },
+  {
+    "term": "connotation",
+    "category": "Semantics",
+    "definition": "The secondary, associative, or evaluative meanings that a word carries beyond its literal denotation.",
+    "seeAlso": [
+      "denotation",
+      "sense"
+    ],
+    "example": "'Home' and 'house' denote the same thing, but 'home' connotes warmth and belonging, while 'house' is neutral."
+  },
+  {
+    "term": "synonymy",
+    "category": "Semantics",
+    "definition": "The relationship between two words that have the same or very similar meaning. True (full) synonymy is rare; most synonyms differ in register, connotation, or collocations.",
+    "seeAlso": [
+      "antonymy",
+      "hyponymy",
+      "lexical semantics"
+    ],
+    "example": "'Big' and 'large' are synonyms, but they differ in collocations: we say 'big sister' but not usually 'large sister'."
+  },
+  {
+    "term": "antonymy",
+    "category": "Semantics",
+    "definition": "The sense relation of opposite meaning. Includes gradable antonyms (hot/cold), complementary antonyms (alive/dead), and relational antonyms (buy/sell).",
+    "seeAlso": [
+      "synonymy",
+      "hyponymy",
+      "lexical semantics"
+    ],
+    "example": "'Hot' and 'cold' are gradable antonyms (there are degrees between them), while 'alive' and 'dead' are complementary (no middle ground)."
+  },
+  {
+    "term": "hyponymy",
+    "category": "Semantics",
+    "definition": "The sense relation in which one word (the hyponym) is more specific than another (the hyperonym or superordinate). 'Dog' is a hyponym of 'animal'.",
+    "seeAlso": [
+      "synonymy",
+      "antonymy",
+      "lexical semantics"
+    ],
+    "example": "'Rose' is a hyponym of 'flower', and 'flower' is a hyponym of 'plant' — each term is more specific than the one above it."
+  },
+  {
+    "term": "polysemy",
+    "category": "Semantics",
+    "definition": "The property of a single word having multiple related senses (e.g., 'bank' as a financial institution and as the side of a river — though these may be homonyms rather than polysemes).",
+    "seeAlso": [
+      "homonymy",
+      "lexical semantics"
+    ],
+    "example": "The word 'head' can mean the body part, the leader of a group, or the top of a nail — related senses of one word."
+  },
+  {
+    "term": "homonymy",
+    "category": "Semantics",
+    "definition": "The relationship between two words that share the same form but have unrelated meanings (e.g., 'bat' the animal vs. 'bat' the implement).",
+    "seeAlso": [
+      "polysemy",
+      "lexical semantics"
+    ],
+    "example": "'Bat' (the animal) and 'bat' (used in cricket) are homonyms — identical forms with completely unrelated meanings."
+  },
+  {
+    "term": "compositionality",
+    "category": "Semantics",
+    "definition": "The principle that the meaning of a complex expression is a function of the meanings of its parts and the syntactic rules combining them.",
+    "seeAlso": [
+      "semantic role",
+      "lexical semantics"
+    ],
+    "example": "'Red car' means a car that is red — the meaning is built from 'red' + 'car'. But 'kick the bucket' (meaning 'die') is not compositional."
+  },
+  {
+    "term": "deixis",
+    "category": "Semantics",
+    "definition": "The phenomenon of expressions whose interpretation depends on contextual features such as the speaker, hearer, time, or place. Includes personal (I/you), temporal (now/then), and spatial (here/there) deixis.",
+    "seeAlso": [
+      "reference",
+      "context"
+    ],
+    "example": "'I', 'here', and 'now' are deictic: 'I am here now' means something completely different depending on who says it, where, and when."
+  },
+  {
+    "term": "modality",
+    "category": "Semantics",
+    "definition": "The semantic domain covering necessity, possibility, permission, and obligation. Grammatically expressed through modal verbs, moods, or particles.",
+    "seeAlso": [
+      "mood",
+      "epistemic modality",
+      "deontic modality"
+    ],
+    "example": "'You must leave' (obligation) vs. 'You might leave' (possibility) — modal verbs express different strengths of necessity and likelihood."
+  },
+  {
+    "term": "epistemic modality",
+    "category": "Semantics",
+    "definition": "Modality relating to the speaker's degree of certainty about a proposition (certainty, probability, possibility).",
+    "seeAlso": [
+      "modality",
+      "deontic modality"
+    ],
+    "example": "'She must be home' (I'm almost certain) vs. 'She might be home' (it's possible) — the speaker's confidence differs."
+  },
+  {
+    "term": "deontic modality",
+    "category": "Semantics",
+    "definition": "Modality relating to obligation, permission, or prohibition. Deontic must means 'it is required that'; deontic may means 'it is permitted that'.",
+    "seeAlso": [
+      "modality",
+      "epistemic modality"
+    ],
+    "example": "'You must wear a seatbelt' (obligation) vs. 'You may park here' (permission) — both are about rules, not probability."
+  },
+  {
+    "term": "aktionsart",
+    "category": "Semantics",
+    "definition": "Lexical aspect or situation type — the inherent temporal structure of a verb or predicate independent of grammatical aspect. Includes states, activities, accomplishments, and achievements (Vendler classes).",
+    "seeAlso": [
+      "aspect",
+      "telicity"
+    ],
+    "example": "'Know' is a state (no endpoint), 'run' is an activity (ongoing), 'build a house' is an accomplishment (has a natural endpoint)."
+  },
+  {
+    "term": "telicity",
+    "category": "Semantics",
+    "definition": "A semantic property of predicates that have a natural endpoint. Telic predicates describe events with an inherent culmination; atelic predicates do not.",
+    "seeAlso": [
+      "aktionsart",
+      "aspect"
+    ],
+    "example": "'She ran' is atelic (no inherent endpoint), while 'She ran a mile' is telic (reaching one mile completes the event)."
+  },
+  {
+    "term": "ergative",
+    "category": "Typology",
+    "definition": "The case (or alignment) assigned to the agent of a transitive verb in ergative-absolutive systems. Contrasts with absolutive, which marks both the patient of transitive verbs and the single argument of intransitive verbs.",
+    "seeAlso": [
+      "absolutive",
+      "nominative-accusative",
+      "split ergativity"
+    ],
+    "example": "In Basque, the agent of 'The man saw the dog' gets a special -k suffix (gizon-a-k), while 'The man slept' has no suffix (gizon-a)."
+  },
+  {
+    "term": "absolutive",
+    "category": "Typology",
+    "definition": "The case that marks the single argument of an intransitive predicate and the patient of a transitive predicate in an ergative-absolutive alignment system.",
+    "seeAlso": [
+      "ergative",
+      "nominative-accusative"
+    ],
+    "example": "In Basque, 'gizona' (the man) in 'The man slept' and 'the dog' in 'The man saw the dog' both take the same absolutive form — no special marking."
+  },
+  {
+    "term": "nominative-accusative",
+    "category": "Typology",
+    "definition": "An alignment system in which the subject of both transitive and intransitive verbs is treated the same (nominative), while the object of a transitive verb receives a different case (accusative). The most common alignment cross-linguistically.",
+    "seeAlso": [
+      "nominative",
+      "accusative",
+      "ergative"
+    ],
+    "example": "In English, 'he' (nominative) is the subject of both 'He ran' and 'He saw her', while 'her' (accusative) marks the object."
+  },
+  {
+    "term": "split ergativity",
+    "category": "Typology",
+    "definition": "A system in which a language uses ergative-absolutive alignment in some contexts and nominative-accusative alignment in others, often conditioned by tense, aspect, or person.",
+    "seeAlso": [
+      "ergative",
+      "nominative-accusative"
+    ],
+    "example": "In Hindi, the past perfective uses ergative alignment ('usne kitaab paṛhii' = he-ERG book read), but the present uses nominative ('vo kitaab paṛhtaa hai')."
+  },
+  {
+    "term": "alignment",
+    "category": "Typology",
+    "definition": "The grammatical pattern that determines how the S (subject of intransitive), A (agent of transitive), and P (patient of transitive) arguments are marked. Major types are nominative-accusative and ergative-absolutive.",
+    "seeAlso": [
+      "nominative-accusative",
+      "ergative",
+      "split ergativity"
+    ],
+    "example": "English groups S and A together ('He slept', 'He hit me' — both 'he'), while Basque groups S and P together — these are different alignment systems."
+  },
+  {
+    "term": "typological parameter",
+    "category": "Typology",
+    "definition": "A cross-linguistically varying grammatical feature that can take a small number of values and tends to correlate with other typological properties.",
+    "seeAlso": [
+      "word order",
+      "alignment",
+      "head-marking"
+    ],
+    "example": "Head-directionality is a typological parameter: head-initial languages (English: 'in the house') contrast with head-final ones (Japanese: 'ie no naka ni')."
+  },
+  {
+    "term": "head-marking",
+    "category": "Typology",
+    "definition": "A typological property in which grammatical information about arguments is marked on the head of a phrase (e.g., agreement on the verb) rather than on the dependents.",
+    "seeAlso": [
+      "dependent-marking",
+      "typological parameter"
+    ],
+    "example": "In Mohawk, 'I see her' is expressed with agreement prefixes on the verb: 'ke-ien-' marks both subject and object on the verb itself."
+  },
+  {
+    "term": "dependent-marking",
+    "category": "Typology",
+    "definition": "A typological property in which grammatical information is marked on the dependent of a construction rather than on the head. Case marking on nouns is an example.",
+    "seeAlso": [
+      "head-marking",
+      "typological parameter"
+    ],
+    "example": "In Latin, 'Puella librum legit' (The girl reads a book) — the role is marked on the nouns ('puella' = nominative, 'librum' = accusative), not the verb."
+  },
+  {
+    "term": "pro-drop",
+    "category": "Typology",
+    "definition": "A typological property of languages that allow the subject (or object) pronoun to be omitted when recoverable from context or verb agreement. Spanish and Italian are pro-drop; English is not.",
+    "seeAlso": [
+      "typological parameter",
+      "agreement"
+    ],
+    "example": "In Spanish, 'Hablo español' means 'I speak Spanish' — no pronoun 'yo' is needed because the verb ending '-o' already indicates first person."
+  },
+  {
+    "term": "numeral classifier",
+    "category": "Typology",
+    "definition": "A morpheme used with numerals to categorize the noun it quantifies according to semantic properties (animacy, shape, size). Common in Mandarin, Japanese, and Burmese.",
+    "seeAlso": [
+      "noun class",
+      "typological parameter"
+    ],
+    "example": "In Mandarin, you say 'sān zhī bǐ' (three CLASSIFIER-for-long-thin-objects pen), not just 'sān bǐ' — the classifier 'zhī' is required."
+  },
+  {
+    "term": "noun class",
+    "category": "Typology",
+    "definition": "A grammatical categorization of nouns into classes based on semantic or formal properties. Classes often trigger agreement on adjectives, verbs, and determiners. Bantu languages have elaborate noun class systems.",
+    "seeAlso": [
+      "grammatical gender",
+      "agreement",
+      "numeral classifier"
+    ],
+    "example": "In Swahili, 'm-tu' (person) takes 'wa-' plural ('wa-tu'), while 'ki-tabu' (book) takes 'vi-' plural ('vi-tabu') — different classes, different prefixes."
+  },
+  {
+    "term": "grammatical gender",
+    "category": "Typology",
+    "definition": "A system for classifying nouns into groups (genders) that trigger agreement on other words. Genders may correlate with biological sex (masculine/feminine) or be semantically arbitrary.",
+    "seeAlso": [
+      "noun class",
+      "agreement"
+    ],
+    "example": "In French, 'la table' (the table) is feminine and 'le livre' (the book) is masculine — the gender is arbitrary and affects the article."
+  },
+  {
+    "term": "evidentiality",
+    "category": "Typology",
+    "definition": "A grammatical category that obligatorily encodes the source of the speaker's information about an event: direct witness, reported speech, inference, etc. Grammaticalized in Quechua, Tibetan, and many other languages.",
+    "seeAlso": [
+      "epistemic modality",
+      "typological parameter"
+    ],
+    "example": "In Turkish, 'gel-di' (he came — I saw it) vs. 'gel-miş' (he came — I heard/inferred it) obligatorily marks information source."
+  },
+  {
+    "term": "mirativity",
+    "category": "Typology",
+    "definition": "A grammatical category encoding whether information is new or unexpected to the speaker. Grammaticalized in some languages alongside evidentiality.",
+    "seeAlso": [
+      "evidentiality",
+      "typological parameter"
+    ],
+    "example": "In Turkish, 'Kar yağ-mış!' (It snowed! — I'm surprised) uses the -miş form to convey that the snow was unexpected to the speaker."
+  },
+  {
+    "term": "animacy",
+    "category": "Typology",
+    "definition": "A semantic property that classifies referents on a scale from most animate (humans, animals) to least animate (abstract concepts, inanimate objects). Animacy hierarchies affect agreement, case, and word order in many languages.",
+    "seeAlso": [
+      "noun class",
+      "semantic role"
+    ],
+    "example": "In Russian, animate masculine nouns use a different accusative form: 'Ja videl studenta' (I saw the student-ACC.ANIM) vs. 'Ja videl stol' (I saw the table-ACC.INANIM)."
+  },
+  {
+    "term": "obviation",
+    "category": "Typology",
+    "definition": "A grammatical category used in Algonquian languages that distinguishes between a proximate third person (the more salient referent) and an obviative third person (the less salient referent).",
+    "seeAlso": [
+      "animacy",
+      "reference"
+    ],
+    "example": "In Ojibwe, if two third persons appear in a sentence, the more prominent one is 'proximate' and the less prominent is marked as 'obviative' with the suffix '-an'."
+  },
+  {
+    "term": "register tone",
+    "category": "Typology",
+    "definition": "A tonal system in which each syllable is assigned a tone on a discrete scale (high, mid, low) without complex contour distinctions. Contrasts with contour tone systems.",
+    "seeAlso": [
+      "tone",
+      "pitch accent"
+    ],
+    "example": "Yoruba has three register tones: high (é), mid (e), and low (è) — 'owó' (money) vs. 'owò' (respect) differ only in tone level."
+  },
+  {
+    "term": "triconsonantal root",
+    "category": "Morphology",
+    "definition": "A Semitic morphological pattern in which a root consisting of three consonants (a triliteral skeleton) carries core lexical meaning, while vowel patterns and affixes mark derivational and inflectional categories.",
+    "seeAlso": [
+      "root",
+      "nonconcatenative morphology",
+      "template morphology"
+    ],
+    "example": "In Arabic, the root k-t-b carries the meaning 'write': 'kitāb' (book), 'kātib' (writer), 'maktūb' (written) — same consonants, different vowel patterns."
+  },
+  {
+    "term": "nonconcatenative morphology",
+    "category": "Morphology",
+    "definition": "Morphological processes in which morphemes are not simply strung end-to-end but interdigitated or overlaid with the base (transfixes, templates). Characteristic of Semitic languages.",
+    "seeAlso": [
+      "triconsonantal root",
+      "template morphology",
+      "concatenative morphology"
+    ],
+    "example": "Arabic 'kataba' (he wrote), 'kutiba' (it was written), 'kitāb' (book) — the root k-t-b is constant, and vowels are interleaved to change meaning."
+  },
+  {
+    "term": "template morphology",
+    "category": "Morphology",
+    "definition": "A morphological system in which words are formed by mapping a root onto an abstract canonical pattern (template) that specifies the distribution of vowels and consonants.",
+    "seeAlso": [
+      "nonconcatenative morphology",
+      "triconsonantal root"
+    ],
+    "example": "In Arabic, the template CaCaCa yields 'kataba' (he wrote), while CuCiCa yields 'kutiba' (it was written) — same root k-t-b mapped onto different patterns."
+  },
+  {
+    "term": "concatenative morphology",
+    "category": "Morphology",
+    "definition": "Morphological processes in which morphemes are combined by simple linear concatenation (affixation, compounding). Contrasts with nonconcatenative morphology.",
+    "seeAlso": [
+      "affix",
+      "nonconcatenative morphology"
+    ],
+    "example": "English 'un-happi-ness' is formed by concatenation: prefix + root + suffix, each morpheme simply placed end-to-end."
+  },
+  {
+    "term": "copula",
+    "category": "Syntax",
+    "definition": "A verb (typically 'be') that links a subject to a predicate nominal or predicate adjective. Some languages lack a copula in present-tense equative sentences (null copula).",
+    "seeAlso": [
+      "predicate",
+      "head"
+    ],
+    "example": "In Russian, 'Ona vrach' (She [is] doctor) has no overt copula in the present tense, while English requires 'is': 'She is a doctor.'"
+  },
+  {
+    "term": "predicate",
+    "category": "Syntax",
+    "definition": "The element of a sentence (typically a verb phrase) that says something about the subject. In formal semantics, a predicate denotes a property or relation.",
+    "seeAlso": [
+      "argument structure",
+      "copula"
+    ],
+    "example": "In 'The dog chased the cat', the predicate is 'chased the cat' — it describes what the subject did."
+  },
+  {
+    "term": "determiner",
+    "category": "Syntax",
+    "definition": "A closed-class word that specifies the reference of a noun phrase (definite article, indefinite article, demonstrative, quantifier).",
+    "seeAlso": [
+      "specifier",
+      "noun class"
+    ],
+    "example": "In 'every student passed', 'every' is a determiner specifying which students — all of them."
+  },
+  {
+    "term": "complementizer",
+    "category": "Syntax",
+    "definition": "A functional element that introduces a subordinate clause, marking it as a complement. In English, 'that' in 'I know that he left' is a complementizer.",
+    "seeAlso": [
+      "subordination",
+      "head"
+    ],
+    "example": "In 'I think that she left', 'that' is a complementizer introducing the subordinate clause 'she left'."
+  },
+  {
+    "term": "null subject",
+    "category": "Syntax",
+    "definition": "A construction in which the subject of a sentence is phonologically absent but interpretable from context or verb agreement. See pro-drop.",
+    "seeAlso": [
+      "pro-drop",
+      "agreement"
+    ],
+    "example": "In Italian, 'Parlo italiano' (I speak Italian) has a null subject — the verb ending '-o' tells you the subject is 'I'."
+  },
+  {
+    "term": "scope",
+    "category": "Semantics",
+    "definition": "The domain over which an operator (quantifier, negation, modal) takes effect. Scope relations determine the truth conditions of complex sentences.",
+    "seeAlso": [
+      "quantifier",
+      "negation"
+    ],
+    "example": "In 'Every student didn't pass', scope determines meaning: 'not every passed' (negation over quantifier) vs. 'every one failed' (quantifier over negation)."
+  },
+  {
+    "term": "quantifier",
+    "category": "Semantics",
+    "definition": "An expression that specifies the quantity of a noun phrase: universal (every, all), existential (some, a), cardinal (three), etc.",
+    "seeAlso": [
+      "scope",
+      "determiner"
+    ],
+    "example": "In 'All dogs bark' vs. 'Some dogs bark', the quantifiers 'all' and 'some' specify how many dogs the statement applies to."
+  },
+  {
+    "term": "negation",
+    "category": "Semantics",
+    "definition": "The semantic operation of reversing the truth value of a proposition. Morphosyntactically realized as negative particles, affixes, or polarity verbs.",
+    "seeAlso": [
+      "scope",
+      "polarity"
+    ],
+    "example": "English negates with 'not' ('She did not go'), while Turkish uses a suffix: 'gel-me-di' (come-NEG-PAST = did not come)."
+  },
+  {
+    "term": "polarity",
+    "category": "Syntax",
+    "definition": "The distinction between positive (affirmative) and negative constructions. Polarity items (e.g., 'any', 'ever') are sensitive to the polarity environment.",
+    "seeAlso": [
+      "negation",
+      "scope"
+    ],
+    "example": "'Any' is a negative polarity item: 'I don't have any books' is fine, but '*I have any books' is ungrammatical."
+  },
+  {
+    "term": "sandhi",
+    "category": "Phonology",
+    "definition": "Phonological changes that occur at morpheme or word boundaries due to the influence of neighboring sounds. Includes vowel sandhi, tone sandhi, and consonant sandhi.",
+    "seeAlso": [
+      "assimilation",
+      "phonological rule"
+    ],
+    "example": "In Sanskrit, 'tat' + 'atra' becomes 'tatrā' — the final /t/ and initial /a/ merge at the word boundary."
+  },
+  {
+    "term": "liaison",
+    "category": "Phonology",
+    "definition": "In French, the pronunciation of a normally silent word-final consonant before a following word beginning with a vowel. A type of external sandhi.",
+    "seeAlso": [
+      "sandhi",
+      "elision"
+    ],
+    "example": "In French, 'les amis' is pronounced [le.za.mi] — the normally silent 's' of 'les' is pronounced before the vowel of 'amis'."
+  },
+  {
+    "term": "elision",
+    "category": "Phonology",
+    "definition": "The omission of a sound or syllable in connected speech, often at word boundaries.",
+    "seeAlso": [
+      "syncope",
+      "apocope",
+      "sandhi"
+    ],
+    "example": "In French, 'le eau' becomes 'l'eau' [lo] — the vowel of 'le' is elided before another vowel."
+  },
+  {
+    "term": "fortition",
+    "category": "Phonology",
+    "definition": "A phonological process in which a consonant is strengthened, e.g., a fricative becoming a stop. The opposite of lenition.",
+    "seeAlso": [
+      "lenition",
+      "spirantization"
+    ],
+    "example": "In Italian, intervocalic /b/ from Latin strengthened to /pp/ in some words: Latin 'cubitum' → Italian 'gomito', with related forms showing doubled /pp/."
+  },
+  {
+    "term": "syllabification",
+    "category": "Phonology",
+    "definition": "The assignment of segments to syllables. Languages follow the maximal onset principle (prefer larger onsets) subject to phonotactic constraints.",
+    "seeAlso": [
+      "syllable structure",
+      "phonotactics"
+    ],
+    "example": "English 'extra' is syllabified as 'ex.tra' (not 'e.xtra') because the maximal onset principle assigns /tr/ to the second syllable's onset."
+  },
+  {
+    "term": "weight",
+    "category": "Phonology",
+    "definition": "The relative heaviness of a syllable, determined by the number of moras. Heavy syllables (two moras) differ from light syllables (one mora) in stress assignment and prosodic patterns.",
+    "seeAlso": [
+      "mora",
+      "stress"
+    ],
+    "example": "In Latin, stress falls on the penultimate syllable if it is heavy (two moras): 'a.MĪ.cus' has a heavy penult, so it gets the stress."
+  },
+  {
+    "term": "foot",
+    "category": "Phonology",
+    "definition": "A metrical unit that groups syllables into a rhythmic unit. Common foot types include the iamb (light-heavy), trochee (heavy-light), and dactyl.",
+    "seeAlso": [
+      "stress",
+      "mora",
+      "weight"
+    ],
+    "example": "In English 'bánana', the stress pattern forms a trochaic foot on the second and third syllables: ba-(NÁ-na)."
+  },
+  {
+    "term": "iconicity",
+    "category": "Semantics",
+    "definition": "A resemblance relationship between the form of a sign and its meaning. Sound symbolism (phonesthesia) and onomatopoeia are examples of iconic motivation in language.",
+    "seeAlso": [
+      "onomatopoeia",
+      "arbitrariness"
+    ],
+    "example": "In many languages, words for 'small' tend to use high front vowels (/i/), while words for 'large' tend to use low back vowels (/a/) — sound mirrors meaning."
+  },
+  {
+    "term": "arbitrariness",
+    "category": "Semantics",
+    "definition": "The property of language whereby the relationship between a linguistic form and its meaning is conventional and unmotivated. Contrasted with iconicity.",
+    "seeAlso": [
+      "iconicity"
+    ],
+    "example": "There is no inherent reason why 'dog' means dog — French uses 'chien' and Japanese uses 'inu' for the same animal."
+  },
+  {
+    "term": "onomatopoeia",
+    "category": "Semantics",
+    "definition": "Words whose phonological form imitates or resembles the sound they denote (e.g., 'buzz', 'meow', 'splash').",
+    "seeAlso": [
+      "iconicity",
+      "sound symbolism"
+    ],
+    "example": "English 'buzz', Japanese 'nyan' (cat sound), and French 'cocorico' (rooster call) all imitate natural sounds, though differently in each language."
+  },
+  {
+    "term": "sound symbolism",
+    "category": "Semantics",
+    "definition": "A non-arbitrary relationship between sound and meaning, where certain sounds or sound patterns are associated with particular semantic properties cross-linguistically.",
+    "seeAlso": [
+      "iconicity",
+      "onomatopoeia"
+    ],
+    "example": "Cross-linguistically, people associate 'maluma' with round shapes and 'takete' with spiky shapes — certain sounds evoke certain meanings."
+  },
+  {
+    "term": "grammatical category",
+    "category": "Morphology",
+    "definition": "A class of expressions that share distributional and morphosyntactic properties. Includes parts of speech (noun, verb, adjective) and inflectional categories (tense, case, number).",
+    "seeAlso": [
+      "inflection",
+      "part of speech"
+    ],
+    "example": "In English, nouns inflect for number (dog/dogs), verbs for tense (walk/walked), and pronouns for case (he/him) — each is a grammatical category."
+  },
+  {
+    "term": "part of speech",
+    "category": "Morphology",
+    "definition": "A major syntactic-semantic category of words such as noun, verb, adjective, adverb, preposition/postposition, conjunction, determiner, and pronoun.",
+    "seeAlso": [
+      "grammatical category",
+      "inflection"
+    ],
+    "example": "In 'The tall girl runs quickly', 'the' is a determiner, 'tall' is an adjective, 'girl' is a noun, 'runs' is a verb, and 'quickly' is an adverb."
+  },
+  {
+    "term": "classifier",
+    "category": "Typology",
+    "definition": "A morpheme that classifies the noun it modifies according to semantic features like shape, animacy, or function. Distinct from noun class systems but related.",
+    "seeAlso": [
+      "numeral classifier",
+      "noun class"
+    ],
+    "example": "In Japanese, 'san-bon no pen' (three-CL.long.thin of pen) uses the classifier 'hon/bon' because pens are long, thin objects."
+  },
+  {
+    "term": "locative",
+    "category": "Syntax",
+    "definition": "A case or grammatical relation marking location. Some languages grammaticalize a rich set of locative distinctions (interior, surface, proximity).",
+    "seeAlso": [
+      "case",
+      "spatial deixis"
+    ],
+    "example": "In Finnish, 'talo-ssa' (house-INESSIVE) means 'in the house' and 'talo-lla' (house-ADESSIVE) means 'at the house' — two different locative cases."
+  },
+  {
+    "term": "instrumental",
+    "category": "Syntax",
+    "definition": "A case that marks the instrument or means by which an action is performed.",
+    "seeAlso": [
+      "case",
+      "semantic role"
+    ],
+    "example": "In Russian, 'pisat' karandashom' (to write with-a-pencil-INSTR) — the instrumental case '-om' marks the tool used."
+  },
+  {
+    "term": "vocative",
+    "category": "Syntax",
+    "definition": "A case used to address someone directly. In many languages, the vocative is formally distinct from the nominative.",
+    "seeAlso": [
+      "case",
+      "nominative"
+    ],
+    "example": "In Latin, 'Brute' in 'Et tu, Brute?' is the vocative form of 'Brutus', used for direct address."
+  },
+  {
+    "term": "topic",
+    "category": "Syntax",
+    "definition": "The element of a sentence that names what the sentence is about; often sentence-initial. Topic differs from subject in being a discourse category rather than a purely grammatical one.",
+    "seeAlso": [
+      "focus",
+      "information structure"
+    ],
+    "example": "In Japanese, 'Sakana wa neko ga tabeta' (Fish TOPIC cat SUBJ ate) means 'As for the fish, the cat ate it' — 'sakana' is the topic, not the subject."
+  },
+  {
+    "term": "focus",
+    "category": "Syntax",
+    "definition": "The element of a sentence that presents new or contrastive information. Marked through prosody (stress), morphology, or syntactic movement in different languages.",
+    "seeAlso": [
+      "topic",
+      "information structure"
+    ],
+    "example": "In English, 'It was JOHN who broke the window' uses a cleft construction to focus on 'John' as the new, contrastive information."
+  },
+  {
+    "term": "information structure",
+    "category": "Syntax",
+    "definition": "The way a sentence packages given (old) vs. new information for the discourse participant. Includes topic-comment and focus-background articulations.",
+    "seeAlso": [
+      "topic",
+      "focus"
+    ],
+    "example": "In 'The cat, it ran away', 'the cat' is the topic (given info) and 'ran away' is the comment (new info about the topic)."
+  }
+]

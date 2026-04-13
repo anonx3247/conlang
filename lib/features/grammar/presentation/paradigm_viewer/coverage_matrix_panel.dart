@@ -4,15 +4,20 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../db/app_database.dart';
 import '../../data/grammar_providers.dart';
 import '../../data/paradigm_coverage_provider.dart';
-import '../../domain/dimension_level.dart';
+import '../../domain/coverage_matrix.dart';
+import '../../domain/dimension_level.dart' show DimensionLevel, decodeLevelsJson, formatAbbrUpper;
 
-/// Coverage matrix side panel (D-15).
+/// Coverage matrix side panel (D-15 / D-91).
 ///
-/// 240px fixed-width column showing one row per (dimension, level) pair for
-/// the selected POS. Each row renders a coloured dot: green when the pair
-/// is covered by at least one active inflectional rule, red otherwise.
+/// 240px fixed-width column showing one row per Cartesian cell of the
+/// referenced-dim axes (D-91 intrinsic-aware). Each row renders a
+/// coloured dot: green when the cell is covered by at least one active
+/// inflectional rule, red otherwise.
 ///
-/// Data source: `paradigmCoverageMatrixProvider(posId)` (Task 1).
+/// Data source: [paradigmCoverageMatrixProvider] which returns a
+/// [CoverageMatrix] (BLOCKER-3: [FeatureSetKey]-keyed cells for value
+/// equality). When no rules reference any dim, the empty-state hint
+/// surfaces instead of an empty list.
 class CoverageMatrixPanel extends ConsumerWidget {
   const CoverageMatrixPanel({super.key, required this.posId});
 
@@ -24,7 +29,16 @@ class CoverageMatrixPanel extends ConsumerWidget {
     final cs = theme.colorScheme;
     final dimsAsync = ref.watch(dimensionsForPosProvider(posId));
     final dims = dimsAsync.asData?.value ?? const <Dimension>[];
-    final coverage = ref.watch(paradigmCoverageMatrixProvider(posId));
+    final matrix = ref.watch(paradigmCoverageMatrixProvider(posId));
+
+    // Index dims + levels by id so we can render human-readable labels.
+    final dimsById = {for (final d in dims) d.id: d};
+    final levelsByDim = <int, Map<int, DimensionLevel>>{
+      for (final d in dims)
+        d.id: {
+          for (final l in decodeLevelsJson(d.levelsJson)) l.id: l,
+        },
+    };
 
     return SizedBox(
       width: 240,
@@ -41,23 +55,24 @@ class CoverageMatrixPanel extends ConsumerWidget {
               ),
             ),
           ),
-          Expanded(
-            child: ListView(
-              children: [
-                for (final dim in dims) ...[
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
-                    child: Text(
-                      dim.name,
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                  for (final l in decodeLevelsJson(dim.levelsJson))
+          if (matrix.axes.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: Text(
+                'No inflectional rules define axes for this POS yet.',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: cs.onSurface.withValues(alpha: 0.6),
+                ),
+              ),
+            )
+          else
+            Expanded(
+              child: ListView(
+                children: [
+                  for (final entry in matrix.cells.entries)
                     Padding(
-                      padding:
-                          const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 2),
                       child: Row(
                         children: [
                           Container(
@@ -65,23 +80,24 @@ class CoverageMatrixPanel extends ConsumerWidget {
                             height: 8,
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
-                              color: (coverage[(dim.id, l.id)] ?? false)
+                              color: entry.value
                                   ? Colors.green.shade600
                                   : cs.error,
                             ),
                           ),
                           const SizedBox(width: 8),
-                          Text(
-                            l.abbr,
-                            style: theme.textTheme.labelSmall,
-                          ),
-                          const SizedBox(width: 8),
                           Expanded(
                             child: Text(
-                              l.name,
+                              _cellLabel(
+                                matrix.axes,
+                                entry.key,
+                                dimsById,
+                                levelsByDim,
+                              ),
                               overflow: TextOverflow.ellipsis,
                               style: theme.textTheme.labelSmall?.copyWith(
-                                color: cs.onSurface.withValues(alpha: 0.7),
+                                color:
+                                    cs.onSurface.withValues(alpha: 0.7),
                               ),
                             ),
                           ),
@@ -89,11 +105,35 @@ class CoverageMatrixPanel extends ConsumerWidget {
                       ),
                     ),
                 ],
-              ],
+              ),
             ),
-          ),
         ],
       ),
     );
+  }
+
+  /// Builds a readable cell label from axis dim ids and the cell's
+  /// [FeatureSetKey]. Format: `"Gender=M, Number=SG"`. Uses the dim's
+  /// display name and the level's abbr (falling back to name) for
+  /// compactness in the 240-wide panel.
+  String _cellLabel(
+    List<int> axes,
+    FeatureSetKey key,
+    Map<int, Dimension> dimsById,
+    Map<int, Map<int, DimensionLevel>> levelsByDim,
+  ) {
+    final parts = <String>[];
+    for (final dimId in axes) {
+      final dim = dimsById[dimId];
+      final levelId = key[dimId];
+      if (dim == null || levelId == null) continue;
+      final level = levelsByDim[dimId]?[levelId];
+      final abbrFormatted = formatAbbrUpper(level?.abbr);
+      final levelLabel = abbrFormatted.isNotEmpty
+          ? abbrFormatted
+          : (level?.name ?? '?');
+      parts.add('${dim.name}=$levelLabel');
+    }
+    return parts.join(', ');
   }
 }

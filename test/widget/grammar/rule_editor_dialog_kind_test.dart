@@ -1,8 +1,13 @@
 // Plan 04-05 Task 2 — mandatory widget tests for the kind-aware
-// RuleEditorDialog + parameterized RulesPage + real InflectionalRulesPage.
+// RuleEditorDialog + parameterized RulesPage.
 //
 // The tiebreak-banner integration test (Test 5) is explicitly mandatory
 // per the plan: it locks the D-12 UI contract for live conflict detection.
+//
+// Plan 04-13: the former Test 6 (InflectionalRulesPage + MigrationBanner
+// coverage) was removed because that page was deleted in plan 04-13 Task 5
+// — its content is now hosted by InflectionsPage, which has its own
+// widget test suite at test/widget/grammar/inflections_page_test.dart.
 //
 // The tests use an in-memory AppDatabase overridden into
 // `currentDatabaseProvider`, matching the widget-test pattern from
@@ -12,8 +17,6 @@ import 'package:conlang_workbench/db/app_database.dart';
 import 'package:conlang_workbench/features/grammar/domain/dimension_level.dart';
 import 'package:conlang_workbench/features/grammar/domain/feature_bindings.dart';
 import 'package:conlang_workbench/features/grammar/domain/rule_kind.dart';
-import 'package:conlang_workbench/features/grammar/presentation/inflectional_rules/inflectional_rules_page.dart';
-import 'package:conlang_workbench/features/grammar/presentation/shared/migration_banner.dart';
 import 'package:conlang_workbench/features/morphology/presentation/rules/rule_editor_dialog.dart';
 import 'package:conlang_workbench/features/project/data/project_providers.dart';
 import 'package:drift/drift.dart' hide isNull, isNotNull, Column;
@@ -130,10 +133,9 @@ void main() {
         );
         await settle(tester);
 
-        // Select the Target POS so the chip rows are rendered.
-        await tester.tap(find.text('Target POS'));
-        await settle(tester);
-        await tester.tap(find.text('Noun (N)').last);
+        // Plan 04-11: "Target POS" single-dropdown was replaced with a
+        // multi-POS FilterChip picker. Tap the Noun chip to select it.
+        await tester.tap(find.widgetWithText(FilterChip, 'Noun (N)'));
         await settle(tester);
 
         expect(find.text('Applies to'), findsOneWidget);
@@ -216,10 +218,9 @@ void main() {
         );
         await settle(tester);
 
-        // Select the Target POS so the Number dimension chips render.
-        await tester.tap(find.text('Target POS'));
-        await settle(tester);
-        await tester.tap(find.text('Noun (N)').last);
+        // Plan 04-11: "Target POS" single-dropdown was replaced with a
+        // multi-POS FilterChip picker. Tap the Noun chip to select it.
+        await tester.tap(find.widgetWithText(FilterChip, 'Noun (N)'));
         await settle(tester);
 
         // Fill in a rule name.
@@ -327,54 +328,7 @@ void main() {
     );
   });
 
-  group('InflectionalRulesPage', () {
-    testWidgets(
-      'Test 6 — InflectionalRulesPage shows only inflectional rules '
-      'and mounts MigrationBanner',
-      (tester) async {
-        await seedNounWithNumber();
-
-        // Two inflectional rules + one derivational rule.
-        await db.morphologyDao.insertRuleWithKind(
-          MorphologicalRulesCompanion.insert(
-            name: 'Plural',
-            source: 'suffix: s',
-            featureBindings: Value(
-              FeatureBindings(pos: [nounPosId], dims: {numberDimId: plLevelId}),
-            ),
-          ),
-          RuleKind.inflectional,
-        );
-        await db.morphologyDao.insertRuleWithKind(
-          MorphologicalRulesCompanion.insert(
-            name: 'Singular',
-            source: 'suffix: ',
-            featureBindings: Value(
-              FeatureBindings(pos: [nounPosId], dims: {numberDimId: sgLevelId}),
-            ),
-          ),
-          RuleKind.inflectional,
-        );
-        await db.morphologyDao.insertRuleWithKind(
-          MorphologicalRulesCompanion.insert(
-            name: 'Agent',
-            source: 'suffix: er',
-          ),
-          RuleKind.derivational,
-        );
-
-        await tester.pumpWidget(buildApp(const InflectionalRulesPage()));
-        await settle(tester);
-
-        // The two inflectional rules are visible, the derivational one is not.
-        expect(find.text('Plural'), findsOneWidget);
-        expect(find.text('Singular'), findsOneWidget);
-        expect(find.text('Agent'), findsNothing);
-        // MigrationBanner is mounted above the RulesPage.
-        expect(find.byType(MigrationBanner), findsOneWidget);
-
-        await teardownWidget(tester);
-      },
-    );
-  });
+  // Plan 04-13 Task 5 — Test 6 (InflectionalRulesPage + MigrationBanner)
+  // deleted along with the page itself. Coverage moved to
+  // test/widget/grammar/inflections_page_test.dart.
 }

@@ -1,8 +1,14 @@
+import 'dart:convert';
+
 import 'package:drift/drift.dart';
 import 'package:drift_flutter/drift_flutter.dart';
 
 import '../features/grammar/data/grammar_dao.dart';
+import '../features/grammar/data/inflectional_rule_pos_dao.dart';
+import '../features/grammar/data/lexeme_parents_dao.dart';
+import '../features/grammar/data/marker_dao.dart';
 import '../features/grammar/data/paradigm_cell_override_dao.dart';
+import '../features/grammar/data/standard_form_pattern_dao.dart';
 import '../features/grammar/domain/feature_bindings.dart';
 import '../features/lexicon/data/lexeme_dao.dart';
 import '../features/morphology/data/morphology_dao.dart';
@@ -11,6 +17,8 @@ import '../features/phonology/data/phoneme_dao.dart';
 import '../features/phonology/data/phonotactic_dao.dart';
 import '../features/phonology/data/rewrite_rule_dao.dart';
 import '../features/phonology/data/romanization_dao.dart';
+import '../features/phonology/domain/notation_helpers.dart';
+import 'migration_notation_classify.dart';
 
 part 'app_database.g.dart';
 
@@ -136,6 +144,16 @@ class Dimensions extends Table {
   IntColumn get ordering => integer().withDefault(const Constant(0))();
   TextColumn get levelsJson => text()();
   TextColumn get templateId => text().nullable()();
+
+  /// v10 — Phase 4 04-17 D-82. When true, words of this POS have a fixed
+  /// level on this dimension (e.g. noun gender: a noun IS masculine,
+  /// it isn't inflected into the feminine). Intrinsic dims are filtered
+  /// out of cell enumeration and act as conditions in rule eval.
+  BoolColumn get intrinsic => boolean().withDefault(const Constant(false))();
+
+  /// v12 — Short label for display in compact contexts (paradigm headers,
+  /// binding summaries). Nullable — defaults to first 3 chars of name.
+  TextColumn get abbreviation => text().nullable()();
 }
 
 /// Morphological rules (e.g. "Plural", "Agentive -er") in a pattern DSL.
@@ -234,6 +252,7 @@ class Markers extends Table {
   IntColumn get id => integer().autoIncrement()();
   IntColumn get posId =>
       integer().references(PartsOfSpeech, #id, onDelete: KeyAction.cascade)();
+  TextColumn get name => text().withDefault(const Constant('Unmarked'))();
   TextColumn get featureBindings => text()
       .map(const FeatureBindingsConverter())
       .withDefault(const Constant('{}'))();
@@ -353,6 +372,29 @@ class Lexemes extends Table {
   /// e.g. a bound root that never surfaces as a standalone word.
   BoolColumn get rootOnlyViaDerivations =>
       boolean().withDefault(const Constant(false))();
+
+  /// v10 — Phase 4 04-17 D-83. JSON object `{"<dimensionId>": <levelId>, ...}`
+  /// mapping each intrinsic dimension on this lexeme's POS to the lexeme's
+  /// fixed level on that dim. Null = no intrinsic levels set (e.g. root
+  /// words of POSes with no intrinsic dims or legacy words pre-v10).
+  /// See IntrinsicLevelsCodec for encode/decode helpers.
+  TextColumn get intrinsicLevelsJson => text().nullable()();
+}
+
+/// v10 — Phase 4 04-17 D-97. Standard-form pattern rows keyed by
+/// (dimensionId, levelId). Each row stores a list of pattern branches
+/// (kind + literal, OR-combined) that a lexeme's phonemic form must
+/// match for it to conform to the intrinsic level's standard form.
+/// Matches are soft warnings surfaced via ViolationText (D-99).
+/// Cascade delete on Dimensions removal.
+class StandardFormPatterns extends Table {
+  IntColumn get dimensionId =>
+      integer().references(Dimensions, #id, onDelete: KeyAction.cascade)();
+  IntColumn get levelId => integer()();
+  TextColumn get branchesJson => text()();
+
+  @override
+  Set<Column> get primaryKey => {dimensionId, levelId};
 }
 
 // ---------------------------------------------------------------------------
@@ -377,8 +419,23 @@ class Lexemes extends Table {
     Markers, // v9
     InflectionalRulePOS, // v9
     LexemeParents, // v9
+    StandardFormPatterns, // v10 (04-17)
   ],
-  daos: [PhonemeDao, NaturalClassDao, RomanizationDao, PhonotacticDao, RewriteRuleDao, MorphologyDao, LexemeDao, GrammarDao, ParadigmCellOverrideDao],
+  daos: [
+    PhonemeDao,
+    NaturalClassDao,
+    RomanizationDao,
+    PhonotacticDao,
+    RewriteRuleDao,
+    MorphologyDao,
+    LexemeDao,
+    GrammarDao,
+    ParadigmCellOverrideDao,
+    InflectionalRulePOSDao, // v9 gap D-55
+    LexemeParentsDao, // v9 gap D-62
+    MarkerDao, // v9 gap D-44 (re-registered after 04-11 regression)
+    StandardFormPatternDao, // v10 (04-17)
+  ],
 )
 class AppDatabase extends _$AppDatabase {
   /// Creates an AppDatabase with an injected [QueryExecutor].
@@ -388,7 +445,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase(super.e);
 
   @override
-  int get schemaVersion => 9;
+  int get schemaVersion => 13;
 
   @override
   MigrationStrategy get migration {
@@ -508,6 +565,109 @@ class AppDatabase extends _$AppDatabase {
               [ruleId, posId],
             );
           }
+        }
+        if (from < 10) {
+          // Plan 04-15 D-74: Notation migration — DSL-parse-aware classify
+          // pass over MorphologicalRules.source. Parses each rule via
+          // parseMorphDsl, rewrites ONLY single-token phonological literals
+          // (ablaut FROM/TO, affixes, remove-suffix literals) via the shared
+          // notation_helpers dot-aware helpers, leaves structural tokens
+          // (ablaut flags, template directives, class refs, condition
+          // patterns) untouched, and serializes back via serializeMorphRule.
+          // Writes a per-rule outcome log to project_settings so the user
+          // can verify the migration after the fact.
+          //
+          // SCHEMA COORDINATION: Plan 04-17 (intrinsic dimensions) appends
+          // its column and table additions to THIS v10 block. Do NOT
+          // bump to v11.
+          //
+          // --- Plan 04-17 additions appended to the 04-15 v10 block (D-82, D-83, D-97) ---
+          await m.addColumn(dimensions, dimensions.intrinsic);
+          await m.addColumn(lexemes, lexemes.intrinsicLevelsJson);
+          await m.createTable(standardFormPatterns);
+          // --- end 04-17 additions ---
+
+          // Step A: Project the active romanization_mappings rows to the
+          // pure NotationMapping record shape exported from notation_helpers.
+          final mappingRows = await customSelect(
+            'SELECT ipa_symbol, latin_mapping FROM romanization_mappings',
+          ).get();
+          final mappings = <NotationMapping>[
+            for (final row in mappingRows)
+              (
+                ipaSymbol: row.read<String>('ipa_symbol'),
+                latinMapping: row.read<String>('latin_mapping'),
+              ),
+          ];
+
+          // Step B: Iterate morphological_rules and apply the DSL-parse-aware
+          // classify helper. The helper is the single source of truth for
+          // the classify logic — app_database.dart does NOT call
+          // dotAwareDeromanize or smartRomanize directly.
+          final ruleRows = await customSelect(
+            'SELECT id, source FROM morphological_rules',
+          ).get();
+          final migrationOutcomes = <Map<String, dynamic>>[];
+          for (final row in ruleRows) {
+            final id = row.read<int>('id');
+            final source = row.read<String>('source');
+            final outcome = classifyAndRewriteRuleSource(source, mappings);
+            if (outcome.rewrote && outcome.newSource != null) {
+              await customStatement(
+                'UPDATE morphological_rules SET source = ? WHERE id = ?',
+                [outcome.newSource!, id],
+              );
+              migrationOutcomes.add(<String, dynamic>{
+                'id': id,
+                'outcome': 'rewritten',
+                'before': source,
+                'after': outcome.newSource,
+              });
+            } else {
+              migrationOutcomes.add(<String, dynamic>{
+                'id': id,
+                'outcome': outcome.reason,
+                'source': source,
+              });
+            }
+          }
+
+          // Step C: Write the migration log to project_settings for
+          // post-hoc verification by the user.
+          final logJson = jsonEncode(<String, dynamic>{
+            'plan': '04-15',
+            'ran_at': DateTime.now().toIso8601String(),
+            'outcomes': migrationOutcomes,
+          });
+          await customStatement(
+            "INSERT OR REPLACE INTO project_settings (key, value) "
+            "VALUES ('notation_migration_v10', ?)",
+            [logJson],
+          );
+        }
+        if (from < 11) {
+          // v11: Markers.name for user-given marker labels (gap #6 from 04-18-VERIFICATION)
+          await m.addColumn(markers, markers.name);
+        }
+        if (from < 12) {
+          // v12: Dimensions.abbreviation — short label for compact display
+          await m.addColumn(dimensions, dimensions.abbreviation);
+        }
+        if (from < 13) {
+          // v13: CulturePages table — culture wiki feature (retired to v2 branch)
+          // Table class removed but migration kept for existing databases.
+          await customStatement('''
+            CREATE TABLE IF NOT EXISTS culture_pages (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              parent_id INTEGER REFERENCES culture_pages(id) ON DELETE SET NULL,
+              title TEXT NOT NULL,
+              content TEXT NOT NULL DEFAULT '',
+              icon TEXT,
+              ordering INTEGER NOT NULL DEFAULT 0,
+              created_at INTEGER NOT NULL,
+              updated_at INTEGER NOT NULL
+            )
+          ''');
         }
       },
       beforeOpen: (details) async {
@@ -690,6 +850,38 @@ class AppDatabase extends _$AppDatabase {
           await customStatement(
             'ALTER TABLE lexemes ADD COLUMN '
             '"root_only_via_derivations" INTEGER NOT NULL DEFAULT 0',
+          );
+        } catch (_) {}
+        // v10 safety net: Dimensions.intrinsic (04-17 D-82)
+        try {
+          await customStatement(
+            'ALTER TABLE dimensions ADD COLUMN '
+            '"intrinsic" INTEGER NOT NULL DEFAULT 0',
+          );
+        } catch (_) {}
+        // v10 safety net: Lexemes.intrinsicLevelsJson (04-17 D-83)
+        try {
+          await customStatement(
+            'ALTER TABLE lexemes ADD COLUMN '
+            '"intrinsic_levels_json" TEXT',
+          );
+        } catch (_) {}
+        // v10 safety net: StandardFormPatterns (04-17 D-97)
+        try {
+          await customStatement(
+            'CREATE TABLE IF NOT EXISTS standard_form_patterns ('
+            '"dimension_id" INTEGER NOT NULL REFERENCES dimensions(id) ON DELETE CASCADE, '
+            '"level_id" INTEGER NOT NULL, '
+            '"branches_json" TEXT NOT NULL, '
+            'PRIMARY KEY ("dimension_id", "level_id")'
+            ')',
+          );
+        } catch (_) {}
+        // v11 safety net: Markers.name for user-given marker labels (gap #6 from 04-18-VERIFICATION)
+        try {
+          await customStatement(
+            'ALTER TABLE markers ADD COLUMN '
+            '"name" TEXT NOT NULL DEFAULT \'Unmarked\'',
           );
         } catch (_) {}
       },

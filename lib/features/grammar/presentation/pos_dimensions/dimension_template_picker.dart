@@ -48,17 +48,15 @@ class _DimensionTemplatePickerDialogState
       groups.putIfAbsent(t.group, () => <DimensionTemplate>[]).add(t);
     }
 
-    // Append a Custom (blank) entry per visible group so users can start
-    // from scratch without a preset. (D-05 — always show custom-blank.)
-    for (final g in groups.keys.toList()) {
-      groups[g]!.add(DimensionTemplate(
-        id: 'custom.${g.toLowerCase()}',
-        group: g,
-        name: 'Custom',
-        levels: const [],
-        description: 'Start from scratch — no preset levels.',
-      ));
-    }
+    // Single "Custom (start blank)" entry shown at the top (New Gap 3 fix).
+    const showCustom = true;
+    const customBlank = DimensionTemplate(
+      id: 'custom.blank',
+      group: 'Custom',
+      name: 'Custom (start blank)',
+      levels: [],
+      description: 'Start from scratch — no preset levels.',
+    );
 
     return Dialog(
       child: ConstrainedBox(
@@ -88,6 +86,11 @@ class _DimensionTemplatePickerDialogState
               child: ListView(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 children: [
+                  // Custom entry always at the TOP of the list.
+                  if (showCustom) ...[
+                    _customCard(theme, cs, context, customBlank),
+                    const SizedBox(height: 16),
+                  ],
                   if (groups.isEmpty)
                     Padding(
                       padding: const EdgeInsets.all(24),
@@ -129,6 +132,102 @@ class _DimensionTemplatePickerDialogState
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  /// Renders the Custom card at the top of the picker.
+  ///
+  /// On tap, shows a name-prompt dialog (AlertDialog with TextField).
+  /// The user enters a dimension name; the returned [DimensionTemplate] uses
+  /// that name rather than the default "Custom (start blank)" label.
+  Widget _customCard(
+    ThemeData theme,
+    ColorScheme cs,
+    BuildContext ctx,
+    DimensionTemplate customBlank,
+  ) {
+    return Tooltip(
+      message: customBlank.description,
+      waitDuration: const Duration(milliseconds: 500),
+      child: Card(
+        margin: const EdgeInsets.symmetric(vertical: 4),
+        child: InkWell(
+          onTap: () async {
+            final nameCtrl = TextEditingController();
+            final entered = await showDialog<String>(
+              context: ctx,
+              builder: (dialogCtx) {
+                return StatefulBuilder(
+                  builder: (sbCtx, setSbState) {
+                    return AlertDialog(
+                      title: const Text('New Custom Dimension'),
+                      content: TextField(
+                        controller: nameCtrl,
+                        autofocus: true,
+                        decoration: const InputDecoration(
+                          labelText: 'Dimension name',
+                          hintText: 'e.g. Evidentiality, Politeness, Animacy',
+                          border: OutlineInputBorder(),
+                        ),
+                        onSubmitted: (v) {
+                          final trimmed = v.trim();
+                          if (trimmed.isNotEmpty) {
+                            Navigator.of(dialogCtx).pop(trimmed);
+                          }
+                        },
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.of(dialogCtx).pop(null),
+                          child: const Text('Cancel'),
+                        ),
+                        FilledButton(
+                          onPressed: () {
+                            final trimmed = nameCtrl.text.trim();
+                            if (trimmed.isNotEmpty) {
+                              Navigator.of(dialogCtx).pop(trimmed);
+                            }
+                          },
+                          child: const Text('Add'),
+                        ),
+                      ],
+                    );
+                  },
+                );
+              },
+            );
+            nameCtrl.dispose();
+            if (entered != null && entered.isNotEmpty && ctx.mounted) {
+              Navigator.of(ctx).pop(
+                DimensionTemplate(
+                  id: customBlank.id,
+                  group: customBlank.group,
+                  name: entered,
+                  levels: const [],
+                  description: customBlank.description,
+                ),
+              );
+            }
+          },
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Row(
+              children: [
+                Icon(Icons.add_circle_outline,
+                    size: 18, color: cs.primary),
+                const SizedBox(width: 8),
+                Text(
+                  'Custom (start blank)',
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: cs.primary,
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );

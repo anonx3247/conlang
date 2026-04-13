@@ -20,49 +20,46 @@ class IpaChartPanel extends ConsumerWidget {
     final colorScheme = theme.colorScheme;
     final audioPlayer = ref.watch(ipaAudioPlayerProvider);
 
-    return SizedBox(
-      width: 280,
-      child: Material(
-        color: colorScheme.surfaceContainerLow,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Header
-            Padding(
-              padding: const EdgeInsets.fromLTRB(12, 12, 12, 6),
-              child: Text(
-                'IPA REFERENCE',
-                style: theme.textTheme.labelSmall?.copyWith(
-                  color: colorScheme.onSurface.withValues(alpha: 0.5),
-                  letterSpacing: 1.2,
-                ),
+    return Material(
+      color: colorScheme.surfaceContainerLow,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Header
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 12, 12, 6),
+            child: Text(
+              'IPA REFERENCE',
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: colorScheme.onSurface.withValues(alpha: 0.5),
+                letterSpacing: 1.2,
               ),
             ),
+          ),
 
-            // Chart content — scrollable
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(8, 0, 8, 12),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const _SectionLabel(label: 'Pulmonic Consonants'),
-                    const SizedBox(height: 4),
-                    _PulmonicConsonantChart(audioPlayer: audioPlayer),
-                    const SizedBox(height: 12),
-                    const _SectionLabel(label: 'Vowels'),
-                    const SizedBox(height: 4),
-                    _VowelChart(audioPlayer: audioPlayer),
-                    const SizedBox(height: 12),
-                    const _SectionLabel(label: 'Non-Pulmonic'),
-                    const SizedBox(height: 4),
-                    _NonPulmonicChart(audioPlayer: audioPlayer),
-                  ],
-                ),
+          // Chart content — scrollable
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(8, 0, 8, 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const _SectionLabel(label: 'Pulmonic Consonants'),
+                  const SizedBox(height: 4),
+                  _PulmonicConsonantChart(audioPlayer: audioPlayer),
+                  const SizedBox(height: 12),
+                  const _SectionLabel(label: 'Vowels'),
+                  const SizedBox(height: 4),
+                  _VowelChart(audioPlayer: audioPlayer),
+                  const SizedBox(height: 12),
+                  const _SectionLabel(label: 'Non-Pulmonic'),
+                  const SizedBox(height: 4),
+                  _NonPulmonicChart(audioPlayer: audioPlayer),
+                ],
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

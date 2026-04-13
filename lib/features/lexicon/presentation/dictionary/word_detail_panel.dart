@@ -5,11 +5,18 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../db/app_database.dart';
 import '../../../../shared/widgets/violation_text.dart';
 import '../../../grammar/data/grammar_providers.dart';
+import '../../../grammar/data/intrinsic_levels_codec.dart';
+import '../../../grammar/data/standard_form_validation_provider.dart';
+import '../../../grammar/domain/dimension_level.dart' show decodeLevelsJson, formatAbbr;
 import '../../../grammar/domain/pos_resolver.dart';
 import '../../../grammar/presentation/paradigm_viewer/paradigm_table_widget.dart';
+import '../../../morphology/application/derivation_promotion_service.dart';
 import '../../../morphology/data/morphology_providers.dart';
 import '../../data/phonotactic_validation_provider.dart';
+import '../../../phonology/data/phonotactic_providers.dart'
+    show applyRewritePipelineProvider;
 import '../../../phonology/data/romanization_providers.dart';
+import '../../../phonology/domain/word_generator.dart' show ValidationResult;
 import '../../../phonology/presentation/shared/ipa_keyboard/ipa_text_field.dart';
 import '../../data/lexeme_providers.dart';
 import 'derivation_tree_widget.dart';
@@ -25,10 +32,15 @@ class WordDetailPanel extends ConsumerStatefulWidget {
     super.key,
     required this.lexemeId,
     required this.onDeleted,
+    this.onNavigateToWord,
   });
 
   final int lexemeId;
   final VoidCallback onDeleted;
+
+  /// Called when the user taps a parent pill to navigate to that word.
+  /// When null, parent pills are rendered as plain non-clickable text.
+  final ValueChanged<int>? onNavigateToWord;
 
   @override
   ConsumerState<WordDetailPanel> createState() => _WordDetailPanelState();
@@ -42,6 +54,37 @@ class _WordDetailPanelState extends ConsumerState<WordDetailPanel> {
   final _romanizationController = TextEditingController();
   final _meaningController = TextEditingController();
   String? _editPos;
+
+  /// D-92 / D-93 (plan 04-17 Task 7) — per-intrinsic-dim level selection
+  /// for the currently-selected POS. Key = dimension id, value = selected
+  /// level id (null until the user picks one). On POS change, we preserve
+  /// entries whose dim ids overlap the new POS's intrinsic dims via
+  /// [IntrinsicLevelsCodec.decode] of the stored lexeme json; dim ids
+  /// absent from the new POS are silently dropped at save time because
+  /// they are not keys in this map.
+  final Map<int, int?> _intrinsicLevelSelections = <int, int?>{};
+
+  /// D-92 — per-dim validation error keyed by dimension id. Non-null
+  /// entries are rendered as red helper text under the dropdown and
+  /// block save.
+  final Map<int, String?> _intrinsicLevelErrors = <int, String?>{};
+
+  /// D-93 — snapshot of the lexeme's decoded intrinsic levels at the time
+  /// editing started. Used by the Builder sub-form to seed overlap
+  /// preservation when the user changes POS: any dim id present in both
+  /// the old json and the new POS's intrinsic set is pre-filled.
+  Map<int, int> _storedIntrinsicLevels = const {};
+
+  /// D-93 — set to true whenever the user changes POS via the dropdown in
+  /// edit mode. The Builder sub-form uses this flag to auto-populate
+  /// `_intrinsicLevelSelections` from [_storedIntrinsicLevels] on the
+  /// first render after the POS change, then resets the flag.
+  bool _posJustChanged = false;
+
+  /// Plan 04-18-04 Task 1 — POS mandatory validation error for edit mode.
+  /// Non-null value is rendered as errorText on the POS dropdown and blocks
+  /// save. Cleared when the user picks any non-null POS value.
+  String? _posError;
 
   /// Mirrors [WordCreationForm]: true when the user has manually edited the
   /// IPA field since the last programmatic sync. Initialized by
@@ -93,19 +136,37 @@ class _WordDetailPanelState extends ConsumerState<WordDetailPanel> {
 
   void _startEditing(Lexeme lexeme) {
     _updatingControllersProgrammatically = true;
-    _ipaController.text = lexeme.ipa;
-    _romanizationController.text = lexeme.romanization ?? '';
+    // Issue 13: for promoted derivations, lexeme.ipa / lexeme.romanization
+    // are parent-placeholder stubs — resolve the correct display form first
+    // so the edit pane seeds with the derived form's IPA/rom, not the root's.
+    final promoted = ref.read(promotedDerivedFormProvider(lexeme.id));
+    final display = resolveDisplayForms(lexeme, promoted);
+    _ipaController.text = display.ipa;
+    _romanizationController.text = display.rom;
     _meaningController.text = lexeme.meaning ?? '';
     _editPos = lexeme.partOfSpeech;
-    // Seed the manual-edit flag from whether the stored IPA diverges from
-    // the orthography-derived form. A word loaded with a manual override
-    // should stay overridden unless the user explicitly re-derives it.
+    // Seed the manual-edit flag from whether the resolved IPA diverges from
+    // the orthography-derived form. For promoted rows, always false (the
+    // placeholder diverges from deromanize output, which would wrongly set
+    // the override flag — the promoted form is computed, not manually set).
     final deromanize = ref.read(deromanizeProvider);
-    _ipaManuallyEdited = isIpaManuallyOverridden(
-      lexeme.ipa,
-      lexeme.romanization,
-      deromanize,
-    );
+    _ipaManuallyEdited = promoted == null &&
+        isIpaManuallyOverridden(
+          display.ipa,
+          display.rom.isEmpty ? null : display.rom,
+          deromanize,
+        );
+    // D-92 / D-93 — decode the stored intrinsic levels json into our
+    // state map AND store a snapshot for overlap preservation.
+    _storedIntrinsicLevels =
+        IntrinsicLevelsCodec.decode(lexeme.intrinsicLevelsJson);
+    _intrinsicLevelSelections
+      ..clear()
+      ..addAll(_storedIntrinsicLevels
+          .map<int, int?>((k, v) => MapEntry(k, v)));
+    _intrinsicLevelErrors.clear();
+    _posError = null;
+    _posJustChanged = false;
     _updatingControllersProgrammatically = false;
     setState(() => _isEditing = true);
   }
@@ -115,6 +176,66 @@ class _WordDetailPanelState extends ConsumerState<WordDetailPanel> {
     if (ipa.isEmpty) return;
     final dao = ref.read(lexemeDaoProvider);
     if (dao == null) return;
+
+    // Plan 04-18-04 Task 1 — POS mandatory validation in edit mode.
+    // rootOnlyViaDerivations words are exempt (they never surface standalone).
+    if (!(lexeme.rootOnlyViaDerivations) &&
+        (_editPos == null || _editPos!.isEmpty)) {
+      setState(() => _posError = 'Part of speech is required');
+      return;
+    }
+
+    // D-92 / D-93 (plan 04-17 Task 7) — resolve the currently-selected
+    // POS, look up its intrinsic dims, and block save if any required
+    // intrinsic dim has a null selection. The validator copy lives next
+    // to the dropdown (`Required — every {posName} must have a fixed
+    // {dim.name}.`) but we rebuild the error map here so a direct Save
+    // tap also surfaces the same state.
+    final posList =
+        ref.read(posListProvider).asData?.value ?? const <PartsOfSpeechData>[];
+    PartsOfSpeechData? selectedPos;
+    if (_editPos != null) {
+      for (final p in posList) {
+        if (p.name == _editPos) {
+          selectedPos = p;
+          break;
+        }
+      }
+    }
+    Map<int, int> encodedLevels = const {};
+    if (selectedPos != null) {
+      // Use the synchronously-cached .asData (the Builder sub-form is
+      // already watching this provider, so the stream has resolved).
+      final dims = ref
+              .read(dimensionsForPosProvider(selectedPos.id))
+              .asData
+              ?.value ??
+          const <Dimension>[];
+      final intrinsicDims = dims.where((d) => d.intrinsic).toList();
+      _intrinsicLevelErrors.clear();
+      var anyMissing = false;
+      for (final dim in intrinsicDims) {
+        final current = _intrinsicLevelSelections[dim.id];
+        if (current == null) {
+          _intrinsicLevelErrors[dim.id] =
+              'Required — every ${selectedPos.name} must have a '
+              'fixed ${dim.name}.';
+          anyMissing = true;
+        }
+      }
+      if (anyMissing) {
+        setState(() {});
+        return;
+      }
+      // Build the encoded map — only entries whose dim id is in the
+      // current POS's intrinsic dim set, so old-POS-only entries are
+      // silently dropped per D-93.
+      encodedLevels = {
+        for (final dim in intrinsicDims)
+          dim.id: _intrinsicLevelSelections[dim.id]!,
+      };
+    }
+    final encoded = IntrinsicLevelsCodec.encode(encodedLevels);
 
     await dao.updateLexeme(
       lexeme.copyWith(
@@ -126,8 +247,12 @@ class _WordDetailPanelState extends ConsumerState<WordDetailPanel> {
             ? null
             : _meaningController.text.trim()),
         partOfSpeech: Value(_editPos),
+        intrinsicLevelsJson: Value(encoded),
       ),
     );
+    // D-59: reconcile after meaning changes — a previously-null meaning
+    // landing triggers auto-apply for rules that skipped this word.
+    await ref.read(derivationPromotionServiceProvider).reconcile();
     setState(() => _isEditing = false);
   }
 
@@ -323,21 +448,37 @@ class _WordDetailPanelState extends ConsumerState<WordDetailPanel> {
     // Build rule name map for exception display
     final ruleNameMap = {for (final r in rules) r.id: r.name};
 
-    // Phonotactic validation for this word's IPA
+    // G-68 (wave 3a-bis): for promoted derivations the stored ipa is a
+    // placeholder equal to the parent's ipa — resolve the real displayed
+    // rom/ipa via `promotedDerivedFormProvider`. All header widgets and
+    // phonotactic validation below go through `display.ipa` / `display.rom`.
+    final promoted = ref.watch(promotedDerivedFormProvider(lexeme.id));
+    final display = resolveDisplayForms(lexeme, promoted);
+
+    // Phonotactic validation against the displayed form (derived for promoted
+    // rows, stored otherwise) so violations match what the user actually sees.
+    // D-99 -- 04-17: combine phonotactic + standard-form violations.
     final validate = ref.watch(phonotacticValidatorProvider);
-    final validation = validate(word: lexeme.ipa);
+    final phonoValidation = validate(word: display.ipa);
+    final sfViolations = ref.watch(standardFormViolationsProvider(lexeme.id)).asData?.value ?? const [];
+    final validation = ValidationResult(violations: [
+      ...phonoValidation.violations,
+      ...sfViolations,
+    ]);
     final hasViolations = !validation.isValid;
 
     // Visual flag: IPA is a manual override if it diverges from what
     // deromanize(romanization) would produce. When true, the IPA is
     // rendered in a distinct color so the user can spot irregular
-    // pronunciations at a glance.
+    // pronunciations at a glance. Promoted rows never trigger this — their
+    // stored fields are placeholders, not user overrides.
     final deromanize = ref.watch(deromanizeProvider);
-    final ipaOverridden = isIpaManuallyOverridden(
-      lexeme.ipa,
-      lexeme.romanization,
-      deromanize,
-    );
+    final ipaOverridden = promoted == null &&
+        isIpaManuallyOverridden(
+          lexeme.ipa,
+          lexeme.romanization,
+          deromanize,
+        );
     final ipaOverrideColor = Colors.orange.shade300;
 
     return SingleChildScrollView(
@@ -354,11 +495,13 @@ class _WordDetailPanelState extends ConsumerState<WordDetailPanel> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     if (romanizationEnabled &&
-                        lexeme.romanization != null &&
-                        lexeme.romanization!.isNotEmpty) ...[
-                      // Romanization as primary heading
+                        (promoted != null ||
+                            (lexeme.romanization != null &&
+                                lexeme.romanization!.isNotEmpty))) ...[
+                      // Romanization as primary heading (G-68: derived form
+                      // for promoted rows, stored rom otherwise)
                       Text(
-                        lexeme.romanization!,
+                        display.rom,
                         style: theme.textTheme.bodyMedium?.copyWith(
                           fontSize: 13,
                           fontWeight: FontWeight.w600,
@@ -370,7 +513,7 @@ class _WordDetailPanelState extends ConsumerState<WordDetailPanel> {
                       // can spot irregular pronunciations at a glance.
                       if (lexeme.isPhonologicalException)
                         Text(
-                          lexeme.ipa,
+                          display.ipa,
                           style: theme.textTheme.labelSmall?.copyWith(
                             fontSize: 12,
                             color: ipaOverridden
@@ -383,7 +526,7 @@ class _WordDetailPanelState extends ConsumerState<WordDetailPanel> {
                         )
                       else
                         ViolationText(
-                          text: lexeme.ipa,
+                          text: display.ipa,
                           violations: validation.violations,
                           style: theme.textTheme.labelSmall?.copyWith(
                             fontSize: 12,
@@ -399,7 +542,7 @@ class _WordDetailPanelState extends ConsumerState<WordDetailPanel> {
                       // IPA as primary heading with violation highlighting (unless exception)
                       if (lexeme.isPhonologicalException)
                         Text(
-                          lexeme.ipa,
+                          display.ipa,
                           style: theme.textTheme.bodyMedium?.copyWith(
                             fontSize: 13,
                             fontWeight: FontWeight.w600,
@@ -411,7 +554,7 @@ class _WordDetailPanelState extends ConsumerState<WordDetailPanel> {
                         )
                       else
                         ViolationText(
-                          text: lexeme.ipa,
+                          text: display.ipa,
                           violations: validation.violations,
                           style: theme.textTheme.bodyMedium?.copyWith(
                             fontSize: 13,
@@ -521,31 +664,32 @@ class _WordDetailPanelState extends ConsumerState<WordDetailPanel> {
             ),
 
           // ---- POS badge -----------------------------------------------
+          // ---- POS badge — Issue 39a: show intrinsic level in parens ----
           if (lexeme.partOfSpeech != null && lexeme.partOfSpeech!.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 16),
-              child: Chip(
-                label: Text(
-                  lexeme.partOfSpeech!,
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    fontSize: 11,
-                    letterSpacing: 0.5,
-                  ),
-                ),
-                padding: const EdgeInsets.symmetric(horizontal: 4),
-                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              ),
-            ),
+            _IntrinsicPosBadge(lexeme: lexeme),
 
           const Divider(height: 24),
 
+          // ---- Plan 04-14 D-62: Parents / Etymology --------------------
+          WordDetailParentsSection(
+            lexeme: lexeme,
+            onNavigateToWord: widget.onNavigateToWord,
+          ),
+
           // ---- Derivation tree -----------------------------------------
           Padding(
-            padding: const EdgeInsets.only(bottom: 24),
+            padding: const EdgeInsets.only(bottom: 12),
             child: DerivationTreeWidget(
               rootIpa: lexeme.ipa,
               rootId: widget.lexemeId,
+              onNavigateToWord: widget.onNavigateToWord,
             ),
+          ),
+
+          // ---- Plan 04-14 D-60: Suggestions chips ----------------------
+          Padding(
+            padding: const EdgeInsets.only(bottom: 24),
+            child: WordDetailSuggestionsSection(lexeme: lexeme),
           ),
 
           // ---- Paradigm section (Phase 4 plan 04-07) -------------------
@@ -659,31 +803,62 @@ class _WordDetailPanelState extends ConsumerState<WordDetailPanel> {
 
           // When romanization is enabled, it becomes the primary input and
           // IPA is auto-derived (override-only). Mirrors WordCreationForm.
-          if (romanizationEnabled) ...[
-            TextField(
-              controller: _romanizationController,
-              decoration: const InputDecoration(
-                labelText: 'Romanization *',
-                helperText: 'IPA is auto-derived from this',
-              ),
-            ),
-            const SizedBox(height: 12),
-            IpaTextField(
-              controller: _ipaController,
-              decoration: InputDecoration(
-                labelText: _ipaManuallyEdited
-                    ? 'IPA (manual override)'
-                    : 'IPA (auto-derived — edit to override)',
-              ),
-            ),
-          ] else ...[
-            IpaTextField(
-              controller: _ipaController,
-              decoration: const InputDecoration(
-                labelText: 'IPA *',
-              ),
-            ),
-          ],
+          // 04-18-04 Task 1: phonetic preview integrated as helperText inside
+          // the IPA field decoration — no standalone Surface: [...] line below.
+          Builder(builder: (ctx) {
+            final applyRewrite = ref.watch(applyRewritePipelineProvider);
+            final phonemic = _ipaController.text;
+            final phonetic =
+                phonemic.isNotEmpty ? applyRewrite(phonemic) : phonemic;
+            final showPhonetic = phonemic.isNotEmpty && phonetic != phonemic;
+            if (romanizationEnabled) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: _romanizationController,
+                    decoration: const InputDecoration(
+                      labelText: 'Romanization *',
+                      helperText: 'IPA is auto-derived from this',
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  IpaTextField(
+                    controller: _ipaController,
+                    decoration: InputDecoration(
+                      labelText: _ipaManuallyEdited
+                          ? 'IPA (manual override)'
+                          : 'IPA (auto-derived — edit to override)',
+                      helperText: showPhonetic ? '[$phonetic]' : null,
+                      helperStyle: Theme.of(ctx).textTheme.bodySmall?.copyWith(
+                            color: Theme.of(ctx)
+                                .colorScheme
+                                .onSurface
+                                .withValues(alpha: 0.6),
+                            fontStyle: FontStyle.italic,
+                          ),
+                    ),
+                  ),
+                ],
+              );
+            } else {
+              return IpaTextField(
+                controller: _ipaController,
+                decoration: InputDecoration(
+                  labelText: 'IPA *',
+                  helperText: showPhonetic ? '[$phonetic]' : null,
+                  helperStyle: Theme.of(ctx).textTheme.bodySmall?.copyWith(
+                        color: Theme.of(ctx)
+                            .colorScheme
+                            .onSurface
+                            .withValues(alpha: 0.6),
+                        fontStyle: FontStyle.italic,
+                      ),
+                ),
+              );
+            }
+          }),
           const SizedBox(height: 12),
 
           // Meaning
@@ -695,11 +870,14 @@ class _WordDetailPanelState extends ConsumerState<WordDetailPanel> {
           ),
           const SizedBox(height: 12),
 
-          // POS dropdown
+          // POS dropdown — 04-18-04: required (unless rootOnlyViaDerivations).
           if (posList.isNotEmpty)
             DropdownButtonFormField<String>(
               value: _editPos,
-              decoration: const InputDecoration(labelText: 'Part of speech'),
+              decoration: InputDecoration(
+                labelText: 'Part of speech *',
+                errorText: _posError,
+              ),
               hint: const Text('— none —'),
               items: [
                 const DropdownMenuItem<String>(
@@ -713,7 +891,100 @@ class _WordDetailPanelState extends ConsumerState<WordDetailPanel> {
                   ),
                 ),
               ],
-              onChanged: (val) => setState(() => _editPos = val),
+              onChanged: (val) {
+                // D-93 — synchronously set the POS and clear the
+                // intrinsic selections. The Builder sub-form below
+                // watches dimensionsForPosProvider for the new POS and
+                // uses [_posJustChanged] + [_storedIntrinsicLevels] to
+                // auto-populate overlap-preserved values on its first
+                // render after the POS switch. This avoids an `await`
+                // on `.future` (which would hang if the stream hasn't
+                // started yet).
+                setState(() {
+                  _editPos = val;
+                  // Clear POS error when user selects a value.
+                  if (val != null && val.isNotEmpty) {
+                    _posError = null;
+                  }
+                  _intrinsicLevelSelections.clear();
+                  _intrinsicLevelErrors.clear();
+                  _posJustChanged = true;
+                });
+              },
+            ),
+
+          // D-92 / D-93 (plan 04-17 Task 7) — dynamic intrinsic sub-form
+          // rendered directly beneath the POS dropdown. Watches
+          // dimensionsForPosProvider for the currently-selected POS and
+          // filters to intrinsic dims only. Hides entirely when the POS
+          // has none. Each dim renders a required DropdownButtonFormField
+          // with its own per-dim validation error copy.
+          if (_editPos != null)
+            Builder(
+              builder: (ctx) {
+                final currentPosId = () {
+                  for (final p in posList) {
+                    if (p.name == _editPos) return p.id;
+                  }
+                  return null;
+                }();
+                if (currentPosId == null) return const SizedBox.shrink();
+                final dimsAsync =
+                    ref.watch(dimensionsForPosProvider(currentPosId));
+                final dims =
+                    dimsAsync.asData?.value ?? const <Dimension>[];
+                final intrinsicDims =
+                    dims.where((d) => d.intrinsic).toList();
+                if (intrinsicDims.isEmpty) return const SizedBox.shrink();
+                // D-93 overlap preservation: on POS change, pre-fill
+                // selections from the stored lexeme json snapshot for
+                // any dim id that overlaps the new POS's intrinsic set.
+                if (_posJustChanged) {
+                  _posJustChanged = false;
+                  for (final d in intrinsicDims) {
+                    _intrinsicLevelSelections[d.id] =
+                        _storedIntrinsicLevels[d.id]; // may be null
+                  }
+                }
+                return Padding(
+                  padding: const EdgeInsets.only(top: 12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      for (final dim in intrinsicDims)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 8),
+                          child: DropdownButtonFormField<int>(
+                            key: ValueKey('intrinsicDim_${dim.id}'),
+                            value: _intrinsicLevelSelections[dim.id],
+                            decoration: InputDecoration(
+                              labelText: dim.name,
+                              helperText:
+                                  'Intrinsic — fixed for every $_editPos',
+                              errorText: _intrinsicLevelErrors[dim.id],
+                            ),
+                            items: [
+                              for (final lv
+                                  in decodeLevelsJson(dim.levelsJson))
+                                DropdownMenuItem<int>(
+                                  value: lv.id,
+                                  child: Text('${lv.name} (${formatAbbr(lv.abbr)})'),
+                                ),
+                            ],
+                            onChanged: (v) => setState(() {
+                              _intrinsicLevelSelections[dim.id] = v;
+                              _intrinsicLevelErrors[dim.id] = null;
+                            }),
+                            validator: (v) => v == null
+                                ? 'Required — every $_editPos must have '
+                                    'a fixed ${dim.name}.'
+                                : null,
+                          ),
+                        ),
+                    ],
+                  ),
+                );
+              },
             ),
 
           const SizedBox(height: 24),
@@ -796,11 +1067,359 @@ class WordDetailParadigmSection extends ConsumerWidget {
                 child: ParadigmTableWidget(
                   lexemeId: word.id,
                   posId: pos.id,
+                  // D-54 / plan 04-13: Lexicon word-detail host routes cell
+                  // clicks to CellOverrideDialog for per-word rom/ipa
+                  // overrides. The Grammar > Inflections host uses the
+                  // default ruleEditor mode instead.
+                  clickMode: ParadigmClickMode.wordOverride,
                 ),
               ),
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Plan 04-14 — D-60 Suggestions + D-62 Parents / Etymology sections
+// ---------------------------------------------------------------------------
+
+/// D-60 / G-19 Suggestions chips section.
+///
+/// Renders one [ActionChip] per derivational rule that:
+///   - has `isActive = true`
+///   - has `kind = 'derivational'`
+///   - has `autoApply = false` (auto-apply rules are already promoted)
+///   - has `inputPosId == lexeme.pos.id` (strict POS match per D-61)
+///   - does NOT already have a promoted Lexeme row for the (parent, rule)
+///     pair — once the user clicks a chip the matching row exists and the
+///     chip is hidden on the next rebuild (applied-suggestion filter).
+///
+/// Clicking a chip calls `LexemeDao.promoteDerivation` with an empty
+/// gloss — the user fills in the meaning via the derivation tree row's
+/// meaning field (Task 2 flow).
+///
+/// Extracted as a public widget so widget tests can pump it without
+/// standing up the full WordDetailPanel provider graph.
+class WordDetailSuggestionsSection extends ConsumerWidget {
+  const WordDetailSuggestionsSection({super.key, required this.lexeme});
+
+  final Lexeme lexeme;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+
+    final posListAsync = ref.watch(posListProvider);
+    final posList =
+        posListAsync.asData?.value ?? const <PartsOfSpeechData>[];
+    final pos = posForLexeme(lexeme, posList);
+    if (pos == null) return const SizedBox.shrink();
+
+    final rulesAsync = ref.watch(morphologicalRuleListProvider);
+    final rules = rulesAsync.asData?.value ?? const [];
+
+    // Collect already-applied (parent, rule) pairs so the chip for an
+    // applied rule disappears (D-60 "applied suggestions disappear").
+    final allLexemes =
+        ref.watch(allLexemeListProvider).asData?.value ?? const <Lexeme>[];
+    final appliedRuleIds = <int>{};
+    for (final lx in allLexemes) {
+      if (lx.derivedFromLexemeId == lexeme.id &&
+          lx.derivedViaRuleId != null) {
+        appliedRuleIds.add(lx.derivedViaRuleId!);
+      }
+    }
+
+    // Filter down to dormant suggestions.
+    final suggestions = [
+      for (final r in rules)
+        if (r.isActive &&
+            r.kind == 'derivational' &&
+            !r.autoApply &&
+            r.inputPosId != null &&
+            r.inputPosId == pos.id &&
+            !appliedRuleIds.contains(r.id))
+          r,
+    ];
+
+    if (suggestions.isEmpty) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 12, bottom: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Suggestions',
+            style: theme.textTheme.bodyMedium?.copyWith(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: [
+              for (final rule in suggestions)
+                ActionChip(
+                  label: Text(rule.name),
+                  tooltip: rule.source,
+                  onPressed: () async {
+                    final dao = ref.read(lexemeDaoProvider);
+                    if (dao == null) return;
+                    // D-60: empty gloss — the user types the meaning via
+                    // the derivation tree row's meaning field.
+                    await dao.promoteDerivation(
+                      parentId: lexeme.id,
+                      ruleId: rule.id,
+                      gloss: '',
+                    );
+                  },
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// D-62 / G-17 Parents / Etymology section.
+///
+/// Lists every [LexemeParentRow] for this child lexeme, resolved against
+/// the parent Lexemes list to display romanization + gloss. When a row
+/// has a non-null `relationship` label the label is appended to the
+/// parent's display string.
+///
+/// Hidden entirely when the child has zero parent rows (avoids an empty
+/// "Parents" header polluting the detail panel).
+///
+/// Extracted as a public widget so widget tests can pump it in isolation.
+class WordDetailParentsSection extends ConsumerWidget {
+  const WordDetailParentsSection({
+    super.key,
+    required this.lexeme,
+    this.onNavigateToWord,
+  });
+
+  final Lexeme lexeme;
+
+  /// Called when the user taps a parent chip to navigate to that word.
+  final ValueChanged<int>? onNavigateToWord;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+
+    final parentsAsync = ref.watch(parentsForLexemeProvider(lexeme.id));
+    final parents =
+        parentsAsync.asData?.value ?? const <LexemeParentRow>[];
+
+    // D-62: also show rule-derived parent (derivedFromLexemeId) alongside
+    // manual parents. Show the section even when manual parents are empty
+    // but a rule-derived parent exists.
+    final hasRuleDerivedParent = lexeme.derivedFromLexemeId != null;
+    if (parents.isEmpty && !hasRuleDerivedParent) {
+      return const SizedBox.shrink();
+    }
+
+    final allLexemes =
+        ref.watch(allLexemeListProvider).asData?.value ?? const <Lexeme>[];
+    final lexemeById = {for (final lx in allLexemes) lx.id: lx};
+
+    // Resolve rule name for the rule-derived parent pill.
+    String? ruleDerivedParentRuleName;
+    Lexeme? ruleDerivedParent;
+    if (hasRuleDerivedParent) {
+      ruleDerivedParent = lexemeById[lexeme.derivedFromLexemeId!];
+      if (lexeme.derivedViaRuleId != null) {
+        final rulesAsync = ref.watch(morphologicalRuleListProvider);
+        final rules = rulesAsync.asData?.value ?? const [];
+        for (final r in rules) {
+          if (r.id == lexeme.derivedViaRuleId) {
+            ruleDerivedParentRuleName = r.name;
+            break;
+          }
+        }
+      }
+    }
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 8, bottom: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Parents',
+            style: theme.textTheme.bodyMedium?.copyWith(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 6),
+          // Rule-derived parent pill (D-62) — shown before manual parents.
+          if (hasRuleDerivedParent && ruleDerivedParent != null)
+            _buildRuleDerivedParentRow(
+                context, ruleDerivedParent, ruleDerivedParentRuleName),
+          for (final row in parents)
+            _buildParentRow(context, row, lexemeById),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRuleDerivedParentRow(
+    BuildContext context,
+    Lexeme parent,
+    String? ruleName,
+  ) {
+    final label = (parent.romanization != null &&
+            parent.romanization!.isNotEmpty)
+        ? parent.romanization!
+        : parent.ipa;
+    final meaning = parent.meaning ?? '';
+    final relationship = ruleName != null ? 'via $ruleName' : 'via rule';
+    final chipLabel = '$label ($meaning) — $relationship';
+
+    if (onNavigateToWord != null) {
+      return Padding(
+        padding: const EdgeInsets.only(top: 4),
+        child: ActionChip(
+          avatar: const Icon(Icons.arrow_upward, size: 14),
+          label: Text(
+            chipLabel,
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              fontSize: 11,
+            ),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 2),
+          materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          onPressed: () => onNavigateToWord!(parent.id),
+        ),
+      );
+    }
+
+    return Padding(
+      padding: const EdgeInsets.only(left: 8, top: 2),
+      child: Text(
+        chipLabel,
+        style: Theme.of(context).textTheme.bodySmall,
+      ),
+    );
+  }
+
+  Widget _buildParentRow(
+    BuildContext context,
+    LexemeParentRow row,
+    Map<int, Lexeme> lexemeById,
+  ) {
+    final parent = lexemeById[row.parentLexemeId];
+    if (parent == null) return const SizedBox.shrink();
+    final label = (parent.romanization != null &&
+            parent.romanization!.isNotEmpty)
+        ? parent.romanization!
+        : parent.ipa;
+    final meaning = parent.meaning ?? '';
+    final relationship = row.relationship;
+    final chipLabel = relationship != null && relationship.isNotEmpty
+        ? '$label ($meaning) — $relationship'
+        : '$label ($meaning)';
+
+    if (onNavigateToWord != null) {
+      // Enhancement: clickable parent chip with arrow icon.
+      return Padding(
+        padding: const EdgeInsets.only(top: 4),
+        child: ActionChip(
+          avatar: const Icon(Icons.arrow_upward, size: 14),
+          label: Text(
+            chipLabel,
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              fontSize: 11,
+            ),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 2),
+          materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          onPressed: () => onNavigateToWord!(parent.id),
+        ),
+      );
+    }
+
+    // Fallback: plain text when no navigation callback provided.
+    return Padding(
+      padding: const EdgeInsets.only(left: 8, top: 2),
+      child: Text(
+        chipLabel,
+        style: Theme.of(context).textTheme.bodySmall,
+      ),
+    );
+  }
+}
+
+/// Issue 39a — POS badge with intrinsic level names shown in parentheses.
+///
+/// Looks up the lexeme's POS id, watches [dimensionsForPosProvider] for its
+/// intrinsic dims, decodes [IntrinsicLevelsCodec] to find which level id was
+/// assigned for each dim, then resolves the human-readable level name from
+/// the dimension's levelsJson. Renders e.g. "Noun (Masculine)" or plain
+/// "Verb" when no intrinsic levels are set.
+class _IntrinsicPosBadge extends ConsumerWidget {
+  const _IntrinsicPosBadge({required this.lexeme});
+
+  final Lexeme lexeme;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+
+    final posList = ref.watch(posListProvider).asData?.value ??
+        const <PartsOfSpeechData>[];
+    final pos = posForLexeme(lexeme, posList);
+
+    // Without a matching POS row we cannot resolve intrinsic dims — fall back
+    // to displaying the raw string the lexeme carries.
+    String label = lexeme.partOfSpeech!;
+
+    if (pos != null) {
+      final dims = ref
+              .watch(dimensionsForPosProvider(pos.id))
+              .asData
+              ?.value ??
+          const <Dimension>[];
+      final intrinsicDims = dims.where((d) => d.intrinsic).toList();
+
+      if (intrinsicDims.isNotEmpty) {
+        final storedLevels =
+            IntrinsicLevelsCodec.decode(lexeme.intrinsicLevelsJson);
+        final levelNames = <String>[];
+        for (final dim in intrinsicDims) {
+          final levelId = storedLevels[dim.id];
+          if (levelId == null) continue;
+          final dimLevels = decodeLevelsJson(dim.levelsJson);
+          final match = dimLevels.where((l) => l.id == levelId).firstOrNull;
+          if (match != null) levelNames.add(match.name);
+        }
+        if (levelNames.isNotEmpty) {
+          label = '${lexeme.partOfSpeech!} (${levelNames.join(', ')})';
+        }
+      }
+    }
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Chip(
+        label: Text(
+          label,
+          style: theme.textTheme.labelSmall?.copyWith(
+            fontSize: 11,
+            letterSpacing: 0.5,
+          ),
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 4),
+        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
       ),
     );
   }

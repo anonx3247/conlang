@@ -138,7 +138,7 @@ Plans:
   5. User can record language-level typology choices (alignment, word order, modality expression strategy)
   6. The standalone Morphology tab is removed; its rule editor UI is reused within Grammar (inflectional) and Lexicon (derivational)
   7. Existing morphology rules are migrated to lexicon derivational rules; derivational rules appear in a "Derivations" tab within Lexicon with romanization for all derived forms
-**Plans:** 14 plans (7 shipped + 7 gap-closure plans for 19 UAT gaps / 23 D-43..D-65 decisions)
+**Plans:** 28 plans
 
 Plans:
 - [x] 04-01-PLAN.md — Schema v8 migration: Dimensions + ParadigmCellOverrides tables, kind/featureBindings/input/outputPosId columns, file-level v7 backup, FeatureBindings TypeConverter
@@ -148,13 +148,27 @@ Plans:
 - [x] 04-05-PLAN.md — Inflectional rule editor: kind-aware RuleEditorDialog with FilterChip dimension picker, mandatory live tiebreak banner integration test, InflectionalRulesPage filter
 - [x] 04-06-PLAN.md — Paradigm Viewer: ParadigmTableWidget with D-25 tabs/dropdown affordance for 3+ dimension POS, per-cell ViolationText wiring, amber override rendering, CellOverrideDialog, CoverageMatrixPanel, ParadigmCellOverrideDao, AxisConfigBar
 - [x] 04-07-PLAN.md — Lexicon Derivations: 4th sidebar tab, DerivationsPage reusing RulesPage(kind=derivational), computedDerivedFormsProvider kind filter (pitfall #9), word detail paradigm embed
-- [ ] 04-08-PLAN.md — [GAP, Wave 1 BLOCKING] Schema v9 migration: Markers + InflectionalRulePOS + LexemeParents tables; MorphologicalRules.autoApply; Lexemes.derivedFromLexemeId/derivedViaRuleId/rootOnlyViaDerivations; v8->v9 onUpgrade with InflectionalRulePOS backfill; v9 beforeOpen safety net
-- [ ] 04-09-PLAN.md — [GAP, Wave 2] Pure bug fixes + trivial UI: G-01 per-POS last-selected-word persistence, G-02 template picker rendering audit, G-04 paradigm cell rom-primary render (D-29), G-08 phonology rewrite pipeline on inflected forms, G-11 dimension rename UI, G-12 single Custom entry in template picker, G-65 lexicon toolbar rename `Add root` -> `New word`
-- [ ] 04-10-PLAN.md — [GAP, Wave 3] Unmarked cells (G-03): MarkerDao + providers, paradigm engine markers resolution (D-45 override->rule->marker->uncovered, D-46 rules-win-on-tie), ParadigmUnmarked sealed variant + widget render (D-47 bare root + ∅ badge in muted gray)
-- [ ] 04-11-PLAN.md — [GAP, Wave 3] Multi-POS inflectional rules (G-05, G-09): InflectionalRulePOSDao, MorphologyDao JOIN-based query, RuleEditorDialog multi-POS FilterChip picker + junction write, rules_page POS-set grouping (D-56)
-- [ ] 04-12-PLAN.md — [GAP, Wave 4] Derivation data/engine (G-13, G-14/G-17/G-18/G-19 data): D-61 strict POS filter on computedDerivedFormsProvider (keyed by lexemeId), D-57 promoted-derivation path, D-58 implicit-detach / 100-lexeme rule-edit reactivity, D-59 autoApply reconcile service with exact templated-gloss format, D-62 LexemeParentsDao
-- [ ] 04-13-PLAN.md — [GAP, Wave 5] Inflections sub-tab restructure (G-06, G-07, G-10): Grammar sidebar 4->3 entries (D-48), new Inflections stacked paradigm+rules page (D-49, D-50), ParadigmClickMode enum on ParadigmTableWidget (D-52), RuleEditorDialog.preFilledBindings (D-51), router hard 404 on /grammar/paradigm and /grammar/inflectional (D-53), CellOverrideDialog preserved in Lexicon host only (D-54)
-- [ ] 04-14-PLAN.md — [GAP, Wave 5] Derivation overhaul UI (G-14/G-15/G-16/G-17/G-18/G-19): D-60 suggestion chips, D-62 parents/etymology section + multi-select picker, D-63 rootOnlyViaDerivations checkbox + muted Dictionary render, D-64 POS abbreviation badges, D-59 autoApply checkbox in derivational RuleEditorDialog, D-57/D-58 per-derivation meaning field with promote/demote + implicit-detach warning
+- [x] 04-08-PLAN.md — [GAP, Wave 1 BLOCKING] Schema v9 migration: Markers + InflectionalRulePOS + LexemeParents tables; MorphologicalRules.autoApply; Lexemes.derivedFromLexemeId/derivedViaRuleId/rootOnlyViaDerivations; v8->v9 onUpgrade with InflectionalRulePOS backfill; v9 beforeOpen safety net
+- [x] 04-09-PLAN.md — [GAP, Wave 2] Pure bug fixes + trivial UI: G-01 per-POS last-selected-word persistence, G-02 template picker rendering audit, G-04 paradigm cell rom-primary render (D-29), G-08 phonology rewrite pipeline on inflected forms, G-11 dimension rename UI, G-12 single Custom entry in template picker, G-65 lexicon toolbar rename `Add root` -> `New word`
+- [x] 04-10-PLAN.md — [GAP, Wave 3] Unmarked cells (G-03): MarkerDao + providers, paradigm engine markers resolution (D-45 override->rule->marker->uncovered, D-46 rules-win-on-tie), ParadigmUnmarked sealed variant + widget render (D-47 bare root + ∅ badge in muted gray)
+- [x] 04-11-PLAN.md — [GAP, Wave 3] Multi-POS inflectional rules (G-05, G-09): InflectionalRulePOSDao, MorphologyDao JOIN-based query, RuleEditorDialog multi-POS FilterChip picker + junction write, rules_page POS-set grouping (D-56)
+- [x] 04-12-PLAN.md — [GAP, Wave 4] Derivation data/engine (G-13, G-14/G-17/G-18/G-19 data): D-61 strict POS filter on computedDerivedFormsProvider (keyed by lexemeId), D-57 promoted-derivation path, D-58 implicit-detach / 100-lexeme rule-edit reactivity, D-59 autoApply reconcile service with exact templated-gloss format, D-62 LexemeParentsDao
+- [x] 04-13-PLAN.md — [GAP, Wave 5] Inflections sub-tab restructure (G-06, G-07, G-10): Grammar sidebar 4->3 entries (D-48), new Inflections stacked paradigm+rules page (D-49, D-50), ParadigmClickMode enum on ParadigmTableWidget (D-52), RuleEditorDialog.preFilledBindings (D-51), router hard 404 on /grammar/paradigm and /grammar/inflectional (D-53), CellOverrideDialog preserved in Lexicon host only (D-54)
+- [x] 04-14-PLAN.md — [GAP, Wave 5] Derivation overhaul UI (G-14/G-15/G-16/G-17/G-18/G-19): D-60 suggestion chips, D-62 parents/etymology section + multi-select picker, D-63 rootOnlyViaDerivations checkbox + muted Dictionary render, D-64 POS abbreviation badges, D-59 autoApply checkbox in derivational RuleEditorDialog, D-57/D-58 per-derivation meaning field with promote/demote + implicit-detach warning
+- [x] 04-15-PLAN.md — [GAP, Wave 6] Notation-layer unification (D-70..D-77, closes G-66/G-67/G-68): phonemic IPA as single canonical storage for MorphologicalRules.source (D-70/D-71); romanization bijection validator + save-time block + project-open banner (D-72); rule editor rom input -> deromanize at save / romanize on load, class-ref invariant doc in morphology_dsl.dart (D-73); v9->v10 Drift migration with round-trip classify rewrite pass + migration_log, 04-17 extends same v10 block (D-74); per-surface render-path audit persisted to 04-15-VERIFICATION.md (D-75); sound rule editor asymmetric labels Pattern (phonemic) / Replacement (phonetic) (D-76); delete static MorphologyPreviewPanel + VerticalDivider from rules_page.dart, keep live preview_panel.dart (D-77)
+- [x] 04-16-PLAN.md — [GAP, Wave 7] Rules list UX + dimension editor extensions + phoneme validation: empty-POS inflectional rules passthrough (D-78); per-level rename via chip edit icon (D-79); add-new-level + chip (D-80); PhonemeLiteralScanner domain service for G-69 phoneme validation
+- [x] 04-17-PLAN.md — [GAP, Wave 7] Intrinsic dimensions per POS + standard-form patterns + paradigm viewer stacking (D-82..D-99) + user feedback fixes (D-110..D-113)
+- [x] 04-18-01-PLAN.md — [UAT, Wave 8] Word detail fixes: promoted derivation edit IPA (issue 13), phonetic bracket display (issue 35b), POS pill with intrinsic level (issue 39a), clickable parent pills
+- [x] 04-18-02-PLAN.md — [UAT, Wave 8] Dimension editor chip hit-test fix (issues 28/38), phonetic preview integration (issue 35a), delete confirmation dialogs
+- [x] 04-18-03-PLAN.md — [UAT, Wave 8] Paradigm viewer intrinsic fixes: 1-dim rendering (issue 37a), word-detail filter (37b/39b), multi-word intrinsic selection (37c)
+- [x] 04-18-04-PLAN.md — [UAT, Wave 9] POS + intrinsic level mandatory validation, missing-assignment warning icons, edit mode phonetic preview
+- [x] 04-18-05-PLAN.md — [UAT, Wave 9] Markers UI: D-100 "leave as unmarked" checkbox, D-101 MarkerDao save path, D-102 merged rules+markers list, D-103 cell click to edit marker
+- [x] 04-19-01-PLAN.md — [GAP, Wave 10] Marker name persistence (schema v11) + level abbreviation resolution in binding summaries + feature bindings under rule names
+- [x] 04-19-02-PLAN.md — [GAP, Wave 10] Standard form validation romanized-form fix + single-row paradigm table IntrinsicWidth layout fix
+- [x] 04-19-03-PLAN.md — [GAP, Wave 11] Standard form violation preview in derivation rule editor
+- [x] 04-20-01-PLAN.md — [GAP, Wave 12] Rule editor pre-fill: paradigm cell click POS pre-selection (G-07 regression) + derivational output intrinsic level picker (New Gap 1)
+- [x] 04-20-02-PLAN.md — [GAP, Wave 12] Derivation lifecycle: auto-apply on new word creation (G-18 regression), derived word click navigation (New Gap 5), rule-derived parent pill (New Gap 6), romanized derived form search (New Gap 7)
+- [x] 04-20-03-PLAN.md — [GAP, Wave 12] UX polish: POS deletion with word migration (New Gap 2), custom template name prompt (New Gap 3), derivation rule POS labels (New Gap 4)
 
 ### Phase 5: Culture Wiki
 **Goal**: Users can document the world and culture behind their conlang in a structured wiki with Markdown formatting and navigable internal links between pages
@@ -163,11 +177,13 @@ Plans:
 **Success Criteria** (what must be TRUE):
   1. User can create, edit, and organize Markdown-formatted documentation pages within their project, with rendered preview
   2. User can create [[wiki-style]] internal links between culture pages and navigate the link graph — broken links are visually distinct from resolved ones
-**Plans**: TBD
+**Plans:** 4 plans (3 core + 1 gap closure)
 
 Plans:
-- [ ] 05-01: CultureRepository and CultureService — page CRUD, internal link resolution, document graph
-- [ ] 05-02: Culture UI — Markdown editor with flutter_markdown, [[link]] inline syntax extension, page list and navigation
+- [x] 05-01-PLAN.md — Data layer: CulturePages table (schema v13), CultureDao CRUD + tree queries, Riverpod providers, PageHistory, block splitter with tests
+- [x] 05-02-PLAN.md — Culture shell + tree sidebar: enable Culture tab, GoRouter wiring, 240px tree sidebar with DnD + context menu CRUD, page view, back/forward nav, empty state
+- [x] 05-03-PLAN.md — Block editor + wiki links: heading-based section editing (rendered/edit toggle), [[wikilink]] InlineSyntax + autocomplete, broken link ? badge + create prompt, hover preview tooltip
+- [x] 05-04-PLAN.md — [GAP] Fix StateProvider compile error: replace with NotifierProvider pattern, update 6 call sites
 
 ### Phase 6: Reference Glossary
 **Goal**: Users can look up unfamiliar linguistic terminology without leaving the application
@@ -176,10 +192,11 @@ Plans:
 **Success Criteria** (what must be TRUE):
   1. User can open the built-in glossary, search for a linguistic term (e.g. "ergative", "allophone", "paradigm"), and read a clear definition without leaving the app
   2. Glossary entries for terms relevant to current context (morphology, phonology, grammar) are accessible from those tabs
-**Plans**: TBD
+**Plans:** 2 plans in 2 waves
 
 Plans:
-- [ ] 06-01: Linguistic glossary — bundled terminology dataset, searchable glossary UI, contextual access from relevant tabs
+- [x] 06-01-PLAN.md — Data layer: glossary.json asset (150-200 terms), GlossaryEntry domain class, Riverpod providers for loading + real-time filtering by search and category
+- [x] 06-02-PLAN.md — Glossary UI: 320px right-side drawer with accordion tiles, AppShell ? button, per-tab contextual ? buttons (Phonology/Grammar/Lexicon), See Also navigation
 
 ## Progress
 
@@ -191,8 +208,55 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4. Phases 5 and 6 depend only on
 | 1. Foundation | 13/13 | Complete | 2026-04-09 |
 | 2. Morphology Engine | 10/10 | Complete | 2026-04-09 |
 | 3. Lexicon | 6/6 | Complete | 2026-04-09 |
-| 3.1 Display & UX Fixes | 0/4 | Not started | - |
-| 3.2 Phonology Enhancements | 0/4 | Not started | - |
-| 4. Grammar & Morphology | 0/5 | Planned | - |
-| 5. Culture Wiki | 0/2 | Not started | - |
-| 6. Reference Glossary | 0/1 | Not started | - |
+| 3.1 Display & UX Fixes | 4/4 | Complete | 2026-04-10 |
+| 3.2 Phonology Enhancements | 4/4 | Complete | 2026-04-10 |
+| 4. Grammar & Morphology | 25/25 | Complete | 2026-04-12 |
+| 5. Culture Wiki | 3/4 | Gap closure | - |
+| 6. Reference Glossary | 2/2 | Complete | 2026-04-12 |
+| 7. Polish & Refactor | 3/6 | Gap closure | - |
+| 8. Gemination Restrictions | 0/? | Not started | - |
+| 9. Platform Polish | 0/? | Not started | - |
+
+### Phase 7: Polish & Refactor
+**Goal**: Fix all outstanding UI nits (phonology layout, abbreviation formatting, natural classes tab), clean up dead code from culture wiki removal, refactor oversized files (rule_editor_dialog.dart), and address code quality concerns from codebase audit
+**Depends on**: Phase 6
+**Requirements**: NIT-01, NIT-02, NIT-03, NIT-04, NIT-05, REFAC-01
+**Success Criteria** (what must be TRUE):
+  1. Natural classes moved to their own Phonology sub-tab
+  2. Phoneme inventory charts show /phoneme/ next to romanization (only when they differ)
+  3. Romanization section appears below phoneme inventory (not separate sub-tab)
+  4. Abbreviations are case-insensitive and display with trailing period (e.g. v.)
+  5. Dead code from culture wiki removal is cleaned up (no orphaned imports, providers, or references)
+  6. rule_editor_dialog.dart split into smaller focused files (<500 lines each)
+**Plans:** 6 plans in 2 waves
+
+Plans:
+- [x] 07-01-PLAN.md — Phonology tab restructure: extract natural classes to own sub-tab, inline romanization below inventory, rom-primary phoneme display replacing alt-key toggle
+- [x] 07-02-PLAN.md — Abbreviation formatting (lowercase + trailing period) + draggable panel separator widget for all shells
+- [x] 07-03-PLAN.md — Dead code cleanup, getSingle() safety fixes, rule_editor_dialog.dart refactor into rule_editor/ subdirectory
+- [ ] 07-04-PLAN.md — [UAT GAP] Context-aware abbreviation display (CAPITALS in paradigm/rules, lowercase in lexicon) + lexicon word list inline POS + derived word display fixes
+- [x] 07-05-PLAN.md — [UAT GAP] Remove stray paradigm viewer divider + fix ResizableDivider panel constraints (IPA chart, dictionary word list)
+- [x] 07-06-PLAN.md — [UAT GAP] Lexicon table: no auto-select on load, checkboxes only during Anki export mode
+
+### Phase 8: Gemination Restrictions
+**Goal**: Users can define gemination restrictions as phonotactic constraints — prevent geminate consonants globally, positionally (coda, onset, word-initial, word-final), or selectively
+**Depends on**: Phase 7
+**Requirements**: GEM-01
+**Success Criteria** (what must be TRUE):
+  1. User can add a "no gemination" constraint with position options (everywhere, coda only, onset only, word-initial, word-final)
+  2. Word generator respects gemination constraints
+  3. Phonotactic violation highlighting flags geminate violations
+**Plans**: TBD
+
+### Phase 9: Platform Polish
+**Goal**: Move File menu to macOS native menu bar, add project management features (rename, save-as, .conlang file format with user-chosen location), fix app name to "Conlang Workbench" everywhere, and create app logo
+**Depends on**: Phase 8
+**Requirements**: PLAT-01, PLAT-02, PLAT-03
+**Success Criteria** (what must be TRUE):
+  1. File/Edit/View menus appear in macOS global menu bar (not in-app)
+  2. User can rename a project
+  3. User can "Save as" to duplicate a project
+  4. Projects stored as .conlang files (SQLite DB) in user-chosen locations
+  5. App name shows "Conlang Workbench" everywhere (menu bar, title bar, window title) — no underscores
+  6. App has a custom logo/icon
+**Plans**: TBD

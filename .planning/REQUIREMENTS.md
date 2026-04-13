@@ -60,10 +60,10 @@ Requirements for initial release. Each maps to roadmap phases.
 - [ ] **GRAM-01**: User can define parts of speech categories with N user-defined grammatical dimensions, each with K levels (e.g. gender[M/F] × number[SG/PL] × case[NOM/ACC])
 - [ ] **GRAM-02**: User can attach inflectional morphology rules to dimension levels that stack hierarchically with auto-generated combined forms
 - [ ] **GRAM-03**: User can generate full paradigm charts (declension/conjugation tables) for any word based on its POS dimensions
-- [ ] **GRAM-04**: User can specify language typology choices (ergative/accusative alignment, word order, modality expression as morphological vs analytic)
+- [x] **GRAM-04**: User can specify language typology choices (ergative/accusative alignment, word order, modality expression as morphological vs analytic)
 - [ ] **GRAM-05**: User can override any individual cell in a paradigm table with a manual exception form
-- [ ] **GRAM-06**: The standalone Morphology tab is removed; rule editor UI is reused within Grammar (inflectional) and Lexicon (derivational)
-- [ ] **GRAM-07**: Existing morphology rules migrate to lexicon derivational rules; derivational rules have a dedicated tab in Lexicon with romanization for all derived forms
+- [x] **GRAM-06**: The standalone Morphology tab is removed; rule editor UI is reused within Grammar (inflectional) and Lexicon (derivational)
+- [x] **GRAM-07**: Existing morphology rules migrate to lexicon derivational rules; derivational rules have a dedicated tab in Lexicon with romanization for all derived forms
 
 ### Culture
 
@@ -73,6 +73,25 @@ Requirements for initial release. Each maps to roadmap phases.
 ### Reference
 
 - [ ] **REF-01**: User can search a built-in glossary of linguistic terminology with definitions
+
+### Polish & Refactor
+
+- [ ] **NIT-01**: Natural classes moved to their own Phonology sub-tab (separate from inventory)
+- [ ] **NIT-02**: Phoneme inventory charts show /phoneme/ next to romanization (only when they differ, e.g. skip when t→/t/)
+- [ ] **NIT-03**: Romanization section appears below phoneme inventory section (not as separate sub-tab)
+- [ ] **NIT-04**: Abbreviations are case-insensitive and display with trailing period everywhere (e.g. v.)
+- [ ] **NIT-05**: Draggable panel separator bars throughout the app (resize panels)
+- [ ] **REFAC-01**: Dead code cleanup from culture wiki removal + rule_editor_dialog.dart refactor into smaller files
+
+### Gemination Restrictions
+
+- [ ] **GEM-01**: User can define gemination restrictions as phonotactic constraints with position options (everywhere, coda, onset, word-initial, word-final)
+
+### Platform Polish
+
+- [ ] **PLAT-01**: File/Edit/View menus in macOS native global menu bar (PlatformMenuBar widget), not in-app
+- [ ] **PLAT-02**: Project management: rename project, save-as, .conlang file format with user-chosen storage location
+- [ ] **PLAT-03**: App name "Conlang Workbench" everywhere (no underscores) + custom app logo/icon
 
 ## v2 Requirements
 
@@ -166,10 +185,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | GRAM-01 | Phase 4 | Pending |
 | GRAM-02 | Phase 4 | Pending |
 | GRAM-03 | Phase 4 | Pending |
-| GRAM-04 | Phase 4 | Pending |
+| GRAM-04 | Phase 4 | Complete |
 | GRAM-05 | Phase 4 | Pending |
-| GRAM-06 | Phase 4 | Pending |
-| GRAM-07 | Phase 4 | Pending |
+| GRAM-06 | Phase 4 | Complete |
+| GRAM-07 | Phase 4 | Complete |
 | CULT-01 | Phase 5 | Pending |
 | CULT-02 | Phase 5 | Pending |
 | REF-01 | Phase 6 | Pending |

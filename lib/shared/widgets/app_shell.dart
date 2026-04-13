@@ -2,9 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../features/glossary/data/glossary_providers.dart';
+import '../../features/glossary/presentation/glossary_drawer.dart';
 import '../../features/project/data/project_providers.dart';
 import '../../features/project/data/project_registry.dart';
 import '../../features/project/presentation/project_menu.dart';
+import 'resizable_divider.dart';
 
 /// Top-level application shell with a horizontal tab bar for major sections.
 ///
@@ -12,7 +15,7 @@ import '../../features/project/presentation/project_menu.dart';
 /// When no project is open, the main content area shows an empty state.
 /// Only the Phonology tab is interactive in Phase 1; other tabs are disabled
 /// with a tooltip indicating when they will be available.
-class AppShell extends ConsumerWidget {
+class AppShell extends ConsumerStatefulWidget {
   const AppShell({
     super.key,
     required this.navigationShell,
@@ -20,18 +23,21 @@ class AppShell extends ConsumerWidget {
 
   final StatefulNavigationShell navigationShell;
 
-  // Phase 4 plan 04-04: Morphology tab removed, Grammar promoted to index 1
-  // and enabled. Branch indices in app_router.dart now match tab indices
-  // (0=Phonology, 1=Grammar, 2=Lexicon, 3=Culture).
+  @override
+  ConsumerState<AppShell> createState() => _AppShellState();
+}
+
+class _AppShellState extends ConsumerState<AppShell> {
+  double _glossaryWidth = 320;
+
   static const _tabs = [
     _TabItem(label: 'Phonology', icon: Icons.music_note, enabled: true, phase: null),
     _TabItem(label: 'Grammar', icon: Icons.account_tree, enabled: true, phase: null),
     _TabItem(label: 'Lexicon', icon: Icons.menu_book, enabled: true, phase: null),
-    _TabItem(label: 'Culture', icon: Icons.language, enabled: false, phase: 'Phase 5'),
   ];
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
@@ -75,15 +81,15 @@ class AppShell extends ConsumerWidget {
                       if (currentProjectId != null) ...[
                         ...List.generate(_tabs.length, (index) {
                           final tab = _tabs[index];
-                          final isSelected = navigationShell.currentIndex == index;
+                          final isSelected = widget.navigationShell.currentIndex == index;
                           return _TabButton(
                             tab: tab,
                             isSelected: isSelected,
                             onTap: tab.enabled
-                                ? () => navigationShell.goBranch(
+                                ? () => widget.navigationShell.goBranch(
                                       index,
                                       initialLocation:
-                                          index == navigationShell.currentIndex,
+                                          index == widget.navigationShell.currentIndex,
                                     )
                                 : null,
                           );
@@ -91,6 +97,28 @@ class AppShell extends ConsumerWidget {
                       ],
 
                       const Spacer(),
+
+                      // Glossary ? button (only when a project is open)
+                      if (currentProjectId != null) ...[
+                        IconButton(
+                          icon: const Icon(Icons.help_outline, size: 18),
+                          tooltip: 'Glossary',
+                          onPressed: () {
+                            final notifier =
+                                ref.read(glossaryOpenProvider.notifier);
+                            if (ref.read(glossaryOpenProvider)) {
+                              notifier.close();
+                            } else {
+                              ref
+                                  .read(
+                                      glossaryCategoryFilterProvider.notifier)
+                                  .clear();
+                              notifier.open();
+                            }
+                          },
+                        ),
+                        const SizedBox(width: 4),
+                      ],
 
                       // Current project name (right-aligned)
                       if (currentProjectId != null)
@@ -118,10 +146,27 @@ class AppShell extends ConsumerWidget {
             ),
           ),
 
-          // Main content area
+          // Main content area (with optional glossary drawer on the right)
           Expanded(
             child: currentProjectId != null
-                ? navigationShell
+                ? Row(
+                    children: [
+                      Expanded(child: widget.navigationShell),
+                      if (ref.watch(glossaryOpenProvider)) ...[
+                        ResizableDivider(
+                          onDrag: (d) => setState(() {
+                            // Glossary is on the right: drag right shrinks it,
+                            // drag left grows it.
+                            _glossaryWidth = (_glossaryWidth - d).clamp(240, 500);
+                          }),
+                        ),
+                        SizedBox(
+                          width: _glossaryWidth,
+                          child: const GlossaryDrawer(),
+                        ),
+                      ],
+                    ],
+                  )
                 : _NoProjectEmptyState(),
           ),
         ],

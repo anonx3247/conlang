@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: planning
-stopped_at: Phase 04 gap context gathered (23 decisions D-43..D-65)
-last_updated: "2026-04-11T06:46:02.600Z"
-last_activity: 2026-04-10
+status: executing
+stopped_at: Phase 5 context gathered
+last_updated: "2026-04-13T00:38:20.072Z"
+last_activity: 2026-04-13
 progress:
-  total_phases: 8
-  completed_phases: 6
-  total_plans: 44
-  completed_plans: 44
+  total_phases: 9
+  completed_phases: 9
+  total_plans: 71
+  completed_plans: 71
   percent: 100
 ---
 
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-08)
 
 **Core value:** A powerful, flexible morphology engine that handles the full spectrum of language types through a readable pattern mini-language
-**Current focus:** Phase 3 (Lexicon) complete including 3.1/3.2 insertions — ready for Phase 4 (Grammar & Morphology)
+**Current focus:** Phase 07 — polish-refactor
 
 ## Current Position
 
-Phase: 4 of 6 (grammar & morphology (revised))
+Phase: 07
 Plan: Not started
-Status: Ready to plan
-Last activity: 2026-04-10
+Status: Executing Phase 07
+Last activity: 2026-04-13
 
 Progress: [██████░░░░] 55% (24/44 total plans)
 
@@ -36,7 +36,7 @@ Progress: [██████░░░░] 55% (24/44 total plans)
 
 **Velocity:**
 
-- Total plans completed: 21
+- Total plans completed: 55
 - Average duration: 12 min (updated)
 - Total execution time: 1.3 hours
 
@@ -48,6 +48,10 @@ Progress: [██████░░░░] 55% (24/44 total plans)
 | 03 | 6 | - | - |
 | 03.1 | 4 | - | - |
 | 03.2 | 4 | - | - |
+| 04 | 25 | - | - |
+| 05 | 4 | - | - |
+| 06 | 2 | - | - |
+| 07 | 3 | - | - |
 
 **Recent Trend:**
 
@@ -64,8 +68,14 @@ Progress: [██████░░░░] 55% (24/44 total plans)
 | Phase 01-foundation P09 | 4 min | 2 tasks | 3 files |
 | Phase 02-morphology-engine P03 | 25 | 2 tasks | 7 files |
 | Phase 02-morphology-engine P06 | 2 | 2 tasks | 2 files |
+| Phase 04-grammar-morphology-revised P19-03 | 8 | 1 tasks | 1 files |
 
 ## Accumulated Context
+
+### Roadmap Evolution
+
+- Phase 5 (Culture Wiki) retired to `culture-wiki-v2-staging` branch — code removed from main, will return in v2
+- Phase 7 added: Polish & Refactor — UI nits, dead code cleanup, rule_editor_dialog.dart refactor
 
 ### Decisions
 
@@ -139,6 +149,7 @@ Recent decisions affecting current work:
 - [Phase 02-morphology-engine]: 02-10: ref.read inside _evaluate() for constraints/rule list — avoids extra rebuilds; _evaluate is already on 300ms debounce timer
 - [Phase 02-morphology-engine]: 02-10: Stack mode skips MorphNoMatch rules and continues with current form — no-match is a no-op, not an error; preserves partial chain results
 - [Phase 02-morphology-engine]: 02-10: Stack mode reads morphologicalRuleListProvider via ConsumerStatefulWidget ref — no widget param threading needed
+- [Phase 04-grammar-morphology-revised]: Compute sample output form in _StandardFormDerivationWarning independently via MorphologyEngine — avoids PreviewPanel coupling, functionally equivalent
 
 ### Pending Todos
 
@@ -153,6 +164,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-11T06:46:02.597Z
-Stopped at: Phase 04 gap context gathered (23 decisions D-43..D-65)
-Resume file: .planning/phases/04-grammar-morphology-revised/04-CONTEXT-GAPS.md
+Last session: 2026-04-12T20:57:03.828Z
+Stopped at: Phase 5 context gathered
+Resume file: .planning/phases/05-culture-wiki/05-CONTEXT.md

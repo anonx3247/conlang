@@ -2,14 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../features/morphology/data/morphology_providers.dart';
-import '../../../../shared/widgets/violation_text.dart';
+import '../../../phonology/data/phonotactic_providers.dart'
+    show applyRewritePipelineProvider;
 import '../../../phonology/data/romanization_providers.dart';
+import '../../../grammar/domain/dimension_level.dart' show formatAbbr;
 import '../../data/lexeme_providers.dart';
 
 /// Left panel of the Dictionary master-detail layout.
 ///
 /// Shows a scrollable list of root lexemes with:
-///   - "Add root" action button
+///   - "New word" action button
 ///   - Search bar (filters via [lexemeSearchQueryProvider])
 ///   - POS filter chips (filters via [lexemePosFilterProvider])
 ///   - List/table view toggle
@@ -105,13 +107,13 @@ class _WordListPanelState extends ConsumerState<WordListPanel> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // ---- Add root button -------------------------------------------
+          // ---- New word button -------------------------------------------
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
             child: FilledButton.icon(
               onPressed: widget.onAddRoot,
               icon: const Icon(Icons.add, size: 18),
-              label: const Text('Add root'),
+              label: const Text('New word'),
             ),
           ),
 
@@ -349,7 +351,7 @@ class _WordListPanelState extends ConsumerState<WordListPanel> {
         child: Text(
           query.isNotEmpty
               ? 'No words match "$query"'
-              : 'No words yet. Click "Add root" to add your first word.',
+              : 'No words yet. Click "New word" to add your first word.',
           textAlign: TextAlign.center,
           style: theme.textTheme.bodyMedium?.copyWith(
             fontSize: 13,
@@ -368,14 +370,15 @@ class _WordListPanelState extends ConsumerState<WordListPanel> {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
 
-    // Batch violations for all lexemes — avoids per-item validation calls.
-    final violations = ref.watch(lexemeViolationsProvider);
     // Hoist allLexemes watch outside itemBuilder so we have a single provider
     // subscription per rebuild rather than one per visible row.
     final allLexemes = ref.watch(allLexemeListProvider).asData?.value ?? [];
     // Hoist the deromanize function so the per-row override flag check is
     // a cheap comparison rather than reading the provider per item.
     final deromanize = ref.watch(deromanizeProvider);
+    // Issue 35b: [bracket] notation means PHONETIC (post-rewrite), not
+    // phonemic. Hoist applyRewrite so every row applies the same pipeline.
+    final applyRewrite = ref.watch(applyRewritePipelineProvider);
     final ipaOverrideColor = Colors.orange.shade300;
 
     return ListView.builder(
@@ -396,18 +399,31 @@ class _WordListPanelState extends ConsumerState<WordListPanel> {
                 allLexemes.any((l) => l.id == id && l.rootId == rootIdStr))
             .length;
 
-        // Violations for this specific lexeme (null if it's an exception).
-        final lexemeViolation = violations[lexeme.id];
-        final itemViolations = lexemeViolation?.violations ?? [];
+        // G-68 (wave 3a-bis): promoted derivations store `ipa = parent.ipa`
+        // as a placeholder and compute the real rom/ipa via
+        // `promotedDerivedFormProvider`. Resolve effective display values
+        // through the helper so the list shows the derived form, not the
+        // parent's phonemes.
+        final promoted = ref.watch(promotedDerivedFormProvider(lexeme.id));
+        final display = resolveDisplayForms(lexeme, promoted);
         // Manual IPA override flag: stored IPA diverges from what
         // deromanize(romanization) produces → render in override color.
-        final ipaOverridden = isIpaManuallyOverridden(
-          lexeme.ipa,
-          lexeme.romanization,
-          deromanize,
-        );
+        // Skip for promoted rows — their stored IPA is a placeholder.
+        final ipaOverridden = promoted == null &&
+            isIpaManuallyOverridden(
+              lexeme.ipa,
+              lexeme.romanization,
+              deromanize,
+            );
 
-        return Material(
+        // D-63 / G-16 (plan 04-14): rootOnlyViaDerivations lexemes render
+        // muted (reduced opacity) but remain findable and clickable. The
+        // Opacity wraps the Material so the selection highlight + tap
+        // target stay functional.
+        final muted = lexeme.rootOnlyViaDerivations;
+        return Opacity(
+          opacity: muted ? 0.45 : 1.0,
+          child: Material(
           color: isSelected ? cs.primaryContainer : Colors.transparent,
           child: InkWell(
             onTap: () => widget.onWordSelected(lexeme.id),
@@ -435,10 +451,12 @@ class _WordListPanelState extends ConsumerState<WordListPanel> {
                           children: [
                             Expanded(
                               child: Text(
-                                (lexeme.romanization != null &&
-                                        lexeme.romanization!.isNotEmpty)
-                                    ? lexeme.romanization!
-                                    : lexeme.ipa,
+                                () {
+                                  final posAbbr = formatAbbr(lexeme.partOfSpeech);
+                                  return posAbbr.isNotEmpty
+                                      ? '${display.rom} ($posAbbr)'
+                                      : display.rom;
+                                }(),
                                 style: theme.textTheme.bodyMedium?.copyWith(
                                   fontSize: 13,
                                   fontWeight: isSelected
@@ -476,39 +494,19 @@ class _WordListPanelState extends ConsumerState<WordListPanel> {
                               ),
                           ],
                         ),
-                        // Brackets rendered OUTSIDE ViolationText so the
-                        // violation offsets (which index into lexeme.ipa)
-                        // line up with the highlighted characters. Wrapping
-                        // the IPA in `'[${lexeme.ipa}]'` used to shift every
-                        // underline one character right. Uses inline spans
-                        // so the brackets stay tight against the IPA.
-                        Text.rich(
-                          TextSpan(
-                            style: theme.textTheme.labelSmall?.copyWith(
-                              fontSize: 12,
-                              color: cs.onSurface.withValues(alpha: 0.55),
-                            ),
-                            children: [
-                              const TextSpan(text: '['),
-                              WidgetSpan(
-                                alignment: PlaceholderAlignment.baseline,
-                                baseline: TextBaseline.alphabetic,
-                                child: ViolationText(
-                                  text: lexeme.ipa,
-                                  violations: itemViolations,
-                                  style:
-                                      theme.textTheme.labelSmall?.copyWith(
-                                    fontSize: 12,
-                                    color: cs.onSurface
-                                        .withValues(alpha: 0.55),
-                                  ),
-                                ),
-                              ),
-                              const TextSpan(text: ']'),
-                            ],
+                        // Issue 35b: [bracket] notation is PHONETIC
+                        // (post-rewrite). Compute the phonetic form and
+                        // display it as plain text inside the brackets.
+                        Text(
+                          '[${applyRewrite(display.ipa)}]',
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            fontSize: 12,
+                            color: cs.onSurface.withValues(alpha: 0.55),
                           ),
                         ),
-                        if (lexeme.meaning != null && lexeme.meaning!.isNotEmpty)
+                        if (lexeme.meaning != null &&
+                            lexeme.meaning!.isNotEmpty &&
+                            lexeme.derivedViaRuleId == null)
                           Text(
                             lexeme.meaning!,
                             style: theme.textTheme.bodySmall?.copyWith(
@@ -518,19 +516,6 @@ class _WordListPanelState extends ConsumerState<WordListPanel> {
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
-                        if (lexeme.partOfSpeech != null &&
-                            lexeme.partOfSpeech!.isNotEmpty)
-                          Padding(
-                            padding: const EdgeInsets.only(top: 2),
-                            child: Text(
-                              lexeme.partOfSpeech!,
-                              style: theme.textTheme.labelSmall?.copyWith(
-                                fontSize: 11,
-                                color: cs.onSurface.withValues(alpha: 0.5),
-                                letterSpacing: 0.5,
-                              ),
-                            ),
-                          ),
                       ],
                     ),
                   ),
@@ -538,6 +523,7 @@ class _WordListPanelState extends ConsumerState<WordListPanel> {
               ),
             ),
           ),
+        ),
         );
       },
     );
@@ -547,10 +533,10 @@ class _WordListPanelState extends ConsumerState<WordListPanel> {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
 
-    // Batch violations for table view IPA cells.
-    final violations = ref.watch(lexemeViolationsProvider);
     // Same override-flag computation as the list view.
     final deromanize = ref.watch(deromanizeProvider);
+    // Issue 35b: [bracket] notation is PHONETIC — apply rewrite pipeline.
+    final applyRewrite = ref.watch(applyRewritePipelineProvider);
     final ipaOverrideColor = Colors.orange.shade300;
 
     // Sort lexemes based on current sort state
@@ -595,6 +581,7 @@ class _WordListPanelState extends ConsumerState<WordListPanel> {
         dataRowMaxHeight: 40,
         columnSpacing: 12,
         horizontalMargin: 16,
+        showCheckboxColumn: widget.isSelectionMode,
         columns: [
           DataColumn(
             label: const Text('Word'),
@@ -633,22 +620,26 @@ class _WordListPanelState extends ConsumerState<WordListPanel> {
           final isSelected = widget.isSelectionMode
               ? widget.selectedForExport.contains(lexeme.id)
               : widget.selectedLexemeId == lexeme.id;
-          final lexemeViolation = violations[lexeme.id];
-          final itemViolations = lexemeViolation?.violations ?? [];
-          final ipaOverridden = isIpaManuallyOverridden(
-            lexeme.ipa,
-            lexeme.romanization,
-            deromanize,
-          );
+          // G-68 (wave 3a-bis): resolve display forms via the promoted
+          // provider so derived rows render their computed rom/ipa
+          // instead of the parent placeholder stored at promotion time.
+          final promoted = ref.watch(promotedDerivedFormProvider(lexeme.id));
+          final display = resolveDisplayForms(lexeme, promoted);
+          final ipaOverridden = promoted == null &&
+              isIpaManuallyOverridden(
+                lexeme.ipa,
+                lexeme.romanization,
+                deromanize,
+              );
           return DataRow(
             selected: isSelected,
-            onSelectChanged: (_) => widget.isSelectionMode
-                ? widget.onToggleExport?.call(lexeme.id)
-                : widget.onWordSelected(lexeme.id),
+            onSelectChanged: widget.isSelectionMode
+                ? (_) => widget.onToggleExport?.call(lexeme.id)
+                : null,
             cells: [
               DataCell(
                 Text(
-                  lexeme.romanization ?? lexeme.ipa,
+                  display.rom,
                   style: theme.textTheme.bodySmall?.copyWith(
                     fontSize: 13,
                     color: ipaOverridden ? ipaOverrideColor : null,
@@ -657,40 +648,31 @@ class _WordListPanelState extends ConsumerState<WordListPanel> {
                         : FontStyle.normal,
                   ),
                 ),
+                onTap: widget.isSelectionMode
+                    ? null
+                    : () => widget.onWordSelected(lexeme.id),
               ),
               DataCell(
-                // Brackets rendered outside ViolationText so violation
-                // offsets line up with the IPA characters (see list view).
-                Text.rich(
-                  TextSpan(
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      fontSize: 12,
-                      color: cs.onSurface.withValues(alpha: 0.7),
-                    ),
-                    children: [
-                      const TextSpan(text: '['),
-                      WidgetSpan(
-                        alignment: PlaceholderAlignment.baseline,
-                        baseline: TextBaseline.alphabetic,
-                        child: ViolationText(
-                          text: lexeme.ipa,
-                          violations: itemViolations,
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            fontSize: 12,
-                            color: cs.onSurface.withValues(alpha: 0.7),
-                          ),
-                        ),
-                      ),
-                      const TextSpan(text: ']'),
-                    ],
+                // Issue 35b: [bracket] notation is PHONETIC (post-rewrite).
+                Text(
+                  '[${applyRewrite(display.ipa)}]',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    fontSize: 12,
+                    color: cs.onSurface.withValues(alpha: 0.7),
                   ),
                 ),
+                onTap: widget.isSelectionMode
+                    ? null
+                    : () => widget.onWordSelected(lexeme.id),
               ),
               DataCell(
                 Text(
                   lexeme.partOfSpeech ?? '',
                   style: theme.textTheme.bodySmall?.copyWith(fontSize: 11),
                 ),
+                onTap: widget.isSelectionMode
+                    ? null
+                    : () => widget.onWordSelected(lexeme.id),
               ),
               DataCell(
                 Text(
@@ -699,6 +681,9 @@ class _WordListPanelState extends ConsumerState<WordListPanel> {
                   overflow: TextOverflow.ellipsis,
                   maxLines: 1,
                 ),
+                onTap: widget.isSelectionMode
+                    ? null
+                    : () => widget.onWordSelected(lexeme.id),
               ),
             ],
           );

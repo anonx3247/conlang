@@ -26,6 +26,12 @@ class TiebreakConflict {
 /// (D-12) only looks at dims. A follow-up plan (04-04 rule editor) can
 /// layer POS filtering on top of this detector if the live banner needs
 /// cross-POS visibility.
+///
+/// D-89 invariant (04-17): this detector is independent of cell
+/// enumeration. It groups rules purely by binding key, so filtering
+/// intrinsic dims out of cell enumeration in callers has no effect on
+/// tiebreak detection — tiebreaks are a property of rule authorship,
+/// not of the paradigm axes actually rendered.
 List<TiebreakConflict> findDuplicateSpecificityConflicts(
   List<InflectionalRule> rules,
 ) {

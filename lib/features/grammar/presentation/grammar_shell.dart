@@ -1,22 +1,35 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+
+import '../../../features/glossary/data/glossary_providers.dart';
+import '../../../shared/widgets/resizable_divider.dart';
 
 /// Grammar sub-shell with a left sidebar for navigation.
 ///
-/// Mirrors the LexiconShell pattern exactly: 200px sidebar + VerticalDivider
-/// + Expanded content area. Four sidebar items for Phase 4:
+/// Mirrors the LexiconShell pattern exactly: resizable sidebar + ResizableDivider
+/// + Expanded content area. Plan 04-13 / D-48 collapsed the sidebar from
+/// 4 entries to 3 — `Paradigm Viewer` and `Inflectional Rules` have been
+/// merged into the single `Inflections` sub-tab with a stacked paradigm +
+/// rules layout. Final sidebar:
 ///
-///  1. POS & Dimensions — the relocated POS manager + dimension editor
-///  2. Inflectional Rules — kind='inflectional' rule editor (stub, filled by 04-05)
-///  3. Paradigm Viewer — generated paradigm tables (stub, filled by 04-06)
-///  4. Typology — alignment / word order / modality form
-class GrammarShell extends StatelessWidget {
+///  1. POS & Dimensions — POS manager + dimension editor
+///  2. Inflections — stacked paradigm (top) + POS-scoped rules (bottom)
+///  3. Typology — alignment / word order / modality form
+class GrammarShell extends ConsumerStatefulWidget {
   const GrammarShell({
     super.key,
     required this.navigationShell,
   });
 
   final StatefulNavigationShell navigationShell;
+
+  @override
+  ConsumerState<GrammarShell> createState() => _GrammarShellState();
+}
+
+class _GrammarShellState extends ConsumerState<GrammarShell> {
+  double _sidebarWidth = 200;
 
   static const _sidebarItems = [
     _SidebarItem(
@@ -25,14 +38,9 @@ class GrammarShell extends StatelessWidget {
       path: '/grammar/pos',
     ),
     _SidebarItem(
-      label: 'Inflectional Rules',
+      label: 'Inflections',
       icon: Icons.auto_fix_high_outlined,
-      path: '/grammar/inflectional',
-    ),
-    _SidebarItem(
-      label: 'Paradigm Viewer',
-      icon: Icons.table_chart_outlined,
-      path: '/grammar/paradigm',
+      path: '/grammar/inflections',
     ),
     _SidebarItem(
       label: 'Typology',
@@ -42,9 +50,9 @@ class GrammarShell extends StatelessWidget {
   ];
 
   void _onSidebarTap(BuildContext context, int index) {
-    navigationShell.goBranch(
+    widget.navigationShell.goBranch(
       index,
-      initialLocation: index == navigationShell.currentIndex,
+      initialLocation: index == widget.navigationShell.currentIndex,
     );
   }
 
@@ -55,27 +63,45 @@ class GrammarShell extends StatelessWidget {
 
     return Row(
       children: [
-        // Left sidebar (200px wide)
+        // Left sidebar (resizable)
         SizedBox(
-          width: 200,
+          width: _sidebarWidth,
           child: Material(
             color: colorScheme.surfaceContainerLow,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-                  child: Text(
-                    'GRAMMAR',
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      color: colorScheme.onSurface.withValues(alpha: 0.5),
-                      letterSpacing: 1.2,
-                    ),
+                  padding: const EdgeInsets.fromLTRB(16, 8, 4, 8),
+                  child: Row(
+                    children: [
+                      Text(
+                        'GRAMMAR',
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: colorScheme.onSurface.withValues(alpha: 0.5),
+                          letterSpacing: 1.2,
+                        ),
+                      ),
+                      const Spacer(),
+                      IconButton(
+                        icon: const Icon(Icons.help_outline, size: 16),
+                        tooltip: 'Glossary: Grammar terms',
+                        padding: EdgeInsets.zero,
+                        constraints:
+                            const BoxConstraints(minWidth: 28, minHeight: 28),
+                        onPressed: () {
+                          ref
+                              .read(glossaryCategoryFilterProvider.notifier)
+                              .set('Morphology');
+                          ref.read(glossaryOpenProvider.notifier).open();
+                        },
+                      ),
+                    ],
                   ),
                 ),
                 ...List.generate(_sidebarItems.length, (index) {
                   final item = _sidebarItems[index];
-                  final isSelected = navigationShell.currentIndex == index;
+                  final isSelected = widget.navigationShell.currentIndex == index;
                   return _SidebarTile(
                     item: item,
                     isSelected: isSelected,
@@ -87,16 +113,16 @@ class GrammarShell extends StatelessWidget {
           ),
         ),
 
-        // Vertical divider
-        VerticalDivider(
-          width: 1,
-          thickness: 1,
-          color: colorScheme.outlineVariant,
+        // Draggable divider between sidebar and content
+        ResizableDivider(
+          onDrag: (d) => setState(() {
+            _sidebarWidth = (_sidebarWidth + d).clamp(140, 320);
+          }),
         ),
 
         // Main content area
         Expanded(
-          child: navigationShell,
+          child: widget.navigationShell,
         ),
       ],
     );

@@ -2947,6 +2947,17 @@ class $LexemesTable extends Lexemes with TableInfo<$LexemesTable, Lexeme> {
         ),
         defaultValue: const Constant(false),
       );
+  static const VerificationMeta _intrinsicLevelsJsonMeta =
+      const VerificationMeta('intrinsicLevelsJson');
+  @override
+  late final GeneratedColumn<String> intrinsicLevelsJson =
+      GeneratedColumn<String>(
+        'intrinsic_levels_json',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+      );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -2962,6 +2973,7 @@ class $LexemesTable extends Lexemes with TableInfo<$LexemesTable, Lexeme> {
     derivedFromLexemeId,
     derivedViaRuleId,
     rootOnlyViaDerivations,
+    intrinsicLevelsJson,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -3076,6 +3088,15 @@ class $LexemesTable extends Lexemes with TableInfo<$LexemesTable, Lexeme> {
         ),
       );
     }
+    if (data.containsKey('intrinsic_levels_json')) {
+      context.handle(
+        _intrinsicLevelsJsonMeta,
+        intrinsicLevelsJson.isAcceptableOrUnknown(
+          data['intrinsic_levels_json']!,
+          _intrinsicLevelsJsonMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -3137,6 +3158,10 @@ class $LexemesTable extends Lexemes with TableInfo<$LexemesTable, Lexeme> {
         DriftSqlType.bool,
         data['${effectivePrefix}root_only_via_derivations'],
       )!,
+      intrinsicLevelsJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}intrinsic_levels_json'],
+      ),
     );
   }
 
@@ -3186,6 +3211,13 @@ class Lexeme extends DataClass implements Insertable<Lexeme> {
   /// editing). Signals "this root only exists through its derivations" —
   /// e.g. a bound root that never surfaces as a standalone word.
   final bool rootOnlyViaDerivations;
+
+  /// v10 — Phase 4 04-17 D-83. JSON object `{"<dimensionId>": <levelId>, ...}`
+  /// mapping each intrinsic dimension on this lexeme's POS to the lexeme's
+  /// fixed level on that dim. Null = no intrinsic levels set (e.g. root
+  /// words of POSes with no intrinsic dims or legacy words pre-v10).
+  /// See IntrinsicLevelsCodec for encode/decode helpers.
+  final String? intrinsicLevelsJson;
   const Lexeme({
     required this.id,
     required this.ipa,
@@ -3200,6 +3232,7 @@ class Lexeme extends DataClass implements Insertable<Lexeme> {
     this.derivedFromLexemeId,
     this.derivedViaRuleId,
     required this.rootOnlyViaDerivations,
+    this.intrinsicLevelsJson,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -3235,6 +3268,9 @@ class Lexeme extends DataClass implements Insertable<Lexeme> {
       map['derived_via_rule_id'] = Variable<int>(derivedViaRuleId);
     }
     map['root_only_via_derivations'] = Variable<bool>(rootOnlyViaDerivations);
+    if (!nullToAbsent || intrinsicLevelsJson != null) {
+      map['intrinsic_levels_json'] = Variable<String>(intrinsicLevelsJson);
+    }
     return map;
   }
 
@@ -3271,6 +3307,9 @@ class Lexeme extends DataClass implements Insertable<Lexeme> {
           ? const Value.absent()
           : Value(derivedViaRuleId),
       rootOnlyViaDerivations: Value(rootOnlyViaDerivations),
+      intrinsicLevelsJson: intrinsicLevelsJson == null && nullToAbsent
+          ? const Value.absent()
+          : Value(intrinsicLevelsJson),
     );
   }
 
@@ -3301,6 +3340,9 @@ class Lexeme extends DataClass implements Insertable<Lexeme> {
       rootOnlyViaDerivations: serializer.fromJson<bool>(
         json['rootOnlyViaDerivations'],
       ),
+      intrinsicLevelsJson: serializer.fromJson<String?>(
+        json['intrinsicLevelsJson'],
+      ),
     );
   }
   @override
@@ -3324,6 +3366,7 @@ class Lexeme extends DataClass implements Insertable<Lexeme> {
       'derivedFromLexemeId': serializer.toJson<int?>(derivedFromLexemeId),
       'derivedViaRuleId': serializer.toJson<int?>(derivedViaRuleId),
       'rootOnlyViaDerivations': serializer.toJson<bool>(rootOnlyViaDerivations),
+      'intrinsicLevelsJson': serializer.toJson<String?>(intrinsicLevelsJson),
     };
   }
 
@@ -3341,6 +3384,7 @@ class Lexeme extends DataClass implements Insertable<Lexeme> {
     Value<int?> derivedFromLexemeId = const Value.absent(),
     Value<int?> derivedViaRuleId = const Value.absent(),
     bool? rootOnlyViaDerivations,
+    Value<String?> intrinsicLevelsJson = const Value.absent(),
   }) => Lexeme(
     id: id ?? this.id,
     ipa: ipa ?? this.ipa,
@@ -3363,6 +3407,9 @@ class Lexeme extends DataClass implements Insertable<Lexeme> {
         : this.derivedViaRuleId,
     rootOnlyViaDerivations:
         rootOnlyViaDerivations ?? this.rootOnlyViaDerivations,
+    intrinsicLevelsJson: intrinsicLevelsJson.present
+        ? intrinsicLevelsJson.value
+        : this.intrinsicLevelsJson,
   );
   Lexeme copyWithCompanion(LexemesCompanion data) {
     return Lexeme(
@@ -3395,6 +3442,9 @@ class Lexeme extends DataClass implements Insertable<Lexeme> {
       rootOnlyViaDerivations: data.rootOnlyViaDerivations.present
           ? data.rootOnlyViaDerivations.value
           : this.rootOnlyViaDerivations,
+      intrinsicLevelsJson: data.intrinsicLevelsJson.present
+          ? data.intrinsicLevelsJson.value
+          : this.intrinsicLevelsJson,
     );
   }
 
@@ -3413,7 +3463,8 @@ class Lexeme extends DataClass implements Insertable<Lexeme> {
           ..write('skippedDimensionsJson: $skippedDimensionsJson, ')
           ..write('derivedFromLexemeId: $derivedFromLexemeId, ')
           ..write('derivedViaRuleId: $derivedViaRuleId, ')
-          ..write('rootOnlyViaDerivations: $rootOnlyViaDerivations')
+          ..write('rootOnlyViaDerivations: $rootOnlyViaDerivations, ')
+          ..write('intrinsicLevelsJson: $intrinsicLevelsJson')
           ..write(')'))
         .toString();
   }
@@ -3433,6 +3484,7 @@ class Lexeme extends DataClass implements Insertable<Lexeme> {
     derivedFromLexemeId,
     derivedViaRuleId,
     rootOnlyViaDerivations,
+    intrinsicLevelsJson,
   );
   @override
   bool operator ==(Object other) =>
@@ -3450,7 +3502,8 @@ class Lexeme extends DataClass implements Insertable<Lexeme> {
           other.skippedDimensionsJson == this.skippedDimensionsJson &&
           other.derivedFromLexemeId == this.derivedFromLexemeId &&
           other.derivedViaRuleId == this.derivedViaRuleId &&
-          other.rootOnlyViaDerivations == this.rootOnlyViaDerivations);
+          other.rootOnlyViaDerivations == this.rootOnlyViaDerivations &&
+          other.intrinsicLevelsJson == this.intrinsicLevelsJson);
 }
 
 class LexemesCompanion extends UpdateCompanion<Lexeme> {
@@ -3467,6 +3520,7 @@ class LexemesCompanion extends UpdateCompanion<Lexeme> {
   final Value<int?> derivedFromLexemeId;
   final Value<int?> derivedViaRuleId;
   final Value<bool> rootOnlyViaDerivations;
+  final Value<String?> intrinsicLevelsJson;
   const LexemesCompanion({
     this.id = const Value.absent(),
     this.ipa = const Value.absent(),
@@ -3481,6 +3535,7 @@ class LexemesCompanion extends UpdateCompanion<Lexeme> {
     this.derivedFromLexemeId = const Value.absent(),
     this.derivedViaRuleId = const Value.absent(),
     this.rootOnlyViaDerivations = const Value.absent(),
+    this.intrinsicLevelsJson = const Value.absent(),
   });
   LexemesCompanion.insert({
     this.id = const Value.absent(),
@@ -3496,6 +3551,7 @@ class LexemesCompanion extends UpdateCompanion<Lexeme> {
     this.derivedFromLexemeId = const Value.absent(),
     this.derivedViaRuleId = const Value.absent(),
     this.rootOnlyViaDerivations = const Value.absent(),
+    this.intrinsicLevelsJson = const Value.absent(),
   }) : ipa = Value(ipa);
   static Insertable<Lexeme> custom({
     Expression<int>? id,
@@ -3511,6 +3567,7 @@ class LexemesCompanion extends UpdateCompanion<Lexeme> {
     Expression<int>? derivedFromLexemeId,
     Expression<int>? derivedViaRuleId,
     Expression<bool>? rootOnlyViaDerivations,
+    Expression<String>? intrinsicLevelsJson,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -3530,6 +3587,8 @@ class LexemesCompanion extends UpdateCompanion<Lexeme> {
       if (derivedViaRuleId != null) 'derived_via_rule_id': derivedViaRuleId,
       if (rootOnlyViaDerivations != null)
         'root_only_via_derivations': rootOnlyViaDerivations,
+      if (intrinsicLevelsJson != null)
+        'intrinsic_levels_json': intrinsicLevelsJson,
     });
   }
 
@@ -3547,6 +3606,7 @@ class LexemesCompanion extends UpdateCompanion<Lexeme> {
     Value<int?>? derivedFromLexemeId,
     Value<int?>? derivedViaRuleId,
     Value<bool>? rootOnlyViaDerivations,
+    Value<String?>? intrinsicLevelsJson,
   }) {
     return LexemesCompanion(
       id: id ?? this.id,
@@ -3565,6 +3625,7 @@ class LexemesCompanion extends UpdateCompanion<Lexeme> {
       derivedViaRuleId: derivedViaRuleId ?? this.derivedViaRuleId,
       rootOnlyViaDerivations:
           rootOnlyViaDerivations ?? this.rootOnlyViaDerivations,
+      intrinsicLevelsJson: intrinsicLevelsJson ?? this.intrinsicLevelsJson,
     );
   }
 
@@ -3616,6 +3677,11 @@ class LexemesCompanion extends UpdateCompanion<Lexeme> {
         rootOnlyViaDerivations.value,
       );
     }
+    if (intrinsicLevelsJson.present) {
+      map['intrinsic_levels_json'] = Variable<String>(
+        intrinsicLevelsJson.value,
+      );
+    }
     return map;
   }
 
@@ -3634,7 +3700,8 @@ class LexemesCompanion extends UpdateCompanion<Lexeme> {
           ..write('skippedDimensionsJson: $skippedDimensionsJson, ')
           ..write('derivedFromLexemeId: $derivedFromLexemeId, ')
           ..write('derivedViaRuleId: $derivedViaRuleId, ')
-          ..write('rootOnlyViaDerivations: $rootOnlyViaDerivations')
+          ..write('rootOnlyViaDerivations: $rootOnlyViaDerivations, ')
+          ..write('intrinsicLevelsJson: $intrinsicLevelsJson')
           ..write(')'))
         .toString();
   }
@@ -4583,6 +4650,32 @@ class $DimensionsTable extends Dimensions
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _intrinsicMeta = const VerificationMeta(
+    'intrinsic',
+  );
+  @override
+  late final GeneratedColumn<bool> intrinsic = GeneratedColumn<bool>(
+    'intrinsic',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("intrinsic" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _abbreviationMeta = const VerificationMeta(
+    'abbreviation',
+  );
+  @override
+  late final GeneratedColumn<String> abbreviation = GeneratedColumn<String>(
+    'abbreviation',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -4591,6 +4684,8 @@ class $DimensionsTable extends Dimensions
     ordering,
     levelsJson,
     templateId,
+    intrinsic,
+    abbreviation,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -4643,6 +4738,21 @@ class $DimensionsTable extends Dimensions
         templateId.isAcceptableOrUnknown(data['template_id']!, _templateIdMeta),
       );
     }
+    if (data.containsKey('intrinsic')) {
+      context.handle(
+        _intrinsicMeta,
+        intrinsic.isAcceptableOrUnknown(data['intrinsic']!, _intrinsicMeta),
+      );
+    }
+    if (data.containsKey('abbreviation')) {
+      context.handle(
+        _abbreviationMeta,
+        abbreviation.isAcceptableOrUnknown(
+          data['abbreviation']!,
+          _abbreviationMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -4676,6 +4786,14 @@ class $DimensionsTable extends Dimensions
         DriftSqlType.string,
         data['${effectivePrefix}template_id'],
       ),
+      intrinsic: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}intrinsic'],
+      )!,
+      abbreviation: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}abbreviation'],
+      ),
     );
   }
 
@@ -4692,6 +4810,16 @@ class Dimension extends DataClass implements Insertable<Dimension> {
   final int ordering;
   final String levelsJson;
   final String? templateId;
+
+  /// v10 — Phase 4 04-17 D-82. When true, words of this POS have a fixed
+  /// level on this dimension (e.g. noun gender: a noun IS masculine,
+  /// it isn't inflected into the feminine). Intrinsic dims are filtered
+  /// out of cell enumeration and act as conditions in rule eval.
+  final bool intrinsic;
+
+  /// v12 — Short label for display in compact contexts (paradigm headers,
+  /// binding summaries). Nullable — defaults to first 3 chars of name.
+  final String? abbreviation;
   const Dimension({
     required this.id,
     required this.posId,
@@ -4699,6 +4827,8 @@ class Dimension extends DataClass implements Insertable<Dimension> {
     required this.ordering,
     required this.levelsJson,
     this.templateId,
+    required this.intrinsic,
+    this.abbreviation,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -4710,6 +4840,10 @@ class Dimension extends DataClass implements Insertable<Dimension> {
     map['levels_json'] = Variable<String>(levelsJson);
     if (!nullToAbsent || templateId != null) {
       map['template_id'] = Variable<String>(templateId);
+    }
+    map['intrinsic'] = Variable<bool>(intrinsic);
+    if (!nullToAbsent || abbreviation != null) {
+      map['abbreviation'] = Variable<String>(abbreviation);
     }
     return map;
   }
@@ -4724,6 +4858,10 @@ class Dimension extends DataClass implements Insertable<Dimension> {
       templateId: templateId == null && nullToAbsent
           ? const Value.absent()
           : Value(templateId),
+      intrinsic: Value(intrinsic),
+      abbreviation: abbreviation == null && nullToAbsent
+          ? const Value.absent()
+          : Value(abbreviation),
     );
   }
 
@@ -4739,6 +4877,8 @@ class Dimension extends DataClass implements Insertable<Dimension> {
       ordering: serializer.fromJson<int>(json['ordering']),
       levelsJson: serializer.fromJson<String>(json['levelsJson']),
       templateId: serializer.fromJson<String?>(json['templateId']),
+      intrinsic: serializer.fromJson<bool>(json['intrinsic']),
+      abbreviation: serializer.fromJson<String?>(json['abbreviation']),
     );
   }
   @override
@@ -4751,6 +4891,8 @@ class Dimension extends DataClass implements Insertable<Dimension> {
       'ordering': serializer.toJson<int>(ordering),
       'levelsJson': serializer.toJson<String>(levelsJson),
       'templateId': serializer.toJson<String?>(templateId),
+      'intrinsic': serializer.toJson<bool>(intrinsic),
+      'abbreviation': serializer.toJson<String?>(abbreviation),
     };
   }
 
@@ -4761,6 +4903,8 @@ class Dimension extends DataClass implements Insertable<Dimension> {
     int? ordering,
     String? levelsJson,
     Value<String?> templateId = const Value.absent(),
+    bool? intrinsic,
+    Value<String?> abbreviation = const Value.absent(),
   }) => Dimension(
     id: id ?? this.id,
     posId: posId ?? this.posId,
@@ -4768,6 +4912,8 @@ class Dimension extends DataClass implements Insertable<Dimension> {
     ordering: ordering ?? this.ordering,
     levelsJson: levelsJson ?? this.levelsJson,
     templateId: templateId.present ? templateId.value : this.templateId,
+    intrinsic: intrinsic ?? this.intrinsic,
+    abbreviation: abbreviation.present ? abbreviation.value : this.abbreviation,
   );
   Dimension copyWithCompanion(DimensionsCompanion data) {
     return Dimension(
@@ -4781,6 +4927,10 @@ class Dimension extends DataClass implements Insertable<Dimension> {
       templateId: data.templateId.present
           ? data.templateId.value
           : this.templateId,
+      intrinsic: data.intrinsic.present ? data.intrinsic.value : this.intrinsic,
+      abbreviation: data.abbreviation.present
+          ? data.abbreviation.value
+          : this.abbreviation,
     );
   }
 
@@ -4792,14 +4942,24 @@ class Dimension extends DataClass implements Insertable<Dimension> {
           ..write('name: $name, ')
           ..write('ordering: $ordering, ')
           ..write('levelsJson: $levelsJson, ')
-          ..write('templateId: $templateId')
+          ..write('templateId: $templateId, ')
+          ..write('intrinsic: $intrinsic, ')
+          ..write('abbreviation: $abbreviation')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode =>
-      Object.hash(id, posId, name, ordering, levelsJson, templateId);
+  int get hashCode => Object.hash(
+    id,
+    posId,
+    name,
+    ordering,
+    levelsJson,
+    templateId,
+    intrinsic,
+    abbreviation,
+  );
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -4809,7 +4969,9 @@ class Dimension extends DataClass implements Insertable<Dimension> {
           other.name == this.name &&
           other.ordering == this.ordering &&
           other.levelsJson == this.levelsJson &&
-          other.templateId == this.templateId);
+          other.templateId == this.templateId &&
+          other.intrinsic == this.intrinsic &&
+          other.abbreviation == this.abbreviation);
 }
 
 class DimensionsCompanion extends UpdateCompanion<Dimension> {
@@ -4819,6 +4981,8 @@ class DimensionsCompanion extends UpdateCompanion<Dimension> {
   final Value<int> ordering;
   final Value<String> levelsJson;
   final Value<String?> templateId;
+  final Value<bool> intrinsic;
+  final Value<String?> abbreviation;
   const DimensionsCompanion({
     this.id = const Value.absent(),
     this.posId = const Value.absent(),
@@ -4826,6 +4990,8 @@ class DimensionsCompanion extends UpdateCompanion<Dimension> {
     this.ordering = const Value.absent(),
     this.levelsJson = const Value.absent(),
     this.templateId = const Value.absent(),
+    this.intrinsic = const Value.absent(),
+    this.abbreviation = const Value.absent(),
   });
   DimensionsCompanion.insert({
     this.id = const Value.absent(),
@@ -4834,6 +5000,8 @@ class DimensionsCompanion extends UpdateCompanion<Dimension> {
     this.ordering = const Value.absent(),
     required String levelsJson,
     this.templateId = const Value.absent(),
+    this.intrinsic = const Value.absent(),
+    this.abbreviation = const Value.absent(),
   }) : posId = Value(posId),
        name = Value(name),
        levelsJson = Value(levelsJson);
@@ -4844,6 +5012,8 @@ class DimensionsCompanion extends UpdateCompanion<Dimension> {
     Expression<int>? ordering,
     Expression<String>? levelsJson,
     Expression<String>? templateId,
+    Expression<bool>? intrinsic,
+    Expression<String>? abbreviation,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -4852,6 +5022,8 @@ class DimensionsCompanion extends UpdateCompanion<Dimension> {
       if (ordering != null) 'ordering': ordering,
       if (levelsJson != null) 'levels_json': levelsJson,
       if (templateId != null) 'template_id': templateId,
+      if (intrinsic != null) 'intrinsic': intrinsic,
+      if (abbreviation != null) 'abbreviation': abbreviation,
     });
   }
 
@@ -4862,6 +5034,8 @@ class DimensionsCompanion extends UpdateCompanion<Dimension> {
     Value<int>? ordering,
     Value<String>? levelsJson,
     Value<String?>? templateId,
+    Value<bool>? intrinsic,
+    Value<String?>? abbreviation,
   }) {
     return DimensionsCompanion(
       id: id ?? this.id,
@@ -4870,6 +5044,8 @@ class DimensionsCompanion extends UpdateCompanion<Dimension> {
       ordering: ordering ?? this.ordering,
       levelsJson: levelsJson ?? this.levelsJson,
       templateId: templateId ?? this.templateId,
+      intrinsic: intrinsic ?? this.intrinsic,
+      abbreviation: abbreviation ?? this.abbreviation,
     );
   }
 
@@ -4894,6 +5070,12 @@ class DimensionsCompanion extends UpdateCompanion<Dimension> {
     if (templateId.present) {
       map['template_id'] = Variable<String>(templateId.value);
     }
+    if (intrinsic.present) {
+      map['intrinsic'] = Variable<bool>(intrinsic.value);
+    }
+    if (abbreviation.present) {
+      map['abbreviation'] = Variable<String>(abbreviation.value);
+    }
     return map;
   }
 
@@ -4905,7 +5087,9 @@ class DimensionsCompanion extends UpdateCompanion<Dimension> {
           ..write('name: $name, ')
           ..write('ordering: $ordering, ')
           ..write('levelsJson: $levelsJson, ')
-          ..write('templateId: $templateId')
+          ..write('templateId: $templateId, ')
+          ..write('intrinsic: $intrinsic, ')
+          ..write('abbreviation: $abbreviation')
           ..write(')'))
         .toString();
   }
@@ -5374,6 +5558,16 @@ class $MarkersTable extends Markers with TableInfo<$MarkersTable, Marker> {
       'REFERENCES parts_of_speech (id) ON DELETE CASCADE',
     ),
   );
+  static const VerificationMeta _nameMeta = const VerificationMeta('name');
+  @override
+  late final GeneratedColumn<String> name = GeneratedColumn<String>(
+    'name',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('Unmarked'),
+  );
   @override
   late final GeneratedColumnWithTypeConverter<FeatureBindings, String>
   featureBindings = GeneratedColumn<String>(
@@ -5385,7 +5579,7 @@ class $MarkersTable extends Markers with TableInfo<$MarkersTable, Marker> {
     defaultValue: const Constant('{}'),
   ).withConverter<FeatureBindings>($MarkersTable.$converterfeatureBindings);
   @override
-  List<GeneratedColumn> get $columns => [id, posId, featureBindings];
+  List<GeneratedColumn> get $columns => [id, posId, name, featureBindings];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -5409,6 +5603,12 @@ class $MarkersTable extends Markers with TableInfo<$MarkersTable, Marker> {
     } else if (isInserting) {
       context.missing(_posIdMeta);
     }
+    if (data.containsKey('name')) {
+      context.handle(
+        _nameMeta,
+        name.isAcceptableOrUnknown(data['name']!, _nameMeta),
+      );
+    }
     return context;
   }
 
@@ -5425,6 +5625,10 @@ class $MarkersTable extends Markers with TableInfo<$MarkersTable, Marker> {
       posId: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}pos_id'],
+      )!,
+      name: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}name'],
       )!,
       featureBindings: $MarkersTable.$converterfeatureBindings.fromSql(
         attachedDatabase.typeMapping.read(
@@ -5447,10 +5651,12 @@ class $MarkersTable extends Markers with TableInfo<$MarkersTable, Marker> {
 class Marker extends DataClass implements Insertable<Marker> {
   final int id;
   final int posId;
+  final String name;
   final FeatureBindings featureBindings;
   const Marker({
     required this.id,
     required this.posId,
+    required this.name,
     required this.featureBindings,
   });
   @override
@@ -5458,6 +5664,7 @@ class Marker extends DataClass implements Insertable<Marker> {
     final map = <String, Expression>{};
     map['id'] = Variable<int>(id);
     map['pos_id'] = Variable<int>(posId);
+    map['name'] = Variable<String>(name);
     {
       map['feature_bindings'] = Variable<String>(
         $MarkersTable.$converterfeatureBindings.toSql(featureBindings),
@@ -5470,6 +5677,7 @@ class Marker extends DataClass implements Insertable<Marker> {
     return MarkersCompanion(
       id: Value(id),
       posId: Value(posId),
+      name: Value(name),
       featureBindings: Value(featureBindings),
     );
   }
@@ -5482,6 +5690,7 @@ class Marker extends DataClass implements Insertable<Marker> {
     return Marker(
       id: serializer.fromJson<int>(json['id']),
       posId: serializer.fromJson<int>(json['posId']),
+      name: serializer.fromJson<String>(json['name']),
       featureBindings: $MarkersTable.$converterfeatureBindings.fromJson(
         serializer.fromJson<Map<String, dynamic>>(json['featureBindings']),
       ),
@@ -5493,22 +5702,29 @@ class Marker extends DataClass implements Insertable<Marker> {
     return <String, dynamic>{
       'id': serializer.toJson<int>(id),
       'posId': serializer.toJson<int>(posId),
+      'name': serializer.toJson<String>(name),
       'featureBindings': serializer.toJson<Map<String, dynamic>>(
         $MarkersTable.$converterfeatureBindings.toJson(featureBindings),
       ),
     };
   }
 
-  Marker copyWith({int? id, int? posId, FeatureBindings? featureBindings}) =>
-      Marker(
-        id: id ?? this.id,
-        posId: posId ?? this.posId,
-        featureBindings: featureBindings ?? this.featureBindings,
-      );
+  Marker copyWith({
+    int? id,
+    int? posId,
+    String? name,
+    FeatureBindings? featureBindings,
+  }) => Marker(
+    id: id ?? this.id,
+    posId: posId ?? this.posId,
+    name: name ?? this.name,
+    featureBindings: featureBindings ?? this.featureBindings,
+  );
   Marker copyWithCompanion(MarkersCompanion data) {
     return Marker(
       id: data.id.present ? data.id.value : this.id,
       posId: data.posId.present ? data.posId.value : this.posId,
+      name: data.name.present ? data.name.value : this.name,
       featureBindings: data.featureBindings.present
           ? data.featureBindings.value
           : this.featureBindings,
@@ -5520,44 +5736,51 @@ class Marker extends DataClass implements Insertable<Marker> {
     return (StringBuffer('Marker(')
           ..write('id: $id, ')
           ..write('posId: $posId, ')
+          ..write('name: $name, ')
           ..write('featureBindings: $featureBindings')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(id, posId, featureBindings);
+  int get hashCode => Object.hash(id, posId, name, featureBindings);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       (other is Marker &&
           other.id == this.id &&
           other.posId == this.posId &&
+          other.name == this.name &&
           other.featureBindings == this.featureBindings);
 }
 
 class MarkersCompanion extends UpdateCompanion<Marker> {
   final Value<int> id;
   final Value<int> posId;
+  final Value<String> name;
   final Value<FeatureBindings> featureBindings;
   const MarkersCompanion({
     this.id = const Value.absent(),
     this.posId = const Value.absent(),
+    this.name = const Value.absent(),
     this.featureBindings = const Value.absent(),
   });
   MarkersCompanion.insert({
     this.id = const Value.absent(),
     required int posId,
+    this.name = const Value.absent(),
     this.featureBindings = const Value.absent(),
   }) : posId = Value(posId);
   static Insertable<Marker> custom({
     Expression<int>? id,
     Expression<int>? posId,
+    Expression<String>? name,
     Expression<String>? featureBindings,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
       if (posId != null) 'pos_id': posId,
+      if (name != null) 'name': name,
       if (featureBindings != null) 'feature_bindings': featureBindings,
     });
   }
@@ -5565,11 +5788,13 @@ class MarkersCompanion extends UpdateCompanion<Marker> {
   MarkersCompanion copyWith({
     Value<int>? id,
     Value<int>? posId,
+    Value<String>? name,
     Value<FeatureBindings>? featureBindings,
   }) {
     return MarkersCompanion(
       id: id ?? this.id,
       posId: posId ?? this.posId,
+      name: name ?? this.name,
       featureBindings: featureBindings ?? this.featureBindings,
     );
   }
@@ -5582,6 +5807,9 @@ class MarkersCompanion extends UpdateCompanion<Marker> {
     }
     if (posId.present) {
       map['pos_id'] = Variable<int>(posId.value);
+    }
+    if (name.present) {
+      map['name'] = Variable<String>(name.value);
     }
     if (featureBindings.present) {
       map['feature_bindings'] = Variable<String>(
@@ -5596,6 +5824,7 @@ class MarkersCompanion extends UpdateCompanion<Marker> {
     return (StringBuffer('MarkersCompanion(')
           ..write('id: $id, ')
           ..write('posId: $posId, ')
+          ..write('name: $name, ')
           ..write('featureBindings: $featureBindings')
           ..write(')'))
         .toString();
@@ -6166,6 +6395,290 @@ class LexemeParentsCompanion extends UpdateCompanion<LexemeParentRow> {
   }
 }
 
+class $StandardFormPatternsTable extends StandardFormPatterns
+    with TableInfo<$StandardFormPatternsTable, StandardFormPattern> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $StandardFormPatternsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _dimensionIdMeta = const VerificationMeta(
+    'dimensionId',
+  );
+  @override
+  late final GeneratedColumn<int> dimensionId = GeneratedColumn<int>(
+    'dimension_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES dimensions (id) ON DELETE CASCADE',
+    ),
+  );
+  static const VerificationMeta _levelIdMeta = const VerificationMeta(
+    'levelId',
+  );
+  @override
+  late final GeneratedColumn<int> levelId = GeneratedColumn<int>(
+    'level_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _branchesJsonMeta = const VerificationMeta(
+    'branchesJson',
+  );
+  @override
+  late final GeneratedColumn<String> branchesJson = GeneratedColumn<String>(
+    'branches_json',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [dimensionId, levelId, branchesJson];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'standard_form_patterns';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<StandardFormPattern> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('dimension_id')) {
+      context.handle(
+        _dimensionIdMeta,
+        dimensionId.isAcceptableOrUnknown(
+          data['dimension_id']!,
+          _dimensionIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_dimensionIdMeta);
+    }
+    if (data.containsKey('level_id')) {
+      context.handle(
+        _levelIdMeta,
+        levelId.isAcceptableOrUnknown(data['level_id']!, _levelIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_levelIdMeta);
+    }
+    if (data.containsKey('branches_json')) {
+      context.handle(
+        _branchesJsonMeta,
+        branchesJson.isAcceptableOrUnknown(
+          data['branches_json']!,
+          _branchesJsonMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_branchesJsonMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {dimensionId, levelId};
+  @override
+  StandardFormPattern map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return StandardFormPattern(
+      dimensionId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}dimension_id'],
+      )!,
+      levelId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}level_id'],
+      )!,
+      branchesJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}branches_json'],
+      )!,
+    );
+  }
+
+  @override
+  $StandardFormPatternsTable createAlias(String alias) {
+    return $StandardFormPatternsTable(attachedDatabase, alias);
+  }
+}
+
+class StandardFormPattern extends DataClass
+    implements Insertable<StandardFormPattern> {
+  final int dimensionId;
+  final int levelId;
+  final String branchesJson;
+  const StandardFormPattern({
+    required this.dimensionId,
+    required this.levelId,
+    required this.branchesJson,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['dimension_id'] = Variable<int>(dimensionId);
+    map['level_id'] = Variable<int>(levelId);
+    map['branches_json'] = Variable<String>(branchesJson);
+    return map;
+  }
+
+  StandardFormPatternsCompanion toCompanion(bool nullToAbsent) {
+    return StandardFormPatternsCompanion(
+      dimensionId: Value(dimensionId),
+      levelId: Value(levelId),
+      branchesJson: Value(branchesJson),
+    );
+  }
+
+  factory StandardFormPattern.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return StandardFormPattern(
+      dimensionId: serializer.fromJson<int>(json['dimensionId']),
+      levelId: serializer.fromJson<int>(json['levelId']),
+      branchesJson: serializer.fromJson<String>(json['branchesJson']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'dimensionId': serializer.toJson<int>(dimensionId),
+      'levelId': serializer.toJson<int>(levelId),
+      'branchesJson': serializer.toJson<String>(branchesJson),
+    };
+  }
+
+  StandardFormPattern copyWith({
+    int? dimensionId,
+    int? levelId,
+    String? branchesJson,
+  }) => StandardFormPattern(
+    dimensionId: dimensionId ?? this.dimensionId,
+    levelId: levelId ?? this.levelId,
+    branchesJson: branchesJson ?? this.branchesJson,
+  );
+  StandardFormPattern copyWithCompanion(StandardFormPatternsCompanion data) {
+    return StandardFormPattern(
+      dimensionId: data.dimensionId.present
+          ? data.dimensionId.value
+          : this.dimensionId,
+      levelId: data.levelId.present ? data.levelId.value : this.levelId,
+      branchesJson: data.branchesJson.present
+          ? data.branchesJson.value
+          : this.branchesJson,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('StandardFormPattern(')
+          ..write('dimensionId: $dimensionId, ')
+          ..write('levelId: $levelId, ')
+          ..write('branchesJson: $branchesJson')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(dimensionId, levelId, branchesJson);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is StandardFormPattern &&
+          other.dimensionId == this.dimensionId &&
+          other.levelId == this.levelId &&
+          other.branchesJson == this.branchesJson);
+}
+
+class StandardFormPatternsCompanion
+    extends UpdateCompanion<StandardFormPattern> {
+  final Value<int> dimensionId;
+  final Value<int> levelId;
+  final Value<String> branchesJson;
+  final Value<int> rowid;
+  const StandardFormPatternsCompanion({
+    this.dimensionId = const Value.absent(),
+    this.levelId = const Value.absent(),
+    this.branchesJson = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  StandardFormPatternsCompanion.insert({
+    required int dimensionId,
+    required int levelId,
+    required String branchesJson,
+    this.rowid = const Value.absent(),
+  }) : dimensionId = Value(dimensionId),
+       levelId = Value(levelId),
+       branchesJson = Value(branchesJson);
+  static Insertable<StandardFormPattern> custom({
+    Expression<int>? dimensionId,
+    Expression<int>? levelId,
+    Expression<String>? branchesJson,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (dimensionId != null) 'dimension_id': dimensionId,
+      if (levelId != null) 'level_id': levelId,
+      if (branchesJson != null) 'branches_json': branchesJson,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  StandardFormPatternsCompanion copyWith({
+    Value<int>? dimensionId,
+    Value<int>? levelId,
+    Value<String>? branchesJson,
+    Value<int>? rowid,
+  }) {
+    return StandardFormPatternsCompanion(
+      dimensionId: dimensionId ?? this.dimensionId,
+      levelId: levelId ?? this.levelId,
+      branchesJson: branchesJson ?? this.branchesJson,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (dimensionId.present) {
+      map['dimension_id'] = Variable<int>(dimensionId.value);
+    }
+    if (levelId.present) {
+      map['level_id'] = Variable<int>(levelId.value);
+    }
+    if (branchesJson.present) {
+      map['branches_json'] = Variable<String>(branchesJson.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('StandardFormPatternsCompanion(')
+          ..write('dimensionId: $dimensionId, ')
+          ..write('levelId: $levelId, ')
+          ..write('branchesJson: $branchesJson, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -6194,6 +6707,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $InflectionalRulePOSTable inflectionalRulePOS =
       $InflectionalRulePOSTable(this);
   late final $LexemeParentsTable lexemeParents = $LexemeParentsTable(this);
+  late final $StandardFormPatternsTable standardFormPatterns =
+      $StandardFormPatternsTable(this);
   late final PhonemeDao phonemeDao = PhonemeDao(this as AppDatabase);
   late final NaturalClassDao naturalClassDao = NaturalClassDao(
     this as AppDatabase,
@@ -6212,6 +6727,14 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final GrammarDao grammarDao = GrammarDao(this as AppDatabase);
   late final ParadigmCellOverrideDao paradigmCellOverrideDao =
       ParadigmCellOverrideDao(this as AppDatabase);
+  late final InflectionalRulePOSDao inflectionalRulePOSDao =
+      InflectionalRulePOSDao(this as AppDatabase);
+  late final LexemeParentsDao lexemeParentsDao = LexemeParentsDao(
+    this as AppDatabase,
+  );
+  late final MarkerDao markerDao = MarkerDao(this as AppDatabase);
+  late final StandardFormPatternDao standardFormPatternDao =
+      StandardFormPatternDao(this as AppDatabase);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -6233,6 +6756,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     markers,
     inflectionalRulePOS,
     lexemeParents,
+    standardFormPatterns,
   ];
   @override
   StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules([
@@ -6284,6 +6808,13 @@ abstract class _$AppDatabase extends GeneratedDatabase {
         limitUpdateKind: UpdateKind.delete,
       ),
       result: [TableUpdate('lexeme_parents', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'dimensions',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('standard_form_patterns', kind: UpdateKind.delete)],
     ),
   ]);
 }
@@ -8673,6 +9204,7 @@ typedef $$LexemesTableCreateCompanionBuilder =
       Value<int?> derivedFromLexemeId,
       Value<int?> derivedViaRuleId,
       Value<bool> rootOnlyViaDerivations,
+      Value<String?> intrinsicLevelsJson,
     });
 typedef $$LexemesTableUpdateCompanionBuilder =
     LexemesCompanion Function({
@@ -8689,6 +9221,7 @@ typedef $$LexemesTableUpdateCompanionBuilder =
       Value<int?> derivedFromLexemeId,
       Value<int?> derivedViaRuleId,
       Value<bool> rootOnlyViaDerivations,
+      Value<String?> intrinsicLevelsJson,
     });
 
 final class $$LexemesTableReferences
@@ -8829,6 +9362,11 @@ class $$LexemesTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
+  ColumnFilters<String> get intrinsicLevelsJson => $composableBuilder(
+    column: $table.intrinsicLevelsJson,
+    builder: (column) => ColumnFilters(column),
+  );
+
   $$LexemesTableFilterComposer get derivedFromLexemeId {
     final $$LexemesTableFilterComposer composer = $composerBuilder(
       composer: this,
@@ -8966,6 +9504,11 @@ class $$LexemesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get intrinsicLevelsJson => $composableBuilder(
+    column: $table.intrinsicLevelsJson,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   $$LexemesTableOrderingComposer get derivedFromLexemeId {
     final $$LexemesTableOrderingComposer composer = $composerBuilder(
       composer: this,
@@ -9064,6 +9607,11 @@ class $$LexemesTableAnnotationComposer
 
   GeneratedColumn<bool> get rootOnlyViaDerivations => $composableBuilder(
     column: $table.rootOnlyViaDerivations,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get intrinsicLevelsJson => $composableBuilder(
+    column: $table.intrinsicLevelsJson,
     builder: (column) => column,
   );
 
@@ -9186,6 +9734,7 @@ class $$LexemesTableTableManager
                 Value<int?> derivedFromLexemeId = const Value.absent(),
                 Value<int?> derivedViaRuleId = const Value.absent(),
                 Value<bool> rootOnlyViaDerivations = const Value.absent(),
+                Value<String?> intrinsicLevelsJson = const Value.absent(),
               }) => LexemesCompanion(
                 id: id,
                 ipa: ipa,
@@ -9200,6 +9749,7 @@ class $$LexemesTableTableManager
                 derivedFromLexemeId: derivedFromLexemeId,
                 derivedViaRuleId: derivedViaRuleId,
                 rootOnlyViaDerivations: rootOnlyViaDerivations,
+                intrinsicLevelsJson: intrinsicLevelsJson,
               ),
           createCompanionCallback:
               ({
@@ -9216,6 +9766,7 @@ class $$LexemesTableTableManager
                 Value<int?> derivedFromLexemeId = const Value.absent(),
                 Value<int?> derivedViaRuleId = const Value.absent(),
                 Value<bool> rootOnlyViaDerivations = const Value.absent(),
+                Value<String?> intrinsicLevelsJson = const Value.absent(),
               }) => LexemesCompanion.insert(
                 id: id,
                 ipa: ipa,
@@ -9230,6 +9781,7 @@ class $$LexemesTableTableManager
                 derivedFromLexemeId: derivedFromLexemeId,
                 derivedViaRuleId: derivedViaRuleId,
                 rootOnlyViaDerivations: rootOnlyViaDerivations,
+                intrinsicLevelsJson: intrinsicLevelsJson,
               ),
           withReferenceMapper: (p0) => p0
               .map(
@@ -9883,6 +10435,8 @@ typedef $$DimensionsTableCreateCompanionBuilder =
       Value<int> ordering,
       required String levelsJson,
       Value<String?> templateId,
+      Value<bool> intrinsic,
+      Value<String?> abbreviation,
     });
 typedef $$DimensionsTableUpdateCompanionBuilder =
     DimensionsCompanion Function({
@@ -9892,6 +10446,8 @@ typedef $$DimensionsTableUpdateCompanionBuilder =
       Value<int> ordering,
       Value<String> levelsJson,
       Value<String?> templateId,
+      Value<bool> intrinsic,
+      Value<String?> abbreviation,
     });
 
 final class $$DimensionsTableReferences
@@ -9914,6 +10470,34 @@ final class $$DimensionsTableReferences
     if (item == null) return manager;
     return ProcessedTableManager(
       manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static MultiTypedResultKey<
+    $StandardFormPatternsTable,
+    List<StandardFormPattern>
+  >
+  _standardFormPatternsRefsTable(_$AppDatabase db) =>
+      MultiTypedResultKey.fromTable(
+        db.standardFormPatterns,
+        aliasName: $_aliasNameGenerator(
+          db.dimensions.id,
+          db.standardFormPatterns.dimensionId,
+        ),
+      );
+
+  $$StandardFormPatternsTableProcessedTableManager
+  get standardFormPatternsRefs {
+    final manager = $$StandardFormPatternsTableTableManager(
+      $_db,
+      $_db.standardFormPatterns,
+    ).filter((f) => f.dimensionId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _standardFormPatternsRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
     );
   }
 }
@@ -9952,6 +10536,16 @@ class $$DimensionsTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
+  ColumnFilters<bool> get intrinsic => $composableBuilder(
+    column: $table.intrinsic,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get abbreviation => $composableBuilder(
+    column: $table.abbreviation,
+    builder: (column) => ColumnFilters(column),
+  );
+
   $$PartsOfSpeechTableFilterComposer get posId {
     final $$PartsOfSpeechTableFilterComposer composer = $composerBuilder(
       composer: this,
@@ -9973,6 +10567,31 @@ class $$DimensionsTableFilterComposer
           ),
     );
     return composer;
+  }
+
+  Expression<bool> standardFormPatternsRefs(
+    Expression<bool> Function($$StandardFormPatternsTableFilterComposer f) f,
+  ) {
+    final $$StandardFormPatternsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.standardFormPatterns,
+      getReferencedColumn: (t) => t.dimensionId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$StandardFormPatternsTableFilterComposer(
+            $db: $db,
+            $table: $db.standardFormPatterns,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
   }
 }
 
@@ -10007,6 +10626,16 @@ class $$DimensionsTableOrderingComposer
 
   ColumnOrderings<String> get templateId => $composableBuilder(
     column: $table.templateId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get intrinsic => $composableBuilder(
+    column: $table.intrinsic,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get abbreviation => $composableBuilder(
+    column: $table.abbreviation,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -10062,6 +10691,14 @@ class $$DimensionsTableAnnotationComposer
     builder: (column) => column,
   );
 
+  GeneratedColumn<bool> get intrinsic =>
+      $composableBuilder(column: $table.intrinsic, builder: (column) => column);
+
+  GeneratedColumn<String> get abbreviation => $composableBuilder(
+    column: $table.abbreviation,
+    builder: (column) => column,
+  );
+
   $$PartsOfSpeechTableAnnotationComposer get posId {
     final $$PartsOfSpeechTableAnnotationComposer composer = $composerBuilder(
       composer: this,
@@ -10084,6 +10721,32 @@ class $$DimensionsTableAnnotationComposer
     );
     return composer;
   }
+
+  Expression<T> standardFormPatternsRefs<T extends Object>(
+    Expression<T> Function($$StandardFormPatternsTableAnnotationComposer a) f,
+  ) {
+    final $$StandardFormPatternsTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.standardFormPatterns,
+          getReferencedColumn: (t) => t.dimensionId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$StandardFormPatternsTableAnnotationComposer(
+                $db: $db,
+                $table: $db.standardFormPatterns,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
 }
 
 class $$DimensionsTableTableManager
@@ -10099,7 +10762,7 @@ class $$DimensionsTableTableManager
           $$DimensionsTableUpdateCompanionBuilder,
           (Dimension, $$DimensionsTableReferences),
           Dimension,
-          PrefetchHooks Function({bool posId})
+          PrefetchHooks Function({bool posId, bool standardFormPatternsRefs})
         > {
   $$DimensionsTableTableManager(_$AppDatabase db, $DimensionsTable table)
     : super(
@@ -10120,6 +10783,8 @@ class $$DimensionsTableTableManager
                 Value<int> ordering = const Value.absent(),
                 Value<String> levelsJson = const Value.absent(),
                 Value<String?> templateId = const Value.absent(),
+                Value<bool> intrinsic = const Value.absent(),
+                Value<String?> abbreviation = const Value.absent(),
               }) => DimensionsCompanion(
                 id: id,
                 posId: posId,
@@ -10127,6 +10792,8 @@ class $$DimensionsTableTableManager
                 ordering: ordering,
                 levelsJson: levelsJson,
                 templateId: templateId,
+                intrinsic: intrinsic,
+                abbreviation: abbreviation,
               ),
           createCompanionCallback:
               ({
@@ -10136,6 +10803,8 @@ class $$DimensionsTableTableManager
                 Value<int> ordering = const Value.absent(),
                 required String levelsJson,
                 Value<String?> templateId = const Value.absent(),
+                Value<bool> intrinsic = const Value.absent(),
+                Value<String?> abbreviation = const Value.absent(),
               }) => DimensionsCompanion.insert(
                 id: id,
                 posId: posId,
@@ -10143,6 +10812,8 @@ class $$DimensionsTableTableManager
                 ordering: ordering,
                 levelsJson: levelsJson,
                 templateId: templateId,
+                intrinsic: intrinsic,
+                abbreviation: abbreviation,
               ),
           withReferenceMapper: (p0) => p0
               .map(
@@ -10152,47 +10823,73 @@ class $$DimensionsTableTableManager
                 ),
               )
               .toList(),
-          prefetchHooksCallback: ({posId = false}) {
-            return PrefetchHooks(
-              db: db,
-              explicitlyWatchedTables: [],
-              addJoins:
-                  <
-                    T extends TableManagerState<
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic
-                    >
-                  >(state) {
-                    if (posId) {
-                      state =
-                          state.withJoin(
-                                currentTable: table,
-                                currentColumn: table.posId,
-                                referencedTable: $$DimensionsTableReferences
-                                    ._posIdTable(db),
-                                referencedColumn: $$DimensionsTableReferences
-                                    ._posIdTable(db)
-                                    .id,
-                              )
-                              as T;
-                    }
+          prefetchHooksCallback:
+              ({posId = false, standardFormPatternsRefs = false}) {
+                return PrefetchHooks(
+                  db: db,
+                  explicitlyWatchedTables: [
+                    if (standardFormPatternsRefs) db.standardFormPatterns,
+                  ],
+                  addJoins:
+                      <
+                        T extends TableManagerState<
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic
+                        >
+                      >(state) {
+                        if (posId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.posId,
+                                    referencedTable: $$DimensionsTableReferences
+                                        ._posIdTable(db),
+                                    referencedColumn:
+                                        $$DimensionsTableReferences
+                                            ._posIdTable(db)
+                                            .id,
+                                  )
+                                  as T;
+                        }
 
-                    return state;
+                        return state;
+                      },
+                  getPrefetchedDataCallback: (items) async {
+                    return [
+                      if (standardFormPatternsRefs)
+                        await $_getPrefetchedData<
+                          Dimension,
+                          $DimensionsTable,
+                          StandardFormPattern
+                        >(
+                          currentTable: table,
+                          referencedTable: $$DimensionsTableReferences
+                              ._standardFormPatternsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$DimensionsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).standardFormPatternsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.dimensionId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                    ];
                   },
-              getPrefetchedDataCallback: (items) async {
-                return [];
+                );
               },
-            );
-          },
         ),
       );
 }
@@ -10209,7 +10906,7 @@ typedef $$DimensionsTableProcessedTableManager =
       $$DimensionsTableUpdateCompanionBuilder,
       (Dimension, $$DimensionsTableReferences),
       Dimension,
-      PrefetchHooks Function({bool posId})
+      PrefetchHooks Function({bool posId, bool standardFormPatternsRefs})
     >;
 typedef $$ParadigmCellOverridesTableCreateCompanionBuilder =
     ParadigmCellOverridesCompanion Function({
@@ -10575,12 +11272,14 @@ typedef $$MarkersTableCreateCompanionBuilder =
     MarkersCompanion Function({
       Value<int> id,
       required int posId,
+      Value<String> name,
       Value<FeatureBindings> featureBindings,
     });
 typedef $$MarkersTableUpdateCompanionBuilder =
     MarkersCompanion Function({
       Value<int> id,
       Value<int> posId,
+      Value<String> name,
       Value<FeatureBindings> featureBindings,
     });
 
@@ -10617,6 +11316,11 @@ class $$MarkersTableFilterComposer
   });
   ColumnFilters<int> get id => $composableBuilder(
     column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get name => $composableBuilder(
+    column: $table.name,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -10664,6 +11368,11 @@ class $$MarkersTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get featureBindings => $composableBuilder(
     column: $table.featureBindings,
     builder: (column) => ColumnOrderings(column),
@@ -10704,6 +11413,9 @@ class $$MarkersTableAnnotationComposer
   });
   GeneratedColumn<int> get id =>
       $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => column);
 
   GeneratedColumnWithTypeConverter<FeatureBindings, String>
   get featureBindings => $composableBuilder(
@@ -10765,20 +11477,24 @@ class $$MarkersTableTableManager
               ({
                 Value<int> id = const Value.absent(),
                 Value<int> posId = const Value.absent(),
+                Value<String> name = const Value.absent(),
                 Value<FeatureBindings> featureBindings = const Value.absent(),
               }) => MarkersCompanion(
                 id: id,
                 posId: posId,
+                name: name,
                 featureBindings: featureBindings,
               ),
           createCompanionCallback:
               ({
                 Value<int> id = const Value.absent(),
                 required int posId,
+                Value<String> name = const Value.absent(),
                 Value<FeatureBindings> featureBindings = const Value.absent(),
               }) => MarkersCompanion.insert(
                 id: id,
                 posId: posId,
+                name: name,
                 featureBindings: featureBindings,
               ),
           withReferenceMapper: (p0) => p0
@@ -11623,6 +12339,311 @@ typedef $$LexemeParentsTableProcessedTableManager =
       LexemeParentRow,
       PrefetchHooks Function({bool childLexemeId, bool parentLexemeId})
     >;
+typedef $$StandardFormPatternsTableCreateCompanionBuilder =
+    StandardFormPatternsCompanion Function({
+      required int dimensionId,
+      required int levelId,
+      required String branchesJson,
+      Value<int> rowid,
+    });
+typedef $$StandardFormPatternsTableUpdateCompanionBuilder =
+    StandardFormPatternsCompanion Function({
+      Value<int> dimensionId,
+      Value<int> levelId,
+      Value<String> branchesJson,
+      Value<int> rowid,
+    });
+
+final class $$StandardFormPatternsTableReferences
+    extends
+        BaseReferences<
+          _$AppDatabase,
+          $StandardFormPatternsTable,
+          StandardFormPattern
+        > {
+  $$StandardFormPatternsTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static $DimensionsTable _dimensionIdTable(_$AppDatabase db) =>
+      db.dimensions.createAlias(
+        $_aliasNameGenerator(
+          db.standardFormPatterns.dimensionId,
+          db.dimensions.id,
+        ),
+      );
+
+  $$DimensionsTableProcessedTableManager get dimensionId {
+    final $_column = $_itemColumn<int>('dimension_id')!;
+
+    final manager = $$DimensionsTableTableManager(
+      $_db,
+      $_db.dimensions,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_dimensionIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$StandardFormPatternsTableFilterComposer
+    extends Composer<_$AppDatabase, $StandardFormPatternsTable> {
+  $$StandardFormPatternsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get levelId => $composableBuilder(
+    column: $table.levelId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get branchesJson => $composableBuilder(
+    column: $table.branchesJson,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$DimensionsTableFilterComposer get dimensionId {
+    final $$DimensionsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.dimensionId,
+      referencedTable: $db.dimensions,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$DimensionsTableFilterComposer(
+            $db: $db,
+            $table: $db.dimensions,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$StandardFormPatternsTableOrderingComposer
+    extends Composer<_$AppDatabase, $StandardFormPatternsTable> {
+  $$StandardFormPatternsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get levelId => $composableBuilder(
+    column: $table.levelId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get branchesJson => $composableBuilder(
+    column: $table.branchesJson,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$DimensionsTableOrderingComposer get dimensionId {
+    final $$DimensionsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.dimensionId,
+      referencedTable: $db.dimensions,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$DimensionsTableOrderingComposer(
+            $db: $db,
+            $table: $db.dimensions,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$StandardFormPatternsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $StandardFormPatternsTable> {
+  $$StandardFormPatternsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get levelId =>
+      $composableBuilder(column: $table.levelId, builder: (column) => column);
+
+  GeneratedColumn<String> get branchesJson => $composableBuilder(
+    column: $table.branchesJson,
+    builder: (column) => column,
+  );
+
+  $$DimensionsTableAnnotationComposer get dimensionId {
+    final $$DimensionsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.dimensionId,
+      referencedTable: $db.dimensions,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$DimensionsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.dimensions,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$StandardFormPatternsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $StandardFormPatternsTable,
+          StandardFormPattern,
+          $$StandardFormPatternsTableFilterComposer,
+          $$StandardFormPatternsTableOrderingComposer,
+          $$StandardFormPatternsTableAnnotationComposer,
+          $$StandardFormPatternsTableCreateCompanionBuilder,
+          $$StandardFormPatternsTableUpdateCompanionBuilder,
+          (StandardFormPattern, $$StandardFormPatternsTableReferences),
+          StandardFormPattern,
+          PrefetchHooks Function({bool dimensionId})
+        > {
+  $$StandardFormPatternsTableTableManager(
+    _$AppDatabase db,
+    $StandardFormPatternsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$StandardFormPatternsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$StandardFormPatternsTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$StandardFormPatternsTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<int> dimensionId = const Value.absent(),
+                Value<int> levelId = const Value.absent(),
+                Value<String> branchesJson = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => StandardFormPatternsCompanion(
+                dimensionId: dimensionId,
+                levelId: levelId,
+                branchesJson: branchesJson,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required int dimensionId,
+                required int levelId,
+                required String branchesJson,
+                Value<int> rowid = const Value.absent(),
+              }) => StandardFormPatternsCompanion.insert(
+                dimensionId: dimensionId,
+                levelId: levelId,
+                branchesJson: branchesJson,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$StandardFormPatternsTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({dimensionId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (dimensionId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.dimensionId,
+                                referencedTable:
+                                    $$StandardFormPatternsTableReferences
+                                        ._dimensionIdTable(db),
+                                referencedColumn:
+                                    $$StandardFormPatternsTableReferences
+                                        ._dimensionIdTable(db)
+                                        .id,
+                              )
+                              as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$StandardFormPatternsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $StandardFormPatternsTable,
+      StandardFormPattern,
+      $$StandardFormPatternsTableFilterComposer,
+      $$StandardFormPatternsTableOrderingComposer,
+      $$StandardFormPatternsTableAnnotationComposer,
+      $$StandardFormPatternsTableCreateCompanionBuilder,
+      $$StandardFormPatternsTableUpdateCompanionBuilder,
+      (StandardFormPattern, $$StandardFormPatternsTableReferences),
+      StandardFormPattern,
+      PrefetchHooks Function({bool dimensionId})
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -11666,4 +12687,6 @@ class $AppDatabaseManager {
       $$InflectionalRulePOSTableTableManager(_db, _db.inflectionalRulePOS);
   $$LexemeParentsTableTableManager get lexemeParents =>
       $$LexemeParentsTableTableManager(_db, _db.lexemeParents);
+  $$StandardFormPatternsTableTableManager get standardFormPatterns =>
+      $$StandardFormPatternsTableTableManager(_db, _db.standardFormPatterns);
 }

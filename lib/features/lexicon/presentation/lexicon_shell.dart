@@ -1,18 +1,29 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+
+import '../../../features/glossary/data/glossary_providers.dart';
+import '../../../shared/widgets/resizable_divider.dart';
 
 /// Lexicon sub-shell with a left sidebar for navigation.
 ///
-/// Mirrors the MorphologyShell pattern exactly: 200px sidebar + VerticalDivider
+/// Mirrors the GrammarShell pattern: resizable sidebar + ResizableDivider
 /// + Expanded content area. Three sidebar items for Dictionary, Swadesh List,
 /// and Thesaurus sub-sections (per D-12 in 03-CONTEXT.md).
-class LexiconShell extends StatelessWidget {
+class LexiconShell extends ConsumerStatefulWidget {
   const LexiconShell({
     super.key,
     required this.navigationShell,
   });
 
   final StatefulNavigationShell navigationShell;
+
+  @override
+  ConsumerState<LexiconShell> createState() => _LexiconShellState();
+}
+
+class _LexiconShellState extends ConsumerState<LexiconShell> {
+  double _sidebarWidth = 200;
 
   static const _sidebarItems = [
     _SidebarItem(
@@ -42,9 +53,9 @@ class LexiconShell extends StatelessWidget {
   ];
 
   void _onSidebarTap(BuildContext context, int index) {
-    navigationShell.goBranch(
+    widget.navigationShell.goBranch(
       index,
-      initialLocation: index == navigationShell.currentIndex,
+      initialLocation: index == widget.navigationShell.currentIndex,
     );
   }
 
@@ -55,27 +66,45 @@ class LexiconShell extends StatelessWidget {
 
     return Row(
       children: [
-        // Left sidebar (200px wide)
+        // Left sidebar (resizable)
         SizedBox(
-          width: 200,
+          width: _sidebarWidth,
           child: Material(
             color: colorScheme.surfaceContainerLow,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-                  child: Text(
-                    'LEXICON',
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      color: colorScheme.onSurface.withValues(alpha: 0.5),
-                      letterSpacing: 1.2,
-                    ),
+                  padding: const EdgeInsets.fromLTRB(16, 8, 4, 8),
+                  child: Row(
+                    children: [
+                      Text(
+                        'LEXICON',
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: colorScheme.onSurface.withValues(alpha: 0.5),
+                          letterSpacing: 1.2,
+                        ),
+                      ),
+                      const Spacer(),
+                      IconButton(
+                        icon: const Icon(Icons.help_outline, size: 16),
+                        tooltip: 'Glossary: Lexicon terms',
+                        padding: EdgeInsets.zero,
+                        constraints:
+                            const BoxConstraints(minWidth: 28, minHeight: 28),
+                        onPressed: () {
+                          ref
+                              .read(glossaryCategoryFilterProvider.notifier)
+                              .set('Semantics');
+                          ref.read(glossaryOpenProvider.notifier).open();
+                        },
+                      ),
+                    ],
                   ),
                 ),
                 ...List.generate(_sidebarItems.length, (index) {
                   final item = _sidebarItems[index];
-                  final isSelected = navigationShell.currentIndex == index;
+                  final isSelected = widget.navigationShell.currentIndex == index;
                   return _SidebarTile(
                     item: item,
                     isSelected: isSelected,
@@ -87,16 +116,16 @@ class LexiconShell extends StatelessWidget {
           ),
         ),
 
-        // Vertical divider
-        VerticalDivider(
-          width: 1,
-          thickness: 1,
-          color: colorScheme.outlineVariant,
+        // Draggable divider between sidebar and content
+        ResizableDivider(
+          onDrag: (d) => setState(() {
+            _sidebarWidth = (_sidebarWidth + d).clamp(140, 320);
+          }),
         ),
 
         // Main content area
         Expanded(
-          child: navigationShell,
+          child: widget.navigationShell,
         ),
       ],
     );

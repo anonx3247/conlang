@@ -1,6 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../shared/widgets/violation_text.dart';
+// D-99 / WARN-4 Option A -- 04-17. Standard-form violations are SKIPPED for
+// inspiration-generated words because they are NOT lexemes and have no
+// intrinsic level assignments. Only phonotactic violations apply here.
+// ignore: unused_import
+import '../../../grammar/data/standard_form_validation_provider.dart';
+import '../../data/phonotactic_validation_provider.dart';
 import '../../../phonology/data/phonotactic_providers.dart';
 import '../../../phonology/data/romanization_providers.dart';
 import '../../../phonology/domain/phonotactic_dsl.dart';
@@ -53,6 +60,9 @@ class _InspirationPanelState extends ConsumerState<InspirationPanel> {
 
     final inventory = ref.watch(phonemeInventoryProvider);
     final romanize = ref.watch(romanizeProvider);
+    // D-99 / WARN-4 -- 04-17: phonotactic violations only (no standard-form
+    // for generated words -- they have no lexeme/intrinsic assignments).
+    final validate = ref.watch(phonotacticValidatorProvider);
     final templates = ref.watch(parsedTemplatesProvider).when(
           data: (v) => v,
           loading: () => <ParsedTemplate>[],
@@ -214,6 +224,9 @@ class _InspirationPanelState extends ConsumerState<InspirationPanel> {
                     final romanized = romanize(rawWord);
                     final showRomanized =
                         romanized.isNotEmpty && romanized != phoneticWord;
+                    // D-99 / WARN-4 -- 04-17: phonotactic violations on
+                    // generated words (standard-form skipped -- no lexeme).
+                    final wordViolations = validate(word: rawWord).violations;
                     return InkWell(
                       // Pass the RAW (phonemic) form so word_creation_form
                       // can romanize() it correctly.
@@ -225,8 +238,9 @@ class _InspirationPanelState extends ConsumerState<InspirationPanel> {
                             ? Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Text(
-                                    romanized,
+                                  ViolationText(
+                                    text: romanized,
+                                    violations: wordViolations,
                                     style:
                                         theme.textTheme.bodyMedium?.copyWith(
                                       fontSize: 13,
@@ -244,8 +258,9 @@ class _InspirationPanelState extends ConsumerState<InspirationPanel> {
                                   ),
                                 ],
                               )
-                            : Text(
-                                phoneticWord,
+                            : ViolationText(
+                                text: phoneticWord,
+                                violations: wordViolations,
                                 style: theme.textTheme.bodyMedium?.copyWith(
                                   fontSize: 13,
                                   color: cs.primary,

@@ -1,5 +1,6 @@
 import 'package:conlang_workbench/db/app_database.dart';
 import 'package:conlang_workbench/features/grammar/data/grammar_dao.dart';
+import 'package:conlang_workbench/features/grammar/data/inflectional_rule_pos_dao.dart';
 import 'package:conlang_workbench/features/grammar/domain/dimension_level.dart';
 import 'package:conlang_workbench/features/grammar/domain/feature_bindings.dart';
 import 'package:conlang_workbench/features/grammar/domain/rule_kind.dart';
@@ -74,51 +75,61 @@ void main() {
     });
 
     test('watchInflectionalRulesForPos filters by pos AND kind', () async {
-      // Inflectional for POS 1 (posNounId)
-      await morphDao.insertRuleWithKind(
+      // Plan 04-11 D-55: the v9 junction table is authoritative for
+      // inflectional rule lookup. featureBindings.pos is a convenience
+      // cache only; this test seeds via both the legacy bindings AND the
+      // junction so the v9 query surfaces the expected rules.
+      final junctionDao = InflectionalRulePOSDao(db);
+
+      // Seed a second POS (id 999-ish) the tests can attach rules to.
+      final otherPosId = await db.into(db.partsOfSpeech).insert(
+            PartsOfSpeechCompanion.insert(name: 'Verb', abbreviation: 'V'),
+          );
+
+      // Inflectional for posNounId
+      final plId = await morphDao.insertRuleWithKind(
         MorphologicalRulesCompanion.insert(
           name: 'PL',
           source: '-s',
-          featureBindings: Value(FeatureBindings(pos: [posNounId], dims: {5: 2})),
+          featureBindings:
+              Value(FeatureBindings(pos: [posNounId], dims: {5: 2})),
         ),
         RuleKind.inflectional,
       );
-      // Inflectional applies-to-all (empty pos)
-      await morphDao.insertRuleWithKind(
+      await junctionDao
+          .replaceForRule(ruleId: plId, posIds: {posNounId});
+
+      // Inflectional attached to the OTHER POS only — must be excluded from
+      // a query for posNounId. (v8 'applies to all' with empty pos is no
+      // longer a supported shape in v9+.)
+      final otherId = await morphDao.insertRuleWithKind(
         MorphologicalRulesCompanion.insert(
-          name: 'all',
-          source: '-x',
-          featureBindings: const Value(
-            FeatureBindings(pos: [], dims: {5: 2}),
-          ),
-        ),
-        RuleKind.inflectional,
-      );
-      // Inflectional for POS 999 only (should be excluded)
-      await morphDao.insertRuleWithKind(
-        MorphologicalRulesCompanion.insert(
-          name: 'pos999only',
+          name: 'otherOnly',
           source: '-q',
-          featureBindings: const Value(
-            FeatureBindings(pos: [999], dims: {5: 2}),
-          ),
+          featureBindings:
+              Value(FeatureBindings(pos: [otherPosId], dims: const {5: 2})),
         ),
         RuleKind.inflectional,
       );
-      // Derivational for POS 1 (should be excluded — wrong kind)
+      await junctionDao
+          .replaceForRule(ruleId: otherId, posIds: {otherPosId});
+
+      // Derivational for posNounId (should be excluded — wrong kind).
       await morphDao.insertRuleWithKind(
         MorphologicalRulesCompanion.insert(
           name: 'derPOS1',
           source: '-d',
-          featureBindings: Value(FeatureBindings(pos: [posNounId], dims: const {})),
+          featureBindings:
+              Value(FeatureBindings(pos: [posNounId], dims: const {})),
         ),
         RuleKind.derivational,
       );
 
-      final result = await morphDao.watchInflectionalRulesForPos(posNounId).first;
+      final result =
+          await morphDao.watchInflectionalRulesForPos(posNounId).first;
       final names = result.map((r) => r.name).toList();
-      expect(names, containsAll(['PL', 'all']));
-      expect(names, isNot(contains('pos999only')));
+      expect(names, contains('PL'));
+      expect(names, isNot(contains('otherOnly')));
       expect(names, isNot(contains('derPOS1')));
     });
   });

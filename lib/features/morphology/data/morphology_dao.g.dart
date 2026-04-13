@@ -9,6 +9,8 @@ mixin _$MorphologyDaoMixin on DatabaseAccessor<AppDatabase> {
       attachedDatabase.morphologicalRules;
   $MorphologicalRuleExceptionsTable get morphologicalRuleExceptions =>
       attachedDatabase.morphologicalRuleExceptions;
+  $InflectionalRulePOSTable get inflectionalRulePOS =>
+      attachedDatabase.inflectionalRulePOS;
   MorphologyDaoManager get managers => MorphologyDaoManager(this);
 }
 
@@ -27,5 +29,10 @@ class MorphologyDaoManager {
       $$MorphologicalRuleExceptionsTableTableManager(
         _db.attachedDatabase,
         _db.morphologicalRuleExceptions,
+      );
+  $$InflectionalRulePOSTableTableManager get inflectionalRulePOS =>
+      $$InflectionalRulePOSTableTableManager(
+        _db.attachedDatabase,
+        _db.inflectionalRulePOS,
       );
 }

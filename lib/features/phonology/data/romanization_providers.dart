@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../db/app_database.dart';
 import '../../project/data/project_providers.dart';
+import '../domain/notation_helpers.dart';
+import 'romanization_bijection.dart';
 import 'romanization_dao.dart';
 
 // ---------------------------------------------------------------------------
@@ -80,89 +82,83 @@ Future<void> setRomanizationEnabled(WidgetRef ref, bool enabled) async {
 // Romanization conversion function provider
 // ---------------------------------------------------------------------------
 
-/// Returns a String Function(String ipa) that converts an IPA string to its
-/// romanized Latin form using the project's currently defined mappings.
+/// Returns a `String Function(String ipa)` that converts an IPA string to
+/// its romanized Latin form using the project's currently defined mappings.
 ///
-/// Watches the live mappings stream so the function updates whenever mappings
-/// are added, edited, or deleted.
+/// D-78 (plan 04-15): this provider is now a thin wrapper over
+/// [smartRomanize] in `notation_helpers.dart`. It emits `.` between
+/// adjacent rom tokens whenever naive concatenation would re-parse as a
+/// different phoneme sequence (e.g. `/atha/` → `at.ha` when `θ→th` is in
+/// the mapping set). See `notation_helpers.dart` for the boundary-insertion
+/// algorithm. `.` is a consumed glyph separator — see notation_helpers.dart.
 ///
-/// When no project is open, returns an identity function.
+/// Watches the live mappings stream so the function updates whenever
+/// mappings are added, edited, or deleted. When no project is open,
+/// returns an identity function.
 final romanizeProvider = Provider<String Function(String ipa)>((ref) {
   final mappingsAsync = ref.watch(romanizationMappingsProvider);
   final mappings = mappingsAsync.asData?.value;
   if (mappings == null || mappings.isEmpty) return (String ipa) => ipa;
 
-  final sorted = List<RomanizationMapping>.from(mappings)
-    ..sort((a, b) => b.ipaSymbol.length.compareTo(a.ipaSymbol.length));
-
-  return (String ipa) {
-    var result = ipa;
-    for (final mapping in sorted) {
-      result = result.replaceAll(mapping.ipaSymbol, mapping.latinMapping);
-    }
-    return result;
-  };
+  final notation = mappings
+      .map<NotationMapping>(
+        (m) => (ipaSymbol: m.ipaSymbol, latinMapping: m.latinMapping),
+      )
+      .toList(growable: false);
+  return (String ipa) => smartRomanize(ipa, notation);
 });
 
 // ---------------------------------------------------------------------------
 // Inverse romanization (deromanize)
 // ---------------------------------------------------------------------------
 
-/// Returns a `String Function(String latin)` that converts a romanized Latin
-/// string back into its IPA form using the project's currently defined
-/// mappings in reverse.
+/// Returns a `String Function(String latin)` that converts a romanized
+/// Latin string back into its IPA form using the project's currently
+/// defined mappings in reverse.
 ///
-/// The inverse walks the input left-to-right, greedy longest-match against
-/// every known `latinMapping`, substituting the corresponding `ipaSymbol`.
-/// Characters that match no mapping are passed through verbatim so users can
-/// type mixed input (e.g. IPA characters interleaved with their romanization)
-/// without data loss.
+/// D-78 (plan 04-15): this provider is now a thin wrapper over
+/// [dotAwareDeromanize] in `notation_helpers.dart`. `.` is a consumed glyph
+/// separator — typing `at.ha` under the `(t, h, th)` mapping set yields
+/// three separate phonemes `/atha/` while `atha` yields `/aθa/` via
+/// longest-match. See `notation_helpers.dart` for the algorithm.
 ///
-/// Ambiguity policy: if two mappings share the same `latinMapping` string,
-/// the first one encountered wins. This is a first-cut heuristic — conlangs
-/// rarely ship ambiguous romanizations, and users can manually correct the
-/// IPA field when they hit the edge case.
-///
-/// When no project is open, returns an identity function.
-///
-/// Used by the word creation / edit forms to auto-populate the IPA field as
-/// the user types in the romanized field, so IPA becomes a manual-override
-/// slot rather than a required parallel entry.
+/// When no project is open, returns an identity function. Used by the word
+/// creation / edit forms and the rule editor dialog to convert rom input
+/// to phonemic storage.
 final deromanizeProvider = Provider<String Function(String latin)>((ref) {
   final mappingsAsync = ref.watch(romanizationMappingsProvider);
   final mappings = mappingsAsync.asData?.value;
   if (mappings == null || mappings.isEmpty) return (String latin) => latin;
 
-  // Longest-first so digraphs like "ch" beat single "c".
-  final sorted = List<RomanizationMapping>.from(mappings)
-    ..sort((a, b) => b.latinMapping.length.compareTo(a.latinMapping.length));
+  final notation = mappings
+      .where((m) => m.latinMapping.isNotEmpty && m.ipaSymbol.isNotEmpty)
+      .map<NotationMapping>(
+        (m) => (ipaSymbol: m.ipaSymbol, latinMapping: m.latinMapping),
+      )
+      .toList(growable: false);
+  if (notation.isEmpty) return (String latin) => latin;
+  return (String latin) => dotAwareDeromanize(latin, notation);
+});
 
-  // Drop mappings with empty latin strings — they'd create an infinite loop.
-  final active =
-      sorted.where((m) => m.latinMapping.isNotEmpty).toList(growable: false);
-  if (active.isEmpty) return (String latin) => latin;
+// ---------------------------------------------------------------------------
+// Plan 04-15 D-72: Bijection status provider
+// ---------------------------------------------------------------------------
 
-  return (String latin) {
-    if (latin.isEmpty) return latin;
-    final buffer = StringBuffer();
-    var i = 0;
-    while (i < latin.length) {
-      var matched = false;
-      for (final m in active) {
-        if (latin.startsWith(m.latinMapping, i)) {
-          buffer.write(m.ipaSymbol);
-          i += m.latinMapping.length;
-          matched = true;
-          break;
-        }
-      }
-      if (!matched) {
-        buffer.write(latin[i]);
-        i++;
-      }
-    }
-    return buffer.toString();
-  };
+/// Watches the current romanization mapping set and exposes the list of
+/// bijection violations (empty list = valid). Used by the romanization
+/// settings section for the project-open banner and by the rule editor
+/// dialog for the edit-locked gate.
+///
+/// Updates reactively whenever mappings change.
+final bijectionStatusProvider =
+    Provider<AsyncValue<List<BijectionViolation>>>((ref) {
+  final mappingsAsync = ref.watch(romanizationMappingsProvider);
+  return mappingsAsync.when(
+    data: (mappings) =>
+        AsyncValue.data(validateMappingsBijection(mappings)),
+    loading: () => const AsyncValue.loading(),
+    error: (e, s) => AsyncValue.error(e, s),
+  );
 });
 
 /// True when [lexeme] has a manually-overridden IPA — i.e. its stored IPA

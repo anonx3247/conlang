@@ -346,14 +346,23 @@ class _PreviewPanelState extends ConsumerState<PreviewPanel> {
     );
   }
 
+  // D-111 (plan 04-17): the preview panel MUST render via the same
+  // romanize pipeline as paradigm_table_widget.dart cells. Specifically:
+  //   - Use ref.watch(romanizeProvider), not ref.read — the preview must
+  //     refresh when the mapping changes.
+  //   - romanize() receives the RAW PHONEMIC form (engine output), never
+  //     the post-rewrite phonetic. D-112 invariant.
+  //   - showRomanized compares romanized != phonemic (not != phonetic).
+  //   - When rom is hidden, display the phonemic form, not the phonetic.
   TableRow _buildRow(_PreviewRow row, ThemeData theme, ColorScheme cs) {
-    final romanize = ref.read(romanizeProvider);
+    // D-111: watch, not read — preview refreshes on mapping changes.
+    final romanize = ref.watch(romanizeProvider);
     final rewriteRules = ref.read(parsedRewriteRulesProvider);
     final inventory = ref.read(phonemeInventoryProvider);
     final gen = WordGenerator();
 
     // Compute the phonetic (surface) transcription for display in
-    // [brackets]. Romanization continues to use the phonemic (raw) form.
+    // [brackets]. Romanization uses the phonemic (raw) form — D-112.
     String toPhonetic(String raw) => gen.applyRewriteRules(
           word: raw,
           rules: rewriteRules,
@@ -368,10 +377,14 @@ class _PreviewPanelState extends ConsumerState<PreviewPanel> {
     Widget derivedWidget;
     if (row.derived != null) {
       final hasViolation = row.violations != null && !row.violations!.isValid;
+      // D-112: romanize the raw phonemic (row.derived), not the phonetic.
       final romanized = romanize(row.derived!);
       final phoneticDerived = toPhonetic(row.derived!);
+      // D-112 parity: show rom when it differs from the PHONEMIC form,
+      // not from the phonetic form. Mirrors _FilledCell in
+      // paradigm_table_widget.dart.
       final showRomanized =
-          romanized.isNotEmpty && romanized != phoneticDerived;
+          romanized.isNotEmpty && romanized != row.derived;
 
       Widget ipaLabel = Text(
         '[$phoneticDerived]',
@@ -416,19 +429,19 @@ class _PreviewPanelState extends ConsumerState<PreviewPanel> {
 
     final arrowIcon = const Icon(Icons.arrow_forward, size: 14);
 
-    // Root is phonemic; show romanize(raw) as primary. If no romanization
-    // mapping, show the phonetic surface form instead.
+    // D-112 parity: romanize the raw phonemic root, compare against phonemic.
+    // When rom is hidden, show the phonemic form (not phonetic).
     final romanizedRoot = romanize(row.root);
     final phoneticRoot = toPhonetic(row.root);
     final showRomanizedRoot =
-        romanizedRoot.isNotEmpty && romanizedRoot != phoneticRoot;
+        romanizedRoot.isNotEmpty && romanizedRoot != row.root;
 
     return TableRow(
       children: [
         Padding(
           padding: const EdgeInsets.symmetric(vertical: 3),
           child: Text(
-            showRomanizedRoot ? romanizedRoot : phoneticRoot,
+            showRomanizedRoot ? romanizedRoot : '[$phoneticRoot]',
             style: monoStyle,
           ),
         ),

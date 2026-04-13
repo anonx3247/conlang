@@ -2,7 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../shared/widgets/violation_text.dart';
+import '../../../grammar/data/standard_form_validation_provider.dart';
+import '../../../phonology/domain/word_generator.dart' show Violation;
 import '../../data/lexeme_providers.dart';
+import '../../data/phonotactic_validation_provider.dart';
 import '../../data/semantic_providers.dart';
 
 /// Swadesh List page — shows 207 Swadesh concepts as a checklist with coverage
@@ -253,7 +257,7 @@ class _SwadeshConceptTile extends StatelessWidget {
 // Linked word label (for covered concepts)
 // ---------------------------------------------------------------------------
 
-class _LinkedWordLabel extends StatelessWidget {
+class _LinkedWordLabel extends ConsumerWidget {
   const _LinkedWordLabel({
     required this.lexeme,
     required this.colorScheme,
@@ -263,26 +267,44 @@ class _LinkedWordLabel extends StatelessWidget {
   final ColorScheme colorScheme;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     // Extract display form — prefer romanization, fall back to IPA.
     final displayForm = (lexeme.romanization as String?)?.isNotEmpty == true
         ? lexeme.romanization as String
         : lexeme.ipa as String;
+
+    // D-99 -- 04-17: combine phonotactic + standard-form violations.
+    final lexId = lexeme.id as int;
+    final validate = ref.watch(phonotacticValidatorProvider);
+    final phonoResult = validate(word: lexeme.ipa as String);
+    final sfViolations = ref.watch(standardFormViolationsProvider(lexId)).asData?.value ?? const [];
+    final combined = <Violation>[...phonoResult.violations, ...sfViolations];
 
     return GestureDetector(
       onTap: () {
         // Navigate to dictionary page where the word can be viewed.
         context.go('/lexicon/dictionary');
       },
-      child: Text(
-        displayForm,
-        style: TextStyle(
-          fontSize: 12,
-          color: colorScheme.primary,
-          decoration: TextDecoration.underline,
-          decorationColor: colorScheme.primary,
-        ),
-      ),
+      child: combined.isEmpty
+          ? Text(
+              displayForm,
+              style: TextStyle(
+                fontSize: 12,
+                color: colorScheme.primary,
+                decoration: TextDecoration.underline,
+                decorationColor: colorScheme.primary,
+              ),
+            )
+          : ViolationText(
+              text: displayForm,
+              violations: combined,
+              style: TextStyle(
+                fontSize: 12,
+                color: colorScheme.primary,
+                decoration: TextDecoration.underline,
+                decorationColor: colorScheme.primary,
+              ),
+            ),
     );
   }
 }

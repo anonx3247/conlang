@@ -1,7 +1,4 @@
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../db/app_database.dart';
@@ -9,9 +6,7 @@ import '../../../../features/project/data/project_providers.dart';
 import '../../data/ipa_data.dart';
 import '../../data/phoneme_providers.dart';
 import '../../data/romanization_providers.dart';
-import '../../domain/default_natural_classes.dart';
 import '../shared/vowel_trapezoid_painter.dart';
-import 'natural_class_editor.dart';
 import 'phoneme_edit_dialog.dart';
 import 'romanization_section.dart';
 
@@ -87,44 +82,17 @@ String _shortManner(String manner) {
 /// Phoneme inventory editor page.
 ///
 /// Shows:
-/// - Romanization mapping editor
 /// - Consonant grid (manner x place)
 /// - Vowel chart (height x backness)
-/// - Natural classes section
+/// - Romanization mapping editor (inline, below vowel chart)
 ///
-/// When no project is open, shows a placeholder message.
-class InventoryPage extends ConsumerStatefulWidget {
+/// Natural classes have been moved to their own dedicated page
+/// (NaturalClassesPage). When no project is open, shows a placeholder message.
+class InventoryPage extends ConsumerWidget {
   const InventoryPage({super.key});
 
   @override
-  ConsumerState<InventoryPage> createState() => _InventoryPageState();
-}
-
-class _InventoryPageState extends ConsumerState<InventoryPage> {
-  bool _isAltHeld = false;
-
-  bool _handleKeyEvent(KeyEvent event) {
-    final altPressed = HardwareKeyboard.instance.isAltPressed;
-    if (altPressed != _isAltHeld) {
-      setState(() => _isAltHeld = altPressed);
-    }
-    return false; // Don't consume the event
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    HardwareKeyboard.instance.addHandler(_handleKeyEvent);
-  }
-
-  @override
-  void dispose() {
-    HardwareKeyboard.instance.removeHandler(_handleKeyEvent);
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final db = ref.watch(currentDatabaseProvider);
     final theme = Theme.of(context);
 
@@ -162,10 +130,6 @@ class _InventoryPageState extends ConsumerState<InventoryPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Romanization mapping editor (IPA -> Latin).
-          const RomanizationSection(),
-          const SizedBox(height: 32),
-
           // Unified Add Phoneme button + section title.
           Row(
             children: [
@@ -187,15 +151,22 @@ class _InventoryPageState extends ConsumerState<InventoryPage> {
           const SizedBox(height: 12),
 
           // All phonemes as chips (nothing can hide)
-          _AllPhonemesRow(isAltHeld: _isAltHeld),
+          const _AllPhonemesRow(),
           const SizedBox(height: 24),
 
           // Phoneme inventory sections.
-          _ConsonantSection(isAltHeld: _isAltHeld),
+          const _ConsonantSection(),
           const SizedBox(height: 32),
-          _VowelSection(isAltHeld: _isAltHeld),
+          const _VowelSection(),
           const SizedBox(height: 32),
-          const _NaturalClassesSection(),
+
+          // Romanization mapping editor (IPA -> Latin) — inline below vowel chart.
+          Text(
+            'Romanization',
+            style: theme.textTheme.titleLarge,
+          ),
+          const SizedBox(height: 12),
+          const RomanizationSection(),
           const SizedBox(height: 32),
         ],
       ),
@@ -208,9 +179,7 @@ class _InventoryPageState extends ConsumerState<InventoryPage> {
 // ---------------------------------------------------------------------------
 
 class _AllPhonemesRow extends ConsumerWidget {
-  const _AllPhonemesRow({required this.isAltHeld});
-
-  final bool isAltHeld;
+  const _AllPhonemesRow();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -227,7 +196,6 @@ class _AllPhonemesRow extends ConsumerWidget {
           children: phonemes
               .map((p) => _PhonemeChip(
                     phoneme: p,
-                    isAltHeld: isAltHeld,
                     onTap: () => showDialog(
                       context: context,
                       builder: (_) => PhonemeEditDialog(phoneme: p),
@@ -245,9 +213,7 @@ class _AllPhonemesRow extends ConsumerWidget {
 // ---------------------------------------------------------------------------
 
 class _ConsonantSection extends ConsumerWidget {
-  const _ConsonantSection({required this.isAltHeld});
-
-  final bool isAltHeld;
+  const _ConsonantSection();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -268,7 +234,7 @@ class _ConsonantSection extends ConsumerWidget {
                 'No consonants yet. Tap "Add Phoneme" to define your first consonant.',
               );
             }
-            return _ConsonantGrid(consonants: consonants, isAltHeld: isAltHeld);
+            return _ConsonantGrid(consonants: consonants);
           },
         ),
       ],
@@ -277,10 +243,9 @@ class _ConsonantSection extends ConsumerWidget {
 }
 
 class _ConsonantGrid extends ConsumerWidget {
-  const _ConsonantGrid({required this.consonants, required this.isAltHeld});
+  const _ConsonantGrid({required this.consonants});
 
   final List<Phoneme> consonants;
-  final bool isAltHeld;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -351,7 +316,6 @@ class _ConsonantGrid extends ConsumerWidget {
                       phonemes: phonemesHere,
                       width: cellW,
                       height: cellH,
-                      isAltHeld: isAltHeld,
                     );
                   }),
                 ],
@@ -367,9 +331,7 @@ class _ConsonantGrid extends ConsumerWidget {
 // ---------------------------------------------------------------------------
 
 class _VowelSection extends ConsumerWidget {
-  const _VowelSection({required this.isAltHeld});
-
-  final bool isAltHeld;
+  const _VowelSection();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -390,7 +352,7 @@ class _VowelSection extends ConsumerWidget {
                 'No vowels yet. Tap "Add Phoneme" to define your first vowel.',
               );
             }
-            return _VowelChart(vowels: vowels, isAltHeld: isAltHeld);
+            return _VowelChart(vowels: vowels);
           },
         ),
       ],
@@ -439,10 +401,9 @@ VowelBackness? _backnessFromString(String? b) {
 }
 
 class _VowelChart extends StatelessWidget {
-  const _VowelChart({required this.vowels, required this.isAltHeld});
+  const _VowelChart({required this.vowels});
 
   final List<Phoneme> vowels;
-  final bool isAltHeld;
 
   @override
   Widget build(BuildContext context) {
@@ -507,7 +468,6 @@ class _VowelChart extends StatelessWidget {
                   children: sorted
                       .map((p) => _PhonemeChip(
                             phoneme: p,
-                            isAltHeld: isAltHeld,
                             onTap: () => showDialog(
                               context: context,
                               builder: (_) => PhonemeEditDialog(phoneme: p),
@@ -551,13 +511,11 @@ class _PhonemeCell extends ConsumerWidget {
     required this.phonemes,
     required this.width,
     required this.height,
-    required this.isAltHeld,
   });
 
   final List<Phoneme> phonemes;
   final double width;
   final double height;
-  final bool isAltHeld;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -596,7 +554,6 @@ class _PhonemeCell extends ConsumerWidget {
             .map(
               (p) => _PhonemeChip(
                 phoneme: p,
-                isAltHeld: isAltHeld,
                 onTap: () => showDialog(
                   context: context,
                   builder: (_) => PhonemeEditDialog(phoneme: p),
@@ -613,28 +570,21 @@ class _PhonemeChip extends ConsumerWidget {
   const _PhonemeChip({
     required this.phoneme,
     required this.onTap,
-    required this.isAltHeld,
   });
 
   final Phoneme phoneme;
   final VoidCallback onTap;
-  final bool isAltHeld;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final romanize = ref.watch(romanizeProvider);
     final romanized = romanize(phoneme.symbol);
+    final ipaSymbol = phoneme.symbol;
 
-    final String displayText;
-    if (isAltHeld) {
-      // Alt held: show /IPA/ in slashes (phonemic notation)
-      displayText = '/${phoneme.symbol}/';
-    } else {
-      // Default: show romanization (plain text)
-      // If romanization equals IPA (no mapping), show IPA without slashes as fallback
-      displayText = romanized;
-    }
+    // D-03: Always show romanization as primary text.
+    // Only show /IPA/ to the right when romanization differs from IPA.
+    final showIpa = romanized != ipaSymbol;
 
     return GestureDetector(
       onTap: onTap,
@@ -647,12 +597,27 @@ class _PhonemeChip extends ConsumerWidget {
             color: theme.colorScheme.primaryContainer,
             borderRadius: BorderRadius.circular(4),
           ),
-          child: Text(
-            displayText,
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: theme.colorScheme.onPrimaryContainer,
-              fontWeight: FontWeight.bold,
-            ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                romanized,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.onPrimaryContainer,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              if (showIpa) ...[
+                const SizedBox(width: 3),
+                Text(
+                  '/$ipaSymbol/',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onPrimaryContainer
+                        .withValues(alpha: 0.5),
+                  ),
+                ),
+              ],
+            ],
           ),
         ),
       ),
@@ -674,276 +639,6 @@ class _PhonemeChip extends ConsumerWidget {
         'vowel',
       ].join(' ');
     }
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Natural classes section
-// ---------------------------------------------------------------------------
-
-class _NaturalClassesSection extends ConsumerWidget {
-  const _NaturalClassesSection();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
-    final asyncClasses = ref.watch(naturalClassListProvider);
-    final asyncAll = ref.watch(allPhonemesProvider);
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Text('Natural Classes', style: theme.textTheme.titleLarge),
-            const Spacer(),
-            TextButton.icon(
-              onPressed: () => showDialog(
-                context: context,
-                builder: (_) => const NaturalClassEditor(),
-              ),
-              icon: const Icon(Icons.add, size: 16),
-              label: const Text('New Class'),
-            ),
-          ],
-        ),
-        const SizedBox(height: 4),
-        Text(
-          'C, V, and the predefined phonological classes below are built-in. '
-          'Single-letter aliases (S, N, F, L, R) resolve to Stop/Nasal/Fricative/Liquid/Rhotic. '
-          'Custom classes are referenced in phonotactic patterns as [name].',
-          style: theme.textTheme.bodySmall?.copyWith(
-            color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
-          ),
-        ),
-        const SizedBox(height: 12),
-
-        // Built-in system classes (always shown, read-only).
-        // C/V are inventory-relative; the 9 predefined natural classes below
-        // ship with hardcoded IPA members and resolve regardless of inventory.
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: [
-            const _SystemClassChip(label: 'C', description: 'all consonants'),
-            const _SystemClassChip(label: 'V', description: 'all vowels'),
-            for (final entry in defaultNaturalClasses.entries)
-              _DefaultClassChip(
-                name: entry.key,
-                members: entry.value,
-                alias: _aliasFor(entry.key),
-              ),
-          ],
-        ),
-        const SizedBox(height: 8),
-
-        // User-defined classes
-        asyncClasses.when(
-          loading: () => const SizedBox(
-            height: 32,
-            child: Center(child: CircularProgressIndicator()),
-          ),
-          error: (e, _) => Text('Error: $e'),
-          data: (classes) {
-            if (classes.isEmpty) {
-              return Text(
-                'No custom natural classes yet.',
-                style: theme.textTheme.bodySmall?.copyWith(
-                  fontStyle: FontStyle.italic,
-                  color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
-                ),
-              );
-            }
-            return asyncAll.when(
-              loading: () => const SizedBox.shrink(),
-              error: (err, stack) => const SizedBox.shrink(),
-              data: (allPhonemes) {
-                final phonemeMap = {for (final p in allPhonemes) p.id: p};
-                return Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: classes
-                      .map(
-                        (nc) => _UserClassChip(
-                          nc: nc,
-                          phonemeMap: phonemeMap,
-                          onEdit: () => showDialog(
-                            context: context,
-                            builder: (_) =>
-                                NaturalClassEditor(naturalClass: nc),
-                          ),
-                          onDelete: () =>
-                              confirmDeleteNaturalClass(context, ref, nc),
-                        ),
-                      )
-                      .toList(),
-                );
-              },
-            );
-          },
-        ),
-      ],
-    );
-  }
-}
-
-class _SystemClassChip extends StatelessWidget {
-  const _SystemClassChip({required this.label, required this.description});
-
-  final String label;
-  final String description;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Chip(
-      label: RichText(
-        text: TextSpan(
-          children: [
-            TextSpan(
-              text: '[$label]',
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                color: theme.colorScheme.secondary,
-              ),
-            ),
-            TextSpan(
-              text: ' = $description',
-              style: TextStyle(
-                color: theme.colorScheme.onSurfaceVariant,
-                fontSize: 12,
-              ),
-            ),
-          ],
-        ),
-      ),
-      backgroundColor: theme.colorScheme.secondaryContainer.withValues(
-        alpha: 0.4,
-      ),
-    );
-  }
-}
-
-/// Reverse lookup from default class name → single-letter alias, if any.
-///
-/// Uses referential equality on the shared member lists in
-/// `default_natural_classes.dart` to match a class name to its alias. Returns
-/// `null` for classes without an alias (obstruent, sonorant, approximant,
-/// affricate).
-String? _aliasFor(String className) {
-  final members = defaultNaturalClasses[className];
-  if (members == null) return null;
-  for (final entry in defaultNaturalClassAliases.entries) {
-    if (identical(entry.value, members)) return entry.key;
-  }
-  return null;
-}
-
-/// Read-only chip for a predefined natural class (stop, nasal, …).
-///
-/// Visually consistent with `_UserClassChip` but non-editable and styled like
-/// the built-in system chips (secondaryContainer). Displays `[name] / Alias`
-/// when an alias exists, followed by the full member list.
-class _DefaultClassChip extends StatelessWidget {
-  const _DefaultClassChip({
-    required this.name,
-    required this.members,
-    this.alias,
-  });
-
-  final String name;
-  final List<String> members;
-  final String? alias;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final symbols = members.join(' ');
-    final labelText = alias != null ? '[$name] / $alias' : '[$name]';
-
-    return Chip(
-      label: RichText(
-        text: TextSpan(
-          children: [
-            TextSpan(
-              text: labelText,
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                color: theme.colorScheme.secondary,
-              ),
-            ),
-            TextSpan(
-              text: ' = $symbols',
-              style: TextStyle(
-                color: theme.colorScheme.onSurfaceVariant,
-                fontSize: 12,
-              ),
-            ),
-          ],
-        ),
-      ),
-      backgroundColor: theme.colorScheme.secondaryContainer.withValues(
-        alpha: 0.4,
-      ),
-    );
-  }
-}
-
-class _UserClassChip extends ConsumerWidget {
-  const _UserClassChip({
-    required this.nc,
-    required this.phonemeMap,
-    required this.onEdit,
-    required this.onDelete,
-  });
-
-  final NaturalClassesData nc;
-  final Map<int, Phoneme> phonemeMap;
-  final VoidCallback onEdit;
-  final VoidCallback onDelete;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
-
-    // Decode phoneme IDs from JSON and resolve to symbols
-    List<int> ids = [];
-    try {
-      final decoded = jsonDecode(nc.phonemeIds);
-      if (decoded is List) {
-        ids = decoded.whereType<int>().toList();
-      }
-    } catch (_) {}
-
-    final symbols =
-        ids.map((id) => phonemeMap[id]?.symbol).whereType<String>().join(' ');
-
-    return InputChip(
-      label: RichText(
-        text: TextSpan(
-          children: [
-            TextSpan(
-              text: '[${nc.name}]',
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                color: theme.colorScheme.primary,
-              ),
-            ),
-            if (symbols.isNotEmpty)
-              TextSpan(
-                text: ' = $symbols',
-                style: TextStyle(
-                  color: theme.colorScheme.onSurfaceVariant,
-                  fontSize: 12,
-                ),
-              ),
-          ],
-        ),
-      ),
-      onPressed: onEdit,
-      onDeleted: onDelete,
-      deleteIcon: const Icon(Icons.close, size: 14),
-    );
   }
 }
 
@@ -971,4 +666,3 @@ class _EmptyHint extends StatelessWidget {
     );
   }
 }
-

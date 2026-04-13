@@ -10,7 +10,8 @@ part 'morphology_dao.g.dart';
 ///
 /// Obtain via `currentDatabase.morphologyDao` or the Riverpod
 /// [morphologyDaoProvider] which derives it from the active project database.
-@DriftAccessor(tables: [MorphologicalRules, MorphologicalRuleExceptions, PartsOfSpeech])
+@DriftAccessor(
+    tables: [MorphologicalRules, MorphologicalRuleExceptions, PartsOfSpeech, InflectionalRulePOS])
 class MorphologyDao extends DatabaseAccessor<AppDatabase>
     with _$MorphologyDaoMixin {
   MorphologyDao(super.db);
@@ -39,17 +40,42 @@ class MorphologyDao extends DatabaseAccessor<AppDatabase>
 
   /// Watches inflectional rules that apply to the given [posId].
   ///
-  /// A rule applies to [posId] iff `kind='inflectional'` AND either
-  /// `featureBindings.pos` is empty (applies to all POS) or contains
-  /// [posId]. Filtering on `featureBindings` is done in Dart because the
-  /// column is a JSON [TypeConverter] and the subset check is not expressible
-  /// in SQL.
+  /// v9+ (Phase 4 D-55): this query consults the `inflectional_rule_pos`
+  /// junction table as the authoritative source of which POS an inflectional
+  /// rule applies to. A rule applies to [posId] iff
+  /// `kind = 'inflectional'` AND at least one junction row
+  /// `(rule_id = r.id, pos_id = posId)` exists.
+  ///
+  /// The legacy [MorphologicalRules.inputPosId] column is NOT consulted for
+  /// inflectional rules anymore — it is kept as a convenience cache only.
+  /// Multi-POS rules (D-55) surface in the result for every POS in their
+  /// junction set.
+  ///
+  /// Deduplication note: a rule with N junction rows produces N joined rows
+  /// only when joined without a POS filter; filtered by a single [posId] the
+  /// rule's junction set can still contain that posId only once (PK =
+  /// `(ruleId, posId)`), so the result is already unique. The `seen` set is
+  /// defensive against schema drift.
   Stream<List<MorphologicalRule>> watchInflectionalRulesForPos(int posId) {
-    return watchRulesByKind(RuleKind.inflectional).map((rules) {
-      return rules.where((r) {
-        final pos = r.featureBindings.pos;
-        return pos.isEmpty || pos.contains(posId);
-      }).toList();
+    final query = select(morphologicalRules).join([
+      innerJoin(
+        inflectionalRulePOS,
+        inflectionalRulePOS.ruleId.equalsExp(morphologicalRules.id),
+      ),
+    ])
+      ..where(
+        morphologicalRules.kind.equals('inflectional') &
+            inflectionalRulePOS.posId.equals(posId),
+      )
+      ..orderBy([OrderingTerm.asc(morphologicalRules.ordering)]);
+    return query.watch().map((rows) {
+      final seen = <int>{};
+      final result = <MorphologicalRule>[];
+      for (final row in rows) {
+        final rule = row.readTable(morphologicalRules);
+        if (seen.add(rule.id)) result.add(rule);
+      }
+      return result;
     });
   }
 
@@ -89,10 +115,18 @@ class MorphologyDao extends DatabaseAccessor<AppDatabase>
     await transaction(() async {
       final a = await (select(morphologicalRules)
             ..where((t) => t.id.equals(ruleIdA)))
-          .getSingle();
+          .getSingleOrNull();
+      if (a == null) {
+        throw StateError(
+            '[MorphologyDao.swapOrdering] expected exactly one rule for id=$ruleIdA, found none');
+      }
       final b = await (select(morphologicalRules)
             ..where((t) => t.id.equals(ruleIdB)))
-          .getSingle();
+          .getSingleOrNull();
+      if (b == null) {
+        throw StateError(
+            '[MorphologyDao.swapOrdering] expected exactly one rule for id=$ruleIdB, found none');
+      }
 
       var ordA = a.ordering;
       var ordB = b.ordering;
@@ -136,7 +170,11 @@ class MorphologyDao extends DatabaseAccessor<AppDatabase>
   Future<int> nextOrdering() async {
     final result = await customSelect(
       'SELECT COALESCE(MAX(ordering), -1) + 1 AS next_ord FROM morphological_rules',
-    ).getSingle();
+    ).getSingleOrNull();
+    if (result == null) {
+      throw StateError(
+          '[MorphologyDao.nextOrdering] expected exactly one row from COALESCE query, found none');
+    }
     return result.read<int>('next_ord');
   }
 
