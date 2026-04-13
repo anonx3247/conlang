@@ -28,11 +28,20 @@ import 'grammar_providers.dart';
 /// Plain value object for the three top-level typology fields. Persisted in
 /// `project_settings` under keys `typology.alignment`, `typology.word_order`,
 /// and `typology.modality`.
+///
+/// Phase 10 D-11 extends this with four phrase-level word order settings
+/// stored under `typology.head_direction`, `typology.adposition_type`,
+/// `typology.adj_placement`, and `typology.gen_placement`.
 class TypologySettings {
   const TypologySettings({
     this.alignment,
     this.wordOrder,
     this.modality,
+    // Phase 10 D-11 word order settings:
+    this.headDirection,
+    this.adpositionType,
+    this.adjPlacement,
+    this.genPlacement,
   });
 
   /// `'nom_acc'` | `'erg_abs'` | `'split'` | null
@@ -44,15 +53,35 @@ class TypologySettings {
   /// `'synthetic'` | `'analytic'` | `'mixed'` | null
   final String? modality;
 
+  /// `'head_initial'` | `'head_final'` | `'mixed'` | null
+  final String? headDirection;
+
+  /// `'preposition'` | `'postposition'` | `'circumposition'` | null
+  final String? adpositionType;
+
+  /// `'prenominal'` | `'postnominal'` | null
+  final String? adjPlacement;
+
+  /// `'prenominal'` | `'postnominal'` | null
+  final String? genPlacement;
+
   TypologySettings copyWith({
     String? alignment,
     String? wordOrder,
     String? modality,
+    String? headDirection,
+    String? adpositionType,
+    String? adjPlacement,
+    String? genPlacement,
   }) =>
       TypologySettings(
         alignment: alignment ?? this.alignment,
         wordOrder: wordOrder ?? this.wordOrder,
         modality: modality ?? this.modality,
+        headDirection: headDirection ?? this.headDirection,
+        adpositionType: adpositionType ?? this.adpositionType,
+        adjPlacement: adjPlacement ?? this.adjPlacement,
+        genPlacement: genPlacement ?? this.genPlacement,
       );
 
   @override
@@ -60,14 +89,20 @@ class TypologySettings {
       other is TypologySettings &&
       other.alignment == alignment &&
       other.wordOrder == wordOrder &&
-      other.modality == modality;
+      other.modality == modality &&
+      other.headDirection == headDirection &&
+      other.adpositionType == adpositionType &&
+      other.adjPlacement == adjPlacement &&
+      other.genPlacement == genPlacement;
 
   @override
-  int get hashCode => Object.hash(alignment, wordOrder, modality);
+  int get hashCode => Object.hash(
+      alignment, wordOrder, modality,
+      headDirection, adpositionType, adjPlacement, genPlacement);
 
   @override
   String toString() =>
-      'TypologySettings(alignment: $alignment, wordOrder: $wordOrder, modality: $modality)';
+      'TypologySettings(alignment: $alignment, wordOrder: $wordOrder, modality: $modality, headDirection: $headDirection, adpositionType: $adpositionType, adjPlacement: $adjPlacement, genPlacement: $genPlacement)';
 }
 
 // ---------------------------------------------------------------------------
@@ -77,6 +112,10 @@ class TypologySettings {
 const String _kAlignmentKey = 'typology.alignment';
 const String _kWordOrderKey = 'typology.word_order';
 const String _kModalityKey = 'typology.modality';
+const String _kHeadDirectionKey = 'typology.head_direction';
+const String _kAdpositionTypeKey = 'typology.adposition_type';
+const String _kAdjPlacementKey = 'typology.adj_placement';
+const String _kGenPlacementKey = 'typology.gen_placement';
 
 String paradigmAxesKey(int posId) => 'typology.paradigm_axes.$posId';
 
@@ -104,6 +143,10 @@ Future<TypologySettings> readTypologySettings(AppDatabase db) async {
     alignment: lookup(_kAlignmentKey),
     wordOrder: lookup(_kWordOrderKey),
     modality: lookup(_kModalityKey),
+    headDirection: lookup(_kHeadDirectionKey),
+    adpositionType: lookup(_kAdpositionTypeKey),
+    adjPlacement: lookup(_kAdjPlacementKey),
+    genPlacement: lookup(_kGenPlacementKey),
   );
 }
 
@@ -344,6 +387,10 @@ final typologySettingsProvider = StreamProvider<TypologySettings>((ref) {
       alignment: lookup(_kAlignmentKey),
       wordOrder: lookup(_kWordOrderKey),
       modality: lookup(_kModalityKey),
+      headDirection: lookup(_kHeadDirectionKey),
+      adpositionType: lookup(_kAdpositionTypeKey),
+      adjPlacement: lookup(_kAdjPlacementKey),
+      genPlacement: lookup(_kGenPlacementKey),
     );
   });
 });
