@@ -89,6 +89,9 @@ unlinked_spec.ds
 
 # macOS
 **/Flutter/ephemeral/
+
+# Release artifacts
+*.zip
 **/Pods/
 **/macos/Flutter/GeneratedPluginRegistrant.swift
 **/macos/Flutter/ephemeral
