@@ -1236,6 +1236,16 @@ class $PhonotacticConstraintsTable extends PhonotacticConstraints
     requiredDuringInsert: false,
     defaultValue: const Constant('anywhere'),
   );
+  static const VerificationMeta _typeMeta = const VerificationMeta('type');
+  @override
+  late final GeneratedColumn<String> type = GeneratedColumn<String>(
+    'type',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('sequence'),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -1243,6 +1253,7 @@ class $PhonotacticConstraintsTable extends PhonotacticConstraints
     description,
     isActive,
     position,
+    type,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -1288,6 +1299,12 @@ class $PhonotacticConstraintsTable extends PhonotacticConstraints
         position.isAcceptableOrUnknown(data['position']!, _positionMeta),
       );
     }
+    if (data.containsKey('type')) {
+      context.handle(
+        _typeMeta,
+        type.isAcceptableOrUnknown(data['type']!, _typeMeta),
+      );
+    }
     return context;
   }
 
@@ -1317,6 +1334,10 @@ class $PhonotacticConstraintsTable extends PhonotacticConstraints
         DriftSqlType.string,
         data['${effectivePrefix}position'],
       )!,
+      type: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}type'],
+      )!,
     );
   }
 
@@ -1335,12 +1356,16 @@ class PhonotacticConstraint extends DataClass
 
   /// Position constraint: 'anywhere' (default), 'start', 'end'.
   final String position;
+
+  /// Constraint type: 'sequence' (default, forbidden-sequence) or 'gemination'.
+  final String type;
   const PhonotacticConstraint({
     required this.id,
     required this.pattern,
     this.description,
     required this.isActive,
     required this.position,
+    required this.type,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -1352,6 +1377,7 @@ class PhonotacticConstraint extends DataClass
     }
     map['is_active'] = Variable<bool>(isActive);
     map['position'] = Variable<String>(position);
+    map['type'] = Variable<String>(type);
     return map;
   }
 
@@ -1364,6 +1390,7 @@ class PhonotacticConstraint extends DataClass
           : Value(description),
       isActive: Value(isActive),
       position: Value(position),
+      type: Value(type),
     );
   }
 
@@ -1378,6 +1405,7 @@ class PhonotacticConstraint extends DataClass
       description: serializer.fromJson<String?>(json['description']),
       isActive: serializer.fromJson<bool>(json['isActive']),
       position: serializer.fromJson<String>(json['position']),
+      type: serializer.fromJson<String>(json['type']),
     );
   }
   @override
@@ -1389,6 +1417,7 @@ class PhonotacticConstraint extends DataClass
       'description': serializer.toJson<String?>(description),
       'isActive': serializer.toJson<bool>(isActive),
       'position': serializer.toJson<String>(position),
+      'type': serializer.toJson<String>(type),
     };
   }
 
@@ -1398,12 +1427,14 @@ class PhonotacticConstraint extends DataClass
     Value<String?> description = const Value.absent(),
     bool? isActive,
     String? position,
+    String? type,
   }) => PhonotacticConstraint(
     id: id ?? this.id,
     pattern: pattern ?? this.pattern,
     description: description.present ? description.value : this.description,
     isActive: isActive ?? this.isActive,
     position: position ?? this.position,
+    type: type ?? this.type,
   );
   PhonotacticConstraint copyWithCompanion(
     PhonotacticConstraintsCompanion data,
@@ -1416,6 +1447,7 @@ class PhonotacticConstraint extends DataClass
           : this.description,
       isActive: data.isActive.present ? data.isActive.value : this.isActive,
       position: data.position.present ? data.position.value : this.position,
+      type: data.type.present ? data.type.value : this.type,
     );
   }
 
@@ -1426,13 +1458,15 @@ class PhonotacticConstraint extends DataClass
           ..write('pattern: $pattern, ')
           ..write('description: $description, ')
           ..write('isActive: $isActive, ')
-          ..write('position: $position')
+          ..write('position: $position, ')
+          ..write('type: $type')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(id, pattern, description, isActive, position);
+  int get hashCode =>
+      Object.hash(id, pattern, description, isActive, position, type);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -1441,7 +1475,8 @@ class PhonotacticConstraint extends DataClass
           other.pattern == this.pattern &&
           other.description == this.description &&
           other.isActive == this.isActive &&
-          other.position == this.position);
+          other.position == this.position &&
+          other.type == this.type);
 }
 
 class PhonotacticConstraintsCompanion
@@ -1451,12 +1486,14 @@ class PhonotacticConstraintsCompanion
   final Value<String?> description;
   final Value<bool> isActive;
   final Value<String> position;
+  final Value<String> type;
   const PhonotacticConstraintsCompanion({
     this.id = const Value.absent(),
     this.pattern = const Value.absent(),
     this.description = const Value.absent(),
     this.isActive = const Value.absent(),
     this.position = const Value.absent(),
+    this.type = const Value.absent(),
   });
   PhonotacticConstraintsCompanion.insert({
     this.id = const Value.absent(),
@@ -1464,6 +1501,7 @@ class PhonotacticConstraintsCompanion
     this.description = const Value.absent(),
     this.isActive = const Value.absent(),
     this.position = const Value.absent(),
+    this.type = const Value.absent(),
   }) : pattern = Value(pattern);
   static Insertable<PhonotacticConstraint> custom({
     Expression<int>? id,
@@ -1471,6 +1509,7 @@ class PhonotacticConstraintsCompanion
     Expression<String>? description,
     Expression<bool>? isActive,
     Expression<String>? position,
+    Expression<String>? type,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -1478,6 +1517,7 @@ class PhonotacticConstraintsCompanion
       if (description != null) 'description': description,
       if (isActive != null) 'is_active': isActive,
       if (position != null) 'position': position,
+      if (type != null) 'type': type,
     });
   }
 
@@ -1487,6 +1527,7 @@ class PhonotacticConstraintsCompanion
     Value<String?>? description,
     Value<bool>? isActive,
     Value<String>? position,
+    Value<String>? type,
   }) {
     return PhonotacticConstraintsCompanion(
       id: id ?? this.id,
@@ -1494,6 +1535,7 @@ class PhonotacticConstraintsCompanion
       description: description ?? this.description,
       isActive: isActive ?? this.isActive,
       position: position ?? this.position,
+      type: type ?? this.type,
     );
   }
 
@@ -1515,6 +1557,9 @@ class PhonotacticConstraintsCompanion
     if (position.present) {
       map['position'] = Variable<String>(position.value);
     }
+    if (type.present) {
+      map['type'] = Variable<String>(type.value);
+    }
     return map;
   }
 
@@ -1525,7 +1570,8 @@ class PhonotacticConstraintsCompanion
           ..write('pattern: $pattern, ')
           ..write('description: $description, ')
           ..write('isActive: $isActive, ')
-          ..write('position: $position')
+          ..write('position: $position, ')
+          ..write('type: $type')
           ..write(')'))
         .toString();
   }
@@ -7468,6 +7514,7 @@ typedef $$PhonotacticConstraintsTableCreateCompanionBuilder =
       Value<String?> description,
       Value<bool> isActive,
       Value<String> position,
+      Value<String> type,
     });
 typedef $$PhonotacticConstraintsTableUpdateCompanionBuilder =
     PhonotacticConstraintsCompanion Function({
@@ -7476,6 +7523,7 @@ typedef $$PhonotacticConstraintsTableUpdateCompanionBuilder =
       Value<String?> description,
       Value<bool> isActive,
       Value<String> position,
+      Value<String> type,
     });
 
 class $$PhonotacticConstraintsTableFilterComposer
@@ -7509,6 +7557,11 @@ class $$PhonotacticConstraintsTableFilterComposer
 
   ColumnFilters<String> get position => $composableBuilder(
     column: $table.position,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get type => $composableBuilder(
+    column: $table.type,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -7546,6 +7599,11 @@ class $$PhonotacticConstraintsTableOrderingComposer
     column: $table.position,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<String> get type => $composableBuilder(
+    column: $table.type,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$PhonotacticConstraintsTableAnnotationComposer
@@ -7573,6 +7631,9 @@ class $$PhonotacticConstraintsTableAnnotationComposer
 
   GeneratedColumn<String> get position =>
       $composableBuilder(column: $table.position, builder: (column) => column);
+
+  GeneratedColumn<String> get type =>
+      $composableBuilder(column: $table.type, builder: (column) => column);
 }
 
 class $$PhonotacticConstraintsTableTableManager
@@ -7626,12 +7687,14 @@ class $$PhonotacticConstraintsTableTableManager
                 Value<String?> description = const Value.absent(),
                 Value<bool> isActive = const Value.absent(),
                 Value<String> position = const Value.absent(),
+                Value<String> type = const Value.absent(),
               }) => PhonotacticConstraintsCompanion(
                 id: id,
                 pattern: pattern,
                 description: description,
                 isActive: isActive,
                 position: position,
+                type: type,
               ),
           createCompanionCallback:
               ({
@@ -7640,12 +7703,14 @@ class $$PhonotacticConstraintsTableTableManager
                 Value<String?> description = const Value.absent(),
                 Value<bool> isActive = const Value.absent(),
                 Value<String> position = const Value.absent(),
+                Value<String> type = const Value.absent(),
               }) => PhonotacticConstraintsCompanion.insert(
                 id: id,
                 pattern: pattern,
                 description: description,
                 isActive: isActive,
                 position: position,
+                type: type,
               ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))

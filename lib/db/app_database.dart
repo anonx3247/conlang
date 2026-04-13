@@ -75,6 +75,8 @@ class PhonotacticConstraints extends Table {
   BoolColumn get isActive => boolean().withDefault(const Constant(true))();
   /// Position constraint: 'anywhere' (default), 'start', 'end'.
   TextColumn get position => text().withDefault(const Constant('anywhere'))();
+  /// Constraint type: 'sequence' (default, forbidden-sequence) or 'gemination'.
+  TextColumn get type => text().withDefault(const Constant('sequence'))();
 }
 
 /// Maps an IPA symbol to a Latin romanization string.
@@ -445,7 +447,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase(super.e);
 
   @override
-  int get schemaVersion => 13;
+  int get schemaVersion => 14;
 
   @override
   MigrationStrategy get migration {
@@ -668,6 +670,11 @@ class AppDatabase extends _$AppDatabase {
               updated_at INTEGER NOT NULL
             )
           ''');
+        }
+        if (from < 14) {
+          // v14: PhonotacticConstraints.type — distinguishes 'sequence' (existing
+          // forbidden-sequence constraints) from 'gemination' constraints.
+          await m.addColumn(phonotacticConstraints, phonotacticConstraints.type);
         }
       },
       beforeOpen: (details) async {
