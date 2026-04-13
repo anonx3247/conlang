@@ -229,6 +229,6 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4. Phases 5 and 6 depend only on
 **Plans:** 3 plans in 2 waves
 
 Plans:
-- [ ] 07-01-PLAN.md — Phonology tab restructure: extract natural classes to own sub-tab, inline romanization below inventory, rom-primary phoneme display replacing alt-key toggle
-- [ ] 07-02-PLAN.md — Abbreviation formatting (lowercase + trailing period) + draggable panel separator widget for all shells
-- [ ] 07-03-PLAN.md — Dead code cleanup, getSingle() safety fixes, rule_editor_dialog.dart refactor into rule_editor/ subdirectory
+- [x] 07-01-PLAN.md — Phonology tab restructure: extract natural classes to own sub-tab, inline romanization below inventory, rom-primary phoneme display replacing alt-key toggle
+- [x] 07-02-PLAN.md — Abbreviation formatting (lowercase + trailing period) + draggable panel separator widget for all shells
+- [x] 07-03-PLAN.md — Dead code cleanup, getSingle() safety fixes, rule_editor_dialog.dart refactor into rule_editor/ subdirectory
