@@ -1,9 +1,7 @@
 import 'dart:io';
 
-import 'package:conlang_workbench/features/grammar/presentation/constructions/constructions_page.dart';
 import 'package:conlang_workbench/features/grammar/presentation/grammar_shell.dart';
 import 'package:conlang_workbench/features/grammar/presentation/inflections/inflections_page.dart';
-import 'package:conlang_workbench/features/grammar/presentation/particles/particles_page.dart';
 import 'package:conlang_workbench/features/grammar/presentation/pos_dimensions/pos_dimensions_page.dart';
 import 'package:conlang_workbench/features/grammar/presentation/typology/typology_page.dart';
 import 'package:flutter/material.dart';
@@ -18,10 +16,6 @@ import 'package:go_router/go_router.dart';
 /// now return a hard 404 via the errorBuilder (D-53). The new
 /// `/grammar/inflections` sub-tab hosts a stacked paradigm + rules layout.
 ///
-/// Phase 10 plan 10-01 update: sidebar extended from 3 to 5 items (D-13).
-/// Particles (index 2) and Constructions (index 3) inserted before Typology
-/// (moved to index 4).
-///
 /// The real app router lives in `lib/router/app_router.dart`, but pumping
 /// it requires a full ProviderScope + project selection + DB overrides.
 /// For the route smoke tests we build a minimal GoRouter that mirrors the
@@ -32,7 +26,7 @@ void main() {
         child: MaterialApp.router(routerConfig: router),
       );
 
-  // Minimal isolated router — mirrors the 5-sub-tab Grammar branch (D-13).
+  // Minimal isolated router — mirrors the 3-sub-tab Grammar branch.
   GoRouter grammarOnlyRouter(String initial) => GoRouter(
         initialLocation: initial,
         routes: [
@@ -41,7 +35,6 @@ void main() {
               body: GrammarShell(navigationShell: shell),
             ),
             branches: [
-              // index 0
               StatefulShellBranch(
                 routes: [
                   GoRoute(
@@ -50,7 +43,6 @@ void main() {
                   ),
                 ],
               ),
-              // index 1
               StatefulShellBranch(
                 routes: [
                   GoRoute(
@@ -59,25 +51,6 @@ void main() {
                   ),
                 ],
               ),
-              // index 2 — Phase 10 (D-13)
-              StatefulShellBranch(
-                routes: [
-                  GoRoute(
-                    path: '/grammar/particles',
-                    builder: (_, _) => const ParticlesPage(),
-                  ),
-                ],
-              ),
-              // index 3 — Phase 10 (D-13)
-              StatefulShellBranch(
-                routes: [
-                  GoRoute(
-                    path: '/grammar/constructions',
-                    builder: (_, _) => const ConstructionsPage(),
-                  ),
-                ],
-              ),
-              // index 4 (was 2 before Phase 10)
               StatefulShellBranch(
                 routes: [
                   GoRoute(
@@ -105,19 +78,6 @@ void main() {
     expect(find.byType(InflectionsPage), findsOneWidget);
   });
 
-  testWidgets('/grammar/particles renders ParticlesPage', (tester) async {
-    await tester.pumpWidget(buildApp(grammarOnlyRouter('/grammar/particles')));
-    await tester.pumpAndSettle();
-    expect(find.byType(ParticlesPage), findsOneWidget);
-  });
-
-  testWidgets('/grammar/constructions renders ConstructionsPage', (tester) async {
-    await tester
-        .pumpWidget(buildApp(grammarOnlyRouter('/grammar/constructions')));
-    await tester.pumpAndSettle();
-    expect(find.byType(ConstructionsPage), findsOneWidget);
-  });
-
   testWidgets('/grammar/typology renders TypologyPage', (tester) async {
     await tester.pumpWidget(buildApp(grammarOnlyRouter('/grammar/typology')));
     await tester.pumpAndSettle();
@@ -125,8 +85,8 @@ void main() {
   });
 
   test(
-      'app_router.dart has no /morphology routes and has the 5-sub-tab '
-      '/grammar branch (D-13)',
+      'app_router.dart has no /morphology routes and has the 3-sub-tab '
+      '/grammar branch (D-48)',
       () async {
     final file = await File('lib/router/app_router.dart').readAsString();
     expect(file.contains('/morphology'), isFalse,
@@ -143,11 +103,8 @@ void main() {
       isFalse,
       reason: '/grammar/inflectional must be deleted (D-53 hard 404)',
     );
-    // D-48 — inflections sub-tab.
+    // D-48 — new sub-tab.
     expect(file.contains("'/grammar/inflections'"), isTrue);
-    // Phase 10 D-13 — new sub-tabs.
-    expect(file.contains("path: '/grammar/particles'"), isTrue);
-    expect(file.contains("path: '/grammar/constructions'"), isTrue);
     expect(file.contains('/grammar/typology'), isTrue);
     // D-53 — errorBuilder must be present for the hard 404 behavior.
     expect(file.contains('errorBuilder'), isTrue);
