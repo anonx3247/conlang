@@ -213,7 +213,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4. Phases 5 and 6 depend only on
 | 4. Grammar & Morphology | 25/25 | Complete | 2026-04-12 |
 | 5. Culture Wiki | 3/4 | Gap closure | - |
 | 6. Reference Glossary | 2/2 | Complete | 2026-04-12 |
-| 7. Polish & Refactor | 3/3 | Complete | 2026-04-13 |
+| 7. Polish & Refactor | 3/6 | Gap closure | - |
 | 8. Gemination Restrictions | 0/? | Not started | - |
 | 9. Platform Polish | 0/? | Not started | - |
 
@@ -228,12 +228,15 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4. Phases 5 and 6 depend only on
   4. Abbreviations are case-insensitive and display with trailing period (e.g. v.)
   5. Dead code from culture wiki removal is cleaned up (no orphaned imports, providers, or references)
   6. rule_editor_dialog.dart split into smaller focused files (<500 lines each)
-**Plans:** 3 plans in 2 waves
+**Plans:** 6 plans in 2 waves
 
 Plans:
 - [x] 07-01-PLAN.md — Phonology tab restructure: extract natural classes to own sub-tab, inline romanization below inventory, rom-primary phoneme display replacing alt-key toggle
 - [x] 07-02-PLAN.md — Abbreviation formatting (lowercase + trailing period) + draggable panel separator widget for all shells
 - [x] 07-03-PLAN.md — Dead code cleanup, getSingle() safety fixes, rule_editor_dialog.dart refactor into rule_editor/ subdirectory
+- [ ] 07-04-PLAN.md — [UAT GAP] Context-aware abbreviation display (CAPITALS in paradigm/rules, lowercase in lexicon) + lexicon word list inline POS + derived word display fixes
+- [ ] 07-05-PLAN.md — [UAT GAP] Remove stray paradigm viewer divider + fix ResizableDivider panel constraints (IPA chart, dictionary word list)
+- [ ] 07-06-PLAN.md — [UAT GAP] Lexicon table: no auto-select on load, checkboxes only during Anki export mode
 
 ### Phase 8: Gemination Restrictions
 **Goal**: Users can define gemination restrictions as phonotactic constraints — prevent geminate consonants globally, positionally (coda, onset, word-initial, word-final), or selectively
