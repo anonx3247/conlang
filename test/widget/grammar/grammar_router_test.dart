@@ -1,7 +1,9 @@
 import 'dart:io';
 
+import 'package:conlang_workbench/features/grammar/presentation/constructions/constructions_page.dart';
 import 'package:conlang_workbench/features/grammar/presentation/grammar_shell.dart';
 import 'package:conlang_workbench/features/grammar/presentation/inflections/inflections_page.dart';
+import 'package:conlang_workbench/features/grammar/presentation/particles/particles_page.dart';
 import 'package:conlang_workbench/features/grammar/presentation/pos_dimensions/pos_dimensions_page.dart';
 import 'package:conlang_workbench/features/grammar/presentation/typology/typology_page.dart';
 import 'package:flutter/material.dart';
@@ -16,6 +18,9 @@ import 'package:go_router/go_router.dart';
 /// now return a hard 404 via the errorBuilder (D-53). The new
 /// `/grammar/inflections` sub-tab hosts a stacked paradigm + rules layout.
 ///
+/// Phase 10 update: expanded to 5 sub-tabs — Particles (index 2) and
+/// Constructions (index 3) added; Typology moved to index 4.
+///
 /// The real app router lives in `lib/router/app_router.dart`, but pumping
 /// it requires a full ProviderScope + project selection + DB overrides.
 /// For the route smoke tests we build a minimal GoRouter that mirrors the
@@ -26,7 +31,7 @@ void main() {
         child: MaterialApp.router(routerConfig: router),
       );
 
-  // Minimal isolated router — mirrors the 3-sub-tab Grammar branch.
+  // Minimal isolated router — mirrors the 5-sub-tab Grammar branch.
   GoRouter grammarOnlyRouter(String initial) => GoRouter(
         initialLocation: initial,
         routes: [
@@ -48,6 +53,22 @@ void main() {
                   GoRoute(
                     path: '/grammar/inflections',
                     builder: (_, _) => const InflectionsPage(),
+                  ),
+                ],
+              ),
+              StatefulShellBranch(
+                routes: [
+                  GoRoute(
+                    path: '/grammar/particles',
+                    builder: (_, _) => const ParticlesPage(),
+                  ),
+                ],
+              ),
+              StatefulShellBranch(
+                routes: [
+                  GoRoute(
+                    path: '/grammar/constructions',
+                    builder: (_, _) => const ConstructionsPage(),
                   ),
                 ],
               ),
@@ -78,6 +99,20 @@ void main() {
     expect(find.byType(InflectionsPage), findsOneWidget);
   });
 
+  testWidgets('/grammar/particles renders ParticlesPage', (tester) async {
+    await tester.pumpWidget(buildApp(grammarOnlyRouter('/grammar/particles')));
+    await tester.pumpAndSettle();
+    expect(find.byType(ParticlesPage), findsOneWidget);
+  });
+
+  testWidgets('/grammar/constructions renders ConstructionsPage',
+      (tester) async {
+    await tester
+        .pumpWidget(buildApp(grammarOnlyRouter('/grammar/constructions')));
+    await tester.pumpAndSettle();
+    expect(find.byType(ConstructionsPage), findsOneWidget);
+  });
+
   testWidgets('/grammar/typology renders TypologyPage', (tester) async {
     await tester.pumpWidget(buildApp(grammarOnlyRouter('/grammar/typology')));
     await tester.pumpAndSettle();
@@ -85,8 +120,8 @@ void main() {
   });
 
   test(
-      'app_router.dart has no /morphology routes and has the 3-sub-tab '
-      '/grammar branch (D-48)',
+      'app_router.dart has no /morphology routes and has the 5-sub-tab '
+      '/grammar branch (D-48, AGRAM-01, AGRAM-02)',
       () async {
     final file = await File('lib/router/app_router.dart').readAsString();
     expect(file.contains('/morphology'), isFalse,
@@ -105,6 +140,12 @@ void main() {
     );
     // D-48 — new sub-tab.
     expect(file.contains("'/grammar/inflections'"), isTrue);
+    // AGRAM-01 — particles sub-tab.
+    expect(file.contains("'/grammar/particles'"), isTrue,
+        reason: '/grammar/particles must be present (AGRAM-01)');
+    // AGRAM-02 — constructions sub-tab.
+    expect(file.contains("'/grammar/constructions'"), isTrue,
+        reason: '/grammar/constructions must be present (AGRAM-02)');
     expect(file.contains('/grammar/typology'), isTrue);
     // D-53 — errorBuilder must be present for the hard 404 behavior.
     expect(file.contains('errorBuilder'), isTrue);
