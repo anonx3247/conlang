@@ -263,5 +263,5 @@ Plans:
 
 Plans:
 - [ ] 09-01-PLAN.md — App identity: macOS PRODUCT_NAME fix, SVG-to-PNG icon generation, .conlang file type registration in Info.plist
-- [ ] 09-02-PLAN.md — Project data layer overhaul: Project model filePath field, registry .conlang support (create-at-path, open-file, duplicate, rename), providers refactor, recent projects service
-- [ ] 09-03-PLAN.md — PlatformMenuBar (File/Edit/View) in app.dart, welcome screen with logo + recent projects, remove in-app File button, wire all project management actions
+- [x] 09-02-PLAN.md — Project data layer overhaul: Project model filePath field, registry .conlang support (create-at-path, open-file, duplicate, rename), providers refactor, recent projects service
+- [x] 09-03-PLAN.md — PlatformMenuBar (File/Edit/View) in app.dart, welcome screen with logo + recent projects, remove in-app File button, wire all project management actions
