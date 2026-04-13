@@ -581,6 +581,7 @@ class _WordListPanelState extends ConsumerState<WordListPanel> {
         dataRowMaxHeight: 40,
         columnSpacing: 12,
         horizontalMargin: 16,
+        showCheckboxColumn: widget.isSelectionMode,
         columns: [
           DataColumn(
             label: const Text('Word'),
@@ -632,9 +633,9 @@ class _WordListPanelState extends ConsumerState<WordListPanel> {
               );
           return DataRow(
             selected: isSelected,
-            onSelectChanged: (_) => widget.isSelectionMode
-                ? widget.onToggleExport?.call(lexeme.id)
-                : widget.onWordSelected(lexeme.id),
+            onSelectChanged: widget.isSelectionMode
+                ? (_) => widget.onToggleExport?.call(lexeme.id)
+                : null,
             cells: [
               DataCell(
                 Text(
@@ -647,6 +648,9 @@ class _WordListPanelState extends ConsumerState<WordListPanel> {
                         : FontStyle.normal,
                   ),
                 ),
+                onTap: widget.isSelectionMode
+                    ? null
+                    : () => widget.onWordSelected(lexeme.id),
               ),
               DataCell(
                 // Issue 35b: [bracket] notation is PHONETIC (post-rewrite).
@@ -657,12 +661,18 @@ class _WordListPanelState extends ConsumerState<WordListPanel> {
                     color: cs.onSurface.withValues(alpha: 0.7),
                   ),
                 ),
+                onTap: widget.isSelectionMode
+                    ? null
+                    : () => widget.onWordSelected(lexeme.id),
               ),
               DataCell(
                 Text(
                   lexeme.partOfSpeech ?? '',
                   style: theme.textTheme.bodySmall?.copyWith(fontSize: 11),
                 ),
+                onTap: widget.isSelectionMode
+                    ? null
+                    : () => widget.onWordSelected(lexeme.id),
               ),
               DataCell(
                 Text(
@@ -671,6 +681,9 @@ class _WordListPanelState extends ConsumerState<WordListPanel> {
                   overflow: TextOverflow.ellipsis,
                   maxLines: 1,
                 ),
+                onTap: widget.isSelectionMode
+                    ? null
+                    : () => widget.onWordSelected(lexeme.id),
               ),
             ],
           );
