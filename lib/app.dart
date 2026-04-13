@@ -9,6 +9,11 @@ import 'features/project/domain/project.dart';
 import 'features/project/presentation/project_actions.dart';
 import 'router/app_router.dart';
 
+/// Global navigator key shared between GoRouter and PlatformMenuBar callbacks.
+/// Menu callbacks run outside the MaterialApp widget tree, so they need this
+/// key to obtain a valid BuildContext for showDialog/SnackBar.
+final rootNavigatorKey = GlobalKey<NavigatorState>();
+
 /// Root application widget. Wraps MaterialApp.router in a PlatformMenuBar
 /// so macOS global menu bar shows File / Edit / View menus.
 class ConlangApp extends ConsumerWidget {
@@ -44,7 +49,10 @@ class ConlangApp extends ConsumerWidget {
                 LogicalKeyboardKey.keyN,
                 meta: true,
               ),
-              onSelected: () => _newProject(ref, context),
+              onSelected: () {
+                final ctx = rootNavigatorKey.currentContext;
+                if (ctx != null) _newProject(ref, ctx);
+              },
             ),
             PlatformMenuItem(
               label: 'Open Project...',
@@ -52,7 +60,10 @@ class ConlangApp extends ConsumerWidget {
                 LogicalKeyboardKey.keyO,
                 meta: true,
               ),
-              onSelected: () => _openProject(ref, context),
+              onSelected: () {
+                final ctx = rootNavigatorKey.currentContext;
+                if (ctx != null) _openProject(ref, ctx);
+              },
             ),
             // D-11: Open Recent submenu
             PlatformMenu(
@@ -71,13 +82,19 @@ class ConlangApp extends ConsumerWidget {
                     shift: true,
                   ),
                   onSelected: hasProject
-                      ? () => _saveAs(ref, context, currentProjectId)
+                      ? () {
+                          final ctx = rootNavigatorKey.currentContext;
+                          if (ctx != null) _saveAs(ref, ctx, currentProjectId);
+                        }
                       : null,
                 ),
                 PlatformMenuItem(
                   label: 'Rename Project...',
                   onSelected: hasProject
-                      ? () => _renameProject(ref, context, currentProjectId)
+                      ? () {
+                          final ctx = rootNavigatorKey.currentContext;
+                          if (ctx != null) _renameProject(ref, ctx, currentProjectId);
+                        }
                       : null,
                 ),
               ],
@@ -169,7 +186,10 @@ class ConlangApp extends ConsumerWidget {
         .map(
           (p) => PlatformMenuItem(
             label: p.name,
-            onSelected: () => _openRecentProject(ref, context, p),
+            onSelected: () {
+              final ctx = rootNavigatorKey.currentContext;
+              if (ctx != null) _openRecentProject(ref, ctx, p);
+            },
           ),
         )
         .toList();

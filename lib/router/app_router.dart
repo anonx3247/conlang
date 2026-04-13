@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
+import '../app.dart';
+
 import '../features/grammar/presentation/grammar_shell.dart';
 import '../features/grammar/presentation/inflections/inflections_page.dart';
 import '../features/grammar/presentation/pos_dimensions/pos_dimensions_page.dart';
@@ -32,7 +34,13 @@ part 'app_router.g.dart';
 /// list: 0=Phonology, 1=Grammar, 2=Lexicon.
 @riverpod
 GoRouter appRouter(Ref ref) {
+  // Import the shared navigator key so PlatformMenuBar callbacks can
+  // obtain a valid BuildContext for showDialog / ScaffoldMessenger.
+  // ignore: depend_on_referenced_packages
+  final navKey = rootNavigatorKey;
+
   return GoRouter(
+    navigatorKey: navKey,
     initialLocation: '/phonology/inventory',
     // D-53 / plan 04-13: hard 404 on retired routes like /grammar/paradigm
     // and /grammar/inflectional. No silent redirect — the user explicitly
