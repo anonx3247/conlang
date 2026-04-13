@@ -56,7 +56,11 @@ class GrammarDao extends DatabaseAccessor<AppDatabase> with _$GrammarDaoMixin {
   Future<int> nextLevelId(int dimensionId) async {
     final row = await (select(dimensions)
           ..where((t) => t.id.equals(dimensionId)))
-        .getSingle();
+        .getSingleOrNull();
+    if (row == null) {
+      throw StateError(
+          '[GrammarDao.nextLevelId] expected exactly one row for id=$dimensionId, found none');
+    }
     final levels = decodeLevelsJson(row.levelsJson);
     if (levels.isEmpty) return 1;
     return levels.map((l) => l.id).reduce((a, b) => a > b ? a : b) + 1;
@@ -313,7 +317,11 @@ class GrammarDao extends DatabaseAccessor<AppDatabase> with _$GrammarDaoMixin {
 
       // Finally remove the old level from the dimension's levelsJson.
       final dim = await (select(dimensions)..where((t) => t.id.equals(dimId)))
-          .getSingle();
+          .getSingleOrNull();
+      if (dim == null) {
+        throw StateError(
+            '[GrammarDao.reassignLevelAndDelete] expected exactly one row for id=$dimId, found none');
+      }
       final remaining = decodeLevelsJson(dim.levelsJson)
           .where((l) => l.id != oldLevelId)
           .toList();

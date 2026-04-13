@@ -37,7 +37,8 @@ class _PosDimensionsPageState extends ConsumerState<PosDimensionsPage> {
     final wordCountResult = await db.customSelect(
       'SELECT COUNT(*) AS cnt FROM lexemes WHERE part_of_speech = ?',
       variables: [Variable.withString(pos.name)],
-    ).getSingle();
+    ).getSingleOrNull();
+    if (wordCountResult == null) return;
     final wordCount = wordCountResult.read<int>('cnt');
 
     final otherPos = allPosList.where((p) => p.id != pos.id).toList();

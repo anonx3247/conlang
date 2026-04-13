@@ -99,7 +99,11 @@ class LexemeDao extends DatabaseAccessor<AppDatabase> with _$LexemeDaoMixin {
     // Resolve the rule's output POS to a free-text label for the new row.
     final rule = await (select(morphologicalRules)
           ..where((t) => t.id.equals(ruleId)))
-        .getSingle();
+        .getSingleOrNull();
+    if (rule == null) {
+      throw StateError(
+          '[LexemeDao.promoteDerivation] expected exactly one rule for id=$ruleId, found none');
+    }
     String? posText;
     if (rule.outputPosId != null) {
       final pos = await (select(partsOfSpeech)
@@ -111,7 +115,11 @@ class LexemeDao extends DatabaseAccessor<AppDatabase> with _$LexemeDaoMixin {
     // Resolve the parent to seed the non-nullable `ipa` placeholder.
     final parent = await (select(lexemes)
           ..where((t) => t.id.equals(parentId)))
-        .getSingle();
+        .getSingleOrNull();
+    if (parent == null) {
+      throw StateError(
+          '[LexemeDao.promoteDerivation] expected exactly one lexeme for id=$parentId, found none');
+    }
 
     return into(lexemes).insert(
       LexemesCompanion.insert(

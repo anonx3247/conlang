@@ -115,10 +115,18 @@ class MorphologyDao extends DatabaseAccessor<AppDatabase>
     await transaction(() async {
       final a = await (select(morphologicalRules)
             ..where((t) => t.id.equals(ruleIdA)))
-          .getSingle();
+          .getSingleOrNull();
+      if (a == null) {
+        throw StateError(
+            '[MorphologyDao.swapOrdering] expected exactly one rule for id=$ruleIdA, found none');
+      }
       final b = await (select(morphologicalRules)
             ..where((t) => t.id.equals(ruleIdB)))
-          .getSingle();
+          .getSingleOrNull();
+      if (b == null) {
+        throw StateError(
+            '[MorphologyDao.swapOrdering] expected exactly one rule for id=$ruleIdB, found none');
+      }
 
       var ordA = a.ordering;
       var ordB = b.ordering;
@@ -162,7 +170,11 @@ class MorphologyDao extends DatabaseAccessor<AppDatabase>
   Future<int> nextOrdering() async {
     final result = await customSelect(
       'SELECT COALESCE(MAX(ordering), -1) + 1 AS next_ord FROM morphological_rules',
-    ).getSingle();
+    ).getSingleOrNull();
+    if (result == null) {
+      throw StateError(
+          '[MorphologyDao.nextOrdering] expected exactly one row from COALESCE query, found none');
+    }
     return result.read<int>('next_ord');
   }
 
