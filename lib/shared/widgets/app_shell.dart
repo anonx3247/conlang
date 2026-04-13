@@ -6,15 +6,14 @@ import '../../features/glossary/data/glossary_providers.dart';
 import '../../features/glossary/presentation/glossary_drawer.dart';
 import '../../features/project/data/project_providers.dart';
 import '../../features/project/data/project_registry.dart';
-import '../../features/project/presentation/project_menu.dart';
 import 'resizable_divider.dart';
 
 /// Top-level application shell with a horizontal tab bar for major sections.
 ///
-/// Integrates the File menu (ProjectMenu) for project lifecycle management.
-/// When no project is open, the main content area shows an empty state.
-/// Only the Phonology tab is interactive in Phase 1; other tabs are disabled
-/// with a tooltip indicating when they will be available.
+/// Project lifecycle management is handled by the macOS PlatformMenuBar in
+/// app.dart (Plan 09-03). When no project is open, the main content area
+/// shows the WelcomeScreen. Only the Phonology tab is interactive in Phase 1;
+/// other tabs are disabled with a tooltip indicating when they will be available.
 class AppShell extends ConsumerStatefulWidget {
   const AppShell({
     super.key,
@@ -62,20 +61,6 @@ class _AppShellState extends ConsumerState<AppShell> {
                   child: Row(
                     children: [
                       const SizedBox(width: 8),
-
-                      // File menu button
-                      const ProjectMenu(),
-
-                      const SizedBox(width: 8),
-
-                      // Separator
-                      VerticalDivider(
-                        width: 16,
-                        thickness: 1,
-                        indent: 10,
-                        endIndent: 10,
-                        color: colorScheme.outlineVariant,
-                      ),
 
                       // Tab buttons (only shown when a project is open)
                       if (currentProjectId != null) ...[
