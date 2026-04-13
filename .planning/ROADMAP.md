@@ -194,7 +194,7 @@ Plans:
 
 **Milestone Goal:** Extend the workbench beyond morphological tools into phrase-level grammar, text composition with live analysis, AI-assisted conlanging, custom script support, and language evolution modeling.
 
-### Phase 10: Analytic Grammar
+### ✅ Phase 10: Analytic Grammar — COMPLETE (2026-04-13)
 **Goal**: Users can define the closed-class word inventory and phrase-level construction rules that govern how particles, auxiliaries, and determiners combine with content words
 **Depends on**: Phase 9
 **Requirements**: AGRAM-01, AGRAM-02, AGRAM-03
@@ -207,10 +207,10 @@ Plans:
 **UI hint**: yes
 
 Plans:
-- [ ] 10-01-PLAN.md — Schema v15 migration (isClosedClass + glossTag + PhraseConstructions + ConstructionSlots), Grammar sidebar 5 items, GoRouter branches, placeholder pages
-- [ ] 10-02-PLAN.md — Particles page: POS-grouped closed-class word list, add/edit/delete dialogs, Leipzig gloss tag autocomplete
-- [ ] 10-03-PLAN.md — Constructions page: master-detail layout, visual slot editor with drag-and-drop, live preview with real words
-- [ ] 10-04-PLAN.md — Typology page extension: Word Order section with head-directionality, adposition type, adjective/genitive placement dropdowns
+- [x] 10-01-PLAN.md — Schema v15 migration (isClosedClass + glossTag + PhraseConstructions + ConstructionSlots), Grammar sidebar 5 items, GoRouter branches, placeholder pages
+- [x] 10-02-PLAN.md — Particles page: POS-grouped closed-class word list, add/edit/delete dialogs, Leipzig gloss tag autocomplete
+- [x] 10-03-PLAN.md — Constructions page: master-detail layout, visual slot editor with drag-and-drop, live preview with real words
+- [x] 10-04-PLAN.md — Typology page extension: Word Order section with head-directionality, adposition type, adjective/genitive placement dropdowns
 
 ### Phase 11: Lexicon Etymology Chain
 **Goal**: Users can see the full derivational history of any word as a visual lineage display tracing root through derived forms to compounds
