@@ -1,17 +1,17 @@
 # Project Research Summary
 
-**Project:** Conlang Workbench
-**Domain:** Flutter desktop application for constructed language creation
-**Researched:** 2026-04-08
-**Confidence:** MEDIUM (stack and architecture HIGH; versions and MCP specifics LOW)
+**Project:** Conlang Workbench v2.0
+**Domain:** Flutter desktop constructed-language authoring tool
+**Researched:** 2026-04-13
+**Confidence:** HIGH (architecture from direct codebase inspection; stack versions live-verified; features competitor-verified; pitfalls codebase-grounded)
 
 ## Executive Summary
 
-Conlang Workbench is a locally-run desktop tool for constructing artificial languages, targeting macOS/Windows/Linux via Flutter. The research confirms a clear market gap: no existing free tool (ConWorkShop, Vulgar, PolyGlot, Lexique Pro) combines non-concatenative morphology, interlinear glossing of written text, and an AI co-creator in one offline-first application. The recommended approach is a layered monolith with Flutter + Riverpod for the UI/state, drift + SQLite for per-project data, and a custom PEG-based morphology pattern engine (petitparser) as the architectural centrepiece. Everything else — lexicon, grammar, writing scratchpad, AI integration — depends on that engine being correct.
+Conlang Workbench v2.0 extends a working Flutter/Drift/Riverpod desktop app (schema v13, six shipped feature modules) with six new capabilities: analytic grammar, writing scratchpad with interlinear glossing, AI/MCP integration, language evolution via sound change modeling, custom writing systems, and automatic etymology suggestions. The existing architecture is mature and well-patterned — every new feature should follow the established `data/ → domain/ → presentation/` module structure and the null-guard Riverpod provider pattern for no-project state. No major architectural overhaul is needed; this is additive extension work.
 
-The single most consequential architectural decision is the morphology pattern mini-language. It must handle templatic (Semitic root-and-pattern), ablaut, concatenative, and suppletive morphology from the start — not as afterthoughts. The data schema must treat derived words as recomputable results of (root, rules), not as stored strings. Both of these decisions are load-bearing for every later phase. If either is deferred or simplified in Phase 1, a rewrite is the likely outcome.
+The headline differentiator is parse-driven interlinear glossing with full project context — no competitor (PolyGlot, ConWorkShop, SCA2/Zompist) offers it. The combination of automatic morphological reverse-analysis, MCP-powered AI co-creator, and sound change applier with diff output in a single offline desktop app is unmatched as of April 2026. The technical risk center of gravity is the morphological reverse-analysis engine required by the scratchpad: forward application (root → inflected form) is already built; reverse lookup (inflected form → root + rules) must be pre-computed as an indexed map, not brute-forced per token.
 
-Key risks are: (1) morphology engine designed for concatenative-only forcing a rewrite when Semitic-style languages are attempted; (2) pattern mini-language scope-creeping into a full DSL that linguists cannot write; (3) TTS over-promised — no neural TTS handles arbitrary phoneme inventories, so the feature must be scoped as best-effort with a phoneme-concatenation fallback. All three risks are preventable through upfront design choices rather than implementation heroics.
+The primary architectural risk is accidental data mutation: sound change must never write to live lexeme rows; etymology auto-detection must never overwrite user-authored content; the MCP server must run as a separate process with a read-only DB connection. All three of these are non-negotiable pre-conditions on their respective phases. The build order is fixed by dependency: analytic grammar must exist before the scratchpad tokenizer is built, since the tokenizer reads both lexeme roots and analytic particles as distinct data sources.
 
 ---
 
@@ -19,179 +19,147 @@ Key risks are: (1) morphology engine designed for concatenative-only forcing a r
 
 ### Recommended Stack
 
-The stack is built around Flutter 3.22+ as the mandatory cross-platform framework, drift 2.19 (type-safe SQLite ORM with reactive streams) for per-project databases, and Riverpod 2.x with code generation for state management. The database-per-project model (one `conlang.db` per language folder) maps naturally to drift's runtime database opening and Riverpod's provider scoping. petitparser handles the morphology pattern mini-language's PEG grammar. For exports: the `pdf` package for document export, `archive` for Anki `.apkg` (custom implementation — no library needed), and `just_audio` / `flutter_tts` for audio/TTS.
+The v1.0 stack (drift, riverpod, petitparser, go_router, just_audio, archive, sqlite3) is unchanged. v2.0 adds six packages: `anthropic_sdk_dart ^1.5.0` (Claude API + streaming + MCP), `mcp_client ^1.1.0` + `mcp_server ^1.0.3` (MCP transport layer for Claude Desktop mode), `flutter_tts ^4.2.5` (IPA-driven synthesis via macOS AVSpeechSynthesizer SSML), `flutter_svg ^2.2.4` (SVG glyph rendering for custom script Tier 3), and `flutter_markdown_plus ^1.0.7` (replacement for the discontinued `flutter_markdown`).
 
-**Core technologies:**
-- Flutter + Dart: cross-platform desktop UI — user constraint; macOS/Windows/Linux are Tier 1 targets since Flutter 3.10
-- drift: SQLite ORM — reactive watch queries, schema migrations, desktop-native via sqlite3_flutter_libs
-- Riverpod 2.x: state management — compile-time typed providers, trivial project scoping via ProviderScope overrides
-- petitparser: PEG parser — pure Dart, composable combinators, good error messages for user-facing rule parsing
-- freezed: immutable domain models — Phoneme, MorphologyRule, LexiconEntry; catches structural errors at compile time
-- just_audio + flutter_tts: audio and TTS — just_audio for IPA chart playback; flutter_tts + IPA SSML for conlang speech approximation
-- go_router: navigation — Flutter team's recommended router; supports nested tab routing
+Notably, four of the six planned features require no new packages — interlinear gloss layout uses Flutter primitives (Row/Column/WidgetSpan), sound change modeling extends the existing petitparser DSL, automatic etymology uses pure Dart string matching, and the writing system Tier 1 (custom TTF/OTF font) uses Flutter's built-in FontLoader. The AI integration follows a two-mode design: Mode A (in-app chat) sends the Claude API directly with project context in the system prompt; Mode B (MCP server) exposes the project DB as tools for Claude Desktop or the claude CLI.
 
-All version numbers in STACK.md are marked [VERIFY] — they are training-data estimates and must be confirmed against pub.dev before pinning in pubspec.yaml.
+**Core new technologies:**
+- `anthropic_sdk_dart ^1.5.0`: Claude API client — streaming SSE, tool use, extended thinking, built-in MCP; the only well-maintained official-quality Dart Claude SDK
+- `mcp_client ^1.1.0` + `mcp_server ^1.0.3`: STDIO transport for spawning/connecting to the local MCP companion process
+- `flutter_tts ^4.2.5`: macOS AVSpeechSynthesizer with SSML `<phoneme alphabet="ipa">` — highest-fidelity path for conlang IPA-driven synthesis, offline
+- `flutter_svg ^2.2.4`: SVG glyph rendering for users who want in-app glyph definition without external font tools (Tier 3 only)
+- `flutter_markdown_plus ^1.0.7`: Drop-in community replacement for discontinued `flutter_markdown`; same API
+
+**macOS entitlement required:** `com.apple.security.network.client` in both entitlement files for Claude API outbound calls.
 
 ### Expected Features
 
-**Must have (table stakes):**
-- Phoneme inventory definition with IPA input — entry point for every new language
-- Lexicon management (root + derived words) — core persistent artifact
-- Word-level search and filter — critical at thousands of entries
-- Part-of-speech tagging — prerequisite for morphology and grammar
-- Declension/conjugation tables — single most-requested feature in conlang communities
-- Basic grammar documentation — even free-text satisfies this minimally
-- Multi-project management with per-project isolation
-- Text/CSV export — minimum for users to share work
+**Must have for v2.0 launch (table stakes + P1 differentiators):**
+- Interlinear gloss output in Leipzig format — the standard linguistics text analysis output; every conlanger who knows linguistics will expect it immediately
+- Tokenization + morpheme boundary detection — prerequisite for all scratchpad features
+- Unknown word flagging (red/amber/grey token state) — users expect honest parsing gaps
+- Closed-class word inventory (particles, auxiliaries, determiners) — separate from root lexicon; prerequisite for correct scratchpad tokenization
+- Orthography-to-phoneme mapping (writing system tab) — grapheme to phoneme rules with priority ordering; parity with PolyGlot's existing feature
+- Sound change applier — ordered context-sensitive rules applied to full lexicon with before/after diff; de facto community expectation (SCA2 is the reference, but web-only with no diff)
+- MCP server exposing project data as tools — prerequisite for all AI features; exposes phoneme inventory, lexicon, grammar, morphology patterns
+- Automatic etymology suggestions — compound detection + derivation chain surfacing as non-destructive suggestions in the word detail panel
+- AI chat panel (tutor + co-creator) — built on top of MCP server with minimal added effort
 
-**Should have (differentiators):**
-- Morphology pattern mini-language covering non-concatenative morphology — the core differentiator; no free tool does this
-- Interlinear glossing in the writing scratchpad — end-to-end pipeline proof
-- Phonotactic violation highlighting (real-time, inline everywhere)
-- Clickable IPA reference chart with bundled audio recordings
-- AI co-creator via MCP (Claude or compatible host with full project context)
-- TTS for conlang speech (best-effort, phoneme-concatenation fallback)
-- Swadesh list + Conlanger's Thesaurus semantic coverage view
-- Anki export with morphological context in card fields
-- Culture/world-building wiki with Markdown and internal links
-- Phonological sound change engine (diachronic derivation)
-- Etymological tracking with derivation chain display
+**Should have (add in v2.x iterations after core validated):**
+- Interlinear gloss export (LaTeX gb4e / Leipzig.js HTML) — low effort, high credibility signal
+- Sound change rule-trace diff (which rule caused each change) — the key differentiator over SCA2
+- Custom script rendering in scratchpad (third interlinear tier) — depends on writing system tab being stable
+- Allophone-to-phoneme promotion wizard — surgical evolution tool; requires guided multi-table wizard
+- Analytic construction rules (phrase slot templates) — builds on closed-class inventory
 
-**Defer (v2+):**
-- AI agent feature (high complexity — validate core tool first)
-- Cloud sync or multi-user features
-- Mobile app
-- Syntax tree / phrase structure diagram editor
-- Machine translation (wrong product category)
-- Version control / branching for language history
+**Defer to v3+:**
+- TTS synthesis — already deferred from v1.0; remains very high complexity
+- AI-generated word suggestions with phonotactic filtering — requires stable AI integration first
+- Culture wiki (relaunched from staging branch) — needs rework; separate migration risk
+
+**Anti-features to reject outright:** automatic free translation (conlang to English), full NLP pipeline/dependency trees, version-controlled language branching, real-time collaborative editing, bulk AI lexicon generation, in-app glyph/font editor.
 
 ### Architecture Approach
 
-The system is a layered monolith with five tiers: Flutter UI, Feature Modules (per subsystem), Engine Layer (pure-Dart computation — no I/O), Data Layer (SQLite repositories), and Service Layer (cross-cutting concerns: TTS, IPA audio cache, MCP server, Anki exporter). The MorphologyEngine sits at the center — lexicon, grammar, scratchpad, and AI agent all depend on it. Riverpod providers wire UI to feature modules; project switching is handled by overriding the `dbProvider` in a ProviderScope, which auto-invalidates all downstream providers without app restarts.
+v2.0 adds four new top-level feature modules (`scratchpad/`, `evolution/`, `writing_system/`, `ai/`) and two sub-features extending existing modules (analytic grammar under `grammar/`, etymology under `lexicon/`). All follow the established `data/ → domain/ → presentation/` pattern with null-guard Riverpod providers. The `MorphologyEngine` remains the central computation core — the scratchpad adds a reverse-analysis mode (a new `MorphologyAnalyzer` wrapper), not a replacement. The router adds two new top-level `StatefulShellBranch` entries (Scratchpad, Writing System); Evolution nests under the Phonology tab as a fourth sub-tab to keep top-level navigation to five tabs maximum. The MCP server module (`ai/`) has no dedicated UI tab — it lives in the project menu as a settings panel.
 
 **Major components:**
-1. ProjectRegistry — folder management, SQLite open/close, per-project metadata
-2. PhonologyEngine (pure Dart) — phonotactics validation, phoneme sequence transcription, compiled DFA for per-keystroke checking
-3. MorphologyEngine (pure Dart) — pattern mini-language AST to bytecode, plugin-per-strategy architecture (concatenative, infixation, ablaut, Semitic template, reduplication, suppletive lookup)
-4. LexiconRepository — root words, derived forms (materialized cache, not source of truth), FTS5 full-text search
-5. GrammarService — user-defined feature categories, paradigm table generation via MorphologyEngine
-6. ScratchpadService — orchestrates tokenizer, morphology analysis, phonology validation, interlinear glosser, and TTS pipeline
-7. MCPServer — thin JSON-RPC/HTTP delegation layer over existing services; zero business logic in handlers
+1. `ScratchpadEngine` (new) — orchestrates tokenize → morphological reverse-analysis → interlinear gloss pipeline; reads from `allLexemeListProvider` + new `analyticWordsDaoProvider`
+2. `MorphologyAnalyzer` (new, in `morphology/domain/`) — pre-computed indexed reverse-lookup map from inflected forms to (root, rule) pairs; invalidated by Riverpod on lexeme/rule changes
+3. `SoundChangeEngine` (new, in `evolution/domain/`) — wraps existing `PhonologicalRewriteRule` DSL; applies ordered rule chain to lexeme IPA forms; returns diff map, never mutates lexemes directly
+4. `ProjectSnapshotService` (new, in `ai/data/`) — assembles full project JSON from existing DAOs; used by both MCP server and export features
+5. `EtymologySuggester` (new, in `lexicon/domain/`) — pure Dart function run in `compute()` isolate; keyed `FutureProvider.family` per lexeme ID
+6. `ScriptRenderer` / `GlyphRenderer` interface (new, in `writing_system/domain/`) — abstracts font-based vs SVG-based glyph rendering behind a common interface
 
-**Build order determined by dependency graph:** ProjectRegistry, then PhonologyEngine, then MorphologyEngine, then LexiconService, then GrammarService, then ScratchpadService, then CultureWiki, then MCPServer.
+**Schema bumps:** v13 → v14 (AnalyticWords, PhraseRules) → v15+ (SoundChanges, EvolutionProjects, ScriptCharacters, ScriptSettings). No new schema for etymology (uses existing `LexemeParents`) or MCP (read-only).
 
 ### Critical Pitfalls
 
-1. **Morphology engine designed concatenative-only** — prototype a triconsonantal root test case on day 1 of engine design; if it cannot be expressed cleanly, the abstraction is wrong. Use named pattern kinds (AFFIX, TEMPLATE, ABLAUT, LOOKUP) in the type system.
+1. **Drift orphan table collision (culture_pages)** — The `culture_pages` table exists in v13+ project files via raw `customStatement` but has no Dart `Table` class. If a v2.0 `CulturePages` Dart class is added without a guard migration, `createAll()` crashes on any existing project file. Audit every raw `customStatement` before touching the Culture Wiki branch; add `CREATE TABLE IF NOT EXISTS` guard in the numbered `from < N` block.
 
-2. **Pattern mini-language scope-creeping into a full DSL** — write a one-page ceiling spec before any parsing code; if the spec exceeds one page, cut features. Phonological conditioning belongs in the separate phonology rule engine, not the morphology pattern.
+2. **Scratchpad brute-force reverse morphology** — Trying every (root x rule) combination per token is O(roots x rules) per word; freezes UI at any real lexicon size. Must pre-compute an indexed `inflectedForm -> (root, rule)` map at load time. This architecture decision must be locked in before the first line of glosser code.
 
-3. **SQLite schema treating words as flat records** — derived forms must be stored as (root_id, rule_ids, computed_form) where the form is a regenerable cache, not source of truth. Root-rule separation is the schema's load-bearing design.
+3. **Analytic grammar as a parallel silo** — Particles/auxiliaries are lexeme entries with a specialized POS and grammar role flag — not a separate data model. Building an `AnalyticMarkers` table without a `lexemeId` foreign key forces two separate lookup queries in the scratchpad and breaks unified lexicon features (search, Anki export).
 
-4. **Forcing completeness before use (UX anti-pattern)** — every feature must work with zero prior setup; empty states are permissive, not gates. A new project must reach any tab without data entry. Design empty states before populating them.
+4. **MCP server on the main Flutter isolate** — Sharing `AppDatabase` across isolate boundaries is unsupported by Drift and causes UI jank. The MCP server must run as a separate Dart process (stdio transport) with its own read-only SQLite connection via `NativeDatabase.createInBackground`. It never participates in the Flutter provider graph.
 
-5. **IPA audio fetched from Wikipedia at runtime** — bundle the full IPA sound file set (~100-120 files, ~5-10 MB) as app assets during development. Wikipedia is the source at development time, not at runtime.
+5. **Destructive sound change application** — Writing evolved forms back to `lexemes.ipa` destroys the original language permanently with no recovery path. Sound changes must be stored as a non-destructive `SoundChangeLayers` stack; evolved forms are computed at query time.
+
+6. **Auto-etymology overwriting user content** — Add a separate `autoEtymologyJson TEXT` column for machine-generated suggestions. The existing `etymology TEXT` column is user-authored and must never be auto-overwritten.
+
+7. **Writing system feature scope conflation** — Grapheme-to-phoneme mapping and custom glyph rendering are independent concerns. Phase them: orthography rules work immediately with any system font; custom font/SVG glyph support is a follow-on enhancement pass.
 
 ---
 
 ## Implications for Roadmap
 
-Based on the dependency graph from ARCHITECTURE.md and the phase warnings from PITFALLS.md, the research strongly implies a 7-phase structure. Architecture research provides a validated build order; pitfalls research identifies which decisions cannot be deferred.
+Based on the dependency graph in ARCHITECTURE.md and the pitfall-to-phase mapping in PITFALLS.md, a six-phase build order is strongly recommended. The order is fixed by data dependencies, not preference.
 
-### Phase 1: Foundation — Project Shell, Phonology, and Schema
+### Phase 1: Analytic Grammar
+**Rationale:** The scratchpad tokenizer must query both open-class lexemes AND closed-class particles. Building analytic grammar first means the tokenizer can be written once correctly, not patched later. No blocking dependencies on other new features.
+**Delivers:** Closed-class word inventory (particles, auxiliaries, determiners, classifiers) with gloss tags; phrase construction rules; word order settings.
+**Implements:** `AnalyticWords`, `PhraseRules` tables (schema v14); `AnalyticGrammarDao`; 4th sub-tab in GrammarShell; `AnalyticGrammarEngine`.
+**Critical pitfall:** Analytic words MUST be lexeme entries (with `analyticRole` flag / POS link), not an independent silo. Verify: analytic particles appear in unified lexicon search and Anki export.
+**Research flag:** Standard patterns — no additional research phase needed.
 
-**Rationale:** Every other phase depends on an open project database, a phoneme representation layer, and a derivation-aware schema. These three are prerequisites for lexicon validation, morphology engine output, and scratchpad analysis. Deferring any of them causes rework. The auto-save infrastructure and empty-state UX philosophy must also be established here — both are architecture, not features.
+### Phase 2: Writing Scratchpad
+**Rationale:** The headline v2.0 feature. Can only be built correctly once analytic grammar is available (tokenizer reads both data sources). All v1.0 dependencies (morphology engine, phonology rules, lexicon) are stable.
+**Delivers:** Text input → tokenize → morpheme reverse-analysis → Leipzig interlinear gloss → IPA transcription tier → unknown word highlighting.
+**Critical architecture decision:** Pre-computed `inflectedForm -> (root, rule)` index in `MorphologyAnalyzer`. This must be designed in Plan 1 of this phase before any code.
+**Implements:** Full `scratchpad/` feature module; `MorphologyAnalyzer` in `morphology/domain/`; new top-level Scratchpad tab.
+**Stack:** No new packages — uses existing petitparser, existing phonology rule engine, existing `allLexemeListProvider`.
+**Avoids:** Reverse morphology brute force (Pitfall 2). Use 300ms debounce + `Isolate.run()` for analysis.
+**Research flag:** Needs `/gsd-research-phase` — morphological reverse analysis for Semitic root-and-pattern morphology types needs validation; pre-computed index design may require empirical benchmarking.
 
-**Delivers:** Working Flutter app shell with navigation rail, project creation and switching, phoneme inventory editor, IPA reference chart with bundled audio, phonotactics rule editor, per-keystroke phonotactics validation, and the database schema with derivation tree structure.
+### Phase 3: Automatic Etymology
+**Rationale:** Lightweight additive feature with no new schema. Low-risk and delivers visible value (word detail panel enhancement) while the scratchpad is being validated by users.
+**Delivers:** Compound word and derivation chain suggestions in word detail panel; accept/reject UI; `autoEtymologyJson` column for machine-generated content.
+**Implements:** `EtymologySuggester` in `lexicon/domain/`; etymology suggestion chips in `WordDetailPanel`.
+**Avoids:** Auto-etymology overwrite (Pitfall 6) — separate `autoEtymologyJson` column, never touch user `etymology` field.
+**Research flag:** Standard patterns — pure Dart string matching, no deep unknowns.
 
-**Addresses (from FEATURES.md):** Phoneme inventory definition, IPA input, persistent local storage, multi-project management.
+### Phase 4: Language Evolution
+**Rationale:** Reuses the existing `PhonologicalRewriteRule` DSL and `PhonemeInventory` types — no new DSL to write. Depends on phonology being stable (it is). Must be non-destructive by architecture.
+**Delivers:** Sound change applier with ordered context-sensitive rules; before/after lexicon diff; `EvolutionProjects` snapshots; allophone-to-phoneme promotion wizard (v2.x).
+**Implements:** `SoundChanges`, `EvolutionProjects` tables; `SoundChangeEngine`; `EvolutionDao`; Evolution sub-tab in PhonologyShell.
+**Avoids:** Destructive sound change (Pitfall 5) — `SoundChangeLayers` stack, lexeme IPA never modified by preview. Non-destructive architecture locked in Plan 1.
+**Research flag:** Needs `/gsd-research-phase` for feeding/bleeding order edge cases — classical Neogrammarian feeding (change A creates environment for change B) is tricky to implement correctly and must be test-driven.
 
-**Avoids (from PITFALLS.md):** Pitfall 1 (concatenative-only engine), Pitfall 4 (flat word schema), Pitfall 8 (regex phonotactics), Pitfall 9 (state loss), Pitfall 10 (runtime Wikipedia audio), Pitfall 11 (completeness-forcing UX).
+### Phase 5: Writing System
+**Rationale:** Self-contained feature with no blocking dependencies on other v2.0 phases. Phases the deliverable into orthography rules first (no font needed), custom rendering second.
+**Delivers:** Grapheme-to-phoneme mapping rules with priority ordering; custom TTF/OTF font loading via `FontLoader`; SVG glyph tier via `flutter_svg`; custom script tier in scratchpad interlinear display.
+**Implements:** `ScriptCharacters`, `ScriptSettings` tables; `ScriptRenderer` + `GlyphRenderer` interface; `WritingSystemShell` new top-level tab.
+**Avoids:** Writing system scope conflation (Pitfall 7) — grapheme mapping table works from day one with zero glyph/font work; font rendering is an additive enhancement pass.
+**Research flag:** Standard patterns for font loading and flutter_svg. GlyphRenderer interface is straightforward composition.
 
-### Phase 2: Morphology Engine and Pattern Mini-Language
-
-**Rationale:** The morphology engine is the centrepiece differentiator. Lexicon derived forms, grammar paradigm generation, and scratchpad analysis all require it. Build it before lexicon and grammar UI so those layers build on a stable, tested engine. Plugin architecture (MorphPlugin interface) must be established here — concatenative plugin first, then Semitic/ablaut/reduplication.
-
-**Delivers:** Pattern mini-language (spec to lexer to parser to AST to bytecode runtime), concatenative plugin, Semitic template plugin, ablaut/vowel-change plugin, reduplication plugin, suppletive lookup, MorphologyRepository CRUD, morphology rule editor UI.
-
-**Addresses (from FEATURES.md):** Morphology pattern mini-language (core differentiator), non-concatenative morphology coverage.
-
-**Avoids (from PITFALLS.md):** Pitfall 1 (triconsonantal root prototype in week 1), Pitfall 2 (one-page spec ceiling before implementation).
-
-**Research flag:** High novelty — the pattern mini-language design is a synthesis of linguistics literature and PEG parser techniques with no single canonical reference. Run a design spike on the syntax surface before committing to the DSL. Specifically: how does the mini-language express phonological conditioning (vowel harmony, assimilation) without crossing into DSL scope creep?
-
-### Phase 3: Lexicon
-
-**Rationale:** Lexicon depends on phonology (word validation) and morphology (derived form generation). Both are now stable. Lexicon is also the prerequisite for grammar (which needs words to inflect) and scratchpad (which needs a dictionary to look up tokens). Swadesh list and Anki export belong here since they are lexicon-level concerns.
-
-**Delivers:** LexiconRepository (roots, derived forms, FTS5, etymology chains), LexiconService with derivation triggering on add/edit, root dictionary UI, word detail view, etymology editor, Swadesh list coverage view, Anki export with morphological context.
-
-**Addresses (from FEATURES.md):** Lexicon management, word search and filter, POS tagging, etymological tracking, Swadesh integration, Anki export.
-
-**Avoids (from PITFALLS.md):** Pitfall 4 (schema correctness verified upstream), Pitfall 13 (Anki export with full derivation context, not flat cards), Pitfall 14 (live Swadesh coverage view, not static import).
-
-### Phase 4: Grammar and Paradigm Tables
-
-**Rationale:** Grammar depends on morphology (paradigm generation) and lexicon (words to inflect). Paradigm table generation is the highest-visibility payoff from the morphology engine — the deliverable users will screenshot and share.
-
-**Delivers:** GrammarRepository (user-defined POS, user-defined feature categories), GrammarService with paradigm generation, grammar UI (POS editor, paradigm chart, typology settings), word order and modality strategy documentation.
-
-**Addresses (from FEATURES.md):** Declension/conjugation tables, grammar documentation, typology choice system, modality expression strategy.
-
-**Avoids (from PITFALLS.md):** Pitfall 12 (feature categories are user-defined data, not hardcoded constants).
-
-### Phase 5: Writing Scratchpad and Interlinear Glosser
-
-**Rationale:** The scratchpad is the second major differentiator. It requires the entire upstream stack to be stable: phonology (validation), lexicon (token lookup), morphology (morpheme analysis). ScratchpadService orchestrates all three. Interlinear glosser and phonotactic violation highlighting complete the end-to-end pipeline.
-
-**Delivers:** Tokenizer, InterlinearGlosser, ScratchpadService pipeline, scratchpad UI with interlinear display and violation highlighting, explicit gloss result types (GLOSSED / UNKNOWN_ROOT / PARTIAL_MATCH / RULE_FAILED / TOKENIZATION_ERROR), phonetic reading display, TTSPipeline (flutter_tts + IPA SSML, with phoneme-concatenation fallback).
-
-**Addresses (from FEATURES.md):** Writing scratchpad, interlinear glossing, phonotactic violation linting, TTS (scoped as best-effort).
-
-**Avoids (from PITFALLS.md):** Pitfall 3 (silent failure on unknowns — explicit result types from the start), Pitfall 5 (IPA diacritics via characters package + NFC normalization), Pitfall 6 (TTS scoped as approximation with fallback, not a solved audio problem).
-
-### Phase 6: Culture Wiki
-
-**Rationale:** Culture wiki has no linguistic engine dependencies — it can be built in parallel with Phase 4, but is deprioritized because it is not on the critical differentiator path. It is a standalone Markdown document system with internal linking.
-
-**Delivers:** CultureRepository + CultureService, Markdown editor with flutter_markdown, [[internal link]] resolution, document graph, full-text search over wiki pages.
-
-**Addresses (from FEATURES.md):** Culture/world-building wiki.
-
-**Research flag:** Standard patterns (Markdown editing, document graph). Skip research-phase; use flutter_markdown with custom inline syntax extension.
-
-### Phase 7: AI Agent (MCP Integration)
-
-**Rationale:** MCP server is a thin delegation layer over existing services. It must be built last because it depends on all services being stable — building it earlier means the API surface keeps shifting. Validate the core tool (Phases 1-6) before adding network and AI complexity.
-
-**Delivers:** MCPServer (local HTTP or stdio JSON-RPC), semantic tool manifest (get_phoneme_inventory, search_lexicon, get_paradigm_table, analyze_phrase, add_root_word, and others), read/write separation in tool manifest, async tool handlers on isolate.
-
-**Addresses (from FEATURES.md):** AI tutor + co-creator, linguistic terminology Q&A, vocabulary suggestion.
-
-**Avoids (from PITFALLS.md):** Pitfall 7 (semantic tools not raw DB exposure), Pitfall 15 (async handlers, no UI thread blocking).
-
-**Research flag:** MCP Dart library maturity is LOW confidence as of training cutoff (August 2025). Verify current pub.dev state of dart_mcp before Phase 7 planning. If immature, budget ~200 lines of custom JSON-RPC implementation.
+### Phase 6: AI / MCP Integration
+**Rationale:** The MCP server exposes what already exists in the app. Building it last means the tool API surface is stable and complete — `get_phoneme_inventory`, `search_lexicon`, `get_paradigm_table`, `analyze_phrase` all have stable backing services.
+**Delivers:** Local MCP server (stdio transport) exposing project data as read-only tools; in-app AI chat panel (Mode A: direct Claude API with system prompt context); `ProjectSnapshotService`; MCP settings panel in project menu.
+**Implements:** Full `ai/` feature module; `ProjectSnapshotService`; `mcp_server` stdio process; `anthropic_sdk_dart` streaming chat widget.
+**Stack:** `anthropic_sdk_dart ^1.5.0`, `mcp_client ^1.1.0`, `mcp_server ^1.0.3`.
+**Avoids:** MCP on main isolate (Pitfall 4) — separate Dart process with read-only `NativeDatabase.createInBackground`; never shares `AppDatabase` instance; never uses Riverpod providers from within MCP handlers.
+**Security constraints:** All MCP tools are named, typed, read-only by default. Write tools return `DryRunResult` first; a separate `confirm_action(actionId)` tool commits. No generic SQL execution tool.
+**Research flag:** Needs `/gsd-research-phase` — MCP ecosystem in Flutter is still maturing; multi-isolate Drift behavior under MCP tool calls needs empirical validation; confirm STDIO transport works on macOS/Windows/Linux.
 
 ### Phase Ordering Rationale
 
-- Layers 0-2 from ARCHITECTURE.md (infrastructure, phonology, morphology) map directly to Phases 1-2 — they are prerequisites for everything upstream.
-- Phases 3-4 (lexicon, grammar) depend on Phase 2; they could be partially parallelized but grammar UI needs lexicon data.
-- Phase 5 (scratchpad) is the integration phase — it only works when Phases 1-4 are stable.
-- Phase 6 (culture wiki) is independent and can be parallelized with Phase 4 if resources allow.
-- Phase 7 (MCP) deliberately comes last: the services it wraps must be stable before their API surface is published to an AI agent.
+- Analytic grammar before scratchpad is mandatory — the tokenizer has two lexical data sources; building it before both sources exist forces a rewrite
+- Scratchpad before all others (except analytic grammar) because it is the headline feature and must be validated against real usage before dependent v2.x features are built
+- Etymology before evolution because it is lower risk, delivers value sooner, and has no dependency relationship with evolution
+- Writing system before AI because the MCP server's `analyze_phrase` tool is richer with custom script output available; the writing system scratchpad tier should be stable before AI integration references it
+- AI last because it exposes everything else; a stable, complete API surface at build time prevents tool redesign mid-implementation
 
 ### Research Flags
 
-Phases requiring deeper research during planning:
-- **Phase 2 (Morphology Engine):** Pattern mini-language DSL design is a synthesis without a canonical reference. Run a design spike on the syntax surface before committing. Key question: how does the mini-language express phonological conditioning without crossing into scope creep?
-- **Phase 7 (MCP):** dart_mcp library maturity is unknown post-training-cutoff. Verify pub.dev state; if immature, implementation path changes significantly.
-- **Phase 5 (TTS):** OGG audio playback on Windows with just_audio may require FFmpeg bundling. Verify platform-specific audio decoder availability before finalizing the TTS/audio pipeline design.
+Phases likely needing `/gsd-research-phase` during planning:
+- **Phase 2 (Scratchpad):** Morphological reverse analysis architecture — particularly for Semitic root-and-pattern morphology types; pre-computed index design needs validation
+- **Phase 4 (Language Evolution):** Sound change feeding/bleeding order handling; classical Neogrammarian edge cases need test-driven design
+- **Phase 6 (AI/MCP):** MCP ecosystem maturity on Flutter desktop; multi-isolate Drift behavior; STDIO transport cross-platform reliability
 
-Phases with standard patterns (skip research-phase):
-- **Phase 1 (Project Shell + Phonology):** Flutter desktop app shell, drift SQLite, Riverpod project scoping — all well-documented official patterns.
-- **Phase 3 (Lexicon):** CRUD + FTS5 + reactive Riverpod streams — standard drift patterns.
-- **Phase 4 (Grammar):** Paradigm table generation is algorithmic (feature matrix multiplied by morphology engine) — no research needed.
-- **Phase 6 (Culture Wiki):** flutter_markdown with custom link syntax — documented extension API.
+Phases with standard well-documented patterns (skip research-phase):
+- **Phase 1 (Analytic Grammar):** Standard Drift schema extension + Riverpod provider pattern; fully established
+- **Phase 3 (Etymology):** Pure Dart string matching + FutureProvider.family; no unknowns
+- **Phase 5 (Writing System):** Flutter FontLoader + flutter_svg patterns are documented; GlyphRenderer interface is straightforward composition
 
 ---
 
@@ -199,46 +167,48 @@ Phases with standard patterns (skip research-phase):
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| Stack | MEDIUM | Architecture recommendations are HIGH; all version numbers are LOW (marked [VERIFY], cannot confirm against live pub.dev) |
-| Features | MEDIUM | Competitive analysis is training-data only; ConWorkShop/PolyGlot feature sets should be verified against current versions before finalizing differentiator claims |
-| Architecture | HIGH | Layered monolith, Riverpod project scoping, derivation tree schema, plugin-per-morphology-strategy — all grounded in established Flutter and database design principles |
-| Pitfalls | HIGH | Concatenative-only morphology failure, flat schema problems, interlinear glosser silent failures, TTS phoneme coverage limits — all well-established failure modes in their respective domains |
+| Stack | HIGH | All 6 new package versions live-verified on pub.dev as of 2026-04-13; no version conflicts with existing Dart SDK ^3.10.4 |
+| Features | MEDIUM-HIGH | PolyGlot, SCA2, Leipzig Glossing Rules verified live April 2026; ConWorkShop partial; competitive gap analysis is solid |
+| Architecture | HIGH | Derived entirely from direct codebase inspection (schema v13, router, app_shell, provider patterns) — not assumptions |
+| Pitfalls | HIGH (Flutter/Drift/Riverpod); MEDIUM (MCP-in-Flutter) | MCP ecosystem still maturing; multi-isolate behavior needs empirical validation |
 
-**Overall confidence:** MEDIUM-HIGH for architecture and approach; LOW for specific versions and MCP library state.
+**Overall confidence:** HIGH
 
 ### Gaps to Address
 
-- **All pub.dev version numbers:** Must be verified against live pub.dev before writing pubspec.yaml. Every version in STACK.md is marked [VERIFY]. Do this before Phase 1 planning.
-- **dart_mcp library maturity:** MCP spec was rapidly evolving as of August 2025. Check current state before Phase 7 planning. Decision point: use library or implement ~200 lines of JSON-RPC directly.
-- **OGG on Windows (just_audio):** Verify whether just_audio's Windows backend handles OGG natively or requires FFmpeg bundling. Affects IPA audio asset format decision in Phase 1.
-- **macOS SSML IPA support (flutter_tts):** AVSpeechSynthesizer's phoneme SSML support should be tested on the development machine before committing to the SSML-based TTS path.
-- **ConWorkShop/PolyGlot current feature state:** Both tools are actively developed. Verify competitor feature matrices against current versions before finalizing differentiator claims.
-- **Conlanger's Thesaurus PDF extraction:** Parse the PDF once during Phase 3 planning to confirm the pre-extraction-to-JSON approach is feasible with the actual document structure.
+- **MCP multi-isolate Drift behavior:** MEDIUM confidence — the `mcp_server` package's behavior under concurrent reads alongside a Flutter Drift instance needs empirical validation during Phase 6 Plan 1. Fallback: implement lightweight JSON-RPC over STDIO manually (~200 lines) if the package proves problematic.
+- **Semitic morphology reverse analysis:** The existing `MorphologyEngine` was designed for agglutinative patterns. Root-and-pattern template matching in reverse is algorithmically different. Phase 2 research should validate whether the existing engine's type system accommodates it or whether a separate code path is needed.
+- **GoRouter branch index shifts:** Adding Scratchpad and Writing System as new `StatefulShellBranch` entries shifts existing branch indices. Every `goBranch(index)` call site in `app_shell.dart` must be updated atomically; test routing before any feature work begins in Phase 2.
+- **Culture wiki re-integration timing:** The `culture_pages` table exists in v13 via raw SQL without a Dart class. If the culture wiki is re-introduced from `culture-wiki-v2-staging` in a future phase (v3+), the orphan table migration (Pitfall 1) is the first task. No phase in this roadmap touches it, but the risk must be flagged.
 
 ---
 
 ## Sources
 
 ### Primary (HIGH confidence)
-- Flutter official docs (docs.flutter.dev) — app architecture, desktop platform status, lifecycle
-- Riverpod 2.x official docs (riverpod.dev) — provider scoping, AsyncNotifier, StreamNotifier
-- SQLite official docs (sqlite.org/wal.html) — WAL mode, FTS5
-- MCP protocol specification (modelcontextprotocol.io) — tool manifest design, JSON-RPC transport
-- Linguistics literature (McCarthy 1979 on Arabic root-and-pattern morphology; Comrie, Haspelmath on morphological typology) — morphology strategy taxonomy
+- `/Users/neosapien/dev/conlang/lib/db/app_database.dart` — schema v13/v14 migration history, table declarations, raw SQL culture_pages stub
+- `/Users/neosapien/dev/conlang/lib/router/app_router.dart` — StatefulShellBranch structure, branch indices
+- `/Users/neosapien/dev/conlang/lib/features/morphology/domain/morphology_engine.dart` — forward-only architecture confirmed; no reverse lookup
+- `/Users/neosapien/dev/conlang/lib/features/grammar/data/grammar_providers.dart` — Riverpod/Drift constraint documentation inline
+- [Leipzig Glossing Rules (MPI Eva)](https://www.eva.mpg.de/lingua/resources/glossing-rules.php) — interlinear format standard
+- pub.dev/packages/anthropic_sdk_dart — v1.5.0 live-verified
+- pub.dev/packages/mcp_client — v1.1.0 live-verified
+- pub.dev/packages/mcp_server — v1.0.3 live-verified
+- pub.dev/packages/flutter_tts — v4.2.5 live-verified
+- pub.dev/packages/flutter_markdown_plus — v1.0.7 live-verified
 
 ### Secondary (MEDIUM confidence)
-- Training knowledge of conlang tool ecosystem (ConWorkShop, Vulgar, PolyGlot, Lexique Pro, Zompist SCA2, Awkwords) — feature gap analysis; verify current versions
-- r/conlangs and Linguifex community discussions (training corpus) — user-requested features and pain points
-- Anki .apkg format documentation (github.com/ankitects/anki) — collection schema
-- Conlanger's Thesaurus (fiatlingua.org) — semantic domain coverage approach
-- Wikipedia IPA audio files (en.wikipedia.org/wiki/IPA_pulmonic_consonant_chart_with_audio) — Creative Commons audio sourcing
+- [PolyGlot documentation](https://draquet.github.io/PolyGlot/readme.html) — verified April 2026; confirmed absent features
+- [Zompist SCA2](https://www.zompist.com/sounds.htm) — sound change applier reference; web-only, no diff
+- [FrathWiki software tools list](https://www.frathwiki.com/Software_tools_for_conlanging) — ecosystem overview
+- [Model Context Protocol spec](https://modelcontextprotocol.io/specification/2025-11-25) — MCP standard
+- [Drift migration API](https://drift.simonbinder.eu/migrations/api/) — migration patterns
+- [Flutter MCP server docs](https://docs.flutter.dev/ai/mcp-server) — Flutter team guidance
 
-### Tertiary (LOW confidence)
-- All pub.dev version numbers in STACK.md — training data estimates; must be verified before use
-- dart_mcp package state — was in early development as of August 2025; current maturity unknown
-- flutter_tts SSML IPA support on Windows/Linux — documented for macOS; Windows/Linux behavior needs runtime verification
+### Tertiary (LOW confidence / needs validation)
+- MCP multi-isolate Drift behavior — needs empirical validation during Phase 6 Plan 1
+- `mcp_server` pub.dev package multi-process behavior — ecosystem still maturing per research notes
 
 ---
-
-*Research completed: 2026-04-08*
+*Research completed: 2026-04-13*
 *Ready for roadmap: yes*

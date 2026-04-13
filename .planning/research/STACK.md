@@ -1,342 +1,249 @@
-# Technology Stack
+# Stack Research
 
-**Project:** Conlang Workbench
-**Researched:** 2026-04-08
-**Confidence note:** Research tools (WebSearch, WebFetch, Bash, file Read) were restricted in this session. All version numbers and recommendations are drawn from training data with an August 2025 cutoff. Every version marked [VERIFY] must be confirmed against pub.dev before pinning in pubspec.yaml.
-
----
-
-## Recommended Stack
-
-### Core Framework
-
-| Technology | Version | Purpose | Why |
-|------------|---------|---------|-----|
-| Flutter | ^3.22 [VERIFY] | Cross-platform UI framework | User constraint; desktop stable on macOS/Windows/Linux since Flutter 3.x; single codebase covers all three targets |
-| Dart | ^3.4 [VERIFY] | Language | Ships with Flutter; null-safe, strong typed, excellent async primitives for event-driven UI |
-
-**Flutter desktop status (HIGH confidence):** Flutter desktop is production-stable. macOS, Windows, and Linux targets are all Tier 1 as of Flutter 3.10+. The toolchain uses native embedding (ANGLE/Metal/Vulkan) with platform channels for native calls. No experimental flags needed.
-
-**Recommended target:** macOS primary (user's likely platform given Darwin 25.1.0 in env). Windows/Linux compile without code changes for most pure-Flutter work.
+**Domain:** Flutter desktop conlang workbench — v2.0 additions
+**Researched:** 2026-04-13
+**Confidence:** MEDIUM–HIGH (versions verified live via pub.dev; architecture HIGH; implementation details MEDIUM)
 
 ---
 
-### State Management
+## Scope
 
-| Technology | Version | Purpose | Why |
-|------------|---------|---------|-----|
-| Riverpod | ^2.5 [VERIFY] | App-wide state | Code-gen variant (`riverpod_generator`) eliminates boilerplate; works well with async data (SQLite streams); strongly typed providers catch category errors at compile time. Preferred over Bloc for a solo project — less ceremony. |
-| riverpod_generator | ^2.4 [VERIFY] | Code generation for Riverpod | Generates provider boilerplate from annotated classes; pairs with `build_runner` |
-
-**Why not Bloc:** Bloc is excellent for large teams needing strict event/state separation. For a solo desktop app with complex domain logic (morphology engine), Riverpod's flexibility and tighter Dart integration wins.
-
-**Why not Provider (the package):** Provider is legacy Riverpod; Riverpod supersedes it with better compile-time guarantees.
+This document covers ONLY the new packages needed for v2.0 features. The v1.0 stack (drift, riverpod, petitparser, just_audio, go_router, archive, sqlite3) is validated and unchanged.
 
 ---
 
-### Database — SQLite
+## Recommended Stack — New Additions
 
-| Technology | Version | Purpose | Why |
-|------------|---------|---------|-----|
-| drift | ^2.19 [VERIFY] | Type-safe SQLite ORM | Generates type-safe Dart query APIs from table definitions; supports reactive streams (watch queries) so UI rebuilds on data changes; supports WAL mode; desktop-compatible via `drift_sqflite` or `sqlite3_flutter_libs` backend |
-| sqlite3_flutter_libs | ^0.5 [VERIFY] | Bundles SQLite native binary | Provides a pre-compiled SQLite shared library for all desktop targets; eliminates system SQLite version inconsistencies |
-| drift_dev | ^2.19 [VERIFY] | Build-time code generation | Generates the type-safe query layer from table DSL |
+### AI Integration (Claude API + MCP)
 
-**Architecture note:** Each conlang project is a self-contained folder with its own `.db` file. Drift supports opening databases by file path at runtime, making per-project SQLite trivial. Use `NativeDatabase.createInBackground` (drift's isolate mode) to avoid blocking the UI during heavy lexicon queries.
+| Technology | Version | Purpose | Why Recommended |
+|------------|---------|---------|-----------------|
+| anthropic_sdk_dart | ^1.5.0 | Claude API client | Verified latest (published 3 days ago as of 2026-04-13). Type-safe, supports streaming SSE, tool use, extended thinking, and built-in MCP integration. The only well-maintained official-quality Dart Claude SDK. Streaming lets the in-app chat widget render tokens as they arrive. |
+| mcp_client | ^1.1.0 | MCP client transport | Verified latest. Handles STDIO, SSE, and Streamable HTTP transports. STDIO is the right transport for spawning a local Dart MCP server process from the desktop app. Supports session management and auto-reconnection. |
+| mcp_server | ^1.0.3 | MCP server (expose project data) | Verified latest. Implements the server side of MCP for the companion Dart server binary that exposes `get_lexicon`, `get_grammar_rules`, `get_phonology` tools. Ships as a separate `bin/mcp_server.dart` executable that the Flutter app spawns via `dart:io Process`. |
 
-**Why not sqflite:** sqflite is mobile-first; desktop support was tacked on. Drift wraps `sqlite3` directly on desktop and has better ergonomics. Drift also adds schema migration tooling that sqflite lacks.
+**Architecture note:** Two-mode AI design.
 
-**Why not Isar / Hive:** Both are document stores. The lexicon's relational structure (roots → derived words → morphological rules → paradigm entries) maps naturally to relational tables. Querying "all words using inflection pattern X" or "all words violating phonotactic rule Y" is a SQL query, not a document scan.
+Mode A (in-app chat): `anthropic_sdk_dart` sends the Claude API directly from the Flutter app, with project context injected into the system prompt as JSON. No MCP needed — simpler and works without Claude Desktop.
 
----
+Mode B (Claude Desktop / external host): A `bin/mcp_server.dart` binary built using `mcp_server` exposes the project's SQLite data as MCP tools. Claude Desktop or any MCP host is pointed at this binary via its config. The Flutter app just writes to the DB normally; the MCP server reads it on demand.
 
-### Audio Playback (IPA reference chart)
+Both modes should be supported. Mode A is built first (easier), Mode B enables the full co-creator vision.
 
-| Technology | Version | Purpose | Why |
-|------------|---------|---------|-----|
-| just_audio | ^0.9 [VERIFY] | Audio playback engine | Supports MP3/OGG/WAV; works on macOS and Windows desktop; handles network URLs (for Wikipedia IPA recordings) and local file paths; exposes streams for player state |
-| audio_session | ^0.1 [VERIFY] | Audio session management | Handles focus, interruptions; recommended companion to just_audio |
-
-**IPA audio sourcing strategy:** Wikipedia hosts IPA sound files under Creative Commons at `https://upload.wikimedia.org/wikipedia/commons/`. These are typically OGG Vorbis. just_audio plays OGG on desktop via FFmpeg on Linux and native decoders on macOS/Windows. **Verify OGG support on Windows** — it may require `just_audio_windows` with FFmpeg; the team has noted Windows OGG support is platform-dependent. Safest approach: cache MP3 variants or transcode to MP3 on first download.
-
-**Why not audioplayers:** audioplayers is simpler but has had platform inconsistencies on desktop. just_audio has broader desktop support and is actively maintained by the Flutter community's audio working group.
+**macOS entitlement required:** `com.apple.security.network.client` in `DebugProfile.entitlements` and `Release.entitlements` for outbound Claude API calls.
 
 ---
 
-### TTS Synthesis (reading conlang text aloud)
+### TTS (Writing Scratchpad phonetic readout)
 
-| Technology | Version | Purpose | Why |
-|------------|---------|---------|-----|
-| flutter_tts | ^4.0 [VERIFY] | System TTS bridge | Wraps platform TTS (AVSpeechSynthesizer on macOS, SAPI on Windows, speech-dispatcher on Linux); zero network requirement; works offline |
+| Technology | Version | Purpose | Why Recommended |
+|------------|---------|---------|-----------------|
+| flutter_tts | ^4.2.5 | System TTS for macOS/Windows/Linux | Verified latest. macOS uses AVSpeechSynthesizer which supports `<phoneme alphabet="ipa">` SSML — the highest-fidelity path for conlang pronunciation. Requires macOS 10.15+. Works offline. |
 
-**Conlang TTS strategy (MEDIUM confidence):** System TTS cannot pronounce a constructed language natively. The approach is: convert conlang text to IPA using the phonology rules defined in the project, then feed the IPA string to TTS with a base language that approximates those phonemes (e.g., `en-US` for approximation, or `ipa` SSML tag if the platform supports it). macOS AVSpeechSynthesizer supports SSML and `<phoneme alphabet="ipa">` tags — this is the highest-fidelity path on macOS. Windows SAPI supports IPA phonemes via `<phoneme>` SSML in some voices. Linux speech-dispatcher support varies.
+**Conlang TTS strategy:** The pipeline is: conlang text → tokenize → apply phonology rules → generate IPA string → feed to flutter_tts via SSML `<phoneme alphabet="ipa">` tag. This reuses the existing phonology rules engine. On macOS this gives genuine IPA-driven synthesis. On Windows, SAPI phoneme support varies by voice. On Linux, consider subprocess call to espeak-ng (`Process.run('espeak-ng', ['-v', 'en', '--ipa', ipaString])`).
 
-**Alternative for higher quality:** A local TTS engine like espeak-ng can be called as a subprocess. espeak-ng natively supports IPA input (`espeak-ng -v en --ipa "text"`). This works on all three desktop platforms and is entirely offline. The tradeoff is robotic voice quality. Consider exposing both paths (system TTS via SSML, espeak-ng via process) and letting users choose.
-
-**Why not a cloud TTS API (ElevenLabs, Google Cloud TTS):** Breaks offline-first constraint. Could be offered as an optional enhancement behind a feature flag, but the base path must be fully local.
+**Why not a cloud TTS API:** Breaks offline-first constraint. Could be an optional plugin later.
 
 ---
 
-### AI Agent / MCP Integration
+### Writing System (Custom Script / Orthography)
 
-| Technology | Version | Purpose | Why |
-|------------|---------|---------|-----|
-| dart_mcp_server (custom) | N/A | Expose project data to Claude | MCP (Model Context Protocol) is the standard for giving AI agents structured tool access. Build a lightweight Dart MCP server that reads the project's SQLite DB and exposes tools: `get_lexicon`, `get_phonology`, `get_grammar_rules`, `add_word`, etc. |
-| http | ^1.2 [VERIFY] | HTTP client for AI API calls | dart:io has a built-in HTTP client but the `http` package is idiomatic and supports interceptors |
-| dart_jsonwebtoken or similar | [VERIFY] | API key management | For authenticating to Claude/OpenAI APIs if not using MCP relay |
+No new packages needed for the core implementation. Approach by rendering tier:
 
-**MCP implementation approach (MEDIUM confidence — MCP spec was young as of mid-2025):**
+**Tier 1 — Custom font file (recommended for most users):**
+Flutter's built-in font loading (`pubspec.yaml` assets + `TextStyle(fontFamily: ...)`) handles TTF/OTF custom fonts natively. Users design their script as a font file (using Glyphr Studio or FontForge, both free) and import it. The app renders glyphs using standard `Text` widgets with the custom font family. No additional package needed. This is the simplest and most powerful path.
 
-The Model Context Protocol defines a JSON-RPC 2.0 protocol over stdio or SSE. A Flutter desktop app can spawn an MCP server as a side process or run it in an isolate that communicates over stdio with Claude Desktop or any MCP-compatible client. The recommended architecture:
+**Tier 2 — Glyph mapping to Unicode PUA (Private Use Area):**
+User draws glyphs and maps them to Unicode PUA codepoints (U+E000–U+F8FF) in their custom font. The app stores the mapping table in the project DB and uses `String.fromCharCode()` to encode text. Still uses standard Text widgets.
 
-1. The Flutter app writes a `mcp_server.dart` that speaks the MCP protocol over stdin/stdout
-2. Claude Desktop (or any MCP host) is configured to launch this server pointing at the active project's DB file
-3. The Flutter app also exposes a local HTTP endpoint for direct AI chat within the app UI
+**Tier 3 — SVG-drawn glyphs (for users without font tools):**
 
-This means the AI agent feature works in two modes: (a) Claude Desktop as the host with full tool access, (b) in-app chat widget that calls the Claude API directly with context injected via system prompt.
+| Technology | Version | Purpose | Why Recommended |
+|------------|---------|---------|-----------------|
+| flutter_svg | ^2.2.4 | Render SVG glyph definitions | Verified latest. Users define glyphs as SVG path data stored in the project DB. The app renders each glyph as an SVG widget at the appropriate size inline with other text. Slower than font rendering but enables in-app glyph design without external tools. |
 
-**Dart MCP library status:** As of August 2025, the `dart_mcp` package from the Dart team was in early development. Check pub.dev for the current state. If immature, implement the MCP protocol directly — it is ~200 lines of JSON-RPC handling.
+**Recommendation:** Build Tier 1 first (font import + rendering). Add Tier 3 (SVG glyphs) as a follow-on — it's the "no tooling required" path for casual users. Do NOT add a glyph vector editor inside the app; that scope is enormous.
 
 ---
 
-### Morphology Engine
+### Writing Scratchpad — Interlinear Gloss Rendering
 
-| Technology | Version | Purpose | Why |
-|------------|---------|---------|-----|
-| petitparser | ^6.0 [VERIFY] | PEG parser library | For parsing the morphological pattern mini-language; PEG parsers compose cleanly and handle the recursive grammar needed for templates like `C₁eC₂iC₃` or `{root}+{suffix[agr=pl]}` |
-| string_scanner | ^1.2 [VERIFY] | Tokenizer utility | Lower-level scanning; useful for the phonotactics rule tokenizer |
+No external packages needed. The interlinear gloss display (three aligned rows: conlang words / morpheme glosses / free translation) is built entirely with Flutter's layout primitives:
 
-**Morphology pattern mini-language (HIGH confidence on approach, LOW on specific library versions):**
+```
+Row
+  for each token:
+    Column(crossAxisAlignment: center)
+      Text(word, style: conlangFont)       // row 1: conlang text
+      Text(gloss, style: smallCaps)        // row 2: morpheme glosses (3.SG.PRES etc.)
+      (free translation spans full width below)
+```
 
-The morphology engine is the core differentiator. It must handle:
-- **Concatenative:** `{root}+ku` (suffix)
-- **Templatic (Semitic):** `C₁aC₂iC₃` where C₁C₂C₃ are consonant slots from a root
-- **Ablaut/mutation:** replace vowel pattern V→V' within root
-- **Circumfixes:** `{prefix}+{root}+{suffix}`
-- **Suppletive exceptions:** per-word overrides stored in DB
+The alignment constraint (each column is as wide as the widest of its cells) is handled by `IntrinsicWidth` wrapping each token column inside a `Row`. For word-wrapping across lines, use a custom `Wrap` widget where each child is a token column.
 
-petitparser is the right choice because: (1) it's a pure Dart PEG combinator library with no codegen step needed for the engine itself, (2) it supports grammar definition in code with composable combinators, (3) it has good error reporting needed for user-facing parse errors in their rule definitions.
+`WidgetSpan` inside `RichText` is the Flutter-native way to embed widget columns inside flowing text. This matches standard interlinear gloss display (Leipzig glossing rules). No external library adds value here.
 
-Do NOT use `RegExp` directly as the pattern mini-language — regexes are opaque to users, don't capture linguistic slot semantics, and make error messages unreadable.
-
----
-
-### NLP / Linguistics Utilities
-
-| Technology | Version | Purpose | Why |
-|------------|---------|---------|-----|
-| No external NLP library | N/A | Morphological analysis | Standard NLP libraries (spaCy, NLTK) are Python-only. There is no mature Dart NLP library. The morphology engine must be built from scratch using the pattern mini-language — this is intentional and is the app's core value |
-| ffi + native process | N/A | Optional: call espeak-ng for phoneme conversion | If needed for TTS pipeline, spawn espeak-ng as subprocess via `dart:io` Process API |
-
-**Conlanger's Thesaurus PDF integration:**
-
-| Technology | Version | Purpose | Why |
-|------------|---------|---------|-----|
-| pdfium_bindings or syncfusion_flutter_pdf | [VERIFY] | Parse the Conlanger's Thesaurus PDF | Need to extract semantic domain text from the fiatlingua.org PDF |
-
-**PDF parsing options (MEDIUM confidence):**
-- `syncfusion_flutter_pdf`: Free community license, pure Dart, extracts text from PDFs. Does not require a native binary. Good for text extraction from a fixed, known PDF like the Conlanger's Thesaurus.
-- `pdfx`: Renders PDF pages to images; not useful for text extraction.
-- `pdf_text` (pub.dev): Older package, desktop support unclear.
-- **Recommended:** Parse the Conlanger's Thesaurus PDF once at build time, extract the structured semantic domain list into a JSON asset bundled with the app. This avoids runtime PDF parsing entirely and makes the data instantly searchable. Ship the extracted JSON. Parsing the PDF live is only needed if the user can supply their own PDF references.
+**Tokenization:** Reuse the existing `petitparser` infrastructure for splitting conlang text into tokens and running morphological analysis on each. No new parsing library needed.
 
 ---
 
-### Anki Export
+### Language Evolution (Sound Change Modeling)
 
-| Technology | Version | Purpose | Why |
-|------------|---------|---------|-----|
-| No pub.dev package needed | N/A | Anki `.apkg` generation | Anki's `.apkg` format is a ZIP file containing a SQLite database (`collection.anki2`) with a specific schema plus a `media` file. Dart's `archive` package handles ZIP; drift or `sqlite3` handles writing the Anki DB schema. Implement directly — no library needed. |
-| archive | ^3.4 [VERIFY] | ZIP file creation for .apkg | Dart package for reading/writing ZIP/tar archives |
+No external packages. Sound change modeling is pure algorithmic Dart. The existing petitparser is already present and can parse sound change rules of the form `p / _V → b` (Neogrammarian-style context-sensitive rewrite rules).
 
-**Anki .apkg format (MEDIUM confidence):** The Anki 2.1 collection format stores notes in a SQLite DB with a `notes` table (guid, flds pipe-delimited, tags) and a `cards` table. The schema is publicly documented. This is ~100 lines of Dart to implement. Do not reach for a heavy library.
+The implementation is:
+1. Sound change rules stored as rows in a new DB table (`evolution_rules`), ordered sequentially
+2. Each rule is a petitparser-parsed pattern with source phoneme, target phoneme, and optional environment
+3. "Apply changes" iterates the lexicon and transforms each word through the rule sequence
+4. Results shown as a diff (before/after) with a "promote to new lexicon" action
 
----
-
-### PDF/Document Export
-
-| Technology | Version | Purpose | Why |
-|------------|---------|---------|-----|
-| pdf | ^3.10 [VERIFY] | Generate PDF exports | Pure Dart PDF generation; no native dependencies; supports text, tables, Unicode (important for IPA symbols and custom scripts) |
-| printing | ^5.12 [VERIFY] | Print/save PDF on desktop | Companion to `pdf` package; handles print dialog and file save on macOS/Windows/Linux |
+No NLP library or ML model needed. This is deterministic pattern application, identical in nature to the existing phonological rewrite rules engine — extend that engine to handle evolution rules.
 
 ---
 
-### File System & Project Management
+### Automatic Etymology Suggestions
 
-| Technology | Version | Purpose | Why |
-|------------|---------|---------|-----|
-| path_provider | ^2.1 [VERIFY] | Platform-appropriate paths | Gets Documents directory for default project storage location |
-| file_picker | ^8.0 [VERIFY] | Open/save project folder picker | Native folder picker dialog on all three desktop platforms |
-| path | ^1.9 [VERIFY] | Path manipulation utilities | Dart path joining/splitting utilities |
-| watcher | ^1.1 [VERIFY] | Watch project folder for external changes | Optional: detect if another process modifies the DB file |
+No external packages. Compound word detection and morphological decomposition uses the existing morphology engine:
 
----
+1. When a new word is added to the lexicon, attempt to decompose it using known roots + morphological patterns
+2. Candidate etymologies ranked by coverage (how much of the word is explained by known morphemes)
+3. Results presented as suggestions, not automatic assignments
 
-### UI Components
-
-| Technology | Version | Purpose | Why |
-|------------|---------|---------|-----|
-| flutter_markdown | ^0.7 [VERIFY] | Render markdown in culture wiki | Pure Flutter markdown renderer; supports custom inline syntax for internal links |
-| super_editor | ^0.2 [VERIFY] | Rich text editing for culture wiki | If markdown source editing is not enough; super_editor is a production-grade document editor for Flutter |
-| data_table_2 | ^2.5 [VERIFY] | Sortable data tables for lexicon view | More capable than Flutter's built-in DataTable; supports fixed headers, sorting, large datasets |
-| two_dimensional_scrollables | ^0.1 [VERIFY] | 2D scroll for paradigm charts | Flutter's TableView for large declension/conjugation tables; part of flutter/packages |
-
-**IPA keyboard approach:** Build a custom Flutter widget — a scrollable grid of IPA symbols drawn from a hardcoded JSON asset. On tap, insert the character into the focused text field using a `TextEditingController`. No pub.dev package needed; all IPA characters are Unicode and render with the system font on macOS/Windows.
+This is straightforward string matching against the existing lexicon roots table. No separate NLP or etymology library exists in Dart that would be useful here. The value comes from the project's own data, not external resources.
 
 ---
 
-### Navigation
+### Markdown (Culture Wiki)
 
-| Technology | Version | Purpose | Why |
-|------------|---------|---------|-----|
-| go_router | ^14.0 [VERIFY] | App navigation | Deep-link-style routing; supports nested navigation needed for tab structure (project → phonology/lexicon/grammar/culture/writing tabs); declarative and testable |
+| Technology | Version | Purpose | Why Recommended |
+|------------|---------|---------|-----------------|
+| flutter_markdown_plus | ^1.0.7 | Render markdown in culture wiki | Verified latest. Google discontinued `flutter_markdown`; `flutter_markdown_plus` is the official community continuation (140k+ weekly downloads, verified publisher foresightmobile.com). Drop-in replacement. Supports custom inline syntax needed for `[[WikiLink]]` internal links. |
 
----
-
-### Build & Code Generation
-
-| Technology | Version | Purpose | Why |
-|------------|---------|---------|-----|
-| build_runner | ^2.4 [VERIFY] | Runs code generators | Required by drift_dev and riverpod_generator |
-| freezed | ^2.5 [VERIFY] | Immutable data classes | For domain model objects (Phoneme, MorphologyRule, LexiconEntry); generates copyWith, equality, pattern matching |
-| freezed_annotation | ^2.4 [VERIFY] | Freezed annotations | |
-| json_serializable | ^6.7 [VERIFY] | JSON serialization | For project config files, asset data, API payloads |
+**Migration:** Replace `flutter_markdown: ^0.7.x` in pubspec.yaml with `flutter_markdown_plus: ^1.0.7`. The API is identical.
 
 ---
 
-### Testing
+## pubspec.yaml Changes
 
-| Technology | Version | Purpose | Why |
-|------------|---------|---------|-----|
-| flutter_test | (bundled) | Widget and unit tests | Standard |
-| mocktail | ^1.0 [VERIFY] | Mocking | Null-safe, no codegen required unlike mockito |
-| integration_test | (bundled) | End-to-end desktop tests | Flutter's integration test runner works on desktop |
+Remove (deprecated):
+```yaml
+# flutter_markdown: ^0.7.x  ← discontinued, replaced below
+```
+
+Add:
+```yaml
+  # AI integration
+  anthropic_sdk_dart: ^1.5.0
+  mcp_client: ^1.1.0
+  mcp_server: ^1.0.3
+
+  # TTS
+  flutter_tts: ^4.2.5
+
+  # Writing system (SVG glyph tier)
+  flutter_svg: ^2.2.4
+
+  # Markdown (replaces discontinued flutter_markdown)
+  flutter_markdown_plus: ^1.0.7
+```
+
+No dev dependency changes needed. All new packages are runtime dependencies.
 
 ---
 
 ## Alternatives Considered
 
-| Category | Recommended | Alternative | Why Not |
-|----------|-------------|-------------|---------|
-| ORM | drift | sqflite | sqflite has weak desktop support and no type-safe query generation |
-| ORM | drift | Isar | Isar is document-oriented; lexicon is relational |
-| State | Riverpod | Bloc | Bloc is over-engineered for a solo project; more ceremony with event/state classes |
-| State | Riverpod | Provider (pkg) | Provider is legacy; Riverpod supersedes it |
-| Audio | just_audio | audioplayers | audioplayers has more reported desktop inconsistencies |
-| TTS | flutter_tts + IPA SSML | Cloud TTS | Cloud breaks offline-first constraint |
-| Parser | petitparser | dart:convert RegExp | RegExp can't express recursive grammar; poor error messages for user-facing rule language |
-| PDF | Bundle as JSON asset | Runtime PDF parsing | Runtime parsing adds complexity and dependency; the Thesaurus PDF is fixed content |
-| Anki export | Custom (archive + sqlite3) | Third-party Anki lib | No mature Dart Anki library exists; the format is simple enough to implement directly |
-| Navigation | go_router | auto_route | go_router is now the Flutter team's officially recommended router |
+| Recommended | Alternative | When Alternative Is Better |
+|-------------|-------------|---------------------------|
+| anthropic_sdk_dart | Raw http + SSE parsing | Never for this project — sdk_dart is actively maintained, handles SSE and streaming properly, already wraps the protocol |
+| anthropic_sdk_dart | Genkit Dart (Google) | If targeting multi-model (Gemini + Claude + OpenAI) in a single abstraction layer — overkill for a Claude-primary app |
+| mcp_client + mcp_server | Custom JSON-RPC over stdio | If MCP packages prove too immature; the MCP wire protocol is simple (~200 lines) to implement manually |
+| flutter_tts | espeak-ng subprocess | On Linux where flutter_tts/speech-dispatcher is unreliable; also better for IPA input on all platforms as a fallback |
+| flutter_tts | Cloud TTS (ElevenLabs, Google) | If voice quality is a priority and offline constraint is relaxed — could be opt-in feature |
+| Font-based writing system | In-app glyph vector editor | Never — glyph editor is a product unto itself (FontForge, Glyphr Studio are free and purpose-built) |
+| Custom layout (interlinear) | Third-party gloss widget | No Dart interlinear gloss widget exists; custom Row/Column layout is 30 lines and fully controllable |
+| Algorithmic sound changes | ML-based sound evolution | ML adds no value here — deterministic rule application is what conlangers need; probabilistic models produce random garbage for controlled language design |
 
 ---
 
-## Installation (pubspec.yaml dependencies)
+## What NOT to Add
 
-```yaml
-dependencies:
-  flutter:
-    sdk: flutter
-
-  # State management
-  flutter_riverpod: ^2.5.0      # [VERIFY version]
-  riverpod_annotation: ^2.3.0   # [VERIFY version]
-
-  # Database
-  drift: ^2.19.0                # [VERIFY version]
-  sqlite3_flutter_libs: ^0.5.0  # [VERIFY version]
-
-  # Audio
-  just_audio: ^0.9.0            # [VERIFY version]
-  audio_session: ^0.1.0         # [VERIFY version]
-
-  # TTS
-  flutter_tts: ^4.0.0           # [VERIFY version]
-
-  # Parsing / morphology engine
-  petitparser: ^6.0.0           # [VERIFY version]
-  string_scanner: ^1.2.0        # [VERIFY version]
-
-  # File system
-  path_provider: ^2.1.0         # [VERIFY version]
-  file_picker: ^8.0.0           # [VERIFY version]
-  path: ^1.9.0                  # [VERIFY version]
-  archive: ^3.4.0               # [VERIFY version]
-
-  # UI
-  flutter_markdown: ^0.7.0      # [VERIFY version]
-  data_table_2: ^2.5.0          # [VERIFY version]
-  go_router: ^14.0.0            # [VERIFY version]
-
-  # PDF export
-  pdf: ^3.10.0                  # [VERIFY version]
-  printing: ^5.12.0             # [VERIFY version]
-
-  # Data modeling
-  freezed_annotation: ^2.4.0    # [VERIFY version]
-  json_annotation: ^4.9.0       # [VERIFY version]
-
-  # HTTP (for AI API calls)
-  http: ^1.2.0                  # [VERIFY version]
-
-dev_dependencies:
-  flutter_test:
-    sdk: flutter
-  build_runner: ^2.4.0          # [VERIFY version]
-  drift_dev: ^2.19.0            # [VERIFY version]
-  riverpod_generator: ^2.4.0    # [VERIFY version]
-  freezed: ^2.5.0               # [VERIFY version]
-  json_serializable: ^6.7.0     # [VERIFY version]
-  mocktail: ^1.0.0              # [VERIFY version]
-```
+| Avoid | Why | Use Instead |
+|-------|-----|-------------|
+| genkit_dart | Abstracts away Claude-specific features (extended thinking, MCP, tool use) that we need direct access to | anthropic_sdk_dart directly |
+| langchain_dart | Heavyweight RAG/chain framework designed for document Q&A pipelines; wrong abstraction for a creative tools app | Direct anthropic_sdk_dart calls with project context in system prompt |
+| flutter_gemini | Google Gemini SDK — wrong model | anthropic_sdk_dart |
+| tflite_flutter | On-device ML inference — unnecessary; no ML features planned | Nothing — evolution and etymology are rule-based |
+| dart_openai | OpenAI SDK — wrong model | anthropic_sdk_dart |
+| super_editor | Full document editor framework; too heavy for culture wiki scratchpad | flutter_markdown_plus with a plain TextField for editing |
+| Any Python NLP library (via FFI/subprocess) | NLP libraries are Python-only; calling them via subprocess creates fragile cross-process dep | Pure Dart implementation using existing petitparser |
 
 ---
 
-## Confidence Assessment
+## Version Compatibility
 
-| Area | Confidence | Notes |
-|------|------------|-------|
-| Flutter desktop stability | HIGH | Production-stable since 3.x; well-established |
-| drift for SQLite | HIGH | Dominant Flutter ORM; well-established pattern |
-| Riverpod for state | HIGH | De facto standard for Flutter apps in 2024-2025 |
-| just_audio for playback | MEDIUM | Desktop support is good but OGG on Windows needs verification |
-| flutter_tts + IPA SSML | MEDIUM | macOS SSML IPA support is documented; Windows/Linux varies |
-| petitparser for morphology | HIGH | Mature library, actively maintained, right tool for PEG parsing |
-| MCP integration approach | LOW | MCP was rapidly evolving; Dart MCP library maturity unknown as of Aug 2025 — verify against current pub.dev |
-| Anki export (DIY) | MEDIUM | Format is stable and documented; implementation straightforward |
-| PDF generation | HIGH | `pdf` package is mature and actively maintained |
-| All version numbers | LOW | Cannot verify live — all marked [VERIFY]; check pub.dev before pinning |
+| Package | Compatible With | Notes |
+|---------|-----------------|-------|
+| anthropic_sdk_dart ^1.5.0 | Dart SDK ^3.10.4 (current) | No conflict — requires Dart 3.x which is already the project SDK |
+| mcp_client ^1.1.0 | Dart SDK ^3.x | Listed as cross-platform: Android, iOS, web, Linux, Windows, macOS |
+| mcp_server ^1.0.3 | Dart SDK ^3.x | Same package family as mcp_client |
+| flutter_tts ^4.2.5 | macOS 10.15+, Flutter 3.x | macOS requirement met; Darwin 25.1.0 is far above minimum |
+| flutter_svg ^2.2.4 | Flutter 3.x | Long-stable package; no known conflicts with current deps |
+| flutter_markdown_plus ^1.0.7 | Flutter 3.x | Drop-in for flutter_markdown; same API |
 
 ---
 
 ## Platform-Specific Notes
 
-### macOS
-- Primary development target (env shows Darwin 25.1.0)
-- Requires `macos/Runner/DebugProfile.entitlements` to include network client entitlement for Wikipedia IPA audio fetching and AI API calls
-- `com.apple.security.network.client` entitlement needed
-- AVSpeechSynthesizer supports `<phoneme alphabet="ipa">` SSML — best TTS path for conlang
+### macOS (primary target)
+- Add `com.apple.security.network.client` to entitlements for Claude API calls
+- AVSpeechSynthesizer + SSML `<phoneme alphabet="ipa">` is the best TTS path for conlang — use this
+- Custom TTF/OTF fonts work identically to standard font loading; no additional entitlements
 
 ### Windows
-- Verify OGG audio playback — may need to bundle FFmpeg for just_audio
-- SAPI TTS supports SSML phonemes but voice coverage varies
-- sqlite3_flutter_libs bundles its own SQLite DLL; no system dependency
+- flutter_tts uses SAPI; phoneme support varies by voice — test with at least one voice
+- Consider espeak-ng subprocess as Windows fallback for IPA TTS
+- MCP STDIO transport: `Process.start()` spawning a Dart binary works the same as macOS
 
 ### Linux
-- espeak-ng likely available as system package; consider using it directly for TTS instead of flutter_tts
-- SQLite via sqlite3_flutter_libs works on Linux
-- just_audio uses GStreamer on Linux — verify GStreamer is available or needs bundling
+- flutter_tts uses speech-dispatcher; quality varies — espeak-ng subprocess recommended
+- MCP STDIO transport: same approach as macOS/Windows
+
+---
+
+## Architecture Integration Points
+
+**Interlinear gloss flow:**
+Scratchpad text → tokenizer (petitparser, existing) → morpheme analyzer (existing morphology engine) → gloss lookup (existing DB) → `GlossRow` widget (custom, Row of token columns)
+
+**TTS flow:**
+Scratchpad text → tokenizer → phonology rule application (existing) → IPA string assembly → `flutter_tts.speak(ssml)` on macOS / espeak-ng fallback
+
+**AI chat flow (Mode A):**
+User message → system prompt builder (reads project DB via drift, existing) → `anthropic_sdk_dart` streaming call → token stream → `StreamBuilder` chat widget
+
+**AI MCP flow (Mode B):**
+Claude Desktop launches `dart run bin/mcp_server.dart --project /path/to/project.conlang` → `mcp_server` package handles JSON-RPC over stdio → tools read/write via drift (existing)
+
+**Writing system font flow:**
+User imports TTF/OTF into project assets folder → app hot-loads font via `FontLoader` (dart:ui) → `TextStyle(fontFamily: 'UserScript')` used for conlang text widgets project-wide
+
+**Sound change modeling:**
+New `EvolutionRulesTable` in drift schema → petitparser (existing) extended with environment context syntax → rule application pipeline → diff view widget (before/after lexicon state)
 
 ---
 
 ## Sources
 
-- Training data (August 2025 cutoff) — Flutter, Dart, pub.dev ecosystem knowledge
-- All claims marked [VERIFY] must be confirmed at https://pub.dev before use
-- Anki .apkg format: https://github.com/ankitects/anki/blob/main/pylib/anki/collection.py (schema reference)
-- MCP Protocol specification: https://modelcontextprotocol.io/
-- Wikipedia IPA audio files: https://en.wikipedia.org/wiki/IPA_pulmonic_consonant_chart_with_audio
-- Conlanger's Thesaurus: https://www.fiatlingua.org/
+- pub.dev/packages/anthropic_sdk_dart — v1.5.0 verified live, streaming and tool use confirmed
+- pub.dev/packages/mcp_client — v1.1.0 verified live, STDIO/SSE/HTTP transports confirmed, macOS listed
+- pub.dev/packages/mcp_server — v1.0.3 verified live
+- pub.dev/packages/flutter_tts — v4.2.5 verified live, macOS 10.15+ confirmed
+- pub.dev/packages/flutter_svg — v2.2.4 verified live
+- pub.dev/packages/flutter_markdown_plus — v1.0.7 verified live, confirmed replacement for discontinued flutter_markdown
+- Flutter docs — FontLoader API, WidgetSpan, CustomPainter text layout — training data HIGH confidence
+- MCP Protocol spec: https://modelcontextprotocol.io/
 
-*Note: Research tools (WebSearch, WebFetch, Bash, Read) were restricted during this session. Version numbers are based on training knowledge and MUST be verified against live pub.dev before implementation. The architectural recommendations are HIGH confidence; the specific version numbers are LOW confidence.*
+---
+*Stack research for: Flutter conlang workbench v2.0 additions*
+*Researched: 2026-04-13*

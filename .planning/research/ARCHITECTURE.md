@@ -1,492 +1,419 @@
-# Architecture Patterns
+# Architecture Research
 
-**Domain:** Flutter desktop conlang construction tool
-**Researched:** 2026-04-08
-**Confidence:** HIGH (Flutter/Dart/SQLite/MCP are stable, well-documented domains)
+**Domain:** Flutter desktop conlang workbench — v2.0 feature integration
+**Researched:** 2026-04-13
+**Confidence:** HIGH (all conclusions drawn from direct codebase inspection, not assumptions)
 
 ---
 
-## Recommended Architecture
+## What the Existing Architecture Actually Is
 
-The system follows a **layered, plugin-capable monolith** with a clear separation between:
+Direct inspection of the codebase reveals the following concrete structure (not aspirational — what exists today):
 
-1. **UI layer** — Flutter widgets, screen state, navigation
-2. **Feature modules** — domain logic per subsystem (phonology, lexicon, morphology, grammar, culture, scratchpad)
-3. **Engine layer** — pure-Dart computation engines (morphology, phonotactics, parser, glosser)
-4. **Data layer** — SQLite repositories, project registry, file I/O
-5. **Service layer** — cross-cutting concerns (TTS pipeline, IPA audio, MCP server, Anki export)
+**Navigation:** Two-level `StatefulShellRoute` in go_router. Outer shell = `AppShell` (3 top-level tabs: Phonology, Grammar, Lexicon). Inner shells = per-tab `PhonologyShell`, `GrammarShell`, `LexiconShell` each with 3-4 sub-tabs.
 
-The morphology engine and its pattern mini-language sit at the center: lexicon, grammar, scratchpad, and AI agent all depend on it.
+**State management:** Mix of Riverpod codegen (`@riverpod` annotation) and hand-written providers. Hand-written providers are used wherever Drift-generated types appear (because `riverpod_generator` 3.x cannot resolve Drift part-file types at codegen time — this is an established constraint, documented inline in `grammar_providers.dart`).
+
+**Database:** Drift/SQLite, schema v13. Single `AppDatabase` with all feature tables registered. One database file per project (`project.db`). All feature DAOs are properties of `AppDatabase`. Project switching works via `currentDatabaseProvider` returning the open `AppDatabase` — all feature DAO providers watch `currentDatabaseProvider` and return null when no project is open.
+
+**Feature pattern:** Every feature follows `data/` (DAO + providers) → `domain/` (pure Dart logic) → `presentation/` (widgets). This is the established, working pattern.
+
+**Central computation:** `MorphologyEngine` (pure Dart, in `morphology/domain/`) is the evaluation core. `ParadigmEngine` (`grammar/domain/`) wraps it for paradigm cell resolution. `PhonemeInventory` is the shared vocabulary-of-phonemes type passed between engines.
+
+---
+
+## System Overview
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                        Flutter UI                           │
-│  [Phonology] [Lexicon] [Grammar] [Culture] [Scratchpad]     │
-└──────────────┬──────────────────────────────────────────────┘
-               │ Riverpod providers
-┌──────────────▼──────────────────────────────────────────────┐
-│                    Feature Modules                          │
-│  PhonologyService  LexiconService  GrammarService           │
-│  CultureService    ScratchpadService                        │
-└──────────┬──────────────┬──────────────┬────────────────────┘
-           │              │              │
-┌──────────▼──────┐ ┌─────▼──────┐ ┌───▼───────────────────┐
-│  Engine Layer   │ │ Data Layer │ │   Service Layer        │
-│                 │ │            │ │                        │
-│ MorphologyEngine│ │ SQLite     │ │ TTS Pipeline           │
-│ PhonologyEngine │ │ Repos      │ │ IPA Audio Cache        │
-│ Parser/Glosser  │ │ Project    │ │ MCP Server             │
-│ PatternRuntime  │ │ Registry   │ │ Anki Exporter          │
-└─────────────────┘ └────────────┘ └────────────────────────┘
+┌─────────────────────────────────────────────────────────────────┐
+│                         AppShell (go_router)                    │
+│  [Phonology] [Grammar] [Lexicon] [Scratchpad*] [Writing Sys.*]  │
+└─────┬────────────┬────────────────────┬────────────────────────┘
+      │            │                    │
+      ▼            ▼                    ▼
+  Phonology    Grammar               Lexicon
+  Shell        Shell                 Shell
+  (existing)   (existing +           (existing +
+               analytic grammar)     etymology)
+      │            │                    │
+      └─────────┬──┘────────────────────┘
+                │ Riverpod providers (currentDatabaseProvider)
+                ▼
+         AppDatabase (Drift/SQLite)
+         schema v13 → v14+ for new tables
+                │
+         Feature DAOs (one per feature)
+                │
+         Pure Domain Engines
+         MorphologyEngine ← central
+         ParadigmEngine
+         PhonologyEngine (word_generator + phonotactic_dsl)
+         AnalyticGrammarEngine* (NEW)
+         ScratchpadEngine* (NEW)
+         SoundChangeEngine* (NEW)
+
+* = new in v2.0
 ```
 
 ---
 
-## Component Boundaries
+## New Features and Their Integration Points
 
-### Component: ProjectRegistry
+### 1. Analytic Grammar System
 
-**Responsibility:** Knows where all project folders live. Opens, creates, and switches projects. Each project is a directory containing a `conlang.db` SQLite file and a `meta.json`.
+**What it is:** Closed-class word inventory (particles, auxiliaries, determiners), phrase-level construction rules, word order patterns. Complements the existing morphological grammar system (which covers inflectional/derivational word forms).
 
-**Communicates with:** All repositories (passes open DB connection), UI navigation layer.
+**New vs modified:**
+- NEW: `lib/features/grammar/data/analytic_grammar_dao.dart` — CRUD for closed-class words, phrase construction rules, word order settings
+- NEW: `lib/features/grammar/domain/analytic_grammar_engine.dart` — evaluates phrase patterns
+- NEW: `lib/features/grammar/presentation/analytic/` — UI sub-tab in GrammarShell
+- MODIFIED: `lib/db/app_database.dart` — new tables (`AnalyticWords`, `PhraseRules`, `WordOrderSettings`), schema bump to v14
+- MODIFIED: `lib/router/app_router.dart` — add `/grammar/analytic` branch to GrammarShell
+- MODIFIED: `lib/features/grammar/presentation/grammar_shell.dart` — add 4th tab
 
-**Does not:** Know anything about linguistic content.
+**Key integration point:** `AnalyticWords` table needs to be searchable from the Scratchpad tokenizer (analytic particles must be recognized alongside lexeme roots). Add a `analyticsWordsDaoProvider` following the same null-when-no-project pattern as all other DAO providers.
 
----
+**Data dependencies:** Reads `PartsOfSpeech` (to classify closed-class words by POS). No write dependency on other features.
 
-### Component: PhonologyEngine (pure Dart, no I/O)
-
-**Responsibility:** Validate sequences against phonotactics rules. Apply phonological rules (SPE-style: `a / _[+nasal] → ã`). Generate candidate word forms from phonotactics templates. Produce Latin transcription from internal representation.
-
-**Communicates with:** PhonologyRepository (reads rules), MorphologyEngine (validates engine output), ScratchpadService (phonetic reading generation).
-
-**Does not:** Store data, play audio, touch the UI.
-
-**Key design:** Phonotactics are compiled to a fast DFA at load time so per-keystroke validation is O(n) per character. Store compiled DFA in memory, invalidate on rule edits.
-
----
-
-### Component: PhonologyRepository
-
-**Responsibility:** CRUD for phoneme inventory, phonotactics patterns, phonological rule definitions, Latin transcription mappings. All backed by SQLite tables in the active project DB.
-
-**Communicates with:** PhonologyEngine (supplies rules), PhonologyService (orchestrates).
-
----
-
-### Component: IPAAudioService
-
-**Responsibility:** Cache and serve IPA recording audio files sourced from Wikipedia. Downloads lazily on first access, stores in `~/Library/Application Support/ConlangWorkbench/ipa_cache/`. Provides a stream/future API for audio playback.
-
-**Communicates with:** PhonologyService (triggered from IPA chart UI), no project DB dependency (global cache).
-
-**Does not:** Know about conlang-specific phonemes — it serves standard IPA symbol recordings only.
-
----
-
-### Component: MorphologyEngine (pure Dart, no I/O)
-
-**Responsibility:** Parse, compile, and execute the pattern mini-language. Apply rules to produce derived forms. Support all morphological strategies:
-- Concatenative: prefix/suffix/circumfix
-- Infixation: positional insertion
-- Vowel replacement / ablaut
-- Triconsonantal templates (Semitic): `C1VC2VC3` skeleton + vowel pattern
-- Reduplication
-- Suppletion (lookup table fallback)
-
-**Communicates with:** MorphologyRepository (loads pattern definitions), LexiconService (derives words on demand), GrammarService (generates declension/conjugation tables), ScratchpadService (applies rules during parsing).
-
-**Does not:** Store derived words persistently (derived words are recomputed from rules + roots, cached in DB as a materialized view).
-
-**Key design:** The pattern mini-language is compiled to a small AST → bytecode interpreter. This makes the plugin architecture natural: a plugin is a compiled pattern program. Pattern programs are pure functions `(input: MorphInput) → MorphOutput` so they are trivially testable and composable.
-
----
-
-### Component: PatternRuntime (plugin architecture)
-
-**Responsibility:** Host the pattern mini-language execution environment. Expose a registration API so each morphological strategy is a named plugin:
+**Schema additions:**
 ```
-PatternRuntime.register('semitic-template', SemiticTemplatePlugin());
-PatternRuntime.register('vowel-harmony', VowelHarmonyPlugin());
+AnalyticWords: id, form (IPA), romanization, meaning, posId(FK), wordOrderRole
+PhraseRules:   id, name, pattern (DSL string), ordering
+WordOrderSettings: projectSettings key-value (reuse existing ProjectSettings table)
 ```
 
-**Communicates with:** MorphologyEngine (runtime is embedded within engine), plugin implementations.
-
-**Design rationale:** Rather than a large switch statement, each strategy is a class implementing `MorphPlugin` with `matches(PatternNode)` and `apply(MorphInput) → MorphOutput`. New morphological strategies ship as new plugin classes without touching the engine core. This is the extensibility seam for future language type support.
-
 ---
 
-### Component: MorphologyRepository
+### 2. Writing Scratchpad
 
-**Responsibility:** CRUD for morphological rule definitions (stored as pattern mini-language source strings + metadata). Persists rule sets, rule ordering, rule groups. Caches compiled bytecode (invalidated on edit).
+**What it is:** Text input area where the user writes phrases in their conlang and gets automatic parsing: tokenization → morphological analysis → interlinear gloss, with IPA transcription and error highlighting.
 
-**Communicates with:** MorphologyEngine (supplies compiled rules), LexiconRepository (join for derived word storage).
+**New vs modified:**
+- NEW: `lib/features/scratchpad/` — full new feature module
+  - `data/scratchpad_providers.dart`
+  - `domain/tokenizer.dart` — splits romanized/IPA text on known word boundaries
+  - `domain/scratchpad_engine.dart` — orchestrates tokenize → analyze → gloss pipeline
+  - `domain/interlinear_gloss.dart` — result model
+  - `presentation/scratchpad_shell.dart` — new top-level tab shell
+  - `presentation/scratchpad_page.dart`
+  - `presentation/interlinear_display.dart` — renders aligned morpheme tiers
+- NEW: `lib/features/scratchpad/domain/morph_analyzer.dart` — wraps MorphologyEngine for analysis mode (as opposed to generation mode)
+- MODIFIED: `lib/shared/widgets/app_shell.dart` — add "Scratchpad" tab to `_tabs` list
+- MODIFIED: `lib/router/app_router.dart` — add Branch 3: `/scratchpad`
 
----
+**Key integration points:**
 
-### Component: LexiconService
+1. **Tokenizer reads from lexicon.** The tokenizer must look up every candidate token against `LexemeDao.watchAllLexemes()` to recognize known words. Use the existing `allLexemeListProvider` from `lexeme_providers.dart` — it already streams the full lexeme list.
 
-**Responsibility:** Orchestrate root word management and derived word resolution. Trigger MorphologyEngine for derivation. Manage etymology chains. Integrate Swadesh list and Conlanger's Thesaurus lookups. Trigger Anki export.
+2. **Tokenizer reads from AnalyticWords.** Closed-class words (particles, aux verbs) defined in the analytic grammar system must also be recognized. The tokenizer needs to watch `AnalyticWordsDaoProvider` as well.
 
-**Communicates with:** LexiconRepository, MorphologyEngine, PhonologyEngine (validates new words), AnkiExporter.
+3. **Morphological analysis reuses MorphologyEngine.** The scratchpad needs analysis direction (unknown surface form → which root + which rules?), which is the reverse of the existing generation direction (root + rules → surface form). This is a new `analyze()` method on `MorphologyEngine` or a separate `MorphologyAnalyzer` that tries all active rules against the token and returns candidate parses.
 
----
+4. **IPA transcription reuses RomanizationBijection.** Already in `phonology/data/romanization_bijection.dart` — use it to convert romanized tokens to IPA for phonetic display.
 
-### Component: LexiconRepository
+5. **Phonotactic violation highlighting reuses existing logic.** `PhonotacticValidationProvider` in `lexicon/data/` already does this. The scratchpad can either depend on it directly or replicate the call pattern.
 
-**Responsibility:** CRUD for root words, derived words (materialized), etymologies. FTS5 full-text search index over headwords and definitions. Phonotactics violation flags (computed column or stored flag updated on phonology rule change).
-
-**Communicates with:** LexiconService, MorphologyRepository.
-
-**Key design:** Derived words table stores `(root_id, rule_id, surface_form, gloss)`. Surface form is recomputed and re-stored when rules change — treat it as a materialized cache, not source of truth. Source of truth is `(root, rule)` pair.
-
----
-
-### Component: GrammarService
-
-**Responsibility:** Parts-of-speech definitions, declension/conjugation rule system management, word order rules, typology choices (ergative/accusative, etc.), modality expression strategy (morphological vs analytic). Generate complete paradigm tables by feeding words through MorphologyEngine.
-
-**Communicates with:** GrammarRepository, MorphologyEngine (paradigm generation), LexiconService (per-word exception lookup).
-
----
-
-### Component: GrammarRepository
-
-**Responsibility:** CRUD for POS definitions, feature categories (case, tense, aspect, mood, number, gender...), rule assignments, typology flag settings, word order constraints, per-word paradigm exceptions.
-
-**Communicates with:** GrammarService.
-
----
-
-### Component: CultureService + CultureRepository
-
-**Responsibility:** Wiki-style Markdown document management with internal `[[link]]` syntax. Document graph (pages link to each other). Full-text search. Image attachments stored as files in project folder.
-
-**Communicates with:** UI directly (lightweight — no linguistic computation). File system for attachments.
-
----
-
-### Component: ScratchpadService
-
-**Responsibility:** Orchestrate the full writing analysis pipeline:
-1. Tokenizer: split text into tokens (respects known word boundaries)
-2. MorphologyEngine: analyze each token against all active rules, producing morpheme segmentation
-3. PhonologyEngine: generate phonetic reading
-4. InterlinearGlosser: align morpheme analyses with source text for interlinear display
-5. TTSPipeline: feed phonetic reading to TTS
-
-Also: unknown word detection (token not in lexicon after analysis → flagged), phonotactics violation highlighting (token fails phonotactics → red underline).
-
-**Communicates with:** LexiconRepository (token lookup), MorphologyEngine, PhonologyEngine, TTSPipeline.
-
----
-
-### Component: TTSPipeline
-
-**Responsibility:** Convert phonetic transcription (output of PhonologyEngine) into audible speech. Strategy: use a configurable backend — initially `flutter_tts` with phoneme-to-SSML mapping; optionally a local ML model (e.g., MaryTTS or Kokoro) for better phoneme control.
-
-**Communicates with:** ScratchpadService (input: phonetic string), audio output device.
-
-**Key design:** Separate the phoneme-to-speech-backend mapping into a `TTSBackend` interface. This isolates the ML model swap without touching ScratchpadService.
-
----
-
-### Component: MCPServer
-
-**Responsibility:** Expose all project data as MCP tools so an AI agent (Claude or other) can read and write to the conlang project. Runs as a local subprocess or in-process HTTP server on a fixed port. Exposes tools:
-- `get_phoneme_inventory`, `get_phonotactics_rules`
-- `search_lexicon`, `get_word_etymology`, `add_root_word`
-- `get_grammar_rules`, `get_paradigm_table`
-- `get_culture_page`, `list_culture_pages`
-- `analyze_phrase` (runs ScratchpadService pipeline)
-- `get_project_summary`
-
-**Communicates with:** All repositories (read) and services (write path for `add_root_word`, etc.). Does not bypass service layer — always goes through services to maintain consistency.
-
-**Key design:** MCP server is a thin JSON-RPC/HTTP layer over the existing service API. No business logic lives in MCP handlers — they delegate immediately to services. This means the MCP server can be tested by testing services independently.
-
----
-
-## Data Flow
-
-### Flow 1: Adding a new root word
-
+**Data flow:**
 ```
-UI (Lexicon tab)
-  → LexiconService.addRoot(form, gloss, POS)
-    → PhonologyEngine.validate(form) [phonotactics check]
-    → LexiconRepository.insertRoot()
-    → MorphologyEngine.deriveAll(root, activeRules)
-    → LexiconRepository.upsertDerivedForms()
-    → LexiconService emits updated word list
+User types text
+  → debounce 300ms
+  → ScratchpadEngine.analyze(text)
+      → Tokenizer.tokenize(text, knownWords, analyticWords)
+      → for each token:
+          if in lexicon: MorphologyAnalyzer.analyze(token, activeRules) → segments
+          if unknown: flag as unknown (red underline)
+          PhonologyEngine.applyRewriteRules(token) → phonetic form
+      → InterlinearGloss assembled from segments
   → UI rebuilds via Riverpod watch
 ```
 
-### Flow 2: Scratchpad phrase analysis
+---
+
+### 3. AI Integration (MCP)
+
+**What it is:** A local MCP server exposing project data as tools so an external AI agent (Claude Desktop, claude CLI) can read and modify the conlang. The app itself does not host an AI — it hosts the MCP server.
+
+**New vs modified:**
+- NEW: `lib/features/ai/` — MCP server feature module
+  - `data/mcp_server.dart` — stdio or HTTP JSON-RPC server
+  - `data/mcp_tool_handlers.dart` — per-tool handler functions
+  - `data/project_snapshot_service.dart` — assembles full project JSON snapshot
+- NEW: `lib/features/ai/presentation/` — settings panel for MCP server (port, enable/disable)
+- MODIFIED: `lib/features/project/presentation/project_menu.dart` — add "Start MCP Server" menu item
+- MODIFIED: `pubspec.yaml` — add HTTP server package (e.g., `shelf` + `shelf_router`) for HTTP transport, OR implement stdio transport (simpler for Claude Desktop)
+
+**Key integration points:**
+
+1. **MCP server reads existing providers, never bypasses DAOs.** Every tool handler calls the same service/provider chain the UI uses. No direct SQL queries in MCP handlers.
+
+2. **Project data access pattern:** MCP server needs a reference to the current `AppDatabase`. The cleanest approach is a `ProjectSnapshotService` that reads from all DAOs and assembles a JSON-serializable snapshot. This service is also useful for analytics and export.
+
+3. **Transport choice:** For Claude Desktop integration, stdio transport is simpler (no port conflicts, no HTTP setup). For claude CLI (`/mcp add`), both work. Recommend stdio transport first.
+
+4. **Tool surface:** Start minimal — `get_phoneme_inventory`, `search_lexicon`, `get_paradigm_table`, `analyze_phrase`. Add write tools (`add_word`, `add_rule`) only after read tools are stable.
+
+5. **No UI dependency:** The MCP server runs headlessly alongside the Flutter app. Use a `StateNotifierProvider` or simple bool flag to track server running state for the UI indicator.
+
+**No new DB schema needed.** MCP tools are read-only by default; write tools go through existing DAOs.
+
+---
+
+### 4. Language Evolution (Sound Change Modeling)
+
+**What it is:** Sound change simulation — apply historically-motivated sound changes (Grimm's law, vowel shifts, etc.) to project phonemes and words to model a daughter language. Allophone-to-phoneme promotion lets a conditioned variant become a phonemic contrast.
+
+**New vs modified:**
+- NEW: `lib/features/evolution/` — new feature module
+  - `data/evolution_dao.dart` — CRUD for sound change rules, evolution project metadata
+  - `domain/sound_change_engine.dart` — applies diachronic rules to word lists
+  - `presentation/evolution_shell.dart` — new tab or sub-feature
+- NEW: `lib/db/app_database.dart` tables: `SoundChanges` (ordered rules with context DSL), `EvolutionProjects` (named evolution snapshots)
+- MODIFIED: `lib/shared/widgets/app_shell.dart` — either add top-level "Evolution" tab or nest it within Phonology shell
+
+**Key integration points:**
+
+1. **SoundChangeEngine reuses PhonologicalRewriteRule DSL.** Diachronic sound changes follow the same SPE-style `A → B / C_D` notation already implemented in `phonology/domain/phonotactic_dsl.dart`. Reuse the parsing and matching infrastructure.
+
+2. **SoundChangeEngine inputs the full lexeme list.** It reads from `LexemeDao` (all words in IPA) and applies the rule chain to each, producing a new phonemic form. The result can either (a) create a new derived project, or (b) produce a diff preview showing what would change.
+
+3. **Allophone promotion modifies PhonemeDao.** When the user promotes an allophone, a new phoneme row is added to `Phonemes` and `RewriteRules` is updated to remove the conditioned rule. This is a multi-table transaction.
+
+4. **Evolution "snapshots" should not modify the live project.** Sound change application should preview output, not rewrite existing lexemes. Store snapshots in a separate table or export to a new project file.
+
+**Nesting recommendation:** Put Evolution as a sub-feature under the Phonology tab (4th sub-tab in `PhonologyShell`) rather than a new top-level tab. It is phonology-centric, and adding another top-level tab increases cognitive load.
+
+---
+
+### 5. Writing System Tab
+
+**What it is:** Define a custom script or orthography for the conlang — character mappings, glyph definitions, rendering rules. Preview text rendered in the custom script.
+
+**New vs modified:**
+- NEW: `lib/features/writing_system/` — new feature module
+  - `data/writing_system_dao.dart` — CRUD for character mappings, glyph metadata
+  - `domain/script_renderer.dart` — maps phoneme/grapheme → custom symbol, handles directionality
+  - `presentation/writing_system_shell.dart`
+  - `presentation/script_editor_page.dart`
+  - `presentation/script_preview_page.dart`
+- NEW: DB tables: `ScriptCharacters` (unicode codepoint or SVG path, phoneme mapping), `ScriptSettings` (direction, case system)
+- MODIFIED: `lib/shared/widgets/app_shell.dart` — add "Writing" tab
+- MODIFIED: `lib/router/app_router.dart` — add Branch N: `/writing`
+
+**Key integration points:**
+
+1. **Script rendering hooks into RomanizationMappings.** The romanization system (`RomanizationMappings` table) already maps IPA → Latin. The writing system is a parallel mapping: IPA → custom script symbol. These two systems are independent columns on the same conceptual data (how is this phoneme written?).
+
+2. **Scratchpad previews in custom script.** Once writing system is defined, the Scratchpad can show a third tier in the interlinear display: [custom script] / [romanization] / [IPA] / [gloss]. This is additive — write system support in Scratchpad is a `if (writingSystemDefined) ...` render path.
+
+3. **Font rendering for custom scripts:** If the custom script uses existing Unicode characters (e.g., Cyrillic, Tengwar PUA encodings), a custom font can be loaded via Flutter's `FontLoader`. If it uses SVG path glyphs, custom `CustomPainter` drawing is needed. The script renderer should abstract this behind a `GlyphRenderer` interface.
+
+---
+
+### 6. Automatic Etymology
+
+**What it is:** The lexicon already supports manual etymology links (`LexemeParents` table, `derivedFromLexemeId`/`derivedViaRuleId` on `Lexemes`). Automatic etymology detects compound words and common morphological patterns and suggests etymology links.
+
+**New vs modified:**
+- NEW: `lib/features/lexicon/domain/etymology_suggester.dart` — pure Dart analysis
+- NEW: `lib/features/lexicon/presentation/dictionary/etymology_suggestion_widget.dart` — inline suggestion chips in word detail
+- MODIFIED: `lib/features/lexicon/presentation/dictionary/word_detail_panel.dart` — add etymology suggestion section
+- No new DB schema needed — uses existing `LexemeParents` and `derivedViaRuleId`
+
+**Key integration points:**
+
+1. **EtymologySuggester gets existing roots + derivational rules as input.** It is a pure function: `suggest(targetLexeme, allLexemes, derivationalRules) → List<EtymologySuggestion>`. Suggestions are: "This word matches rule X applied to root Y" or "This word is a possible compound of A + B".
+
+2. **Suggestion acceptance writes to existing `LexemeParents` DAO.** No new schema needed. The user accepts a suggestion and `LexemeParentsDao.insertParent()` is called.
+
+3. **Computation can be expensive for large lexicons.** Run in a `compute()` isolate call, not on the main thread. Cache suggestions per-word in a `FutureProvider.family` keyed on lexeme ID. Invalidate when lexemes or rules change.
+
+---
+
+## Data Flow Changes Summary
+
+### What changes in existing flows:
+
+**Flow: Adding a root word** — unchanged. No new code path needed; etymology suggester runs lazily when the word detail is opened.
+
+**Flow: Paradigm table generation** — unchanged. Analytic grammar is a separate system alongside morphological grammar, not replacing it.
+
+**Flow: Project switch** — unchanged. New DAO providers follow the same `currentDatabaseProvider` null-guard pattern.
+
+### What is new:
+
+**Flow: Scratchpad analysis (NEW)**
+```
+User types text
+  → ScratchpadEngine(ref).analyze(text)
+      reads: allLexemeListProvider, analyticWordsProvider, activeMorphRulesProvider
+      reads: phonemeInventoryProvider (for rewrite rules)
+      → Tokenizer.tokenize(text, lexemes, analyticWords)
+      → MorphologyAnalyzer.analyze(token, rules, inventory)
+      → InterlinearGloss assembled
+  → ScratchpadResultProvider emits new value
+  → InterlinearDisplayWidget rebuilds
+```
+
+**Flow: MCP tool call (NEW)**
+```
+External AI agent → stdio/HTTP → MCP server
+  → MCPToolHandler.dispatch(toolName, params)
+  → reads from existing providers/DAOs (no bypass)
+  → serializes to JSON
+  → returns to AI agent
+```
+
+**Flow: Sound change preview (NEW)**
+```
+User defines SoundChange rules in Evolution tab
+  → SoundChangeEngine.preview(rules, lexemes, inventory)
+      reuses PhonologicalRewriteRule parsing
+      applies chain to each lexeme.ipa
+      returns Map<lexemeId, newForm>
+  → EvolutionPreviewPage shows diff table
+```
+
+---
+
+## New Folder Structure
 
 ```
-User types phrase in scratchpad
-  → ScratchpadService.analyze(text)
-    → Tokenizer.tokenize(text) → [tokens]
-    → for each token:
-        LexiconRepository.lookup(token) → root candidate
-        MorphologyEngine.analyze(token, activeRules) → morpheme segments
-        PhonologyEngine.validate(token) → violation? (flag red)
-    → InterlinearGlosser.build(segments) → interlinear lines
-    → PhonologyEngine.transcribe(text) → phonetic string
-    → result: InterlinearGloss + ViolationMap + PhoneticReading
-  → UI renders interlinear display + highlights
-```
-
-### Flow 3: Paradigm table generation
-
-```
-UI (Grammar tab, word selected)
-  → GrammarService.generateParadigm(wordId, posId)
-    → GrammarRepository.getFeatureMatrix(posId) → [case × number × gender...]
-    → GrammarRepository.getRules(posId) → rule list
-    → LexiconRepository.getRoot(wordId) → root form
-    → for each cell in matrix:
-        MorphologyEngine.apply(root, rules, features) → surface form
-        GrammarRepository.getException(wordId, features) → override if exists
-    → returns: ParadigmTable
-  → UI renders table
-```
-
-### Flow 4: MCP tool call (AI agent)
-
-```
-AI agent calls analyze_phrase tool
-  → MCPServer.handleToolCall("analyze_phrase", {text})
-    → ScratchpadService.analyze(text)  [same as Flow 2]
-    → serialize result as JSON
-  → AI agent receives structured gloss + violations
-```
-
-### Flow 5: Project switch
-
-```
-UI (project picker)
-  → ProjectRegistry.openProject(path)
-    → Close current SQLite connection
-    → Open new connection at path/conlang.db
-    → Invalidate all Riverpod providers (via ProviderContainer.invalidate or scoped container)
-    → All repos now hold reference to new DB connection
-  → UI rebuilds from fresh state
+lib/features/
+├── phonology/          # EXISTING — minor evolution sub-tab addition
+├── morphology/         # EXISTING — add MorphologyAnalyzer in domain/
+├── lexicon/            # EXISTING — add etymology_suggester in domain/
+├── grammar/            # EXISTING — add analytic/ sub-feature
+│   ├── data/
+│   │   └── analytic_grammar_dao.dart  # NEW
+│   ├── domain/
+│   │   └── analytic_grammar_engine.dart  # NEW
+│   └── presentation/
+│       └── analytic/  # NEW sub-tab
+├── scratchpad/         # NEW full feature module
+│   ├── data/
+│   ├── domain/
+│   └── presentation/
+├── evolution/          # NEW full feature module
+│   ├── data/
+│   ├── domain/
+│   └── presentation/
+├── writing_system/     # NEW full feature module
+│   ├── data/
+│   ├── domain/
+│   └── presentation/
+├── ai/                 # NEW MCP server module
+│   ├── data/
+│   └── presentation/
+└── ...existing features
 ```
 
 ---
 
 ## Suggested Build Order
 
-Dependencies determine the build order. Each layer must be stable before the next layer builds on it.
+Dependencies determine order. This order minimizes blocked work.
 
-### Layer 0: Project Infrastructure (prerequisite for everything)
+### Phase 1: Analytic Grammar (no new dependencies)
 
-1. `ProjectRegistry` — folder management, SQLite open/close, project metadata
-2. Database schema migration system (drift or sqflite migrations)
-3. Riverpod provider scaffold — `projectProvider`, `dbProvider`
-4. Basic Flutter shell: navigation rail (Phonology / Lexicon / Grammar / Culture / Scratchpad tabs)
+Build first because Scratchpad depends on knowing both lexeme words AND analytic words (particles). Having the analytic word inventory available before building the tokenizer avoids a partial tokenizer that must be revisited.
 
-**Why first:** Every other component needs an open DB connection and a running app shell.
+1. Schema migration: add `AnalyticWords`, `PhraseRules` tables (schema v14)
+2. `AnalyticGrammarDao` + DAO provider
+3. Grammar UI: analytic sub-tab in existing GrammarShell (4th tab)
+4. `AnalyticGrammarEngine` (phrase construction rule evaluation)
+5. Word order settings (reuse `ProjectSettings` table)
 
-### Layer 1: Phonology Engine + Repository (prerequisite for lexicon validation)
+### Phase 2: Writing Scratchpad (depends on analytic grammar for full tokenizer)
 
-5. `PhonologyRepository` — phoneme and rule CRUD
-6. `PhonologyEngine` — validator and transcriber (pure Dart, fully testable in isolation)
-7. Phonology UI: phoneme inventory editor, phonotactics rule editor
-8. `IPAAudioService` — IPA chart audio (can be done in parallel, no dependencies)
+Scratchpad is the centerpiece feature — most user-visible. Build it once the tokenizer's two lexical sources (lexemes + analytic words) are both available.
 
-**Why second:** The phonology validator is needed before lexicon (words need validation). The engine is pure Dart — build and test it before wiring to UI.
+6. `Tokenizer` (reads `allLexemeListProvider` + new `analyticWordsDaoProvider`)
+7. `MorphologyAnalyzer` wrapper in `morphology/domain/` (analysis direction for existing engine)
+8. `ScratchpadEngine` (pipeline: tokenize → analyze → gloss)
+9. `InterlinearGloss` result model
+10. Scratchpad UI: new top-level tab, text input, interlinear display, error highlighting
+11. Phonetic reading (IPA transcription tier via `RomanizationBijection`)
 
-### Layer 2: Morphology Engine + Pattern Mini-Language (prerequisite for lexicon derived forms, grammar)
+### Phase 3: Automatic Etymology (depends on stable lexicon — no blocking deps)
 
-9. Pattern mini-language: lexer → parser → AST
-10. `PatternRuntime` with plugin registration
-11. Concatenative plugin (prefix/suffix) — simplest strategy
-12. `MorphologyRepository` — rule definition CRUD
-13. `MorphologyEngine` — orchestrates runtime + repos
-14. Additional strategy plugins: infixation, ablaut, Semitic template, reduplication
+Lightweight addition to existing lexicon feature. No schema changes.
 
-**Why third:** The morphology engine is the centerpiece. Lexicon cannot store derived forms, Grammar cannot generate paradigms, and Scratchpad cannot analyze text without it. Build concatenative first (covers 80% of use cases), add Semitic/ablaut after.
+12. `EtymologySuggester` (pure Dart, in `lexicon/domain/`)
+13. Word detail panel addition — suggestion chips + acceptance action
 
-### Layer 3: Lexicon (depends on phonology + morphology)
+### Phase 4: Language Evolution (depends on phonology primitives being stable)
 
-15. `LexiconRepository` — root word CRUD, FTS5, derived forms table
-16. `LexiconService` — orchestration, derivation triggering
-17. Lexicon UI: root dictionary view, word detail, etymology editor
-18. Swadesh list integration (static bundled data)
-19. Anki export
+Reuses SPE DSL parser and PhonemeInventory types. No new DSL to write.
 
-### Layer 4: Grammar (depends on morphology + lexicon)
+14. Schema migration: `SoundChanges`, `EvolutionProjects` tables
+15. `SoundChangeEngine` (wraps existing `PhonologicalRewriteRule` parsing)
+16. `EvolutionDao` + provider
+17. Evolution UI: sub-tab in PhonologyShell (or separate tab — decision deferred)
 
-20. `GrammarRepository` — POS, feature categories, rules, exceptions
-21. `GrammarService` — paradigm generation
-22. Grammar UI: POS editor, paradigm chart, typology settings
+### Phase 5: Writing System (no hard dependencies, but completes Scratchpad third tier)
 
-### Layer 5: Scratchpad + Writing Analysis (depends on phonology + morphology + lexicon)
+Self-contained feature. Once writing system is defined, a Scratchpad enhancement can add the custom script tier.
 
-23. Tokenizer
-24. `InterlinearGlosser`
-25. `ScratchpadService` — pipeline orchestration
-26. Scratchpad UI: text input, interlinear display, violation highlights
-27. `TTSPipeline` — phonetic → audio (integrate `flutter_tts` first, ML model later)
-28. Phonetic reading display
+18. Schema migration: `ScriptCharacters`, `ScriptSettings` tables
+19. `ScriptRenderer` + `GlyphRenderer` interface
+20. Writing system UI: new top-level tab
+21. Scratchpad integration: custom script tier in interlinear display (optional, Phase 5 exit criteria)
 
-### Layer 6: Culture Wiki (independent of linguistic engines)
+### Phase 6: AI / MCP Integration (depends on all other features being stable)
 
-29. `CultureRepository` + `CultureService`
-30. Markdown editor + renderer with `[[internal link]]` support
-31. Document graph / link resolution
+The MCP server exposes what already exists. Build last so the tool API surface is stable.
 
-**Note:** Culture can be built in parallel with Layer 4 since it has no linguistic dependencies.
-
-### Layer 7: MCP Server (depends on all services being stable)
-
-32. MCP server scaffold (local HTTP or stdio JSON-RPC)
-33. Tool handlers delegating to existing services
-34. AI agent connection testing
-
-**Why last:** The MCP server is a thin wrapper. It should be built after the services it exposes are stable — otherwise the API surface keeps shifting.
+22. `ProjectSnapshotService` (assembles full project data from existing DAOs)
+23. MCP server scaffold (stdio transport first)
+24. Read tool handlers: phoneme inventory, lexicon search, paradigm table, analyze phrase
+25. Write tool handlers: add word, add rule (optional — read-only is a valid v2.0 boundary)
+26. MCP server UI: settings panel, status indicator in app menu
 
 ---
 
-## State Management: Flutter Desktop
+## Key Architectural Constraints (Carry Forward from v1.0)
 
-**Recommendation: Riverpod 2.x with code generation (`@riverpod` annotation)**
+**1. Hand-written providers for Drift types.** The `riverpod_generator` 3.x constraint means any provider that returns a Drift-generated type (`Dimension`, `MorphologicalRule`, `Lexeme`, etc.) must be written as a plain `Provider` or `StreamProvider`, not annotated with `@riverpod`. New feature providers must follow this pattern.
 
-Rationale:
-- Compile-time safety: providers are typed, no string-based lookup
-- Scoping: project-scoped providers can be overridden per project (critical for multi-project support)
-- Async support: `AsyncNotifier` and `StreamNotifier` handle DB queries naturally
-- Testability: providers can be overridden in tests without a widget tree
+**2. Null-guard pattern for no-project state.** Every DAO provider returns `null` when `currentDatabaseProvider` returns null. Feature code must guard: `if (dao == null) return Stream.value(const []);`. This is the established pattern in all six existing features.
 
-**Multi-project provider scoping pattern:**
+**3. No codegen for Drift DAOs.** Drift DAOs are part files (`part 'x_dao.g.dart'`) generated by `drift_dev`. New DAOs follow the same `@DriftAccessor` pattern. Run `dart run build_runner build` after adding new table definitions.
 
-Use a `ProviderScope` override at the project level. When a project switches, the `dbProvider` is overridden with the new connection, and all downstream providers (which depend on `dbProvider`) auto-invalidate.
-
-```dart
-// Conceptual — not prescriptive implementation
-final dbProvider = Provider<Database>((ref) => throw UnimplementedError());
-final phonemeProvider = FutureProvider<List<Phoneme>>((ref) async {
-  final db = ref.watch(dbProvider);
-  return PhonologyRepository(db).getAll();
-});
-// On project switch: rebuild ProviderScope with new dbProvider override
-```
-
-**Avoid:** `setState` for anything shared across tabs. `ChangeNotifier` is acceptable for pure UI state within a single widget (e.g., which phoneme is selected in a table row), not for domain state.
+**4. AppShell tab limit.** The `AppShell._tabs` list currently has 3 entries. v2.0 adds Scratchpad and Writing System as top-level tabs (5 total). Evolution nests under Phonology to keep top-level nav manageable. AI/MCP has no dedicated tab — it lives in the project menu.
 
 ---
 
-## Plugin Architecture for the Pattern Mini-Language
+## Anti-Patterns to Avoid in v2.0
 
-The pattern mini-language needs to handle morphological diversity without a monolithic codebase. The architecture:
+### Scratchpad running analysis synchronously on every keystroke
 
-```
-Pattern Source String
-        │
-        ▼
-   Lexer (tokenize)
-        │
-        ▼
-   Parser (build AST)
-        │
-        ▼
-   PatternNode tree
-        │
-        ▼
-   PatternRuntime.execute(node, MorphInput)
-        │  ← dispatches to registered plugin
-        ▼
-   MorphPlugin.apply(input) → MorphOutput
-```
+The tokenizer + morphological analysis across the full lexicon is not O(1). Run inside `compute()` with a 300ms debounce. Return an `AsyncValue` — show a subtle spinner in the scratchpad status bar while analysis is in flight.
 
-**Plugin interface:**
+### MCP handlers containing business logic
 
-```dart
-abstract class MorphPlugin {
-  // Returns true if this plugin handles this pattern node type
-  bool matches(PatternNode node);
-  // Pure function: input → output, no side effects
-  MorphOutput apply(MorphInput input, PatternNode node);
-}
-```
+MCP tool handlers must be pure delegation: receive JSON params, call existing DAO/service, serialize response. No linguistic logic in MCP handlers. If a capability doesn't exist as a service method yet, create the service method first, then wrap it in MCP.
 
-**Registration is declarative:**
+### Sound change engine writing to live lexeme rows
 
-```dart
-final runtime = PatternRuntime()
-  ..register(ConcatenativePlugin())      // prefix:, suffix:, circumfix:
-  ..register(InfixPlugin())              // infix: at position/before/after
-  ..register(VowelReplacementPlugin())   // ablaut: pattern
-  ..register(SemiticTemplatePlugin())    // template: C1vC2vC3
-  ..register(RedupPlugin());             // redupl: full|partial
-```
+Sound change preview must not modify `Lexemes.ipa`. It returns a diff map. Only when the user explicitly applies a change set (a distinct, confirmable action) should lexeme rows be updated — and that should be a transactional batch update with an undo snapshot.
 
-**New morphological strategy = new plugin class.** No engine changes required. This is the primary extensibility axis.
+### Writing system defined in terms of romanization (not phonemes)
 
----
+The writing system should map from **IPA phonemes** to script characters, not from romanization strings. Romanization is a display layer that can change; IPA is the canonical internal form. This keeps the writing system independent of romanization choices.
 
-## Anti-Patterns to Avoid
+### Etymology suggester blocking on the full lexicon at word-open time
 
-### Anti-Pattern 1: Storing Derived Words as Source of Truth
-
-**What goes wrong:** UI edits a derived form directly, disconnecting it from its generating rule. After a rule change, half the derived forms are stale.
-
-**Instead:** Derived forms are always recomputed from `(root, rule)`. Store the surface form as a cache for query performance. Invalidate on rule edit.
-
-### Anti-Pattern 2: Putting Morphology Logic in the Grammar Module
-
-**What goes wrong:** Grammar and lexicon both need morphology. If morphology logic lives in Grammar, Lexicon has to call Grammar to derive words — a circular dependency.
-
-**Instead:** MorphologyEngine is a shared pure-computation layer with no domain knowledge of "grammar" or "lexicon". Both call it directly.
-
-### Anti-Pattern 3: One Global SQLite Connection for All Projects
-
-**What goes wrong:** Switching projects requires restarting the app or complex connection state management. Cross-project queries become possible bugs.
-
-**Instead:** DB connection is scoped to the active project via Riverpod override. Switching projects rebuilds the provider scope with a new connection.
-
-### Anti-Pattern 4: MCP Handlers Containing Business Logic
-
-**What goes wrong:** Business rules exist in two places (MCP handler + service). They diverge. AI agent gets different behavior than the UI.
-
-**Instead:** MCP handlers are pure delegation — parse JSON, call service, serialize response. Zero logic.
-
-### Anti-Pattern 5: Phonotactics Validated Only on Save
-
-**What goes wrong:** User types a word, saves it, gets an error. Edit-save loop for phonotactics issues is frustrating. Violation not visible in other views.
-
-**Instead:** Phonotactics validation runs on every keystroke (debounced 200ms) during word editing. Violation flags are stored on the word record and shown inline everywhere the word appears (lexicon list, scratchpad, etc.).
-
-### Anti-Pattern 6: TTS Blocking the UI Thread
-
-**What goes wrong:** Phonetic synthesis stalls the UI during scratchpad analysis, especially for longer phrases.
-
-**Instead:** TTS pipeline runs in a Dart `Isolate` (or via `compute()`). Results are streamed back. UI shows a progress indicator and updates incrementally.
-
----
-
-## Scalability Considerations
-
-| Concern | At 500 words | At 5K words | At 50K words |
-|---------|--------------|-------------|--------------|
-| Lexicon search | In-memory list filter | FTS5 index (already recommended) | FTS5 + pagination |
-| Derivation on rule change | Recompute all derived forms eagerly | Background isolate recompute, progress indicator | Incremental recompute with dirty-flagging |
-| Scratchpad tokenization | Synchronous, fast | Debounce + isolate | Isolate + streaming tokens |
-| Grammar paradigm generation | Eager all cells | Lazy: compute cells on scroll | Cache paradigm tables in DB |
-| SQLite file size | <1MB | ~10MB (with audio refs) | ~100MB — consider WAL mode, VACUUM schedule |
-
-SQLite WAL mode should be enabled from day one. It gives better concurrent read performance (MCP server reads while UI writes) and is trivial to enable.
+For a 500-word lexicon, suggesting etymology on open is fast. At 5K words, it is noticeable. Run `EtymologySuggester.suggest()` inside a `FutureProvider.family` so it is computed lazily per word and cached by Riverpod until lexeme/rule data changes.
 
 ---
 
 ## Sources
 
-- Flutter architecture guidance: https://docs.flutter.dev/app-architecture (HIGH confidence — official)
-- Riverpod 2.x documentation: https://riverpod.dev/docs/introduction/getting_started (HIGH confidence — official)
-- SQLite WAL mode: https://www.sqlite.org/wal.html (HIGH confidence — official SQLite docs)
-- MCP protocol specification: https://modelcontextprotocol.io/specification (HIGH confidence — official Anthropic spec)
-- Morphological typology (agglutinative, Semitic, fusional, analytic): standard linguistics literature — Comrie, Haspelmath (HIGH confidence — well-established domain knowledge)
-- Pattern mini-language design: informed by existing conlang tools (Lexurgy, LING morphology), regex engine design patterns, and PEG parser literature (MEDIUM confidence — design synthesis, not a single canonical source)
+All findings from direct codebase inspection:
+- `/Users/neosapien/dev/conlang/lib/db/app_database.dart` (schema, table definitions)
+- `/Users/neosapien/dev/conlang/lib/router/app_router.dart` (navigation structure)
+- `/Users/neosapien/dev/conlang/lib/shared/widgets/app_shell.dart` (tab structure)
+- `/Users/neosapien/dev/conlang/lib/features/grammar/data/grammar_providers.dart` (provider pattern, Drift constraint documentation)
+- `/Users/neosapien/dev/conlang/lib/features/grammar/domain/paradigm_engine.dart` (engine composition pattern)
+- `/Users/neosapien/dev/conlang/lib/features/morphology/domain/morphology_engine.dart` (central engine interface)
+- `/Users/neosapien/dev/conlang/pubspec.yaml` (dependency versions)
