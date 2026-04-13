@@ -443,12 +443,13 @@ class _PhonemeEditDialogState extends ConsumerState<PhonemeEditDialog> {
       title: Text(_isEditing ? 'Edit Phoneme' : 'Add Phoneme'),
       content: SizedBox(
         width: 400,
-        child: Form(
-          key: _formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
+        child: SingleChildScrollView(
+          child: Form(
+            key: _formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
               // IPA symbol input — optional shortcut: typing a known symbol
               // auto-fills all feature dropdowns via reverse lookup.
               IpaTextField(
@@ -639,7 +640,11 @@ class _PhonemeEditDialogState extends ConsumerState<PhonemeEditDialog> {
             ],
           ),
         ),
+        ),
       ),
+      actionsAlignment: _isEditing
+          ? MainAxisAlignment.spaceBetween
+          : MainAxisAlignment.end,
       actions: [
         if (_isEditing)
           TextButton(
@@ -649,7 +654,6 @@ class _PhonemeEditDialogState extends ConsumerState<PhonemeEditDialog> {
             ),
             child: const Text('Delete'),
           ),
-        if (_isEditing) const Spacer(),
         TextButton(
           onPressed: _saving ? null : () => Navigator.of(context).pop(),
           child: const Text('Cancel'),
