@@ -3,137 +3,145 @@
 **Defined:** 2026-04-08
 **Core Value:** A powerful, flexible morphology engine that handles the full spectrum of language types through a readable pattern mini-language
 
-## v1 Requirements
-
-Requirements for initial release. Each maps to roadmap phases.
+## v1.0 Requirements (Shipped)
 
 ### Project Management
 
-- [ ] **PROJ-01**: User can create, open, and delete conlang projects
-- [ ] **PROJ-02**: Each project stores all data in its own SQLite database in a dedicated folder
-- [ ] **PROJ-03**: User can switch between projects from a project selector
+- [x] **PROJ-01**: User can create, open, and delete conlang projects — Validated Phase 1
+- [x] **PROJ-02**: Each project stores all data in its own SQLite database in a dedicated folder — Validated Phase 1
+- [x] **PROJ-03**: User can switch between projects from a project selector — Validated Phase 1
 
 ### Phonology
 
-- [ ] **PHON-01**: User can define a phoneme inventory (consonants and vowels) with IPA symbols, manner/place of articulation
-- [ ] **PHON-02**: User can view and interact with a full IPA chart with clickable audio playback (real recordings)
-- [ ] **PHON-03**: User can input IPA text via an on-screen IPA keyboard
-- [ ] **PHON-04**: User can define phonotactic rules (syllable structure constraints)
-- [ ] **PHON-05**: Words that violate phonotactics appear highlighted in red throughout the tool (with exception override for loanwords)
-- [ ] **PHON-06**: User can define phonological rules (e.g. a + nasal -> ã, allophonic variation)
-- [ ] **PHON-07**: User can define Latin transcription mappings (IPA to romanization)
-- [ ] **PHON-08**: User can generate random words that conform to phonotactic rules
+- [x] **PHON-01**: User can define a phoneme inventory (consonants and vowels) with IPA symbols, manner/place of articulation — Validated Phase 1
+- [x] **PHON-02**: User can view and interact with a full IPA chart with clickable audio playback (real recordings) — Validated Phase 1
+- [x] **PHON-03**: User can input IPA text via an on-screen IPA keyboard — Validated Phase 1
+- [x] **PHON-04**: User can define phonotactic rules (syllable structure constraints) — Validated Phase 1
+- [x] **PHON-05**: Words that violate phonotactics appear highlighted in red throughout the tool (with exception override for loanwords) — Validated Phase 3
+- [x] **PHON-06**: User can define phonological rules (e.g. a + nasal -> ã, allophonic variation) — Validated Phase 1
+- [x] **PHON-07**: User can define Latin transcription mappings (IPA to romanization) — Validated Phase 1
+- [x] **PHON-08**: User can generate random words that conform to phonotactic rules — Validated Phase 1
+- [x] **PHON-09**: Predefined natural classes (Stop, Liquid, Rhotic, Nasal, Fricative, etc.) with sensible IPA defaults, including sounds outside the project inventory — Validated Phase 3.2
+- [x] **PHON-11**: User can click a phoneme to view all contextual allophones based on phonological rules — Validated Phase 3.2
 
 ### Lexicon
 
-- [ ] **LEX-01**: User can add, edit, and delete root words with meaning, part of speech, and IPA transcription
-- [ ] **LEX-02**: User can view derived words generated from roots via morphological rules, with etymology tracing
-- [ ] **LEX-03**: User can search and filter the lexicon by meaning, root, part of speech, or phonetic pattern
-- [ ] **LEX-04**: User can reference the built-in Swadesh list to guide core vocabulary creation
-- [ ] **LEX-05**: User can reference the integrated Conlanger's Thesaurus for semantic coverage guidance
-- [ ] **LEX-06**: User can export vocabulary as Anki .apkg flashcards
-- [ ] **LEX-07**: User can generate new words that follow phonotactic constraints
+- [x] **LEX-01**: User can add, edit, and delete root words with meaning, part of speech, and IPA transcription — Validated Phase 3
+- [x] **LEX-02**: User can view derived words generated from roots via morphological rules, with etymology tracing — Validated Phase 3
+- [x] **LEX-03**: User can search and filter the lexicon by meaning, root, part of speech, or phonetic pattern — Validated Phase 3
+- [x] **LEX-04**: User can reference the built-in Swadesh list to guide core vocabulary creation — Validated Phase 3
+- [x] **LEX-05**: User can reference the integrated Conlanger's Thesaurus for semantic coverage guidance — Validated Phase 3
+- [x] **LEX-06**: User can export vocabulary as Anki .apkg flashcards — Validated Phase 3
+- [x] **LEX-07**: User can generate new words that follow phonotactic constraints — Validated Phase 1
 
 ### Morphology
 
-- [ ] **MORPH-01**: User can define morphological rules using a readable pattern mini-language (suffixes, prefixes, infixes, vowel replacements, root templates)
-- [ ] **MORPH-02**: The morphology engine handles agglutinative, Semitic triconsonantal, fusional, and analytic language types in one unified system
-- [ ] **MORPH-03**: User can define word derivation rules (e.g. -tion, -er, CaCCaaC templates from triconsonantal roots)
-- [ ] **MORPH-04**: User can define per-word exceptions to override any morphological rule for irregular forms
+- [x] **MORPH-01**: User can define morphological rules using a readable pattern mini-language (suffixes, prefixes, infixes, vowel replacements, root templates) — Validated Phase 2
+- [x] **MORPH-02**: The morphology engine handles agglutinative, Semitic triconsonantal, fusional, and analytic language types in one unified system — Validated Phase 2
+- [x] **MORPH-03**: User can define word derivation rules (e.g. -tion, -er, CaCCaaC templates from triconsonantal roots) — Validated Phase 2
+- [x] **MORPH-04**: User can define per-word exceptions to override any morphological rule for irregular forms — Validated Phase 2/3
 
-### Display & UX Fixes
+### Display & UX
 
-- [ ] **FIX-01**: IPA vowel chart and phoneme inventory charts render with correct standard IPA shapes (trapezoid vowel chart)
-- [ ] **FIX-02**: Word generator displays words as `/romanization/ [phonetics]` (romanization first)
-- [ ] **FIX-03**: Anki cards show `/romanization/` on first line, `[IPA]` on second line
-- [ ] **FIX-04**: Anki export UI uses an "Export to Anki" button that reveals selection checkboxes on demand, with confirm/cancel
-- [ ] **FIX-05**: Phoneme inventory shows romanized form alongside IPA only when holding alt/ctrl modifier key
-
-### Phonology (additional)
-
-- [ ] **PHON-09**: Predefined natural classes (Stop, Liquid, Rhotic, Nasal, Fricative, etc.) with sensible IPA defaults, including sounds outside the project inventory
-- [ ] ~~**PHON-10**: Natural classes are shareable across languages (global definitions reusable per project)~~ — **Out of scope (v1)**, user decision 2026-04-10 during Phase 3.2 discussion. Natural classes remain project-local.
-- [ ] **PHON-11**: User can click a phoneme to view all contextual allophones based on phonological rules
+- [x] **FIX-01**: IPA vowel chart and phoneme inventory charts render with correct standard IPA shapes — Validated Phase 3.1
+- [x] **FIX-02**: Word generator displays words as romanization first — Validated Phase 3.1
+- [x] **FIX-03**: Anki cards show romanization on first line, IPA on second line — Validated Phase 3.1
+- [x] **FIX-04**: Anki export UI uses an "Export to Anki" button with confirm/cancel — Validated Phase 3.1
+- [x] **FIX-05**: Phoneme inventory shows romanized form alongside IPA — Validated Phase 3.1
 
 ### Grammar
 
-- [ ] **GRAM-01**: User can define parts of speech categories with N user-defined grammatical dimensions, each with K levels (e.g. gender[M/F] × number[SG/PL] × case[NOM/ACC])
-- [ ] **GRAM-02**: User can attach inflectional morphology rules to dimension levels that stack hierarchically with auto-generated combined forms
-- [ ] **GRAM-03**: User can generate full paradigm charts (declension/conjugation tables) for any word based on its POS dimensions
-- [x] **GRAM-04**: User can specify language typology choices (ergative/accusative alignment, word order, modality expression as morphological vs analytic)
-- [ ] **GRAM-05**: User can override any individual cell in a paradigm table with a manual exception form
-- [x] **GRAM-06**: The standalone Morphology tab is removed; rule editor UI is reused within Grammar (inflectional) and Lexicon (derivational)
-- [x] **GRAM-07**: Existing morphology rules migrate to lexicon derivational rules; derivational rules have a dedicated tab in Lexicon with romanization for all derived forms
+- [x] **GRAM-01**: User can define parts of speech categories with N user-defined grammatical dimensions — Validated Phase 4
+- [x] **GRAM-02**: User can attach inflectional morphology rules to dimension levels that stack hierarchically — Validated Phase 4
+- [x] **GRAM-03**: User can generate full paradigm charts for any word based on its POS dimensions — Validated Phase 4
+- [x] **GRAM-04**: User can specify language typology choices — Validated Phase 4
+- [x] **GRAM-05**: User can override any individual cell in a paradigm table with a manual exception form — Validated Phase 4
+- [x] **GRAM-06**: The standalone Morphology tab is removed; rule editor UI reused in Grammar and Lexicon — Validated Phase 4
+- [x] **GRAM-07**: Existing morphology rules migrate to lexicon derivational rules — Validated Phase 4
 
 ### Culture
 
-- [ ] **CULT-01**: User can create and organize wiki-style documentation pages in Markdown format
-- [ ] **CULT-02**: User can create internal links between culture pages (wiki-style linking)
+- [x] **CULT-01**: User can create and organize wiki-style documentation pages in Markdown format — Validated Phase 5
+- [x] **CULT-02**: User can create internal links between culture pages (wiki-style linking) — Validated Phase 5
 
 ### Reference
 
-- [ ] **REF-01**: User can search a built-in glossary of linguistic terminology with definitions
+- [x] **REF-01**: User can search a built-in glossary of linguistic terminology with definitions — Validated Phase 6
 
-### Polish & Refactor
+### Polish & Platform
 
-- [ ] **NIT-01**: Natural classes moved to their own Phonology sub-tab (separate from inventory)
-- [ ] **NIT-02**: Phoneme inventory charts show /phoneme/ next to romanization (only when they differ, e.g. skip when t→/t/)
-- [ ] **NIT-03**: Romanization section appears below phoneme inventory section (not as separate sub-tab)
-- [ ] **NIT-04**: Abbreviations are case-insensitive and display with trailing period everywhere (e.g. v.)
-- [ ] **NIT-05**: Draggable panel separator bars throughout the app (resize panels)
-- [ ] **REFAC-01**: Dead code cleanup from culture wiki removal + rule_editor_dialog.dart refactor into smaller files
+- [x] **NIT-01** through **NIT-05**: UI polish items — Validated Phase 7
+- [x] **REFAC-01**: Dead code cleanup + rule_editor_dialog refactor — Validated Phase 7
+- [x] **GEM-01**: Gemination restrictions as phonotactic constraints — Validated Phase 8
+- [x] **PLAT-01**: macOS native menu bar — Validated Phase 9
+- [x] **PLAT-02**: Project management (.conlang file format, rename, save-as) — Validated Phase 9
+- [x] **PLAT-03**: App name + custom logo — Validated Phase 9
 
-### Gemination Restrictions
+## v2.0 Requirements
 
-- [ ] **GEM-01**: User can define gemination restrictions as phonotactic constraints with position options (everywhere, coda, onset, word-initial, word-final)
+Requirements for v2.0 milestone. Each maps to roadmap phases.
 
-### Platform Polish
+### Analytic Grammar
 
-- [ ] **PLAT-01**: File/Edit/View menus in macOS native global menu bar (PlatformMenuBar widget), not in-app
-- [ ] **PLAT-02**: Project management: rename project, save-as, .conlang file format with user-chosen storage location
-- [ ] **PLAT-03**: App name "Conlang Workbench" everywhere (no underscores) + custom app logo/icon
+- [ ] **AGRAM-01**: User can define closed-class words (particles, aux verbs, prepositions, determiners, conjunctions) with grammatical gloss tags (DEF, NEG, PROG, etc.) in a dedicated inventory separate from content words
+- [ ] **AGRAM-02**: User can define named phrase construction rules with ordered slots (e.g. "negation = NEG + V", "future = AUX:FUT + V", "genitive = N + PREP:GEN + N")
+- [ ] **AGRAM-03**: User can define structured word order patterns (basic order SVO/SOV/etc., head-directionality, adposition placement, NP/VP/PP ordering rules)
 
-## v2 Requirements
+### Writing Scratchpad
 
-Deferred to future release. Tracked but not in current roadmap.
+- [ ] **WRIT-01**: User can write phrases and have them tokenized into morphemes with automatic interlinear glossing in Leipzig format (original / morpheme gloss / free translation)
+- [ ] **WRIT-02**: Unknown tokens display as "?" in the gloss, and words violating phonotactics or grammar rules are highlighted as errors
+- [ ] **WRIT-03**: User can generate IPA transcription of written phrases from phonology rules
+- [ ] **WRIT-04**: User can enter a free translation line beneath each glossed phrase
 
-### Input & Diacritics
+### AI Integration
 
-- **DIAC-01**: App-wide compose-key system for common romanization diacritics (e.g. a+macron → ā, h+dot → ḣ)
+- [ ] **AI-01**: MCP server auto-starts with the app and exposes phoneme inventory, lexicon, grammar rules, morphology patterns, and culture wiki as MCP tools
+- [ ] **AI-02**: External MCP clients (Claude Desktop, etc.) can connect to the running server and query/interact with all project data
 
 ### Writing System
 
-- **WSYS-01**: Writing system tab for defining and previewing custom scripts/orthographies
+- [ ] **WSYS-01**: User can define orthography rules mapping graphemes to phoneme sequences, supporting diverse script types (alphabet, abjad, syllabary, abugida) with priority ordering and context-sensitive rules
+- [ ] **WSYS-02**: User can load custom .ttf/.otf font files for their writing system and preview text rendered in the custom script
+- [ ] **WSYS-03**: Scratchpad text can be rendered in the custom script alongside romanization
+
+### Lexicon Extras
+
+- [ ] **LEX-09**: User can view the full etymology chain (root → derived → compound) as a visual lineage display in the lexicon
 
 ### Language Evolution
 
-- **EVOL-01**: Language evolution tools for modeling sound changes and phoneme splits over time
-- **EVOL-02**: Allophone-to-phoneme promotion workflow (allophones becoming separate phonemes through evolution)
+- [ ] **EVOL-01**: User can define ordered, context-sensitive sound change rules and apply them to the full lexicon with preview diff before committing
+- [ ] **EVOL-02**: User can promote an allophone to a full phoneme (split), with guided updates to inventory, rules, and affected lexicon entries
+- [ ] **EVOL-03**: User can model broader diachronic changes: phoneme mergers/fusions, grammatical evolution (e.g. analytic → agglutinative), and track language family lineage trees showing how daughter languages descend from parent languages
+
+## Future Requirements
+
+Deferred beyond v2.0. Tracked but not in current roadmap.
+
+### Input & Diacritics
+
+- **DIAC-01**: App-wide compose-key system for common romanization diacritics (e.g. a+macron → ā)
 
 ### Word Preview
 
 - **WPREV-01**: Example paragraph preview in word generator showing generated words in running text
 
-### Writing Scratchpad
-
-- **WRIT-01**: User can write phrases and have them tokenized into morphemes
-- **WRIT-02**: User can view auto-generated interlinear glosses for written phrases
-- **WRIT-03**: User can see error highlighting for unknown words and rule violations in text
-- **WRIT-04**: User can generate IPA transcription of written phrases from phonology rules
-
-### AI Integration
-
-- **AI-01**: AI agent (MCP-powered) acts as linguistics tutor — explains terms, answers questions
-- **AI-02**: AI agent acts as co-creator — suggests words, proposes patterns, helps fill paradigms
-- **AI-03**: All project data exposed as MCP tools for AI agent access
-
 ### Audio
 
 - **TTS-01**: User can hear conlang text read aloud via TTS synthesis with phoneme mapping
 
-### Lexicon Extras
+### AI Enhancements
 
-- **LEX-08**: Automatic etymology suggestions (detect compound words, suggest parent roots)
+- **AI-03**: In-app AI chat panel as linguistics tutor + co-creator with full project context
+
+### Scratchpad Enhancements
+
+- **WRIT-05**: Export interlinear glosses as LaTeX (gb4e/expex) or HTML (Leipzig.js format)
+
+### Lexicon Enhancements
+
+- **LEX-10**: Automatic etymology suggestions — detect compound words by matching known root concatenations
 
 ## Out of Scope
 
@@ -144,7 +152,9 @@ Deferred to future release. Tracked but not in current roadmap.
 | Cloud sync | All data stays local; user preference for offline-first |
 | Machine translation | Full natlang-to-conlang translation is AI-complete; out of scope |
 | Social/sharing features | ConWorkShop already fills this niche |
-| Real-time chat/community | Out of scope — this is a creation tool, not a platform |
+| Full NLP pipeline | Dependency/constituency parsing is a different product; interlinear gloss covers 90% of needs |
+| Font/glyph editor | FontForge/Glyphr Studio are mature dedicated tools; load custom fonts instead |
+| PHON-10 | Natural class sharing across projects — descoped v1, remains out of scope |
 
 ## Traceability
 
@@ -152,52 +162,28 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| PROJ-01 | Phase 1 | Pending |
-| PROJ-02 | Phase 1 | Pending |
-| PROJ-03 | Phase 1 | Pending |
-| PHON-01 | Phase 1 | Pending |
-| PHON-02 | Phase 1 | Pending |
-| PHON-03 | Phase 1 | Pending |
-| PHON-04 | Phase 1 | Pending |
-| PHON-05 | Phase 3 | Pending |
-| PHON-06 | Phase 1 | Pending |
-| PHON-07 | Phase 1 | Pending |
-| PHON-08 | Phase 1 | Pending |
-| LEX-01 | Phase 3 | Pending |
-| LEX-02 | Phase 3 | Pending |
-| LEX-03 | Phase 3 | Pending |
-| LEX-04 | Phase 3 | Pending |
-| LEX-05 | Phase 3 | Pending |
-| LEX-06 | Phase 3 | Pending |
-| LEX-07 | Phase 3 | Pending |
-| MORPH-01 | Phase 2 | Pending |
-| MORPH-02 | Phase 2 | Pending |
-| MORPH-03 | Phase 2 | Pending |
-| MORPH-04 | Phase 2 | Pending |
-| FIX-01 | Phase 3.1 | Pending |
-| FIX-02 | Phase 3.1 | Pending |
-| FIX-03 | Phase 3.1 | Pending |
-| FIX-04 | Phase 3.1 | Pending |
-| FIX-05 | Phase 3.1 | Pending |
-| PHON-09 | Phase 3.2 | Pending |
-| PHON-10 | — | Out of scope (v1) |
-| PHON-11 | Phase 3.2 | Pending |
-| GRAM-01 | Phase 4 | Pending |
-| GRAM-02 | Phase 4 | Pending |
-| GRAM-03 | Phase 4 | Pending |
-| GRAM-04 | Phase 4 | Complete |
-| GRAM-05 | Phase 4 | Pending |
-| GRAM-06 | Phase 4 | Complete |
-| GRAM-07 | Phase 4 | Complete |
-| CULT-01 | Phase 5 | Pending |
-| CULT-02 | Phase 5 | Pending |
-| REF-01 | Phase 6 | Pending |
+| AGRAM-01 | TBD | Pending |
+| AGRAM-02 | TBD | Pending |
+| AGRAM-03 | TBD | Pending |
+| WRIT-01 | TBD | Pending |
+| WRIT-02 | TBD | Pending |
+| WRIT-03 | TBD | Pending |
+| WRIT-04 | TBD | Pending |
+| AI-01 | TBD | Pending |
+| AI-02 | TBD | Pending |
+| WSYS-01 | TBD | Pending |
+| WSYS-02 | TBD | Pending |
+| WSYS-03 | TBD | Pending |
+| LEX-09 | TBD | Pending |
+| EVOL-01 | TBD | Pending |
+| EVOL-02 | TBD | Pending |
+| EVOL-03 | TBD | Pending |
 
 **Coverage:**
-- v1 requirements: 40 total
-- Mapped to phases: 40
-- Unmapped: 0 ✓
+- v2.0 requirements: 16 total
+- Mapped to phases: 0
+- Unmapped: 16 ⚠️
 
 ---
 *Requirements defined: 2026-04-08*
-*Last updated: 2026-04-08 after roadmap creation*
+*Last updated: 2026-04-13 after v2.0 milestone requirements definition*
