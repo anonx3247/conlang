@@ -91,4 +91,40 @@ class PhonotacticDao extends DatabaseAccessor<AppDatabase>
     await (update(phonotacticConstraints)..where((t) => t.id.equals(id)))
         .write(PhonotacticConstraintsCompanion(isActive: Value(active)));
   }
+
+  // ---------------------------------------------------------------------------
+  // Gemination convenience methods
+  // ---------------------------------------------------------------------------
+
+  /// Inserts a gemination constraint row with [type] = 'gemination'.
+  ///
+  /// [dslPattern] is the serialized `!GG` or `!GG/pos` source string.
+  /// [positions] is the comma-separated position string (from
+  /// [serializeGeminationPositions]).
+  /// [description] is an optional human-readable label.
+  Future<int> insertGeminationConstraint({
+    required String dslPattern,
+    required String positions,
+    String? description,
+  }) =>
+      into(phonotacticConstraints).insert(
+        PhonotacticConstraintsCompanion.insert(
+          pattern: dslPattern,
+          description: Value(description),
+          position: Value(positions),
+          type: const Value('gemination'),
+        ),
+      );
+
+  /// Returns the number of existing gemination constraints (type = 'gemination').
+  ///
+  /// Used to enforce the one-gemination-constraint-per-project rule.
+  Future<int> countGeminationConstraints() async {
+    final count = phonotacticConstraints.id.count();
+    final query = selectOnly(phonotacticConstraints)
+      ..addColumns([count])
+      ..where(phonotacticConstraints.type.equals('gemination'));
+    final row = await query.getSingle();
+    return row.read(count) ?? 0;
+  }
 }

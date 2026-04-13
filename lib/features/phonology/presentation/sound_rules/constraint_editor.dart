@@ -7,11 +7,12 @@ import '../../data/phonotactic_providers.dart';
 import '../../domain/phonotactic_dsl.dart';
 import 'sound_rules_shared.dart';
 
-/// Widget for managing forbidden sound sequences.
+/// Widget for managing forbidden sound sequences and gemination constraints.
 ///
 /// Displays all forbidden sequence patterns with parse status, active toggle,
 /// edit and delete controls. Patterns use segment notation
 /// (e.g. "[stop][stop]", "CC", "V[fricative]V").
+/// Gemination constraints display with human-readable labels and position chips.
 class ConstraintEditor extends ConsumerWidget {
   const ConstraintEditor({super.key});
 
@@ -27,7 +28,7 @@ class ConstraintEditor extends ConsumerWidget {
           helpText:
               'Patterns the word generator must avoid. '
               'e.g. "[stop][stop]" or "CC".',
-          onAdd: () => _showAddDialog(context, ref),
+          onAdd: () => _showTypePickerDialog(context, ref),
         ),
         allConstraintsAsync.when(
           data: (constraints) => constraints.isEmpty
@@ -47,7 +48,44 @@ class ConstraintEditor extends ConsumerWidget {
     );
   }
 
-  void _showAddDialog(BuildContext context, WidgetRef ref) {
+  /// Shows a type picker dialog so the user can choose between a forbidden
+  /// sequence constraint and a gemination restriction.
+  void _showTypePickerDialog(BuildContext context, WidgetRef ref) {
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => SimpleDialog(
+        title: const Text('Add constraint'),
+        children: [
+          SimpleDialogOption(
+            onPressed: () {
+              Navigator.pop(ctx);
+              _showAddForbiddenSequenceDialog(context, ref);
+            },
+            child: const ListTile(
+              leading: Icon(Icons.block_outlined),
+              title: Text('Forbidden sequence'),
+              subtitle: Text('e.g. no two stops in a row'),
+              contentPadding: EdgeInsets.zero,
+            ),
+          ),
+          SimpleDialogOption(
+            onPressed: () {
+              Navigator.pop(ctx);
+              _showAddGeminationDialog(context, ref);
+            },
+            child: const ListTile(
+              leading: Icon(Icons.block),
+              title: Text('No gemination'),
+              subtitle: Text('Prevent identical adjacent consonants'),
+              contentPadding: EdgeInsets.zero,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showAddForbiddenSequenceDialog(BuildContext context, WidgetRef ref) {
     showDialog<void>(
       context: context,
       builder: (_) => _ConstraintEditDialog(
@@ -66,6 +104,34 @@ class ConstraintEditor extends ConsumerWidget {
       ),
     );
   }
+
+  void _showAddGeminationDialog(BuildContext context, WidgetRef ref) {
+    showDialog<void>(
+      context: context,
+      builder: (_) => _GeminationEditDialog(
+        initial: null,
+        onSave: (dslPattern, serializedPositions, description) async {
+          final dao = ref.read(phonotacticDaoProvider);
+          if (dao == null) return;
+          // Check for duplicate gemination constraint.
+          final existing = await dao.countGeminationConstraints();
+          if (existing > 0) {
+            // Cannot show snackbar from a detached context in async gap safely,
+            // but the dialog is still open so we rely on the dialog to show
+            // error feedback. We signal via exception so the dialog catches it.
+            throw StateError(
+              'A gemination constraint already exists. Edit the existing one.',
+            );
+          }
+          await dao.insertGeminationConstraint(
+            dslPattern: dslPattern,
+            positions: serializedPositions,
+            description: description.isEmpty ? null : description,
+          );
+        },
+      ),
+    );
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -77,10 +143,126 @@ class _ConstraintRow extends ConsumerWidget {
 
   final PhonotacticConstraint constraint;
 
+  bool get _isGemination => constraint.type == 'gemination';
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
+
+    if (_isGemination) {
+      return _buildGeminationRow(context, ref, theme, cs);
+    }
+    return _buildSequenceRow(context, ref, theme, cs);
+  }
+
+  Widget _buildGeminationRow(
+    BuildContext context,
+    WidgetRef ref,
+    ThemeData theme,
+    ColorScheme cs,
+  ) {
+    final positions = deserializeGeminationPositions(constraint.position);
+    final positionLabels = positions.map(_positionLabel).toList()..sort();
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 3),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: cs.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: cs.outlineVariant),
+      ),
+      child: Row(
+        children: [
+          // Gemination icon (solid block)
+          Tooltip(
+            message: 'Gemination restriction',
+            child: Icon(
+              Icons.block,
+              size: 16,
+              color: cs.primary,
+            ),
+          ),
+          const SizedBox(width: 8),
+
+          // Human-readable label + position chips
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'No gemination',
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: cs.onSurface,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                if (constraint.description != null &&
+                    constraint.description!.isNotEmpty)
+                  Text(
+                    constraint.description!,
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: cs.onSurface.withValues(alpha: 0.55),
+                    ),
+                  ),
+                const SizedBox(height: 4),
+                Wrap(
+                  spacing: 4,
+                  runSpacing: 2,
+                  children: positionLabels
+                      .map(
+                        (label) => Chip(
+                          label: Text(
+                            label,
+                            style: theme.textTheme.labelSmall,
+                          ),
+                          padding: EdgeInsets.zero,
+                          visualDensity: VisualDensity.compact,
+                          backgroundColor: cs.primaryContainer,
+                          side: BorderSide.none,
+                        ),
+                      )
+                      .toList(),
+                ),
+              ],
+            ),
+          ),
+
+          // Active toggle
+          Switch(
+            value: constraint.isActive,
+            onChanged: (v) {
+              ref
+                  .read(phonotacticDaoProvider)
+                  ?.toggleConstraintActive(constraint.id, active: v);
+            },
+          ),
+
+          // Edit button
+          IconButton(
+            icon: const Icon(Icons.edit_outlined, size: 16),
+            tooltip: 'Edit gemination constraint',
+            onPressed: () => _showEditGeminationDialog(context, ref),
+          ),
+
+          // Delete button
+          IconButton(
+            icon: Icon(Icons.delete_outline, size: 16, color: cs.error),
+            tooltip: 'Delete constraint',
+            onPressed: () => _confirmDelete(context, ref),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSequenceRow(
+    BuildContext context,
+    WidgetRef ref,
+    ThemeData theme,
+    ColorScheme cs,
+  ) {
     final parsed = parseConstraintRule(constraint.pattern);
     final isValid = parsed.isValid;
 
@@ -178,6 +360,34 @@ class _ConstraintRow extends ConsumerWidget {
     );
   }
 
+  String _positionLabel(GeminationPosition pos) => switch (pos) {
+        GeminationPosition.everywhere => 'Everywhere',
+        GeminationPosition.coda => 'Coda',
+        GeminationPosition.onset => 'Onset',
+        GeminationPosition.initial => 'Word-initial',
+        GeminationPosition.final_ => 'Word-final',
+      };
+
+  void _showEditGeminationDialog(BuildContext context, WidgetRef ref) {
+    showDialog<void>(
+      context: context,
+      builder: (_) => _GeminationEditDialog(
+        initial: constraint,
+        onSave: (dslPattern, serializedPositions, description) async {
+          final dao = ref.read(phonotacticDaoProvider);
+          if (dao == null) return;
+          await dao.updateConstraint(
+            constraint.copyWith(
+              pattern: dslPattern,
+              description: Value(description.isEmpty ? null : description),
+              position: serializedPositions,
+            ),
+          );
+        },
+      ),
+    );
+  }
+
   void _showEditDialog(BuildContext context, WidgetRef ref) {
     showDialog<void>(
       context: context,
@@ -199,11 +409,12 @@ class _ConstraintRow extends ConsumerWidget {
   }
 
   Future<void> _confirmDelete(BuildContext context, WidgetRef ref) async {
+    final label = _isGemination ? 'No gemination' : '"${constraint.pattern}"';
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Delete forbidden sequence?'),
-        content: Text('Remove "${constraint.pattern}"?'),
+        title: const Text('Delete constraint?'),
+        content: Text('Remove $label?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
@@ -223,7 +434,215 @@ class _ConstraintRow extends ConsumerWidget {
 }
 
 // ---------------------------------------------------------------------------
-// Add / edit dialog
+// Gemination add / edit dialog
+// ---------------------------------------------------------------------------
+
+class _GeminationEditDialog extends StatefulWidget {
+  const _GeminationEditDialog({
+    required this.initial,
+    required this.onSave,
+  });
+
+  final PhonotacticConstraint? initial;
+  final Future<void> Function(
+    String dslPattern,
+    String serializedPositions,
+    String description,
+  ) onSave;
+
+  @override
+  State<_GeminationEditDialog> createState() => _GeminationEditDialogState();
+}
+
+class _GeminationEditDialogState extends State<_GeminationEditDialog> {
+  late final TextEditingController _descCtrl;
+  late Set<GeminationPosition> _positions;
+  bool _saving = false;
+  String? _errorMessage;
+
+  @override
+  void initState() {
+    super.initState();
+    _descCtrl = TextEditingController(
+      text: widget.initial?.description ?? 'No geminate consonants',
+    );
+
+    // Load positions from existing constraint or default to everywhere.
+    if (widget.initial != null) {
+      _positions = deserializeGeminationPositions(widget.initial!.position);
+    } else {
+      _positions = {GeminationPosition.everywhere};
+    }
+  }
+
+  @override
+  void dispose() {
+    _descCtrl.dispose();
+    super.dispose();
+  }
+
+  void _togglePosition(GeminationPosition pos, bool selected) {
+    setState(() {
+      if (pos == GeminationPosition.everywhere) {
+        // Selecting "Everywhere" deselects all others.
+        if (selected) {
+          _positions = {GeminationPosition.everywhere};
+        } else {
+          // If deselecting everywhere, select all specific positions.
+          _positions = {
+            GeminationPosition.coda,
+            GeminationPosition.onset,
+            GeminationPosition.initial,
+            GeminationPosition.final_,
+          };
+        }
+      } else {
+        // Selecting a specific position deselects "Everywhere".
+        if (selected) {
+          _positions = {..._positions, pos}
+            ..remove(GeminationPosition.everywhere);
+          if (_positions.isEmpty) {
+            _positions = {GeminationPosition.everywhere};
+          }
+        } else {
+          _positions = {..._positions}..remove(pos);
+          // If last specific position deselected, auto-select Everywhere.
+          if (_positions.isEmpty) {
+            _positions = {GeminationPosition.everywhere};
+          }
+        }
+      }
+    });
+  }
+
+  Future<void> _save() async {
+    setState(() {
+      _saving = true;
+      _errorMessage = null;
+    });
+    try {
+      final constraint = GeminationConstraint(
+        positions: _positions,
+        source: '!GG',
+      );
+      final dslSource = constraint.toSource();
+      final serializedPositions = serializeGeminationPositions(_positions);
+      await widget.onSave(
+        dslSource,
+        serializedPositions,
+        _descCtrl.text.trim(),
+      );
+      if (mounted) Navigator.pop(context);
+    } on StateError catch (e) {
+      if (mounted) {
+        setState(() {
+          _errorMessage = e.message;
+          _saving = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final isEditing = widget.initial != null;
+
+    const positionEntries = [
+      (GeminationPosition.everywhere, 'Everywhere'),
+      (GeminationPosition.coda, 'Coda'),
+      (GeminationPosition.onset, 'Onset'),
+      (GeminationPosition.initial, 'Word-initial'),
+      (GeminationPosition.final_, 'Word-final'),
+    ];
+
+    return AlertDialog(
+      title: Text(
+        isEditing
+            ? 'Edit gemination restriction'
+            : 'Add gemination restriction',
+      ),
+      content: SizedBox(
+        width: 440,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Position selector header
+            Text(
+              'Restrict gemination at:',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: cs.onSurface.withValues(alpha: 0.7),
+              ),
+            ),
+            const SizedBox(height: 8),
+
+            // FilterChip position selector
+            Wrap(
+              spacing: 6,
+              runSpacing: 4,
+              children: positionEntries.map((entry) {
+                final (pos, label) = entry;
+                final isSelected = _positions.contains(pos);
+                return FilterChip(
+                  label: Text(label),
+                  selected: isSelected,
+                  onSelected: (v) => _togglePosition(pos, v),
+                );
+              }).toList(),
+            ),
+
+            const SizedBox(height: 16),
+
+            // Error message (e.g. duplicate constraint)
+            if (_errorMessage != null)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Text(
+                  _errorMessage!,
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: cs.error,
+                  ),
+                ),
+              ),
+
+            // Optional description
+            TextField(
+              controller: _descCtrl,
+              decoration: const InputDecoration(
+                labelText: 'Description (optional)',
+                hintText: 'No geminate consonants',
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: _saving ? null : () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          onPressed: _saving ? null : _save,
+          child: _saving
+              ? const SizedBox(
+                  width: 14,
+                  height: 14,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Text('Save'),
+        ),
+      ],
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Add / edit forbidden sequence dialog
 // ---------------------------------------------------------------------------
 
 class _ConstraintEditDialog extends StatefulWidget {
