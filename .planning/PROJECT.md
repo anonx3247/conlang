@@ -80,6 +80,18 @@ A powerful, flexible morphology engine that handles the full spectrum of languag
 | Real IPA audio + TTS split | Authentic sounds for reference, synthesis for conlang speech | Validated v1.0 (audio only, TTS deferred) |
 | AI as tutor + co-creator | Dual role: explain linguistics concepts AND actively help build the language | Deferred to v2 |
 
+## Current Milestone: v2.0 Analytic Grammar, Scratchpad & AI
+
+**Goal:** Extend the workbench beyond morphological tools into phrase-level grammar, text composition with live analysis, AI-assisted conlanging, and language evolution modeling.
+
+**Target features:**
+- Analytic grammar system: closed-class word inventory, phrase-level construction rules, word order patterns
+- Writing Scratchpad: tokenization, interlinear glossing, error highlighting, IPA transcription
+- AI Integration: MCP-powered linguistics tutor + co-creator with full project data access
+- Language Evolution: sound change modeling, allophone-to-phoneme promotion
+- Writing System: custom script/orthography definition and preview
+- Lexicon Extras: automatic etymology suggestions
+
 ## Current State
 
 **v1.0 shipped** — 11 phases, 79 plans, 9 features complete:
@@ -92,5 +104,22 @@ A powerful, flexible morphology engine that handles the full spectrum of languag
 
 Culture Wiki retired to branch for v2 rework.
 
+## Evolution
+
+This document evolves at phase transitions and milestone boundaries.
+
+**After each phase transition** (via `/gsd-transition`):
+1. Requirements invalidated? → Move to Out of Scope with reason
+2. Requirements validated? → Move to Validated with phase reference
+3. New requirements emerged? → Add to Active
+4. Decisions to log? → Add to Key Decisions
+5. "What This Is" still accurate? → Update if drifted
+
+**After each milestone** (via `/gsd-complete-milestone`):
+1. Full review of all sections
+2. Core Value check — still the right priority?
+3. Audit Out of Scope — reasons still valid?
+4. Update Context with current state
+
 ---
-*Last updated: 2026-04-13 after v1.0 milestone completion*
+*Last updated: 2026-04-13 after v2.0 milestone start*
