@@ -215,7 +215,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4. Phases 5 and 6 depend only on
 | 6. Reference Glossary | 2/2 | Complete | 2026-04-12 |
 | 7. Polish & Refactor | 3/6 | Gap closure | - |
 | 8. Gemination Restrictions | 0/? | Not started | - |
-| 9. Platform Polish | 0/? | Not started | - |
+| 9. Platform Polish | 0/3 | Planning complete | - |
 
 ### Phase 7: Polish & Refactor
 **Goal**: Fix all outstanding UI nits (phonology layout, abbreviation formatting, natural classes tab), clean up dead code from culture wiki removal, refactor oversized files (rule_editor_dialog.dart), and address code quality concerns from codebase audit
@@ -259,4 +259,9 @@ Plans:
   4. Projects stored as .conlang files (SQLite DB) in user-chosen locations
   5. App name shows "Conlang Workbench" everywhere (menu bar, title bar, window title) — no underscores
   6. App has a custom logo/icon
-**Plans**: TBD
+**Plans:** 3 plans in 2 waves
+
+Plans:
+- [ ] 09-01-PLAN.md — App identity: macOS PRODUCT_NAME fix, SVG-to-PNG icon generation, .conlang file type registration in Info.plist
+- [ ] 09-02-PLAN.md — Project data layer overhaul: Project model filePath field, registry .conlang support (create-at-path, open-file, duplicate, rename), providers refactor, recent projects service
+- [ ] 09-03-PLAN.md — PlatformMenuBar (File/Edit/View) in app.dart, welcome screen with logo + recent projects, remove in-app File button, wire all project management actions
