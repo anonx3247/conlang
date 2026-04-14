@@ -317,7 +317,8 @@ class _RuleEditorBodyState extends ConsumerState<RuleEditorBody> {
         final existingRow = db.ConstructionRuleRow(
           id: _editingConstructionRule!.id,
           name: name,
-          isActive: true,
+          // WR-02: preserve existing isActive — do not silently re-activate.
+          isActive: _editingConstructionRule!.isActive,
           ordering: _editingConstructionRule!.ordering,
           constructionId: _selectedConstructionId!,
           wordSlotId: _selectedWordSlotId!,
