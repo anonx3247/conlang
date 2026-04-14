@@ -13,6 +13,7 @@ import '../../../phonology/data/phonotactic_providers.dart'
 import '../../../phonology/data/romanization_providers.dart';
 import '../../data/lexeme_providers.dart';
 import 'inspiration_panel.dart';
+import 'searchable_parent_selector.dart';
 
 import '../../../phonology/presentation/shared/ipa_keyboard/ipa_text_field.dart';
 
@@ -73,7 +74,8 @@ class _WordCreationFormState extends ConsumerState<WordCreationForm> {
 
   /// Plan 04-14 D-62: selected parent lexeme ids for the multi-select
   /// etymology picker. Committed via LexemeParentsDao on save.
-  final Set<int> _selectedParents = <int>{};
+  // Non-final so SearchableParentSelector.onChanged can replace the set.
+  Set<int> _selectedParents = <int>{};
 
   /// True once the user has typed directly in the IPA field. Until then,
   /// the IPA field is auto-populated from the romanization field via
@@ -511,42 +513,12 @@ class _WordCreationFormState extends ConsumerState<WordCreationForm> {
                     ),
                   ),
                   const SizedBox(height: 4),
-                  Consumer(
-                    builder: (context, innerRef, _) {
-                      final all = innerRef
-                              .watch(allLexemeListProvider)
-                              .asData
-                              ?.value ??
-                          const <Lexeme>[];
-                      if (all.isEmpty) {
-                        return Text(
-                          'No existing lexemes to link as parents.',
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            fontSize: 11,
-                            color: cs.onSurface.withValues(alpha: 0.5),
-                          ),
-                        );
-                      }
-                      return Wrap(
-                        spacing: 6,
-                        runSpacing: 6,
-                        children: [
-                          for (final lx in all)
-                            FilterChip(
-                              label: Text(lx.romanization ?? lx.ipa),
-                              tooltip: lx.meaning,
-                              selected: _selectedParents.contains(lx.id),
-                              onSelected: (on) => setState(() {
-                                if (on) {
-                                  _selectedParents.add(lx.id);
-                                } else {
-                                  _selectedParents.remove(lx.id);
-                                }
-                              }),
-                            ),
-                        ],
-                      );
-                    },
+                  SearchableParentSelector(
+                    selectedIds: _selectedParents,
+                    onChanged: (ids) => setState(() {
+                      _selectedParents = ids;
+                    }),
+                    excludeId: -1, // new word has no ID yet
                   ),
 
                   const SizedBox(height: 24),
