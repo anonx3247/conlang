@@ -1,7 +1,8 @@
 ---
 phase: 11
 slug: lexicon-etymology-chain
-status: draft
+status: approved
+reviewed_at: 2026-04-14T00:00:00Z
 shadcn_initialized: false
 preset: none
 created: 2026-04-14
@@ -45,7 +46,7 @@ Declared values — all existing Flutter spacings in this codebase use multiples
 Exceptions:
 - Tree node indentation: 20px per level (not a strict multiple of 8; chosen for visual tree density at monospace font)
 - Connector line horizontal extent: 12px (half of 24px indent — visually bisects the level gap)
-- Section header bottom gap: 6px (`SizedBox(height: 6)` — existing pattern from `WordDetailParentsSection`)
+- Section header bottom gap: 8px (`SizedBox(height: 8)`)
 
 Source: CONTEXT.md + codebase audit of `word_detail_panel.dart` and `derivation_tree_widget.dart`
 
@@ -139,7 +140,7 @@ SearchableParentSelector
   Autocomplete overlay (uses existing Autocomplete<Lexeme> pattern from slot_editor.dart:291)
     filtered results: show romanization (or IPA if no romanization) + meaning, 12px
     max visible: 6 entries before scroll
-  SelectedParentChips (Wrap layout, spacing: 6, runSpacing: 6)
+  SelectedParentChips (Wrap layout, spacing: 8, runSpacing: 8)
     each chip: ActionChip with × button
       label: romanization (or IPA) + meaning, 11px labelSmall
       onDeleted callback removes parent link
