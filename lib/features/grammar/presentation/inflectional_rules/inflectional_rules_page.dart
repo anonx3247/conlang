@@ -203,13 +203,32 @@ class _ConstructionRuleCard extends ConsumerWidget {
                   );
                 },
               ),
-              // Delete icon — deletes immediately (no confirm)
               IconButton(
                 icon: Icon(Icons.delete_outline,
                     size: 16, color: cs.error.withValues(alpha: 0.7)),
                 onPressed: () async {
-                  final dao = ref.read(constructionRuleDaoProvider);
-                  await dao?.deleteRule(rule.id);
+                  final confirmed = await showDialog<bool>(
+                    context: context,
+                    builder: (_) => AlertDialog(
+                      title: const Text('Delete construction rule?'),
+                      content: Text(
+                          'Delete "${rule.name}"? This cannot be undone.'),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context, false),
+                          child: const Text('Cancel'),
+                        ),
+                        FilledButton(
+                          onPressed: () => Navigator.pop(context, true),
+                          child: const Text('Delete'),
+                        ),
+                      ],
+                    ),
+                  );
+                  if (confirmed == true) {
+                    final dao = ref.read(constructionRuleDaoProvider);
+                    await dao?.deleteRule(rule.id);
+                  }
                 },
               ),
             ],
