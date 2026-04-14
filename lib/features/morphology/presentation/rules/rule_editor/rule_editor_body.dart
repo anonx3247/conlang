@@ -629,11 +629,12 @@ class _RuleEditorBodyState extends ConsumerState<RuleEditorBody> {
     final constructions =
         constructionsAsync.asData?.value ?? const [];
 
-    // Watch slots for selected construction.
-    final slotsAsync = _selectedConstructionId != null
-        ? ref.watch(constructionSlotsProvider(_selectedConstructionId!))
-        : null;
-    final slots = slotsAsync?.asData?.value ?? const [];
+    // Always watch so the subscription is stable across rebuilds (Riverpod hook ordering).
+    final slotsAsync =
+        ref.watch(constructionSlotsProvider(_selectedConstructionId ?? 0));
+    final slots = _selectedConstructionId != null
+        ? (slotsAsync.asData?.value ?? const <ConstructionSlot>[])
+        : const <ConstructionSlot>[];
 
     // Default word slot to first 'pos' type slot when construction changes.
     if (_selectedWordSlotId == null && slots.isNotEmpty) {
