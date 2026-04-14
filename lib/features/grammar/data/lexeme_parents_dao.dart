@@ -43,6 +43,13 @@ class LexemeParentsDao extends DatabaseAccessor<AppDatabase>
         .watch();
   }
 
+  /// Streams ALL parent link rows across all lexemes. Used by
+  /// [ancestryChainProvider] to react when any parent link changes
+  /// anywhere in the lexicon (not just the current word's direct parents).
+  Stream<List<LexemeParentRow>> watchAllParentLinks() {
+    return select(lexemeParents).watch();
+  }
+
   // ---------------------------------------------------------------------------
   // Mutations
   // ---------------------------------------------------------------------------
