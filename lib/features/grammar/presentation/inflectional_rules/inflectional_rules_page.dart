@@ -43,8 +43,11 @@ class InflectionalRulesPage extends ConsumerWidget {
         const MigrationBanner(
           settingsKey: 'ui.migration_v8_banner_dismissed.inflectional',
         ),
-        const Expanded(
-          child: RulesPage(kind: RuleKind.inflectional),
+        Expanded(
+          child: RulesPage(
+            kind: RuleKind.inflectional,
+            posScopeFilter: posId,
+          ),
         ),
 
         // Construction rules section — shown below inflectional rules.

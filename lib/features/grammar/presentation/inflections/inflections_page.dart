@@ -6,12 +6,12 @@ import '../../../lexicon/data/lexeme_providers.dart';
 import '../../../lexicon/presentation/widgets/lexeme_display_label.dart';
 import '../../../morphology/data/morphology_providers.dart';
 import '../../../morphology/presentation/rules/rules_page.dart';
+import '../inflectional_rules/inflectional_rules_page.dart';
 import '../../../phonology/data/romanization_providers.dart';
 import '../../../project/data/project_providers.dart';
 import '../../data/grammar_providers.dart';
 import '../../data/typology_providers.dart';
 import '../../domain/pos_resolver.dart';
-import '../../domain/rule_kind.dart';
 import '../paradigm_viewer/paradigm_table_widget.dart';
 
 /// Plan 04-13 — Grammar > Inflections sub-tab (D-48 / D-49 / G-06).
@@ -227,14 +227,12 @@ class _InflectionsPageState extends ConsumerState<InflectionsPage> {
         // list does not.
         Expanded(
           flex: 45,
-          child: RulesPage(
-            kind: RuleKind.inflectional,
-            // D-50 / plan 04-13: scope the rules pane to the selected
-            // POS when one is chosen (includes any multi-POS rules
-            // whose junction set contains this POS). When
-            // _selectedPosId is null, RulesPage falls through to the
-            // full grouped inflectional list.
-            posScopeFilter: _selectedPosId,
+          child: InflectionalRulesPage(
+            // D-50 / plan 04-13: scope inflectional + construction rules
+            // to the selected POS. InflectionalRulesPage passes posId
+            // through as posScopeFilter to the inner RulesPage and also
+            // renders the construction rules section for this POS.
+            posId: _selectedPosId,
           ),
         ),
       ],
