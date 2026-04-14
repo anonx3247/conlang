@@ -12,6 +12,7 @@ import '../../phonology/domain/phonotactic_dsl.dart'
     show PhonologicalRewriteRule;
 import '../../phonology/domain/word_generator.dart' show PhonemeInventory;
 import '../../project/data/project_providers.dart';
+import '../domain/construction_rule.dart';
 import '../domain/dimension_level.dart';
 import '../domain/inflectional_rule.dart';
 import '../domain/marker.dart';
@@ -19,7 +20,10 @@ import '../domain/paradigm_axes.dart';
 import '../domain/paradigm_cell.dart';
 import '../domain/paradigm_engine.dart';
 import '../domain/pos_resolver.dart';
+import 'construction_providers.dart';
+import 'construction_rule_providers.dart';
 import 'grammar_providers.dart';
+import 'particle_providers.dart';
 
 // ---------------------------------------------------------------------------
 // Typology settings value type (D-35)
@@ -321,6 +325,11 @@ ParadigmChart generateParadigm({
   // for legacy callers that pre-date the intrinsic feature.
   Map<int, int>? lexemeIntrinsicLevels,
   Map<int, bool>? dimensionIntrinsicFlags,
+  // Phase 10.1: construction rule resolution post-pass (D-04).
+  // Optional with const defaults so all existing callers continue to compile.
+  List<ConstructionRule> constructionRules = const [],
+  List<Lexeme> closedClassWords = const [],
+  Map<int, List<ConstructionSlot>> constructionSlotsByConstructionId = const {},
 }) {
   final activeDims =
       dimensions.where((d) => !skippedDimensionIds.contains(d.id)).toList();
@@ -346,6 +355,40 @@ ParadigmChart generateParadigm({
     entries[featureSetKey(featureSet)] =
         ParadigmChartEntry(featureSet: featureSet, cell: cell);
   }
+
+  // Phase 10.1: construction resolution post-pass.
+  // After the full inflectional chart is computed, overlay any cells that
+  // have a matching active construction rule (D-04 composition).
+  if (constructionRules.isNotEmpty) {
+    final resolvingStack = <String>{};
+    final resolvedCache = <String, ParadigmCell>{};
+    final inflectionalChart = {
+      for (final e in entries.entries) e.key: e.value.cell,
+    };
+    for (final key in entries.keys.toList()) {
+      final entry = entries[key]!;
+      final resolved = resolveConstructionCell(
+        root: root,
+        target: entry.featureSet,
+        inflectionalResult: entry.cell,
+        constructionRules: constructionRules,
+        slotsLookup: (cId) =>
+            constructionSlotsByConstructionId[cId] ?? const [],
+        closedClassWords: closedClassWords,
+        inflectionalChart: inflectionalChart,
+        resolvingStack: resolvingStack,
+        resolvedCache: resolvedCache,
+        allConstructionRules: constructionRules,
+        inventory: inventory,
+        rewriteRules: rewriteRules,
+      );
+      if (!identical(resolved, entry.cell)) {
+        entries[key] =
+            ParadigmChartEntry(featureSet: entry.featureSet, cell: resolved);
+      }
+    }
+  }
+
   return ParadigmChart(entries);
 }
 
@@ -472,6 +515,29 @@ final computedInflectedParadigmProvider =
     intrinsicLevelsJson: lexeme.intrinsicLevelsJson,
   );
 
+  // Phase 10.1: construction rules + closed-class words for analytic
+  // realization (D-04). Load construction rules scoped to this POS and the
+  // full closed-class word list (particles, auxiliaries, etc.).
+  final constructionRulesAsync =
+      ref.watch(constructionRulesForPosProvider(pos.id));
+  final constructionRules =
+      constructionRulesAsync.asData?.value ?? const <ConstructionRule>[];
+
+  final closedClassAsync = ref.watch(closedClassLexemeListProvider);
+  final closedClassWords =
+      closedClassAsync.asData?.value ?? const <Lexeme>[];
+
+  // Load slots for every construction referenced by an active rule.
+  final constructionSlotsByConstructionId = <int, List<ConstructionSlot>>{};
+  for (final rule in constructionRules) {
+    if (!constructionSlotsByConstructionId.containsKey(rule.constructionId)) {
+      final slotsAsync =
+          ref.watch(constructionSlotsProvider(rule.constructionId));
+      constructionSlotsByConstructionId[rule.constructionId] =
+          slotsAsync.asData?.value ?? const <ConstructionSlot>[];
+    }
+  }
+
   return generateParadigm(
     root: root,
     dimensions: dims,
@@ -483,5 +549,8 @@ final computedInflectedParadigmProvider =
         decodeSkippedDimensionIds(lexeme.skippedDimensionsJson),
     lexemeIntrinsicLevels: intrinsic.lexemeIntrinsicLevels,
     dimensionIntrinsicFlags: intrinsic.dimensionIntrinsicFlags,
+    constructionRules: constructionRules,
+    closedClassWords: closedClassWords,
+    constructionSlotsByConstructionId: constructionSlotsByConstructionId,
   );
 });
