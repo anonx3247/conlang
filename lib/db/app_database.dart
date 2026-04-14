@@ -240,6 +240,9 @@ class ParadigmCellOverrides extends Table {
   TextColumn get notes => text().nullable()();
   /// v16 — Phase 10.1 D-03. When non-null, suppresses this construction rule
   /// for this specific word/cell combination.
+  /// NOT YET IMPLEMENTED: stored in DB but not yet consulted by the engine
+  /// (generateParadigm / resolveConstructionCell). Deferred to a follow-up
+  /// task — the column is a no-op until wired into computedInflectedParadigmProvider.
   IntColumn get suppressConstructionRuleId => integer().nullable()();
 }
 
@@ -765,8 +768,14 @@ class AppDatabase extends _$AppDatabase {
         }
         if (from < 15) {
           // v15: Phase 10 — closed-class columns + construction tables.
-          await m.addColumn(lexemes, lexemes.isClosedClass);
-          await m.addColumn(lexemes, lexemes.glossTag);
+          // Use try/catch for addColumn in case a prior interrupted migration
+          // already added the column (SQLite has no ALTER TABLE ADD COLUMN IF NOT EXISTS).
+          try {
+            await m.addColumn(lexemes, lexemes.isClosedClass);
+          } catch (_) {}
+          try {
+            await m.addColumn(lexemes, lexemes.glossTag);
+          } catch (_) {}
           await m.createTable(phraseConstructions);
           await m.createTable(constructionSlots);
         }
@@ -774,10 +783,12 @@ class AppDatabase extends _$AppDatabase {
           // v16: Phase 10.1 — construction rules + POS junction + per-word suppression.
           await m.createTable(constructionRules);
           await m.createTable(constructionRulePOS);
-          await m.addColumn(
-            paradigmCellOverrides,
-            paradigmCellOverrides.suppressConstructionRuleId,
-          );
+          try {
+            await m.addColumn(
+              paradigmCellOverrides,
+              paradigmCellOverrides.suppressConstructionRuleId,
+            );
+          } catch (_) {}
         }
       },
       beforeOpen: (details) async {
