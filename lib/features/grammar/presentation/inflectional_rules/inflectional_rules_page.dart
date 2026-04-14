@@ -142,7 +142,7 @@ class _ConstructionRulesSection extends StatelessWidget {
 }
 
 /// A single construction rule card in the list.
-class _ConstructionRuleCard extends StatelessWidget {
+class _ConstructionRuleCard extends ConsumerWidget {
   const _ConstructionRuleCard({
     required this.rule,
     required this.posId,
@@ -156,59 +156,63 @@ class _ConstructionRuleCard extends StatelessWidget {
   final ColorScheme cs;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 3),
       child: Card(
         margin: EdgeInsets.zero,
-        child: InkWell(
-          onTap: () async {
-            await showDialog<void>(
-              context: context,
-              builder: (_) => RuleEditorDialog(
-                kind: RuleKind.construction,
-                existingConstructionRule: rule,
-                preFilledPosIds: posId != null ? {posId!} : null,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+          child: Row(
+            children: [
+              // Construction badge — account_tree icon (D-10)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: cs.primaryContainer,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Icon(
+                  Icons.account_tree_outlined,
+                  size: 12,
+                  color: cs.onPrimaryContainer,
+                ),
               ),
-            );
-          },
-          borderRadius: BorderRadius.circular(12),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-            child: Row(
-              children: [
-                // Construction badge — account_tree icon (D-10)
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 6, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: cs.primaryContainer,
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: Icon(
-                    Icons.account_tree_outlined,
-                    size: 12,
-                    color: cs.onPrimaryContainer,
+              const SizedBox(width: 10),
+              // Rule name
+              Expanded(
+                child: Text(
+                  rule.name,
+                  style: theme.textTheme.bodyLarge?.copyWith(
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
-                const SizedBox(width: 10),
-                // Rule name
-                Expanded(
-                  child: Text(
-                    rule.name,
-                    style: theme.textTheme.bodyLarge?.copyWith(
-                      fontWeight: FontWeight.w600,
+              ),
+              // Edit icon — opens editor dialog
+              IconButton(
+                icon: Icon(Icons.edit_outlined,
+                    size: 16, color: cs.onSurface.withValues(alpha: 0.45)),
+                onPressed: () async {
+                  await showDialog<void>(
+                    context: context,
+                    builder: (_) => RuleEditorDialog(
+                      kind: RuleKind.construction,
+                      existingConstructionRule: rule,
+                      preFilledPosIds: posId != null ? {posId!} : null,
                     ),
-                  ),
-                ),
-                // Edit icon hint
-                Icon(
-                  Icons.edit_outlined,
-                  size: 16,
-                  color: cs.onSurface.withValues(alpha: 0.35),
-                ),
-              ],
-            ),
+                  );
+                },
+              ),
+              // Delete icon — deletes immediately (no confirm)
+              IconButton(
+                icon: Icon(Icons.delete_outline,
+                    size: 16, color: cs.error.withValues(alpha: 0.7)),
+                onPressed: () async {
+                  final dao = ref.read(constructionRuleDaoProvider);
+                  await dao?.deleteRule(rule.id);
+                },
+              ),
+            ],
           ),
         ),
       ),
