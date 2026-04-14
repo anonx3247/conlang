@@ -225,10 +225,10 @@ Plans:
 **Plans**: 4 plans
 
 Plans:
-- [ ] 10.1-01-PLAN.md — Domain models (ParadigmCell variants, ConstructionRule, ConstructionToken), schema v16 migration, ConstructionRuleDao, providers, Wave 0 test stubs
-- [ ] 10.1-02-PLAN.md — TDD: Paradigm engine construction resolution with cycle detection, D-04 composition, provider wiring
-- [ ] 10.1-03-PLAN.md — Rule editor UI construction variant (3 pickers), inflectional rules page construction rule display
-- [ ] 10.1-04-PLAN.md — Paradigm table cell rendering (construction-filled + unresolvable), DAO CRUD tests, human verification
+- [x] 10.1-01-PLAN.md — Domain models (ParadigmCell variants, ConstructionRule, ConstructionToken), schema v16 migration, ConstructionRuleDao, providers, Wave 0 test stubs
+- [x] 10.1-02-PLAN.md — TDD: Paradigm engine construction resolution with cycle detection, D-04 composition, provider wiring
+- [x] 10.1-03-PLAN.md — Rule editor UI construction variant (3 pickers), inflectional rules page construction rule display
+- [x] 10.1-04-PLAN.md — Paradigm table cell rendering (construction-filled + unresolvable), DAO CRUD tests, human verification
 
 ### Phase 11: Lexicon Etymology Chain
 **Goal**: Users can see the full derivational history of any word as a visual lineage display tracing root through derived forms to compounds
@@ -237,8 +237,13 @@ Plans:
 **Success Criteria** (what must be TRUE):
   1. User can open any word in the lexicon and view its complete etymology chain (root → derived → compound) as a visual lineage tree, not just a text field
   2. The lineage display is navigable — clicking any node in the chain opens that word's detail panel
-**Plans**: TBD
+**Plans**: 3 plans
 **UI hint**: yes
+
+Plans:
+- [ ] 11-01-PLAN.md — Bug fix (multi-level derivation chain), AncestryNode data model, ancestryChainProvider, watchAllParentLinks DAO, unit tests
+- [ ] 11-02-PLAN.md — SearchableParentSelector widget, word_creation_form FilterChip wall replacement
+- [ ] 11-03-PLAN.md — EtymologyChainSection widget, word_detail_panel integration, inline parent management, human verification
 
 ### Phase 12: Writing Scratchpad
 **Goal**: Users can compose phrases in their conlang and receive automatic interlinear glossing, IPA transcription, and error highlighting without leaving the app
@@ -313,8 +318,8 @@ v1.0 phases complete. v2.0 executes: 10 → 10.1 → 11 → 12 → 13 → 14 →
 | 8. Gemination Restrictions | v1.0 | TBD | Complete | 2026-04-13 |
 | 9. Platform Polish | v1.0 | 3/3 | Complete | 2026-04-13 |
 | 10. Analytic Grammar | v2.0 | 4/4 | Complete | 2026-04-13 |
-| 10.1 Construction-Realized Paradigm Cells | v2.0 | 0/4 | Planned | - |
-| 11. Lexicon Etymology Chain | v2.0 | 0/? | Not started | - |
+| 10.1 Construction-Realized Paradigm Cells | v2.0 | 4/4 | Complete    | 2026-04-14 |
+| 11. Lexicon Etymology Chain | v2.0 | 0/3 | Planned | - |
 | 12. Writing Scratchpad | v2.0 | 0/? | Not started | - |
 | 13. Writing System | v2.0 | 0/? | Not started | - |
 | 14. AI / MCP Integration | v2.0 | 0/? | Not started | - |
