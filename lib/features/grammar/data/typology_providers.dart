@@ -378,6 +378,11 @@ ParadigmChart generateParadigm({
         inflectionalChart: inflectionalChart,
         resolvingStack: resolvingStack,
         resolvedCache: resolvedCache,
+        // NOTE: allConstructionRules is intentionally scoped to this POS.
+        // Cross-POS CellFormReferences cannot be authored through the UI
+        // (the cell picker only surfaces cells from the current POS) and
+        // fall through gracefully to the inflectional chart result when
+        // encountered in DB (T-10.1-05 graceful handling).
         allConstructionRules: constructionRules,
         inventory: inventory,
         rewriteRules: rewriteRules,
