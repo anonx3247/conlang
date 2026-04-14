@@ -272,24 +272,15 @@ class _RuleEditorBodyState extends ConsumerState<RuleEditorBody> {
     try {
       final name = _nameCtrl.text.trim();
       if (name.isEmpty) {
-        setState(() {
-          _validationError = 'Rule name is required.';
-          _saving = false;
-        });
-        return;
+        setState(() => _validationError = 'Rule name is required.');
+        return;  // finally handles _saving = false
       }
       if (_selectedConstructionId == null) {
-        setState(() {
-          _validationError = 'Select a construction.';
-          _saving = false;
-        });
+        setState(() => _validationError = 'Select a construction.');
         return;
       }
       if (_selectedWordSlotId == null) {
-        setState(() {
-          _validationError = 'Select a word slot.';
-          _saving = false;
-        });
+        setState(() => _validationError = 'Select a word slot.');
         return;
       }
 
