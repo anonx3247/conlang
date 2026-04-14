@@ -906,7 +906,12 @@ class _RuleEditorBodyState extends ConsumerState<RuleEditorBody> {
                             ),
                           )
                         : DropdownButtonFormField<String>(
-                            initialValue: _selectedCellRefJson,
+                            // Guard: only use saved value if it still matches
+                            // a current item (format may have changed after fix).
+                            initialValue: cellRefOptions
+                                    .any((o) => o.json == _selectedCellRefJson)
+                                ? _selectedCellRefJson
+                                : null,
                             decoration: fieldDecoration,
                             isExpanded: true,
                             hint: const Text('Select target cell'),
