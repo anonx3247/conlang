@@ -5323,6 +5323,17 @@ class $ParadigmCellOverridesTable extends ParadigmCellOverrides
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _suppressConstructionRuleIdMeta =
+      const VerificationMeta('suppressConstructionRuleId');
+  @override
+  late final GeneratedColumn<int> suppressConstructionRuleId =
+      GeneratedColumn<int>(
+        'suppress_construction_rule_id',
+        aliasedName,
+        true,
+        type: DriftSqlType.int,
+        requiredDuringInsert: false,
+      );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -5331,6 +5342,7 @@ class $ParadigmCellOverridesTable extends ParadigmCellOverrides
     overrideIpa,
     overrideRomanization,
     notes,
+    suppressConstructionRuleId,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -5392,6 +5404,15 @@ class $ParadigmCellOverridesTable extends ParadigmCellOverrides
         notes.isAcceptableOrUnknown(data['notes']!, _notesMeta),
       );
     }
+    if (data.containsKey('suppress_construction_rule_id')) {
+      context.handle(
+        _suppressConstructionRuleIdMeta,
+        suppressConstructionRuleId.isAcceptableOrUnknown(
+          data['suppress_construction_rule_id']!,
+          _suppressConstructionRuleIdMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -5425,6 +5446,10 @@ class $ParadigmCellOverridesTable extends ParadigmCellOverrides
         DriftSqlType.string,
         data['${effectivePrefix}notes'],
       ),
+      suppressConstructionRuleId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}suppress_construction_rule_id'],
+      ),
     );
   }
 
@@ -5442,6 +5467,10 @@ class ParadigmCellOverride extends DataClass
   final String overrideIpa;
   final String? overrideRomanization;
   final String? notes;
+
+  /// v16 — Phase 10.1 D-03. When non-null, suppresses this construction rule
+  /// for this specific word/cell combination.
+  final int? suppressConstructionRuleId;
   const ParadigmCellOverride({
     required this.id,
     required this.lexemeId,
@@ -5449,6 +5478,7 @@ class ParadigmCellOverride extends DataClass
     required this.overrideIpa,
     this.overrideRomanization,
     this.notes,
+    this.suppressConstructionRuleId,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -5462,6 +5492,11 @@ class ParadigmCellOverride extends DataClass
     }
     if (!nullToAbsent || notes != null) {
       map['notes'] = Variable<String>(notes);
+    }
+    if (!nullToAbsent || suppressConstructionRuleId != null) {
+      map['suppress_construction_rule_id'] = Variable<int>(
+        suppressConstructionRuleId,
+      );
     }
     return map;
   }
@@ -5478,6 +5513,10 @@ class ParadigmCellOverride extends DataClass
       notes: notes == null && nullToAbsent
           ? const Value.absent()
           : Value(notes),
+      suppressConstructionRuleId:
+          suppressConstructionRuleId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(suppressConstructionRuleId),
     );
   }
 
@@ -5495,6 +5534,9 @@ class ParadigmCellOverride extends DataClass
         json['overrideRomanization'],
       ),
       notes: serializer.fromJson<String?>(json['notes']),
+      suppressConstructionRuleId: serializer.fromJson<int?>(
+        json['suppressConstructionRuleId'],
+      ),
     );
   }
   @override
@@ -5507,6 +5549,9 @@ class ParadigmCellOverride extends DataClass
       'overrideIpa': serializer.toJson<String>(overrideIpa),
       'overrideRomanization': serializer.toJson<String?>(overrideRomanization),
       'notes': serializer.toJson<String?>(notes),
+      'suppressConstructionRuleId': serializer.toJson<int?>(
+        suppressConstructionRuleId,
+      ),
     };
   }
 
@@ -5517,6 +5562,7 @@ class ParadigmCellOverride extends DataClass
     String? overrideIpa,
     Value<String?> overrideRomanization = const Value.absent(),
     Value<String?> notes = const Value.absent(),
+    Value<int?> suppressConstructionRuleId = const Value.absent(),
   }) => ParadigmCellOverride(
     id: id ?? this.id,
     lexemeId: lexemeId ?? this.lexemeId,
@@ -5526,6 +5572,9 @@ class ParadigmCellOverride extends DataClass
         ? overrideRomanization.value
         : this.overrideRomanization,
     notes: notes.present ? notes.value : this.notes,
+    suppressConstructionRuleId: suppressConstructionRuleId.present
+        ? suppressConstructionRuleId.value
+        : this.suppressConstructionRuleId,
   );
   ParadigmCellOverride copyWithCompanion(ParadigmCellOverridesCompanion data) {
     return ParadigmCellOverride(
@@ -5541,6 +5590,9 @@ class ParadigmCellOverride extends DataClass
           ? data.overrideRomanization.value
           : this.overrideRomanization,
       notes: data.notes.present ? data.notes.value : this.notes,
+      suppressConstructionRuleId: data.suppressConstructionRuleId.present
+          ? data.suppressConstructionRuleId.value
+          : this.suppressConstructionRuleId,
     );
   }
 
@@ -5552,7 +5604,8 @@ class ParadigmCellOverride extends DataClass
           ..write('featureSetJson: $featureSetJson, ')
           ..write('overrideIpa: $overrideIpa, ')
           ..write('overrideRomanization: $overrideRomanization, ')
-          ..write('notes: $notes')
+          ..write('notes: $notes, ')
+          ..write('suppressConstructionRuleId: $suppressConstructionRuleId')
           ..write(')'))
         .toString();
   }
@@ -5565,6 +5618,7 @@ class ParadigmCellOverride extends DataClass
     overrideIpa,
     overrideRomanization,
     notes,
+    suppressConstructionRuleId,
   );
   @override
   bool operator ==(Object other) =>
@@ -5575,7 +5629,8 @@ class ParadigmCellOverride extends DataClass
           other.featureSetJson == this.featureSetJson &&
           other.overrideIpa == this.overrideIpa &&
           other.overrideRomanization == this.overrideRomanization &&
-          other.notes == this.notes);
+          other.notes == this.notes &&
+          other.suppressConstructionRuleId == this.suppressConstructionRuleId);
 }
 
 class ParadigmCellOverridesCompanion
@@ -5586,6 +5641,7 @@ class ParadigmCellOverridesCompanion
   final Value<String> overrideIpa;
   final Value<String?> overrideRomanization;
   final Value<String?> notes;
+  final Value<int?> suppressConstructionRuleId;
   const ParadigmCellOverridesCompanion({
     this.id = const Value.absent(),
     this.lexemeId = const Value.absent(),
@@ -5593,6 +5649,7 @@ class ParadigmCellOverridesCompanion
     this.overrideIpa = const Value.absent(),
     this.overrideRomanization = const Value.absent(),
     this.notes = const Value.absent(),
+    this.suppressConstructionRuleId = const Value.absent(),
   });
   ParadigmCellOverridesCompanion.insert({
     this.id = const Value.absent(),
@@ -5601,6 +5658,7 @@ class ParadigmCellOverridesCompanion
     required String overrideIpa,
     this.overrideRomanization = const Value.absent(),
     this.notes = const Value.absent(),
+    this.suppressConstructionRuleId = const Value.absent(),
   }) : lexemeId = Value(lexemeId),
        featureSetJson = Value(featureSetJson),
        overrideIpa = Value(overrideIpa);
@@ -5611,6 +5669,7 @@ class ParadigmCellOverridesCompanion
     Expression<String>? overrideIpa,
     Expression<String>? overrideRomanization,
     Expression<String>? notes,
+    Expression<int>? suppressConstructionRuleId,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -5620,6 +5679,8 @@ class ParadigmCellOverridesCompanion
       if (overrideRomanization != null)
         'override_romanization': overrideRomanization,
       if (notes != null) 'notes': notes,
+      if (suppressConstructionRuleId != null)
+        'suppress_construction_rule_id': suppressConstructionRuleId,
     });
   }
 
@@ -5630,6 +5691,7 @@ class ParadigmCellOverridesCompanion
     Value<String>? overrideIpa,
     Value<String?>? overrideRomanization,
     Value<String?>? notes,
+    Value<int?>? suppressConstructionRuleId,
   }) {
     return ParadigmCellOverridesCompanion(
       id: id ?? this.id,
@@ -5638,6 +5700,8 @@ class ParadigmCellOverridesCompanion
       overrideIpa: overrideIpa ?? this.overrideIpa,
       overrideRomanization: overrideRomanization ?? this.overrideRomanization,
       notes: notes ?? this.notes,
+      suppressConstructionRuleId:
+          suppressConstructionRuleId ?? this.suppressConstructionRuleId,
     );
   }
 
@@ -5664,6 +5728,11 @@ class ParadigmCellOverridesCompanion
     if (notes.present) {
       map['notes'] = Variable<String>(notes.value);
     }
+    if (suppressConstructionRuleId.present) {
+      map['suppress_construction_rule_id'] = Variable<int>(
+        suppressConstructionRuleId.value,
+      );
+    }
     return map;
   }
 
@@ -5675,7 +5744,8 @@ class ParadigmCellOverridesCompanion
           ..write('featureSetJson: $featureSetJson, ')
           ..write('overrideIpa: $overrideIpa, ')
           ..write('overrideRomanization: $overrideRomanization, ')
-          ..write('notes: $notes')
+          ..write('notes: $notes, ')
+          ..write('suppressConstructionRuleId: $suppressConstructionRuleId')
           ..write(')'))
         .toString();
   }
@@ -7486,6 +7556,766 @@ class ConstructionSlotsCompanion extends UpdateCompanion<ConstructionSlot> {
   }
 }
 
+class $ConstructionRulesTable extends ConstructionRules
+    with TableInfo<$ConstructionRulesTable, ConstructionRuleRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $ConstructionRulesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _nameMeta = const VerificationMeta('name');
+  @override
+  late final GeneratedColumn<String> name = GeneratedColumn<String>(
+    'name',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _isActiveMeta = const VerificationMeta(
+    'isActive',
+  );
+  @override
+  late final GeneratedColumn<bool> isActive = GeneratedColumn<bool>(
+    'is_active',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_active" IN (0, 1))',
+    ),
+    defaultValue: const Constant(true),
+  );
+  static const VerificationMeta _orderingMeta = const VerificationMeta(
+    'ordering',
+  );
+  @override
+  late final GeneratedColumn<int> ordering = GeneratedColumn<int>(
+    'ordering',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _constructionIdMeta = const VerificationMeta(
+    'constructionId',
+  );
+  @override
+  late final GeneratedColumn<int> constructionId = GeneratedColumn<int>(
+    'construction_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES phrase_constructions (id) ON DELETE CASCADE',
+    ),
+  );
+  static const VerificationMeta _wordSlotIdMeta = const VerificationMeta(
+    'wordSlotId',
+  );
+  @override
+  late final GeneratedColumn<int> wordSlotId = GeneratedColumn<int>(
+    'word_slot_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES construction_slots (id) ON DELETE CASCADE',
+    ),
+  );
+  static const VerificationMeta _formReferenceJsonMeta = const VerificationMeta(
+    'formReferenceJson',
+  );
+  @override
+  late final GeneratedColumn<String> formReferenceJson =
+      GeneratedColumn<String>(
+        'form_reference_json',
+        aliasedName,
+        false,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+        defaultValue: const Constant('null'),
+      );
+  @override
+  late final GeneratedColumnWithTypeConverter<FeatureBindings, String>
+  featureBindings =
+      GeneratedColumn<String>(
+        'feature_bindings',
+        aliasedName,
+        false,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+        defaultValue: const Constant('{}'),
+      ).withConverter<FeatureBindings>(
+        $ConstructionRulesTable.$converterfeatureBindings,
+      );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    name,
+    isActive,
+    ordering,
+    constructionId,
+    wordSlotId,
+    formReferenceJson,
+    featureBindings,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'construction_rules';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<ConstructionRuleRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('name')) {
+      context.handle(
+        _nameMeta,
+        name.isAcceptableOrUnknown(data['name']!, _nameMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_nameMeta);
+    }
+    if (data.containsKey('is_active')) {
+      context.handle(
+        _isActiveMeta,
+        isActive.isAcceptableOrUnknown(data['is_active']!, _isActiveMeta),
+      );
+    }
+    if (data.containsKey('ordering')) {
+      context.handle(
+        _orderingMeta,
+        ordering.isAcceptableOrUnknown(data['ordering']!, _orderingMeta),
+      );
+    }
+    if (data.containsKey('construction_id')) {
+      context.handle(
+        _constructionIdMeta,
+        constructionId.isAcceptableOrUnknown(
+          data['construction_id']!,
+          _constructionIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_constructionIdMeta);
+    }
+    if (data.containsKey('word_slot_id')) {
+      context.handle(
+        _wordSlotIdMeta,
+        wordSlotId.isAcceptableOrUnknown(
+          data['word_slot_id']!,
+          _wordSlotIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_wordSlotIdMeta);
+    }
+    if (data.containsKey('form_reference_json')) {
+      context.handle(
+        _formReferenceJsonMeta,
+        formReferenceJson.isAcceptableOrUnknown(
+          data['form_reference_json']!,
+          _formReferenceJsonMeta,
+        ),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  ConstructionRuleRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return ConstructionRuleRow(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      name: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}name'],
+      )!,
+      isActive: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_active'],
+      )!,
+      ordering: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}ordering'],
+      )!,
+      constructionId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}construction_id'],
+      )!,
+      wordSlotId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}word_slot_id'],
+      )!,
+      formReferenceJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}form_reference_json'],
+      )!,
+      featureBindings: $ConstructionRulesTable.$converterfeatureBindings
+          .fromSql(
+            attachedDatabase.typeMapping.read(
+              DriftSqlType.string,
+              data['${effectivePrefix}feature_bindings'],
+            )!,
+          ),
+    );
+  }
+
+  @override
+  $ConstructionRulesTable createAlias(String alias) {
+    return $ConstructionRulesTable(attachedDatabase, alias);
+  }
+
+  static JsonTypeConverter2<FeatureBindings, String, Map<String, dynamic>>
+  $converterfeatureBindings = const FeatureBindingsConverter();
+}
+
+class ConstructionRuleRow extends DataClass
+    implements Insertable<ConstructionRuleRow> {
+  final int id;
+  final String name;
+  final bool isActive;
+  final int ordering;
+  final int constructionId;
+  final int wordSlotId;
+  final String formReferenceJson;
+  final FeatureBindings featureBindings;
+  const ConstructionRuleRow({
+    required this.id,
+    required this.name,
+    required this.isActive,
+    required this.ordering,
+    required this.constructionId,
+    required this.wordSlotId,
+    required this.formReferenceJson,
+    required this.featureBindings,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['name'] = Variable<String>(name);
+    map['is_active'] = Variable<bool>(isActive);
+    map['ordering'] = Variable<int>(ordering);
+    map['construction_id'] = Variable<int>(constructionId);
+    map['word_slot_id'] = Variable<int>(wordSlotId);
+    map['form_reference_json'] = Variable<String>(formReferenceJson);
+    {
+      map['feature_bindings'] = Variable<String>(
+        $ConstructionRulesTable.$converterfeatureBindings.toSql(
+          featureBindings,
+        ),
+      );
+    }
+    return map;
+  }
+
+  ConstructionRulesCompanion toCompanion(bool nullToAbsent) {
+    return ConstructionRulesCompanion(
+      id: Value(id),
+      name: Value(name),
+      isActive: Value(isActive),
+      ordering: Value(ordering),
+      constructionId: Value(constructionId),
+      wordSlotId: Value(wordSlotId),
+      formReferenceJson: Value(formReferenceJson),
+      featureBindings: Value(featureBindings),
+    );
+  }
+
+  factory ConstructionRuleRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return ConstructionRuleRow(
+      id: serializer.fromJson<int>(json['id']),
+      name: serializer.fromJson<String>(json['name']),
+      isActive: serializer.fromJson<bool>(json['isActive']),
+      ordering: serializer.fromJson<int>(json['ordering']),
+      constructionId: serializer.fromJson<int>(json['constructionId']),
+      wordSlotId: serializer.fromJson<int>(json['wordSlotId']),
+      formReferenceJson: serializer.fromJson<String>(json['formReferenceJson']),
+      featureBindings: $ConstructionRulesTable.$converterfeatureBindings
+          .fromJson(
+            serializer.fromJson<Map<String, dynamic>>(json['featureBindings']),
+          ),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'name': serializer.toJson<String>(name),
+      'isActive': serializer.toJson<bool>(isActive),
+      'ordering': serializer.toJson<int>(ordering),
+      'constructionId': serializer.toJson<int>(constructionId),
+      'wordSlotId': serializer.toJson<int>(wordSlotId),
+      'formReferenceJson': serializer.toJson<String>(formReferenceJson),
+      'featureBindings': serializer.toJson<Map<String, dynamic>>(
+        $ConstructionRulesTable.$converterfeatureBindings.toJson(
+          featureBindings,
+        ),
+      ),
+    };
+  }
+
+  ConstructionRuleRow copyWith({
+    int? id,
+    String? name,
+    bool? isActive,
+    int? ordering,
+    int? constructionId,
+    int? wordSlotId,
+    String? formReferenceJson,
+    FeatureBindings? featureBindings,
+  }) => ConstructionRuleRow(
+    id: id ?? this.id,
+    name: name ?? this.name,
+    isActive: isActive ?? this.isActive,
+    ordering: ordering ?? this.ordering,
+    constructionId: constructionId ?? this.constructionId,
+    wordSlotId: wordSlotId ?? this.wordSlotId,
+    formReferenceJson: formReferenceJson ?? this.formReferenceJson,
+    featureBindings: featureBindings ?? this.featureBindings,
+  );
+  ConstructionRuleRow copyWithCompanion(ConstructionRulesCompanion data) {
+    return ConstructionRuleRow(
+      id: data.id.present ? data.id.value : this.id,
+      name: data.name.present ? data.name.value : this.name,
+      isActive: data.isActive.present ? data.isActive.value : this.isActive,
+      ordering: data.ordering.present ? data.ordering.value : this.ordering,
+      constructionId: data.constructionId.present
+          ? data.constructionId.value
+          : this.constructionId,
+      wordSlotId: data.wordSlotId.present
+          ? data.wordSlotId.value
+          : this.wordSlotId,
+      formReferenceJson: data.formReferenceJson.present
+          ? data.formReferenceJson.value
+          : this.formReferenceJson,
+      featureBindings: data.featureBindings.present
+          ? data.featureBindings.value
+          : this.featureBindings,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ConstructionRuleRow(')
+          ..write('id: $id, ')
+          ..write('name: $name, ')
+          ..write('isActive: $isActive, ')
+          ..write('ordering: $ordering, ')
+          ..write('constructionId: $constructionId, ')
+          ..write('wordSlotId: $wordSlotId, ')
+          ..write('formReferenceJson: $formReferenceJson, ')
+          ..write('featureBindings: $featureBindings')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    name,
+    isActive,
+    ordering,
+    constructionId,
+    wordSlotId,
+    formReferenceJson,
+    featureBindings,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ConstructionRuleRow &&
+          other.id == this.id &&
+          other.name == this.name &&
+          other.isActive == this.isActive &&
+          other.ordering == this.ordering &&
+          other.constructionId == this.constructionId &&
+          other.wordSlotId == this.wordSlotId &&
+          other.formReferenceJson == this.formReferenceJson &&
+          other.featureBindings == this.featureBindings);
+}
+
+class ConstructionRulesCompanion extends UpdateCompanion<ConstructionRuleRow> {
+  final Value<int> id;
+  final Value<String> name;
+  final Value<bool> isActive;
+  final Value<int> ordering;
+  final Value<int> constructionId;
+  final Value<int> wordSlotId;
+  final Value<String> formReferenceJson;
+  final Value<FeatureBindings> featureBindings;
+  const ConstructionRulesCompanion({
+    this.id = const Value.absent(),
+    this.name = const Value.absent(),
+    this.isActive = const Value.absent(),
+    this.ordering = const Value.absent(),
+    this.constructionId = const Value.absent(),
+    this.wordSlotId = const Value.absent(),
+    this.formReferenceJson = const Value.absent(),
+    this.featureBindings = const Value.absent(),
+  });
+  ConstructionRulesCompanion.insert({
+    this.id = const Value.absent(),
+    required String name,
+    this.isActive = const Value.absent(),
+    this.ordering = const Value.absent(),
+    required int constructionId,
+    required int wordSlotId,
+    this.formReferenceJson = const Value.absent(),
+    this.featureBindings = const Value.absent(),
+  }) : name = Value(name),
+       constructionId = Value(constructionId),
+       wordSlotId = Value(wordSlotId);
+  static Insertable<ConstructionRuleRow> custom({
+    Expression<int>? id,
+    Expression<String>? name,
+    Expression<bool>? isActive,
+    Expression<int>? ordering,
+    Expression<int>? constructionId,
+    Expression<int>? wordSlotId,
+    Expression<String>? formReferenceJson,
+    Expression<String>? featureBindings,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (name != null) 'name': name,
+      if (isActive != null) 'is_active': isActive,
+      if (ordering != null) 'ordering': ordering,
+      if (constructionId != null) 'construction_id': constructionId,
+      if (wordSlotId != null) 'word_slot_id': wordSlotId,
+      if (formReferenceJson != null) 'form_reference_json': formReferenceJson,
+      if (featureBindings != null) 'feature_bindings': featureBindings,
+    });
+  }
+
+  ConstructionRulesCompanion copyWith({
+    Value<int>? id,
+    Value<String>? name,
+    Value<bool>? isActive,
+    Value<int>? ordering,
+    Value<int>? constructionId,
+    Value<int>? wordSlotId,
+    Value<String>? formReferenceJson,
+    Value<FeatureBindings>? featureBindings,
+  }) {
+    return ConstructionRulesCompanion(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      isActive: isActive ?? this.isActive,
+      ordering: ordering ?? this.ordering,
+      constructionId: constructionId ?? this.constructionId,
+      wordSlotId: wordSlotId ?? this.wordSlotId,
+      formReferenceJson: formReferenceJson ?? this.formReferenceJson,
+      featureBindings: featureBindings ?? this.featureBindings,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (name.present) {
+      map['name'] = Variable<String>(name.value);
+    }
+    if (isActive.present) {
+      map['is_active'] = Variable<bool>(isActive.value);
+    }
+    if (ordering.present) {
+      map['ordering'] = Variable<int>(ordering.value);
+    }
+    if (constructionId.present) {
+      map['construction_id'] = Variable<int>(constructionId.value);
+    }
+    if (wordSlotId.present) {
+      map['word_slot_id'] = Variable<int>(wordSlotId.value);
+    }
+    if (formReferenceJson.present) {
+      map['form_reference_json'] = Variable<String>(formReferenceJson.value);
+    }
+    if (featureBindings.present) {
+      map['feature_bindings'] = Variable<String>(
+        $ConstructionRulesTable.$converterfeatureBindings.toSql(
+          featureBindings.value,
+        ),
+      );
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ConstructionRulesCompanion(')
+          ..write('id: $id, ')
+          ..write('name: $name, ')
+          ..write('isActive: $isActive, ')
+          ..write('ordering: $ordering, ')
+          ..write('constructionId: $constructionId, ')
+          ..write('wordSlotId: $wordSlotId, ')
+          ..write('formReferenceJson: $formReferenceJson, ')
+          ..write('featureBindings: $featureBindings')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $ConstructionRulePOSTable extends ConstructionRulePOS
+    with TableInfo<$ConstructionRulePOSTable, ConstructionRulePOSRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $ConstructionRulePOSTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _ruleIdMeta = const VerificationMeta('ruleId');
+  @override
+  late final GeneratedColumn<int> ruleId = GeneratedColumn<int>(
+    'rule_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES construction_rules (id) ON DELETE CASCADE',
+    ),
+  );
+  static const VerificationMeta _posIdMeta = const VerificationMeta('posId');
+  @override
+  late final GeneratedColumn<int> posId = GeneratedColumn<int>(
+    'pos_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES parts_of_speech (id) ON DELETE CASCADE',
+    ),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [ruleId, posId];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'construction_rule_pos';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<ConstructionRulePOSRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('rule_id')) {
+      context.handle(
+        _ruleIdMeta,
+        ruleId.isAcceptableOrUnknown(data['rule_id']!, _ruleIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_ruleIdMeta);
+    }
+    if (data.containsKey('pos_id')) {
+      context.handle(
+        _posIdMeta,
+        posId.isAcceptableOrUnknown(data['pos_id']!, _posIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_posIdMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {ruleId, posId};
+  @override
+  ConstructionRulePOSRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return ConstructionRulePOSRow(
+      ruleId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}rule_id'],
+      )!,
+      posId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}pos_id'],
+      )!,
+    );
+  }
+
+  @override
+  $ConstructionRulePOSTable createAlias(String alias) {
+    return $ConstructionRulePOSTable(attachedDatabase, alias);
+  }
+}
+
+class ConstructionRulePOSRow extends DataClass
+    implements Insertable<ConstructionRulePOSRow> {
+  final int ruleId;
+  final int posId;
+  const ConstructionRulePOSRow({required this.ruleId, required this.posId});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['rule_id'] = Variable<int>(ruleId);
+    map['pos_id'] = Variable<int>(posId);
+    return map;
+  }
+
+  ConstructionRulePOSCompanion toCompanion(bool nullToAbsent) {
+    return ConstructionRulePOSCompanion(
+      ruleId: Value(ruleId),
+      posId: Value(posId),
+    );
+  }
+
+  factory ConstructionRulePOSRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return ConstructionRulePOSRow(
+      ruleId: serializer.fromJson<int>(json['ruleId']),
+      posId: serializer.fromJson<int>(json['posId']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'ruleId': serializer.toJson<int>(ruleId),
+      'posId': serializer.toJson<int>(posId),
+    };
+  }
+
+  ConstructionRulePOSRow copyWith({int? ruleId, int? posId}) =>
+      ConstructionRulePOSRow(
+        ruleId: ruleId ?? this.ruleId,
+        posId: posId ?? this.posId,
+      );
+  ConstructionRulePOSRow copyWithCompanion(ConstructionRulePOSCompanion data) {
+    return ConstructionRulePOSRow(
+      ruleId: data.ruleId.present ? data.ruleId.value : this.ruleId,
+      posId: data.posId.present ? data.posId.value : this.posId,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ConstructionRulePOSRow(')
+          ..write('ruleId: $ruleId, ')
+          ..write('posId: $posId')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(ruleId, posId);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ConstructionRulePOSRow &&
+          other.ruleId == this.ruleId &&
+          other.posId == this.posId);
+}
+
+class ConstructionRulePOSCompanion
+    extends UpdateCompanion<ConstructionRulePOSRow> {
+  final Value<int> ruleId;
+  final Value<int> posId;
+  final Value<int> rowid;
+  const ConstructionRulePOSCompanion({
+    this.ruleId = const Value.absent(),
+    this.posId = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  ConstructionRulePOSCompanion.insert({
+    required int ruleId,
+    required int posId,
+    this.rowid = const Value.absent(),
+  }) : ruleId = Value(ruleId),
+       posId = Value(posId);
+  static Insertable<ConstructionRulePOSRow> custom({
+    Expression<int>? ruleId,
+    Expression<int>? posId,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (ruleId != null) 'rule_id': ruleId,
+      if (posId != null) 'pos_id': posId,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  ConstructionRulePOSCompanion copyWith({
+    Value<int>? ruleId,
+    Value<int>? posId,
+    Value<int>? rowid,
+  }) {
+    return ConstructionRulePOSCompanion(
+      ruleId: ruleId ?? this.ruleId,
+      posId: posId ?? this.posId,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (ruleId.present) {
+      map['rule_id'] = Variable<int>(ruleId.value);
+    }
+    if (posId.present) {
+      map['pos_id'] = Variable<int>(posId.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ConstructionRulePOSCompanion(')
+          ..write('ruleId: $ruleId, ')
+          ..write('posId: $posId, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -7520,6 +8350,10 @@ abstract class _$AppDatabase extends GeneratedDatabase {
       $PhraseConstructionsTable(this);
   late final $ConstructionSlotsTable constructionSlots =
       $ConstructionSlotsTable(this);
+  late final $ConstructionRulesTable constructionRules =
+      $ConstructionRulesTable(this);
+  late final $ConstructionRulePOSTable constructionRulePOS =
+      $ConstructionRulePOSTable(this);
   late final PhonemeDao phonemeDao = PhonemeDao(this as AppDatabase);
   late final NaturalClassDao naturalClassDao = NaturalClassDao(
     this as AppDatabase,
@@ -7549,6 +8383,9 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final ConstructionDao constructionDao = ConstructionDao(
     this as AppDatabase,
   );
+  late final ConstructionRuleDao constructionRuleDao = ConstructionRuleDao(
+    this as AppDatabase,
+  );
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -7573,6 +8410,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     standardFormPatterns,
     phraseConstructions,
     constructionSlots,
+    constructionRules,
+    constructionRulePOS,
   ];
   @override
   StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules([
@@ -7638,6 +8477,34 @@ abstract class _$AppDatabase extends GeneratedDatabase {
         limitUpdateKind: UpdateKind.delete,
       ),
       result: [TableUpdate('construction_slots', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'phrase_constructions',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('construction_rules', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'construction_slots',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('construction_rules', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'construction_rules',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('construction_rule_pos', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'parts_of_speech',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('construction_rule_pos', kind: UpdateKind.delete)],
     ),
   ]);
 }
@@ -8777,6 +9644,33 @@ final class $$PartsOfSpeechTableReferences
       manager.$state.copyWith(prefetchedData: cache),
     );
   }
+
+  static MultiTypedResultKey<
+    $ConstructionRulePOSTable,
+    List<ConstructionRulePOSRow>
+  >
+  _constructionRulePOSRefsTable(_$AppDatabase db) =>
+      MultiTypedResultKey.fromTable(
+        db.constructionRulePOS,
+        aliasName: $_aliasNameGenerator(
+          db.partsOfSpeech.id,
+          db.constructionRulePOS.posId,
+        ),
+      );
+
+  $$ConstructionRulePOSTableProcessedTableManager get constructionRulePOSRefs {
+    final manager = $$ConstructionRulePOSTableTableManager(
+      $_db,
+      $_db.constructionRulePOS,
+    ).filter((f) => f.posId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _constructionRulePOSRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
 }
 
 class $$PartsOfSpeechTableFilterComposer
@@ -8869,6 +9763,31 @@ class $$PartsOfSpeechTableFilterComposer
           }) => $$InflectionalRulePOSTableFilterComposer(
             $db: $db,
             $table: $db.inflectionalRulePOS,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> constructionRulePOSRefs(
+    Expression<bool> Function($$ConstructionRulePOSTableFilterComposer f) f,
+  ) {
+    final $$ConstructionRulePOSTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.constructionRulePOS,
+      getReferencedColumn: (t) => t.posId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ConstructionRulePOSTableFilterComposer(
+            $db: $db,
+            $table: $db.constructionRulePOS,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -8999,6 +9918,32 @@ class $$PartsOfSpeechTableAnnotationComposer
         );
     return f(composer);
   }
+
+  Expression<T> constructionRulePOSRefs<T extends Object>(
+    Expression<T> Function($$ConstructionRulePOSTableAnnotationComposer a) f,
+  ) {
+    final $$ConstructionRulePOSTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.constructionRulePOS,
+          getReferencedColumn: (t) => t.posId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$ConstructionRulePOSTableAnnotationComposer(
+                $db: $db,
+                $table: $db.constructionRulePOS,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
 }
 
 class $$PartsOfSpeechTableTableManager
@@ -9018,6 +9963,7 @@ class $$PartsOfSpeechTableTableManager
             bool dimensionsRefs,
             bool markersRefs,
             bool inflectionalRulePOSRefs,
+            bool constructionRulePOSRefs,
           })
         > {
   $$PartsOfSpeechTableTableManager(_$AppDatabase db, $PartsOfSpeechTable table)
@@ -9064,6 +10010,7 @@ class $$PartsOfSpeechTableTableManager
                 dimensionsRefs = false,
                 markersRefs = false,
                 inflectionalRulePOSRefs = false,
+                constructionRulePOSRefs = false,
               }) {
                 return PrefetchHooks(
                   db: db,
@@ -9071,6 +10018,7 @@ class $$PartsOfSpeechTableTableManager
                     if (dimensionsRefs) db.dimensions,
                     if (markersRefs) db.markers,
                     if (inflectionalRulePOSRefs) db.inflectionalRulePOS,
+                    if (constructionRulePOSRefs) db.constructionRulePOS,
                   ],
                   addJoins: null,
                   getPrefetchedDataCallback: (items) async {
@@ -9138,6 +10086,27 @@ class $$PartsOfSpeechTableTableManager
                               ),
                           typedResults: items,
                         ),
+                      if (constructionRulePOSRefs)
+                        await $_getPrefetchedData<
+                          PartsOfSpeechData,
+                          $PartsOfSpeechTable,
+                          ConstructionRulePOSRow
+                        >(
+                          currentTable: table,
+                          referencedTable: $$PartsOfSpeechTableReferences
+                              ._constructionRulePOSRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$PartsOfSpeechTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).constructionRulePOSRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.posId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
                     ];
                   },
                 );
@@ -9162,6 +10131,7 @@ typedef $$PartsOfSpeechTableProcessedTableManager =
         bool dimensionsRefs,
         bool markersRefs,
         bool inflectionalRulePOSRefs,
+        bool constructionRulePOSRefs,
       })
     >;
 typedef $$MorphologicalRulesTableCreateCompanionBuilder =
@@ -11798,6 +12768,7 @@ typedef $$ParadigmCellOverridesTableCreateCompanionBuilder =
       required String overrideIpa,
       Value<String?> overrideRomanization,
       Value<String?> notes,
+      Value<int?> suppressConstructionRuleId,
     });
 typedef $$ParadigmCellOverridesTableUpdateCompanionBuilder =
     ParadigmCellOverridesCompanion Function({
@@ -11807,6 +12778,7 @@ typedef $$ParadigmCellOverridesTableUpdateCompanionBuilder =
       Value<String> overrideIpa,
       Value<String?> overrideRomanization,
       Value<String?> notes,
+      Value<int?> suppressConstructionRuleId,
     });
 
 final class $$ParadigmCellOverridesTableReferences
@@ -11876,6 +12848,11 @@ class $$ParadigmCellOverridesTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
+  ColumnFilters<int> get suppressConstructionRuleId => $composableBuilder(
+    column: $table.suppressConstructionRuleId,
+    builder: (column) => ColumnFilters(column),
+  );
+
   $$LexemesTableFilterComposer get lexemeId {
     final $$LexemesTableFilterComposer composer = $composerBuilder(
       composer: this,
@@ -11934,6 +12911,11 @@ class $$ParadigmCellOverridesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<int> get suppressConstructionRuleId => $composableBuilder(
+    column: $table.suppressConstructionRuleId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   $$LexemesTableOrderingComposer get lexemeId {
     final $$LexemesTableOrderingComposer composer = $composerBuilder(
       composer: this,
@@ -11987,6 +12969,11 @@ class $$ParadigmCellOverridesTableAnnotationComposer
 
   GeneratedColumn<String> get notes =>
       $composableBuilder(column: $table.notes, builder: (column) => column);
+
+  GeneratedColumn<int> get suppressConstructionRuleId => $composableBuilder(
+    column: $table.suppressConstructionRuleId,
+    builder: (column) => column,
+  );
 
   $$LexemesTableAnnotationComposer get lexemeId {
     final $$LexemesTableAnnotationComposer composer = $composerBuilder(
@@ -12057,6 +13044,7 @@ class $$ParadigmCellOverridesTableTableManager
                 Value<String> overrideIpa = const Value.absent(),
                 Value<String?> overrideRomanization = const Value.absent(),
                 Value<String?> notes = const Value.absent(),
+                Value<int?> suppressConstructionRuleId = const Value.absent(),
               }) => ParadigmCellOverridesCompanion(
                 id: id,
                 lexemeId: lexemeId,
@@ -12064,6 +13052,7 @@ class $$ParadigmCellOverridesTableTableManager
                 overrideIpa: overrideIpa,
                 overrideRomanization: overrideRomanization,
                 notes: notes,
+                suppressConstructionRuleId: suppressConstructionRuleId,
               ),
           createCompanionCallback:
               ({
@@ -12073,6 +13062,7 @@ class $$ParadigmCellOverridesTableTableManager
                 required String overrideIpa,
                 Value<String?> overrideRomanization = const Value.absent(),
                 Value<String?> notes = const Value.absent(),
+                Value<int?> suppressConstructionRuleId = const Value.absent(),
               }) => ParadigmCellOverridesCompanion.insert(
                 id: id,
                 lexemeId: lexemeId,
@@ -12080,6 +13070,7 @@ class $$ParadigmCellOverridesTableTableManager
                 overrideIpa: overrideIpa,
                 overrideRomanization: overrideRomanization,
                 notes: notes,
+                suppressConstructionRuleId: suppressConstructionRuleId,
               ),
           withReferenceMapper: (p0) => p0
               .map(
@@ -13575,6 +14566,30 @@ final class $$PhraseConstructionsTableReferences
       manager.$state.copyWith(prefetchedData: cache),
     );
   }
+
+  static MultiTypedResultKey<$ConstructionRulesTable, List<ConstructionRuleRow>>
+  _constructionRulesRefsTable(_$AppDatabase db) =>
+      MultiTypedResultKey.fromTable(
+        db.constructionRules,
+        aliasName: $_aliasNameGenerator(
+          db.phraseConstructions.id,
+          db.constructionRules.constructionId,
+        ),
+      );
+
+  $$ConstructionRulesTableProcessedTableManager get constructionRulesRefs {
+    final manager = $$ConstructionRulesTableTableManager(
+      $_db,
+      $_db.constructionRules,
+    ).filter((f) => f.constructionId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _constructionRulesRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
 }
 
 class $$PhraseConstructionsTableFilterComposer
@@ -13617,6 +14632,31 @@ class $$PhraseConstructionsTableFilterComposer
           }) => $$ConstructionSlotsTableFilterComposer(
             $db: $db,
             $table: $db.constructionSlots,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> constructionRulesRefs(
+    Expression<bool> Function($$ConstructionRulesTableFilterComposer f) f,
+  ) {
+    final $$ConstructionRulesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.constructionRules,
+      getReferencedColumn: (t) => t.constructionId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ConstructionRulesTableFilterComposer(
+            $db: $db,
+            $table: $db.constructionRules,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -13695,6 +14735,32 @@ class $$PhraseConstructionsTableAnnotationComposer
         );
     return f(composer);
   }
+
+  Expression<T> constructionRulesRefs<T extends Object>(
+    Expression<T> Function($$ConstructionRulesTableAnnotationComposer a) f,
+  ) {
+    final $$ConstructionRulesTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.constructionRules,
+          getReferencedColumn: (t) => t.constructionId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$ConstructionRulesTableAnnotationComposer(
+                $db: $db,
+                $table: $db.constructionRules,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
 }
 
 class $$PhraseConstructionsTableTableManager
@@ -13710,7 +14776,10 @@ class $$PhraseConstructionsTableTableManager
           $$PhraseConstructionsTableUpdateCompanionBuilder,
           (PhraseConstruction, $$PhraseConstructionsTableReferences),
           PhraseConstruction,
-          PrefetchHooks Function({bool constructionSlotsRefs})
+          PrefetchHooks Function({
+            bool constructionSlotsRefs,
+            bool constructionRulesRefs,
+          })
         > {
   $$PhraseConstructionsTableTableManager(
     _$AppDatabase db,
@@ -13759,40 +14828,63 @@ class $$PhraseConstructionsTableTableManager
                 ),
               )
               .toList(),
-          prefetchHooksCallback: ({constructionSlotsRefs = false}) {
-            return PrefetchHooks(
-              db: db,
-              explicitlyWatchedTables: [
-                if (constructionSlotsRefs) db.constructionSlots,
-              ],
-              addJoins: null,
-              getPrefetchedDataCallback: (items) async {
-                return [
-                  if (constructionSlotsRefs)
-                    await $_getPrefetchedData<
-                      PhraseConstruction,
-                      $PhraseConstructionsTable,
-                      ConstructionSlot
-                    >(
-                      currentTable: table,
-                      referencedTable: $$PhraseConstructionsTableReferences
-                          ._constructionSlotsRefsTable(db),
-                      managerFromTypedResult: (p0) =>
-                          $$PhraseConstructionsTableReferences(
-                            db,
-                            table,
-                            p0,
-                          ).constructionSlotsRefs,
-                      referencedItemsForCurrentItem: (item, referencedItems) =>
-                          referencedItems.where(
-                            (e) => e.constructionId == item.id,
-                          ),
-                      typedResults: items,
-                    ),
-                ];
+          prefetchHooksCallback:
+              ({constructionSlotsRefs = false, constructionRulesRefs = false}) {
+                return PrefetchHooks(
+                  db: db,
+                  explicitlyWatchedTables: [
+                    if (constructionSlotsRefs) db.constructionSlots,
+                    if (constructionRulesRefs) db.constructionRules,
+                  ],
+                  addJoins: null,
+                  getPrefetchedDataCallback: (items) async {
+                    return [
+                      if (constructionSlotsRefs)
+                        await $_getPrefetchedData<
+                          PhraseConstruction,
+                          $PhraseConstructionsTable,
+                          ConstructionSlot
+                        >(
+                          currentTable: table,
+                          referencedTable: $$PhraseConstructionsTableReferences
+                              ._constructionSlotsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$PhraseConstructionsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).constructionSlotsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.constructionId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (constructionRulesRefs)
+                        await $_getPrefetchedData<
+                          PhraseConstruction,
+                          $PhraseConstructionsTable,
+                          ConstructionRuleRow
+                        >(
+                          currentTable: table,
+                          referencedTable: $$PhraseConstructionsTableReferences
+                              ._constructionRulesRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$PhraseConstructionsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).constructionRulesRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.constructionId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                    ];
+                  },
+                );
               },
-            );
-          },
         ),
       );
 }
@@ -13809,7 +14901,10 @@ typedef $$PhraseConstructionsTableProcessedTableManager =
       $$PhraseConstructionsTableUpdateCompanionBuilder,
       (PhraseConstruction, $$PhraseConstructionsTableReferences),
       PhraseConstruction,
-      PrefetchHooks Function({bool constructionSlotsRefs})
+      PrefetchHooks Function({
+        bool constructionSlotsRefs,
+        bool constructionRulesRefs,
+      })
     >;
 typedef $$ConstructionSlotsTableCreateCompanionBuilder =
     ConstructionSlotsCompanion Function({
@@ -13862,6 +14957,30 @@ final class $$ConstructionSlotsTableReferences
     if (item == null) return manager;
     return ProcessedTableManager(
       manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static MultiTypedResultKey<$ConstructionRulesTable, List<ConstructionRuleRow>>
+  _constructionRulesRefsTable(_$AppDatabase db) =>
+      MultiTypedResultKey.fromTable(
+        db.constructionRules,
+        aliasName: $_aliasNameGenerator(
+          db.constructionSlots.id,
+          db.constructionRules.wordSlotId,
+        ),
+      );
+
+  $$ConstructionRulesTableProcessedTableManager get constructionRulesRefs {
+    final manager = $$ConstructionRulesTableTableManager(
+      $_db,
+      $_db.constructionRules,
+    ).filter((f) => f.wordSlotId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _constructionRulesRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
     );
   }
 }
@@ -13921,6 +15040,31 @@ class $$ConstructionSlotsTableFilterComposer
           ),
     );
     return composer;
+  }
+
+  Expression<bool> constructionRulesRefs(
+    Expression<bool> Function($$ConstructionRulesTableFilterComposer f) f,
+  ) {
+    final $$ConstructionRulesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.constructionRules,
+      getReferencedColumn: (t) => t.wordSlotId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ConstructionRulesTableFilterComposer(
+            $db: $db,
+            $table: $db.constructionRules,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
   }
 }
 
@@ -14030,6 +15174,32 @@ class $$ConstructionSlotsTableAnnotationComposer
         );
     return composer;
   }
+
+  Expression<T> constructionRulesRefs<T extends Object>(
+    Expression<T> Function($$ConstructionRulesTableAnnotationComposer a) f,
+  ) {
+    final $$ConstructionRulesTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.constructionRules,
+          getReferencedColumn: (t) => t.wordSlotId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$ConstructionRulesTableAnnotationComposer(
+                $db: $db,
+                $table: $db.constructionRules,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
 }
 
 class $$ConstructionSlotsTableTableManager
@@ -14045,7 +15215,10 @@ class $$ConstructionSlotsTableTableManager
           $$ConstructionSlotsTableUpdateCompanionBuilder,
           (ConstructionSlot, $$ConstructionSlotsTableReferences),
           ConstructionSlot,
-          PrefetchHooks Function({bool constructionId})
+          PrefetchHooks Function({
+            bool constructionId,
+            bool constructionRulesRefs,
+          })
         > {
   $$ConstructionSlotsTableTableManager(
     _$AppDatabase db,
@@ -14103,7 +15276,998 @@ class $$ConstructionSlotsTableTableManager
                 ),
               )
               .toList(),
-          prefetchHooksCallback: ({constructionId = false}) {
+          prefetchHooksCallback:
+              ({constructionId = false, constructionRulesRefs = false}) {
+                return PrefetchHooks(
+                  db: db,
+                  explicitlyWatchedTables: [
+                    if (constructionRulesRefs) db.constructionRules,
+                  ],
+                  addJoins:
+                      <
+                        T extends TableManagerState<
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic
+                        >
+                      >(state) {
+                        if (constructionId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.constructionId,
+                                    referencedTable:
+                                        $$ConstructionSlotsTableReferences
+                                            ._constructionIdTable(db),
+                                    referencedColumn:
+                                        $$ConstructionSlotsTableReferences
+                                            ._constructionIdTable(db)
+                                            .id,
+                                  )
+                                  as T;
+                        }
+
+                        return state;
+                      },
+                  getPrefetchedDataCallback: (items) async {
+                    return [
+                      if (constructionRulesRefs)
+                        await $_getPrefetchedData<
+                          ConstructionSlot,
+                          $ConstructionSlotsTable,
+                          ConstructionRuleRow
+                        >(
+                          currentTable: table,
+                          referencedTable: $$ConstructionSlotsTableReferences
+                              ._constructionRulesRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$ConstructionSlotsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).constructionRulesRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.wordSlotId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                    ];
+                  },
+                );
+              },
+        ),
+      );
+}
+
+typedef $$ConstructionSlotsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $ConstructionSlotsTable,
+      ConstructionSlot,
+      $$ConstructionSlotsTableFilterComposer,
+      $$ConstructionSlotsTableOrderingComposer,
+      $$ConstructionSlotsTableAnnotationComposer,
+      $$ConstructionSlotsTableCreateCompanionBuilder,
+      $$ConstructionSlotsTableUpdateCompanionBuilder,
+      (ConstructionSlot, $$ConstructionSlotsTableReferences),
+      ConstructionSlot,
+      PrefetchHooks Function({bool constructionId, bool constructionRulesRefs})
+    >;
+typedef $$ConstructionRulesTableCreateCompanionBuilder =
+    ConstructionRulesCompanion Function({
+      Value<int> id,
+      required String name,
+      Value<bool> isActive,
+      Value<int> ordering,
+      required int constructionId,
+      required int wordSlotId,
+      Value<String> formReferenceJson,
+      Value<FeatureBindings> featureBindings,
+    });
+typedef $$ConstructionRulesTableUpdateCompanionBuilder =
+    ConstructionRulesCompanion Function({
+      Value<int> id,
+      Value<String> name,
+      Value<bool> isActive,
+      Value<int> ordering,
+      Value<int> constructionId,
+      Value<int> wordSlotId,
+      Value<String> formReferenceJson,
+      Value<FeatureBindings> featureBindings,
+    });
+
+final class $$ConstructionRulesTableReferences
+    extends
+        BaseReferences<
+          _$AppDatabase,
+          $ConstructionRulesTable,
+          ConstructionRuleRow
+        > {
+  $$ConstructionRulesTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static $PhraseConstructionsTable _constructionIdTable(_$AppDatabase db) =>
+      db.phraseConstructions.createAlias(
+        $_aliasNameGenerator(
+          db.constructionRules.constructionId,
+          db.phraseConstructions.id,
+        ),
+      );
+
+  $$PhraseConstructionsTableProcessedTableManager get constructionId {
+    final $_column = $_itemColumn<int>('construction_id')!;
+
+    final manager = $$PhraseConstructionsTableTableManager(
+      $_db,
+      $_db.phraseConstructions,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_constructionIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static $ConstructionSlotsTable _wordSlotIdTable(_$AppDatabase db) =>
+      db.constructionSlots.createAlias(
+        $_aliasNameGenerator(
+          db.constructionRules.wordSlotId,
+          db.constructionSlots.id,
+        ),
+      );
+
+  $$ConstructionSlotsTableProcessedTableManager get wordSlotId {
+    final $_column = $_itemColumn<int>('word_slot_id')!;
+
+    final manager = $$ConstructionSlotsTableTableManager(
+      $_db,
+      $_db.constructionSlots,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_wordSlotIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static MultiTypedResultKey<
+    $ConstructionRulePOSTable,
+    List<ConstructionRulePOSRow>
+  >
+  _constructionRulePOSRefsTable(_$AppDatabase db) =>
+      MultiTypedResultKey.fromTable(
+        db.constructionRulePOS,
+        aliasName: $_aliasNameGenerator(
+          db.constructionRules.id,
+          db.constructionRulePOS.ruleId,
+        ),
+      );
+
+  $$ConstructionRulePOSTableProcessedTableManager get constructionRulePOSRefs {
+    final manager = $$ConstructionRulePOSTableTableManager(
+      $_db,
+      $_db.constructionRulePOS,
+    ).filter((f) => f.ruleId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _constructionRulePOSRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+}
+
+class $$ConstructionRulesTableFilterComposer
+    extends Composer<_$AppDatabase, $ConstructionRulesTable> {
+  $$ConstructionRulesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isActive => $composableBuilder(
+    column: $table.isActive,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get ordering => $composableBuilder(
+    column: $table.ordering,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get formReferenceJson => $composableBuilder(
+    column: $table.formReferenceJson,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnWithTypeConverterFilters<FeatureBindings, FeatureBindings, String>
+  get featureBindings => $composableBuilder(
+    column: $table.featureBindings,
+    builder: (column) => ColumnWithTypeConverterFilters(column),
+  );
+
+  $$PhraseConstructionsTableFilterComposer get constructionId {
+    final $$PhraseConstructionsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.constructionId,
+      referencedTable: $db.phraseConstructions,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$PhraseConstructionsTableFilterComposer(
+            $db: $db,
+            $table: $db.phraseConstructions,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$ConstructionSlotsTableFilterComposer get wordSlotId {
+    final $$ConstructionSlotsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.wordSlotId,
+      referencedTable: $db.constructionSlots,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ConstructionSlotsTableFilterComposer(
+            $db: $db,
+            $table: $db.constructionSlots,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  Expression<bool> constructionRulePOSRefs(
+    Expression<bool> Function($$ConstructionRulePOSTableFilterComposer f) f,
+  ) {
+    final $$ConstructionRulePOSTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.constructionRulePOS,
+      getReferencedColumn: (t) => t.ruleId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ConstructionRulePOSTableFilterComposer(
+            $db: $db,
+            $table: $db.constructionRulePOS,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+}
+
+class $$ConstructionRulesTableOrderingComposer
+    extends Composer<_$AppDatabase, $ConstructionRulesTable> {
+  $$ConstructionRulesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get isActive => $composableBuilder(
+    column: $table.isActive,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get ordering => $composableBuilder(
+    column: $table.ordering,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get formReferenceJson => $composableBuilder(
+    column: $table.formReferenceJson,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get featureBindings => $composableBuilder(
+    column: $table.featureBindings,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$PhraseConstructionsTableOrderingComposer get constructionId {
+    final $$PhraseConstructionsTableOrderingComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.constructionId,
+          referencedTable: $db.phraseConstructions,
+          getReferencedColumn: (t) => t.id,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$PhraseConstructionsTableOrderingComposer(
+                $db: $db,
+                $table: $db.phraseConstructions,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return composer;
+  }
+
+  $$ConstructionSlotsTableOrderingComposer get wordSlotId {
+    final $$ConstructionSlotsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.wordSlotId,
+      referencedTable: $db.constructionSlots,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ConstructionSlotsTableOrderingComposer(
+            $db: $db,
+            $table: $db.constructionSlots,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$ConstructionRulesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $ConstructionRulesTable> {
+  $$ConstructionRulesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumn<bool> get isActive =>
+      $composableBuilder(column: $table.isActive, builder: (column) => column);
+
+  GeneratedColumn<int> get ordering =>
+      $composableBuilder(column: $table.ordering, builder: (column) => column);
+
+  GeneratedColumn<String> get formReferenceJson => $composableBuilder(
+    column: $table.formReferenceJson,
+    builder: (column) => column,
+  );
+
+  GeneratedColumnWithTypeConverter<FeatureBindings, String>
+  get featureBindings => $composableBuilder(
+    column: $table.featureBindings,
+    builder: (column) => column,
+  );
+
+  $$PhraseConstructionsTableAnnotationComposer get constructionId {
+    final $$PhraseConstructionsTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.constructionId,
+          referencedTable: $db.phraseConstructions,
+          getReferencedColumn: (t) => t.id,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$PhraseConstructionsTableAnnotationComposer(
+                $db: $db,
+                $table: $db.phraseConstructions,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return composer;
+  }
+
+  $$ConstructionSlotsTableAnnotationComposer get wordSlotId {
+    final $$ConstructionSlotsTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.wordSlotId,
+          referencedTable: $db.constructionSlots,
+          getReferencedColumn: (t) => t.id,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$ConstructionSlotsTableAnnotationComposer(
+                $db: $db,
+                $table: $db.constructionSlots,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return composer;
+  }
+
+  Expression<T> constructionRulePOSRefs<T extends Object>(
+    Expression<T> Function($$ConstructionRulePOSTableAnnotationComposer a) f,
+  ) {
+    final $$ConstructionRulePOSTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.constructionRulePOS,
+          getReferencedColumn: (t) => t.ruleId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$ConstructionRulePOSTableAnnotationComposer(
+                $db: $db,
+                $table: $db.constructionRulePOS,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
+}
+
+class $$ConstructionRulesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $ConstructionRulesTable,
+          ConstructionRuleRow,
+          $$ConstructionRulesTableFilterComposer,
+          $$ConstructionRulesTableOrderingComposer,
+          $$ConstructionRulesTableAnnotationComposer,
+          $$ConstructionRulesTableCreateCompanionBuilder,
+          $$ConstructionRulesTableUpdateCompanionBuilder,
+          (ConstructionRuleRow, $$ConstructionRulesTableReferences),
+          ConstructionRuleRow,
+          PrefetchHooks Function({
+            bool constructionId,
+            bool wordSlotId,
+            bool constructionRulePOSRefs,
+          })
+        > {
+  $$ConstructionRulesTableTableManager(
+    _$AppDatabase db,
+    $ConstructionRulesTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$ConstructionRulesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$ConstructionRulesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$ConstructionRulesTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<String> name = const Value.absent(),
+                Value<bool> isActive = const Value.absent(),
+                Value<int> ordering = const Value.absent(),
+                Value<int> constructionId = const Value.absent(),
+                Value<int> wordSlotId = const Value.absent(),
+                Value<String> formReferenceJson = const Value.absent(),
+                Value<FeatureBindings> featureBindings = const Value.absent(),
+              }) => ConstructionRulesCompanion(
+                id: id,
+                name: name,
+                isActive: isActive,
+                ordering: ordering,
+                constructionId: constructionId,
+                wordSlotId: wordSlotId,
+                formReferenceJson: formReferenceJson,
+                featureBindings: featureBindings,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required String name,
+                Value<bool> isActive = const Value.absent(),
+                Value<int> ordering = const Value.absent(),
+                required int constructionId,
+                required int wordSlotId,
+                Value<String> formReferenceJson = const Value.absent(),
+                Value<FeatureBindings> featureBindings = const Value.absent(),
+              }) => ConstructionRulesCompanion.insert(
+                id: id,
+                name: name,
+                isActive: isActive,
+                ordering: ordering,
+                constructionId: constructionId,
+                wordSlotId: wordSlotId,
+                formReferenceJson: formReferenceJson,
+                featureBindings: featureBindings,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$ConstructionRulesTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback:
+              ({
+                constructionId = false,
+                wordSlotId = false,
+                constructionRulePOSRefs = false,
+              }) {
+                return PrefetchHooks(
+                  db: db,
+                  explicitlyWatchedTables: [
+                    if (constructionRulePOSRefs) db.constructionRulePOS,
+                  ],
+                  addJoins:
+                      <
+                        T extends TableManagerState<
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic
+                        >
+                      >(state) {
+                        if (constructionId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.constructionId,
+                                    referencedTable:
+                                        $$ConstructionRulesTableReferences
+                                            ._constructionIdTable(db),
+                                    referencedColumn:
+                                        $$ConstructionRulesTableReferences
+                                            ._constructionIdTable(db)
+                                            .id,
+                                  )
+                                  as T;
+                        }
+                        if (wordSlotId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.wordSlotId,
+                                    referencedTable:
+                                        $$ConstructionRulesTableReferences
+                                            ._wordSlotIdTable(db),
+                                    referencedColumn:
+                                        $$ConstructionRulesTableReferences
+                                            ._wordSlotIdTable(db)
+                                            .id,
+                                  )
+                                  as T;
+                        }
+
+                        return state;
+                      },
+                  getPrefetchedDataCallback: (items) async {
+                    return [
+                      if (constructionRulePOSRefs)
+                        await $_getPrefetchedData<
+                          ConstructionRuleRow,
+                          $ConstructionRulesTable,
+                          ConstructionRulePOSRow
+                        >(
+                          currentTable: table,
+                          referencedTable: $$ConstructionRulesTableReferences
+                              ._constructionRulePOSRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$ConstructionRulesTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).constructionRulePOSRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.ruleId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                    ];
+                  },
+                );
+              },
+        ),
+      );
+}
+
+typedef $$ConstructionRulesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $ConstructionRulesTable,
+      ConstructionRuleRow,
+      $$ConstructionRulesTableFilterComposer,
+      $$ConstructionRulesTableOrderingComposer,
+      $$ConstructionRulesTableAnnotationComposer,
+      $$ConstructionRulesTableCreateCompanionBuilder,
+      $$ConstructionRulesTableUpdateCompanionBuilder,
+      (ConstructionRuleRow, $$ConstructionRulesTableReferences),
+      ConstructionRuleRow,
+      PrefetchHooks Function({
+        bool constructionId,
+        bool wordSlotId,
+        bool constructionRulePOSRefs,
+      })
+    >;
+typedef $$ConstructionRulePOSTableCreateCompanionBuilder =
+    ConstructionRulePOSCompanion Function({
+      required int ruleId,
+      required int posId,
+      Value<int> rowid,
+    });
+typedef $$ConstructionRulePOSTableUpdateCompanionBuilder =
+    ConstructionRulePOSCompanion Function({
+      Value<int> ruleId,
+      Value<int> posId,
+      Value<int> rowid,
+    });
+
+final class $$ConstructionRulePOSTableReferences
+    extends
+        BaseReferences<
+          _$AppDatabase,
+          $ConstructionRulePOSTable,
+          ConstructionRulePOSRow
+        > {
+  $$ConstructionRulePOSTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static $ConstructionRulesTable _ruleIdTable(_$AppDatabase db) =>
+      db.constructionRules.createAlias(
+        $_aliasNameGenerator(
+          db.constructionRulePOS.ruleId,
+          db.constructionRules.id,
+        ),
+      );
+
+  $$ConstructionRulesTableProcessedTableManager get ruleId {
+    final $_column = $_itemColumn<int>('rule_id')!;
+
+    final manager = $$ConstructionRulesTableTableManager(
+      $_db,
+      $_db.constructionRules,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_ruleIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static $PartsOfSpeechTable _posIdTable(_$AppDatabase db) =>
+      db.partsOfSpeech.createAlias(
+        $_aliasNameGenerator(db.constructionRulePOS.posId, db.partsOfSpeech.id),
+      );
+
+  $$PartsOfSpeechTableProcessedTableManager get posId {
+    final $_column = $_itemColumn<int>('pos_id')!;
+
+    final manager = $$PartsOfSpeechTableTableManager(
+      $_db,
+      $_db.partsOfSpeech,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_posIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$ConstructionRulePOSTableFilterComposer
+    extends Composer<_$AppDatabase, $ConstructionRulePOSTable> {
+  $$ConstructionRulePOSTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  $$ConstructionRulesTableFilterComposer get ruleId {
+    final $$ConstructionRulesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.ruleId,
+      referencedTable: $db.constructionRules,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ConstructionRulesTableFilterComposer(
+            $db: $db,
+            $table: $db.constructionRules,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$PartsOfSpeechTableFilterComposer get posId {
+    final $$PartsOfSpeechTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.posId,
+      referencedTable: $db.partsOfSpeech,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$PartsOfSpeechTableFilterComposer(
+            $db: $db,
+            $table: $db.partsOfSpeech,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$ConstructionRulePOSTableOrderingComposer
+    extends Composer<_$AppDatabase, $ConstructionRulePOSTable> {
+  $$ConstructionRulePOSTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  $$ConstructionRulesTableOrderingComposer get ruleId {
+    final $$ConstructionRulesTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.ruleId,
+      referencedTable: $db.constructionRules,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ConstructionRulesTableOrderingComposer(
+            $db: $db,
+            $table: $db.constructionRules,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$PartsOfSpeechTableOrderingComposer get posId {
+    final $$PartsOfSpeechTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.posId,
+      referencedTable: $db.partsOfSpeech,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$PartsOfSpeechTableOrderingComposer(
+            $db: $db,
+            $table: $db.partsOfSpeech,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$ConstructionRulePOSTableAnnotationComposer
+    extends Composer<_$AppDatabase, $ConstructionRulePOSTable> {
+  $$ConstructionRulePOSTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  $$ConstructionRulesTableAnnotationComposer get ruleId {
+    final $$ConstructionRulesTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.ruleId,
+          referencedTable: $db.constructionRules,
+          getReferencedColumn: (t) => t.id,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$ConstructionRulesTableAnnotationComposer(
+                $db: $db,
+                $table: $db.constructionRules,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return composer;
+  }
+
+  $$PartsOfSpeechTableAnnotationComposer get posId {
+    final $$PartsOfSpeechTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.posId,
+      referencedTable: $db.partsOfSpeech,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$PartsOfSpeechTableAnnotationComposer(
+            $db: $db,
+            $table: $db.partsOfSpeech,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$ConstructionRulePOSTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $ConstructionRulePOSTable,
+          ConstructionRulePOSRow,
+          $$ConstructionRulePOSTableFilterComposer,
+          $$ConstructionRulePOSTableOrderingComposer,
+          $$ConstructionRulePOSTableAnnotationComposer,
+          $$ConstructionRulePOSTableCreateCompanionBuilder,
+          $$ConstructionRulePOSTableUpdateCompanionBuilder,
+          (ConstructionRulePOSRow, $$ConstructionRulePOSTableReferences),
+          ConstructionRulePOSRow,
+          PrefetchHooks Function({bool ruleId, bool posId})
+        > {
+  $$ConstructionRulePOSTableTableManager(
+    _$AppDatabase db,
+    $ConstructionRulePOSTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$ConstructionRulePOSTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$ConstructionRulePOSTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$ConstructionRulePOSTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<int> ruleId = const Value.absent(),
+                Value<int> posId = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => ConstructionRulePOSCompanion(
+                ruleId: ruleId,
+                posId: posId,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required int ruleId,
+                required int posId,
+                Value<int> rowid = const Value.absent(),
+              }) => ConstructionRulePOSCompanion.insert(
+                ruleId: ruleId,
+                posId: posId,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$ConstructionRulePOSTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({ruleId = false, posId = false}) {
             return PrefetchHooks(
               db: db,
               explicitlyWatchedTables: [],
@@ -14123,17 +16287,32 @@ class $$ConstructionSlotsTableTableManager
                       dynamic
                     >
                   >(state) {
-                    if (constructionId) {
+                    if (ruleId) {
                       state =
                           state.withJoin(
                                 currentTable: table,
-                                currentColumn: table.constructionId,
+                                currentColumn: table.ruleId,
                                 referencedTable:
-                                    $$ConstructionSlotsTableReferences
-                                        ._constructionIdTable(db),
+                                    $$ConstructionRulePOSTableReferences
+                                        ._ruleIdTable(db),
                                 referencedColumn:
-                                    $$ConstructionSlotsTableReferences
-                                        ._constructionIdTable(db)
+                                    $$ConstructionRulePOSTableReferences
+                                        ._ruleIdTable(db)
+                                        .id,
+                              )
+                              as T;
+                    }
+                    if (posId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.posId,
+                                referencedTable:
+                                    $$ConstructionRulePOSTableReferences
+                                        ._posIdTable(db),
+                                referencedColumn:
+                                    $$ConstructionRulePOSTableReferences
+                                        ._posIdTable(db)
                                         .id,
                               )
                               as T;
@@ -14150,19 +16329,19 @@ class $$ConstructionSlotsTableTableManager
       );
 }
 
-typedef $$ConstructionSlotsTableProcessedTableManager =
+typedef $$ConstructionRulePOSTableProcessedTableManager =
     ProcessedTableManager<
       _$AppDatabase,
-      $ConstructionSlotsTable,
-      ConstructionSlot,
-      $$ConstructionSlotsTableFilterComposer,
-      $$ConstructionSlotsTableOrderingComposer,
-      $$ConstructionSlotsTableAnnotationComposer,
-      $$ConstructionSlotsTableCreateCompanionBuilder,
-      $$ConstructionSlotsTableUpdateCompanionBuilder,
-      (ConstructionSlot, $$ConstructionSlotsTableReferences),
-      ConstructionSlot,
-      PrefetchHooks Function({bool constructionId})
+      $ConstructionRulePOSTable,
+      ConstructionRulePOSRow,
+      $$ConstructionRulePOSTableFilterComposer,
+      $$ConstructionRulePOSTableOrderingComposer,
+      $$ConstructionRulePOSTableAnnotationComposer,
+      $$ConstructionRulePOSTableCreateCompanionBuilder,
+      $$ConstructionRulePOSTableUpdateCompanionBuilder,
+      (ConstructionRulePOSRow, $$ConstructionRulePOSTableReferences),
+      ConstructionRulePOSRow,
+      PrefetchHooks Function({bool ruleId, bool posId})
     >;
 
 class $AppDatabaseManager {
@@ -14213,4 +16392,8 @@ class $AppDatabaseManager {
       $$PhraseConstructionsTableTableManager(_db, _db.phraseConstructions);
   $$ConstructionSlotsTableTableManager get constructionSlots =>
       $$ConstructionSlotsTableTableManager(_db, _db.constructionSlots);
+  $$ConstructionRulesTableTableManager get constructionRules =>
+      $$ConstructionRulesTableTableManager(_db, _db.constructionRules);
+  $$ConstructionRulePOSTableTableManager get constructionRulePOS =>
+      $$ConstructionRulePOSTableTableManager(_db, _db.constructionRulePOS);
 }

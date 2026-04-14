@@ -4,6 +4,7 @@ import 'package:drift/drift.dart';
 import 'package:drift_flutter/drift_flutter.dart';
 
 import '../features/grammar/data/construction_dao.dart';
+import '../features/grammar/data/construction_rule_dao.dart';
 import '../features/grammar/data/grammar_dao.dart';
 import '../features/grammar/data/inflectional_rule_pos_dao.dart';
 import '../features/grammar/data/lexeme_parents_dao.dart';
@@ -237,6 +238,9 @@ class ParadigmCellOverrides extends Table {
   TextColumn get overrideIpa => text()();
   TextColumn get overrideRomanization => text().nullable()();
   TextColumn get notes => text().nullable()();
+  /// v16 — Phase 10.1 D-03. When non-null, suppresses this construction rule
+  /// for this specific word/cell combination.
+  IntColumn get suppressConstructionRuleId => integer().nullable()();
 }
 
 /// Unmarked-cell declarations for inflectional paradigms (Phase 4 gap D-44).
@@ -426,6 +430,56 @@ class ConstructionSlots extends Table {
   IntColumn get ordering => integer().withDefault(const Constant(0))();
 }
 
+/// Phase 10.1 — construction rule binding a feature set to a construction
+/// slot resolution strategy (D-12 / RESEARCH Pattern 1).
+///
+/// Each row answers: "for a word matching [featureBindings], realize the
+/// construction [constructionId] by placing the word at slot [wordSlotId]
+/// using [formReferenceJson] to determine which form to use."
+///
+/// [formReferenceJson] stores either 'null' (base/uninflected form) or a
+/// JSON object `{"kind":"cell","featureSet":{...}}` (cross-cell reference).
+/// Parsed via [FormReference.fromJson].
+@DataClassName('ConstructionRuleRow')
+class ConstructionRules extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  TextColumn get name => text()();
+  BoolColumn get isActive => boolean().withDefault(const Constant(true))();
+  IntColumn get ordering => integer().withDefault(const Constant(0))();
+  IntColumn get constructionId =>
+      integer().references(PhraseConstructions, #id,
+          onDelete: KeyAction.cascade)();
+  IntColumn get wordSlotId =>
+      integer().references(ConstructionSlots, #id,
+          onDelete: KeyAction.cascade)();
+  // JSON: 'null' = base form, '{"kind":"cell","featureSet":{"dimId":levelId,...}}' = cell reference
+  TextColumn get formReferenceJson =>
+      text().withDefault(const Constant('null'))();
+  // Reuses FeatureBindingsConverter (D-01)
+  TextColumn get featureBindings => text()
+      .map(const FeatureBindingsConverter())
+      .withDefault(const Constant('{}'))();
+}
+
+/// Phase 10.1 — POS junction for construction rules (mirrors
+/// [InflectionalRulePOS] pattern). Restricts which parts of speech a
+/// construction rule applies to.
+@DataClassName('ConstructionRulePOSRow')
+class ConstructionRulePOS extends Table {
+  IntColumn get ruleId =>
+      integer().references(ConstructionRules, #id,
+          onDelete: KeyAction.cascade)();
+  IntColumn get posId =>
+      integer().references(PartsOfSpeech, #id,
+          onDelete: KeyAction.cascade)();
+
+  @override
+  Set<Column> get primaryKey => {ruleId, posId};
+
+  @override
+  String get tableName => 'construction_rule_pos';
+}
+
 // ---------------------------------------------------------------------------
 // Database class
 // ---------------------------------------------------------------------------
@@ -451,6 +505,8 @@ class ConstructionSlots extends Table {
     StandardFormPatterns, // v10 (04-17)
     PhraseConstructions, // v15 (Phase 10)
     ConstructionSlots, // v15 (Phase 10)
+    ConstructionRules, // v16 (Phase 10.1)
+    ConstructionRulePOS, // v16 (Phase 10.1)
   ],
   daos: [
     PhonemeDao,
@@ -467,6 +523,7 @@ class ConstructionSlots extends Table {
     MarkerDao, // v9 gap D-44 (re-registered after 04-11 regression)
     StandardFormPatternDao, // v10 (04-17)
     ConstructionDao, // v15 (Phase 10)
+    ConstructionRuleDao, // v16 (Phase 10.1)
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -477,7 +534,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase(super.e);
 
   @override
-  int get schemaVersion => 15;
+  int get schemaVersion => 16;
 
   @override
   MigrationStrategy get migration {
@@ -713,6 +770,15 @@ class AppDatabase extends _$AppDatabase {
           await m.createTable(phraseConstructions);
           await m.createTable(constructionSlots);
         }
+        if (from < 16) {
+          // v16: Phase 10.1 — construction rules + POS junction + per-word suppression.
+          await m.createTable(constructionRules);
+          await m.createTable(constructionRulePOS);
+          await m.addColumn(
+            paradigmCellOverrides,
+            paradigmCellOverrides.suppressConstructionRuleId,
+          );
+        }
       },
       beforeOpen: (details) async {
         // Enable foreign key enforcement for every connection.
@@ -928,12 +994,43 @@ class AppDatabase extends _$AppDatabase {
             '"name" TEXT NOT NULL DEFAULT \'Unmarked\'',
           );
         } catch (_) {}
+        // v16 safety net: construction_rules table (Phase 10.1)
+        await customStatement(
+          'CREATE TABLE IF NOT EXISTS construction_rules ('
+          '"id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, '
+          '"name" TEXT NOT NULL, '
+          '"is_active" INTEGER NOT NULL DEFAULT 1, '
+          '"ordering" INTEGER NOT NULL DEFAULT 0, '
+          '"construction_id" INTEGER NOT NULL REFERENCES phrase_constructions(id) ON DELETE CASCADE, '
+          '"word_slot_id" INTEGER NOT NULL REFERENCES construction_slots(id) ON DELETE CASCADE, '
+          '"form_reference_json" TEXT NOT NULL DEFAULT \'null\', '
+          '"feature_bindings" TEXT NOT NULL DEFAULT \'{}\''
+          ')',
+        );
+        // v16 safety net: construction_rule_pos junction table (Phase 10.1)
+        await customStatement(
+          'CREATE TABLE IF NOT EXISTS construction_rule_pos ('
+          '"rule_id" INTEGER NOT NULL REFERENCES construction_rules(id) ON DELETE CASCADE, '
+          '"pos_id" INTEGER NOT NULL REFERENCES parts_of_speech(id) ON DELETE CASCADE, '
+          'PRIMARY KEY ("rule_id", "pos_id")'
+          ')',
+        );
+        // v16 safety net: paradigm_cell_overrides.suppress_construction_rule_id (Phase 10.1 D-03)
+        try {
+          await customStatement(
+            'ALTER TABLE paradigm_cell_overrides ADD COLUMN '
+            '"suppress_construction_rule_id" INTEGER',
+          );
+        } catch (_) {}
       },
     );
   }
 
   /// Returns the [LexemeDao] for this database.
   LexemeDao get lexemeDao => LexemeDao(this);
+
+  /// Returns the [ConstructionRuleDao] for this database.
+  ConstructionRuleDao get constructionRuleDao => ConstructionRuleDao(this);
 
   /// Factory that opens a Drift database backed by a file at [absolutePath].
   ///
