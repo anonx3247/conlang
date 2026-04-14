@@ -142,7 +142,7 @@ class ParadigmConstructionFilled extends ParadigmCell {
       };
 
   static String _tokenPhonemic(ConstructionToken t) => switch (t) {
-        ParticleToken(:final ipa) => ipa,
+        ParticleToken(:final romanization, :final ipa) => romanization ?? ipa,
         WordSlotToken(:final phonemic) => phonemic,
       };
 }
