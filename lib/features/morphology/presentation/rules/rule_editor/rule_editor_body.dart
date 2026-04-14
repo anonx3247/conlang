@@ -654,20 +654,42 @@ class _RuleEditorBodyState extends ConsumerState<RuleEditorBody> {
       }
     }
 
-    // Build cell cross-reference options from all dimensions for selected POS.
+    // Build cell cross-reference options from the Cartesian product of all
+    // non-intrinsic dimensions for the selected POS. Each combo represents
+    // a unique paradigm cell (all dims must be specified together).
     final cellRefOptions = <({String json, String label})>[];
     if (_selectedPosIdForChips != null) {
       final dimsAsync =
           ref.watch(dimensionsForPosProvider(_selectedPosIdForChips!));
-      final dims = dimsAsync.asData?.value ?? const [];
-      for (final dim in dims) {
-        final levels = decodeLevelsJson(dim.levelsJson);
-        for (final lvl in levels) {
-          final featureSet = {dim.id: lvl.id};
+      final dims = (dimsAsync.asData?.value ?? const [])
+          .where((d) => !d.intrinsic)
+          .toList();
+      if (dims.isNotEmpty) {
+        // Cartesian product: start with one empty feature set, expand per dim.
+        var combos = [<int, int>{}];
+        for (final dim in dims) {
+          final levels = decodeLevelsJson(dim.levelsJson);
+          final expanded = <Map<int, int>>[];
+          for (final existing in combos) {
+            for (final lvl in levels) {
+              expanded.add({...existing, dim.id: lvl.id});
+            }
+          }
+          combos = expanded;
+        }
+        for (final featureSet in combos) {
           final ref2 = CellFormReference(targetFeatureSet: featureSet);
+          final labelParts = dims.map((d) {
+            final lvlId = featureSet[d.id];
+            if (lvlId == null) return null;
+            final levels = decodeLevelsJson(d.levelsJson);
+            final lvl = levels.firstWhere((l) => l.id == lvlId,
+                orElse: () => levels.first);
+            return '${d.name}: ${lvl.name}';
+          }).whereType<String>().toList();
           cellRefOptions.add((
             json: ref2.toJson(),
-            label: '${dim.name}: ${lvl.name}',
+            label: labelParts.join(' · '),
           ));
         }
       }
