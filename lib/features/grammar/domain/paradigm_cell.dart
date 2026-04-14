@@ -105,10 +105,13 @@ class ParadigmUnmarked extends ParadigmCell {
 ///
 /// [constructionName] is the name of the matching construction, surfaced
 /// as a badge tooltip in the paradigm viewer (D-10).
+/// [ruleId] is the id of the winning [ConstructionRule] — used by the
+/// click-to-edit handler for unambiguous lookup (WR-01: name is not unique).
 class ParadigmConstructionFilled extends ParadigmCell {
   ParadigmConstructionFilled({
     required this.tokens,
     required this.constructionName,
+    required this.ruleId,
     String? form,
     String? phonemic,
   })  : form = form ?? tokens.map(_tokenIpa).join(' '),
@@ -128,6 +131,10 @@ class ParadigmConstructionFilled extends ParadigmCell {
 
   /// Display name of the matched construction. Used for badge tooltip.
   final String constructionName;
+
+  /// Id of the winning [ConstructionRule] row. Used by click-to-edit handler
+  /// for unambiguous id-based lookup (WR-01: rule names are not unique).
+  final int ruleId;
 
   static String _tokenIpa(ConstructionToken t) => switch (t) {
         ParticleToken(:final ipa) => ipa,

@@ -431,6 +431,7 @@ ParadigmCell resolveConstructionCell({
     final result = ParadigmConstructionFilled(
       tokens: tokens,
       constructionName: constructionName,
+      ruleId: winner.id,
     );
     resolvedCache[targetKey] = result;
     return result;

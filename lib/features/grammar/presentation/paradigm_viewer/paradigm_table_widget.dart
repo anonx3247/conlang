@@ -717,13 +717,10 @@ class _ParadigmCellWidget extends ConsumerWidget {
             final constructionRules =
                 ref.read(constructionRulesForPosProvider(posId)).asData?.value ??
                     const <ConstructionRule>[];
-            ConstructionRule? matchingRule;
-            for (final r in constructionRules) {
-              if (r.name == localCell.constructionName) {
-                matchingRule = r;
-                break;
-              }
-            }
+            // WR-01: look up by id (unique) rather than name (not unique).
+            final matchingRule = constructionRules
+                .where((r) => r.id == localCell.ruleId)
+                .firstOrNull;
             showDialog<void>(
               context: context,
               builder: (_) => RuleEditorDialog(
