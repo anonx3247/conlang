@@ -1,4 +1,3 @@
-import 'construction_rule.dart';
 import 'inflectional_rule.dart';
 import 'marker.dart';
 
@@ -91,75 +90,4 @@ class ParadigmUnmarked extends ParadigmCell {
   /// open a "Marker" editor when the cell is clicked (plan 04-13 wires the
   /// click flow).
   final MarkerDecl source;
-}
-
-/// The cell is realized analytically via a phrase construction.
-///
-/// D-09 (Phase 10.1): when a construction rule matches the target feature
-/// set, the engine assembles a sequence of tokens (particles + the word
-/// slot form). The renderer composes these tokens for display, applying
-/// phonotactic violation highlighting per token.
-///
-/// D-112 invariant: [phonemic] is the pre-rewrite input to `romanize()`
-/// and [form] is the post-rewrite phonetic form for `[bracket]` display.
-///
-/// [constructionName] is the name of the matching construction, surfaced
-/// as a badge tooltip in the paradigm viewer (D-10).
-/// [ruleId] is the id of the winning [ConstructionRule] — used by the
-/// click-to-edit handler for unambiguous lookup (WR-01: name is not unique).
-class ParadigmConstructionFilled extends ParadigmCell {
-  ParadigmConstructionFilled({
-    required this.tokens,
-    required this.constructionName,
-    required this.ruleId,
-    String? form,
-    String? phonemic,
-  })  : form = form ?? tokens.map(_tokenIpa).join(' '),
-        phonemic = phonemic ?? tokens.map(_tokenPhonemic).join(' ');
-
-  /// Each token in the construction — either a particle (gloss-tag slot)
-  /// or the word slot form.
-  final List<ConstructionToken> tokens;
-
-  /// Space-joined IPA of all tokens (post-rewrite phonetic form).
-  /// Use for `[bracket]` display. D-112 invariant.
-  final String form;
-
-  /// Space-joined phonemic of all tokens (pre-rewrite form).
-  /// Use as input to `romanize()`. D-112 invariant.
-  final String phonemic;
-
-  /// Display name of the matched construction. Used for badge tooltip.
-  final String constructionName;
-
-  /// Id of the winning [ConstructionRule] row. Used by click-to-edit handler
-  /// for unambiguous id-based lookup (WR-01: rule names are not unique).
-  final int ruleId;
-
-  static String _tokenIpa(ConstructionToken t) => switch (t) {
-        ParticleToken(:final ipa) => ipa,
-        WordSlotToken(:final ipa) => ipa,
-      };
-
-  static String _tokenPhonemic(ConstructionToken t) => switch (t) {
-        ParticleToken(:final romanization, :final ipa) => romanization ?? ipa,
-        WordSlotToken(:final phonemic) => phonemic,
-      };
-}
-
-/// A cell dependency cycle was detected — the cell (directly or indirectly)
-/// depends on itself through cross-cell form references.
-///
-/// D-09 (Phase 10.1): cycle detection uses a visited-set resolving stack.
-/// Rather than throwing, the engine returns this first-class state so the
-/// renderer can display a human-readable error (e.g. a tooltip) without
-/// crashing.
-///
-/// [cyclePath] is a human-readable description of the cycle chain,
-/// e.g. `"Cell FUT → Cell COND → Cell FUT"`.
-class ParadigmUnresolvable extends ParadigmCell {
-  const ParadigmUnresolvable({required this.cyclePath});
-
-  /// Human-readable description of the detected cycle path.
-  final String cyclePath;
 }

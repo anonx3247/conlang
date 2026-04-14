@@ -37,15 +37,13 @@ final lexemeDaoProvider = Provider<LexemeDao?>((ref) {
 // Lexeme list providers
 // ---------------------------------------------------------------------------
 
-/// Watches all root lexemes (rootId IS NULL) for the current project,
-/// including closed-class words (particles, auxiliaries, etc.).
+/// Watches all root lexemes (rootId IS NULL) for the current project.
 ///
-/// SC4: Dictionary must show particles alongside open-class words.
 /// Emits an empty list when no project is open.
 final rootLexemeListProvider = StreamProvider<List<Lexeme>>((ref) {
   final dao = ref.watch(lexemeDaoProvider);
   if (dao == null) return Stream.value([]);
-  return dao.watchAllRoots();
+  return dao.watchRoots();
 });
 
 /// Watches ALL lexemes (roots + derived forms) for the current project.

@@ -32,24 +32,6 @@ class TypologyPage extends ConsumerWidget {
     ('analytic', 'Analytic'),
     ('mixed', 'Mixed'),
   ];
-  static const _headDirectionOptions = <(String, String)>[
-    ('head_initial', 'Head-initial'),
-    ('head_final', 'Head-final'),
-    ('mixed', 'Mixed'),
-  ];
-  static const _adpositionTypeOptions = <(String, String)>[
-    ('preposition', 'Preposition'),
-    ('postposition', 'Postposition'),
-    ('circumposition', 'Circumposition'),
-  ];
-  static const _adjPlacementOptions = <(String, String)>[
-    ('prenominal', 'Prenominal'),
-    ('postnominal', 'Postnominal'),
-  ];
-  static const _genPlacementOptions = <(String, String)>[
-    ('prenominal', 'Prenominal'),
-    ('postnominal', 'Postnominal'),
-  ];
 
   static const _alignmentTooltip =
       'Nominative-accusative: subjects of intransitive and transitive verbs '
@@ -61,18 +43,6 @@ class TypologyPage extends ConsumerWidget {
   static const _modalityTooltip =
       'Synthetic: modality expressed by inflectional morphology. Analytic: '
       'modality expressed by auxiliary verbs or particles. Mixed: both.';
-  static const _headDirectionTooltip =
-      'Whether modifiers and dependents come before (head-initial) or after '
-      '(head-final) the head of a phrase.';
-  static const _adpositionTypeTooltip =
-      'Prepositions precede their complement; postpositions follow it; '
-      'circumpositions surround it.';
-  static const _adjPlacementTooltip =
-      'Whether adjectives appear before (prenominal) or after (postnominal) '
-      'the noun they modify.';
-  static const _genPlacementTooltip =
-      'Whether genitive/possessive phrases appear before (prenominal) or after '
-      '(postnominal) the head noun.';
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -120,57 +90,6 @@ class TypologyPage extends ConsumerWidget {
             current: settings.modality,
             options: _modalityOptions,
             onChanged: (v) => write('typology.modality', v),
-          ),
-          const SizedBox(height: 24),
-          const Divider(),
-          const SizedBox(height: 24),
-          Text(
-            'Word Order',
-            style: theme.textTheme.bodyMedium
-                ?.copyWith(fontWeight: FontWeight.w600),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            'Phrase-level ordering settings',
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
-            ),
-          ),
-          const SizedBox(height: 16),
-          _section(
-            context,
-            label: 'Head Directionality',
-            tooltip: _headDirectionTooltip,
-            current: settings.headDirection,
-            options: _headDirectionOptions,
-            onChanged: (v) => write('typology.head_direction', v),
-          ),
-          const SizedBox(height: 16),
-          _section(
-            context,
-            label: 'Adposition Type',
-            tooltip: _adpositionTypeTooltip,
-            current: settings.adpositionType,
-            options: _adpositionTypeOptions,
-            onChanged: (v) => write('typology.adposition_type', v),
-          ),
-          const SizedBox(height: 16),
-          _section(
-            context,
-            label: 'Adjective Placement',
-            tooltip: _adjPlacementTooltip,
-            current: settings.adjPlacement,
-            options: _adjPlacementOptions,
-            onChanged: (v) => write('typology.adj_placement', v),
-          ),
-          const SizedBox(height: 16),
-          _section(
-            context,
-            label: 'Genitive Placement',
-            tooltip: _genPlacementTooltip,
-            current: settings.genPlacement,
-            options: _genPlacementOptions,
-            onChanged: (v) => write('typology.gen_placement', v),
           ),
         ],
       ),
