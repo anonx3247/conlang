@@ -81,7 +81,7 @@ Plans:
 - [x] 03-06-PLAN.md — Phonotactic highlighting wiring: ViolationText into lexicon detail/list, per-word exception toggle
 
 ### Phase 3.1: Display & UX Fixes INSERTED
-**Goal**: Fix visual and UX issues from phases 1-3: IPA chart shapes, word display format, Anki export UX, and romanization visibility toggle
+**Goal**: Fix visual and UX issues from phases 1–3: IPA chart shapes, word display format, Anki export UX, and romanization visibility toggle
 **Depends on**: Phase 3
 **Requirements**: FIX-01, FIX-02, FIX-03, FIX-04, FIX-05
 **Success Criteria** (what must be TRUE):
@@ -194,7 +194,7 @@ Plans:
 
 **Milestone Goal:** Extend the workbench beyond morphological tools into phrase-level grammar, text composition with live analysis, AI-assisted conlanging, custom script support, and language evolution modeling.
 
-### ✅ Phase 10: Analytic Grammar — COMPLETE (2026-04-13)
+### Phase 10: Analytic Grammar
 **Goal**: Users can define the closed-class word inventory and phrase-level construction rules that govern how particles, auxiliaries, and determiners combine with content words
 **Depends on**: Phase 9
 **Requirements**: AGRAM-01, AGRAM-02, AGRAM-03
@@ -207,28 +207,10 @@ Plans:
 **UI hint**: yes
 
 Plans:
-- [x] 10-01-PLAN.md — Schema v15 migration (isClosedClass + glossTag + PhraseConstructions + ConstructionSlots), Grammar sidebar 5 items, GoRouter branches, placeholder pages
-- [x] 10-02-PLAN.md — Particles page: POS-grouped closed-class word list, add/edit/delete dialogs, Leipzig gloss tag autocomplete
-- [x] 10-03-PLAN.md — Constructions page: master-detail layout, visual slot editor with drag-and-drop, live preview with real words
-- [x] 10-04-PLAN.md — Typology page extension: Word Order section with head-directionality, adposition type, adjective/genitive placement dropdowns
-
-### Phase 10.1: Construction-Realized Paradigm Cells (INSERTED)
-
-**Goal**: Users can realize paradigm cells analytically via existing phrase constructions — a cell for "future tense" can be defined as AUX:FUT + [present form of this word] rather than a morphological rule
-**Depends on**: Phase 10
-**Requirements**: SC-1, SC-2, SC-3, SC-4
-**Success Criteria** (what must be TRUE):
-  1. In the paradigm viewer, a cell can be assigned a "via construction" realization strategy alongside morphological rules and manual exceptions
-  2. The construction's word slot resolves to a user-chosen form of the word being conjugated — either base/uninflected form or any existing realized paradigm form (e.g. imperfective, conditional)
-  3. The paradigm cell renders a real example using the actual particle from the lexicon combined with the resolved word form, consistent with Phase 10's construction preview behavior
-  4. Circular cell dependencies (cell A references cell B which references cell A) are detected and the cell renders as unresolvable rather than causing an infinite loop
-**Plans**: 4 plans
-
-Plans:
-- [x] 10.1-01-PLAN.md — Domain models (ParadigmCell variants, ConstructionRule, ConstructionToken), schema v16 migration, ConstructionRuleDao, providers, Wave 0 test stubs
-- [x] 10.1-02-PLAN.md — TDD: Paradigm engine construction resolution with cycle detection, D-04 composition, provider wiring
-- [x] 10.1-03-PLAN.md — Rule editor UI construction variant (3 pickers), inflectional rules page construction rule display
-- [x] 10.1-04-PLAN.md — Paradigm table cell rendering (construction-filled + unresolvable), DAO CRUD tests, human verification
+- [ ] 10-01-PLAN.md — Schema v15 migration (isClosedClass + glossTag + PhraseConstructions + ConstructionSlots), Grammar sidebar 5 items, GoRouter branches, placeholder pages
+- [ ] 10-02-PLAN.md — Particles page: POS-grouped closed-class word list, add/edit/delete dialogs, Leipzig gloss tag autocomplete
+- [ ] 10-03-PLAN.md — Constructions page: master-detail layout, visual slot editor with drag-and-drop, live preview with real words
+- [ ] 10-04-PLAN.md — Typology page extension: Word Order section with head-directionality, adposition type, adjective/genitive placement dropdowns
 
 ### Phase 11: Lexicon Etymology Chain
 **Goal**: Users can see the full derivational history of any word as a visual lineage display tracing root through derived forms to compounds
@@ -237,13 +219,8 @@ Plans:
 **Success Criteria** (what must be TRUE):
   1. User can open any word in the lexicon and view its complete etymology chain (root → derived → compound) as a visual lineage tree, not just a text field
   2. The lineage display is navigable — clicking any node in the chain opens that word's detail panel
-**Plans**: 3 plans
+**Plans**: TBD
 **UI hint**: yes
-
-Plans:
-- [ ] 11-01-PLAN.md — Bug fix (multi-level derivation chain), AncestryNode data model, ancestryChainProvider, watchAllParentLinks DAO, unit tests
-- [ ] 11-02-PLAN.md — SearchableParentSelector widget, word_creation_form FilterChip wall replacement
-- [ ] 11-03-PLAN.md — EtymologyChainSection widget, word_detail_panel integration, inline parent management, human verification
 
 ### Phase 12: Writing Scratchpad
 **Goal**: Users can compose phrases in their conlang and receive automatic interlinear glossing, IPA transcription, and error highlighting without leaving the app
@@ -302,7 +279,7 @@ Plans:
 ## Progress
 
 **Execution Order:**
-v1.0 phases complete. v2.0 executes: 10 → 10.1 → 11 → 12 → 13 → 14 → 15 → 16
+v1.0 phases complete. v2.0 executes: 10 → 11 → 12 → 13 → 14 → 15 → 16
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
@@ -317,9 +294,8 @@ v1.0 phases complete. v2.0 executes: 10 → 10.1 → 11 → 12 → 13 → 14 →
 | 7. Polish & Refactor | v1.0 | 6/6 | Complete | 2026-04-13 |
 | 8. Gemination Restrictions | v1.0 | TBD | Complete | 2026-04-13 |
 | 9. Platform Polish | v1.0 | 3/3 | Complete | 2026-04-13 |
-| 10. Analytic Grammar | v2.0 | 4/4 | Complete | 2026-04-13 |
-| 10.1 Construction-Realized Paradigm Cells | v2.0 | 4/4 | Complete    | 2026-04-14 |
-| 11. Lexicon Etymology Chain | v2.0 | 0/3 | Planned | - |
+| 10. Analytic Grammar | v2.0 | 0/4 | Planned | - |
+| 11. Lexicon Etymology Chain | v2.0 | 0/? | Not started | - |
 | 12. Writing Scratchpad | v2.0 | 0/? | Not started | - |
 | 13. Writing System | v2.0 | 0/? | Not started | - |
 | 14. AI / MCP Integration | v2.0 | 0/? | Not started | - |

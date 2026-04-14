@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../../../../db/app_database.dart' as db;
-import '../../../grammar/domain/construction_rule.dart';
 import '../../../grammar/domain/feature_bindings.dart';
 import '../../../grammar/domain/rule_kind.dart';
 import 'rule_editor/rule_editor_body.dart';
@@ -36,24 +35,18 @@ class RuleEditorDialog extends StatelessWidget {
     super.key,
     required this.kind,
     this.existing,
-    this.existingConstructionRule,
     this.preFilledBindings,
     this.preFilledPosIds,
     this.markerId,
     this.markerBindings,
   });
 
-  /// Whether this dialog edits an inflectional, derivational, or construction rule.
+  /// Whether this dialog edits an inflectional or derivational rule.
   /// Required — callers must explicitly choose the kind (D-40 / plan 04-05).
   final RuleKind kind;
 
-  /// Drift data row. When non-null, the dialog opens in edit mode for
-  /// inflectional/derivational rules.
+  /// Drift data row. When non-null, the dialog opens in edit mode.
   final db.MorphologicalRule? existing;
-
-  /// Construction rule domain object. When non-null, the dialog opens in edit
-  /// mode for construction rules. Used when kind == RuleKind.construction.
-  final ConstructionRule? existingConstructionRule;
 
   /// D-51: When provided and [existing] is null and [kind] is inflectional,
   /// pre-fills the dimension chip picker with these (dimId -> levelId)
@@ -86,7 +79,6 @@ class RuleEditorDialog extends StatelessWidget {
       child: RuleEditorBody(
         kind: kind,
         existing: existing,
-        existingConstructionRule: existingConstructionRule,
         preFilledBindings: preFilledBindings,
         preFilledPosIds: preFilledPosIds,
         markerId: markerId,

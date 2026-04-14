@@ -12,7 +12,6 @@ import '../../phonology/domain/phonotactic_dsl.dart'
     show PhonologicalRewriteRule;
 import '../../phonology/domain/word_generator.dart' show PhonemeInventory;
 import '../../project/data/project_providers.dart';
-import '../domain/construction_rule.dart';
 import '../domain/dimension_level.dart';
 import '../domain/inflectional_rule.dart';
 import '../domain/marker.dart';
@@ -20,10 +19,7 @@ import '../domain/paradigm_axes.dart';
 import '../domain/paradigm_cell.dart';
 import '../domain/paradigm_engine.dart';
 import '../domain/pos_resolver.dart';
-import 'construction_providers.dart';
-import 'construction_rule_providers.dart';
 import 'grammar_providers.dart';
-import 'particle_providers.dart';
 
 // ---------------------------------------------------------------------------
 // Typology settings value type (D-35)
@@ -32,20 +28,11 @@ import 'particle_providers.dart';
 /// Plain value object for the three top-level typology fields. Persisted in
 /// `project_settings` under keys `typology.alignment`, `typology.word_order`,
 /// and `typology.modality`.
-///
-/// Phase 10 D-11 extends this with four phrase-level word order settings
-/// stored under `typology.head_direction`, `typology.adposition_type`,
-/// `typology.adj_placement`, and `typology.gen_placement`.
 class TypologySettings {
   const TypologySettings({
     this.alignment,
     this.wordOrder,
     this.modality,
-    // Phase 10 D-11 word order settings:
-    this.headDirection,
-    this.adpositionType,
-    this.adjPlacement,
-    this.genPlacement,
   });
 
   /// `'nom_acc'` | `'erg_abs'` | `'split'` | null
@@ -57,35 +44,15 @@ class TypologySettings {
   /// `'synthetic'` | `'analytic'` | `'mixed'` | null
   final String? modality;
 
-  /// `'head_initial'` | `'head_final'` | `'mixed'` | null
-  final String? headDirection;
-
-  /// `'preposition'` | `'postposition'` | `'circumposition'` | null
-  final String? adpositionType;
-
-  /// `'prenominal'` | `'postnominal'` | null
-  final String? adjPlacement;
-
-  /// `'prenominal'` | `'postnominal'` | null
-  final String? genPlacement;
-
   TypologySettings copyWith({
     String? alignment,
     String? wordOrder,
     String? modality,
-    String? headDirection,
-    String? adpositionType,
-    String? adjPlacement,
-    String? genPlacement,
   }) =>
       TypologySettings(
         alignment: alignment ?? this.alignment,
         wordOrder: wordOrder ?? this.wordOrder,
         modality: modality ?? this.modality,
-        headDirection: headDirection ?? this.headDirection,
-        adpositionType: adpositionType ?? this.adpositionType,
-        adjPlacement: adjPlacement ?? this.adjPlacement,
-        genPlacement: genPlacement ?? this.genPlacement,
       );
 
   @override
@@ -93,20 +60,14 @@ class TypologySettings {
       other is TypologySettings &&
       other.alignment == alignment &&
       other.wordOrder == wordOrder &&
-      other.modality == modality &&
-      other.headDirection == headDirection &&
-      other.adpositionType == adpositionType &&
-      other.adjPlacement == adjPlacement &&
-      other.genPlacement == genPlacement;
+      other.modality == modality;
 
   @override
-  int get hashCode => Object.hash(
-      alignment, wordOrder, modality,
-      headDirection, adpositionType, adjPlacement, genPlacement);
+  int get hashCode => Object.hash(alignment, wordOrder, modality);
 
   @override
   String toString() =>
-      'TypologySettings(alignment: $alignment, wordOrder: $wordOrder, modality: $modality, headDirection: $headDirection, adpositionType: $adpositionType, adjPlacement: $adjPlacement, genPlacement: $genPlacement)';
+      'TypologySettings(alignment: $alignment, wordOrder: $wordOrder, modality: $modality)';
 }
 
 // ---------------------------------------------------------------------------
@@ -116,10 +77,6 @@ class TypologySettings {
 const String _kAlignmentKey = 'typology.alignment';
 const String _kWordOrderKey = 'typology.word_order';
 const String _kModalityKey = 'typology.modality';
-const String _kHeadDirectionKey = 'typology.head_direction';
-const String _kAdpositionTypeKey = 'typology.adposition_type';
-const String _kAdjPlacementKey = 'typology.adj_placement';
-const String _kGenPlacementKey = 'typology.gen_placement';
 
 String paradigmAxesKey(int posId) => 'typology.paradigm_axes.$posId';
 
@@ -147,10 +104,6 @@ Future<TypologySettings> readTypologySettings(AppDatabase db) async {
     alignment: lookup(_kAlignmentKey),
     wordOrder: lookup(_kWordOrderKey),
     modality: lookup(_kModalityKey),
-    headDirection: lookup(_kHeadDirectionKey),
-    adpositionType: lookup(_kAdpositionTypeKey),
-    adjPlacement: lookup(_kAdjPlacementKey),
-    genPlacement: lookup(_kGenPlacementKey),
   );
 }
 
@@ -325,11 +278,6 @@ ParadigmChart generateParadigm({
   // for legacy callers that pre-date the intrinsic feature.
   Map<int, int>? lexemeIntrinsicLevels,
   Map<int, bool>? dimensionIntrinsicFlags,
-  // Phase 10.1: construction rule resolution post-pass (D-04).
-  // Optional with const defaults so all existing callers continue to compile.
-  List<ConstructionRule> constructionRules = const [],
-  List<Lexeme> closedClassWords = const [],
-  Map<int, List<ConstructionSlot>> constructionSlotsByConstructionId = const {},
 }) {
   final activeDims =
       dimensions.where((d) => !skippedDimensionIds.contains(d.id)).toList();
@@ -355,45 +303,6 @@ ParadigmChart generateParadigm({
     entries[featureSetKey(featureSet)] =
         ParadigmChartEntry(featureSet: featureSet, cell: cell);
   }
-
-  // Phase 10.1: construction resolution post-pass.
-  // After the full inflectional chart is computed, overlay any cells that
-  // have a matching active construction rule (D-04 composition).
-  if (constructionRules.isNotEmpty) {
-    final resolvingStack = <String>{};
-    final resolvedCache = <String, ParadigmCell>{};
-    final inflectionalChart = {
-      for (final e in entries.entries) e.key: e.value.cell,
-    };
-    for (final key in entries.keys.toList()) {
-      final entry = entries[key]!;
-      final resolved = resolveConstructionCell(
-        root: root,
-        target: entry.featureSet,
-        inflectionalResult: entry.cell,
-        constructionRules: constructionRules,
-        slotsLookup: (cId) =>
-            constructionSlotsByConstructionId[cId] ?? const [],
-        closedClassWords: closedClassWords,
-        inflectionalChart: inflectionalChart,
-        resolvingStack: resolvingStack,
-        resolvedCache: resolvedCache,
-        // NOTE: allConstructionRules is intentionally scoped to this POS.
-        // Cross-POS CellFormReferences cannot be authored through the UI
-        // (the cell picker only surfaces cells from the current POS) and
-        // fall through gracefully to the inflectional chart result when
-        // encountered in DB (T-10.1-05 graceful handling).
-        allConstructionRules: constructionRules,
-        inventory: inventory,
-        rewriteRules: rewriteRules,
-      );
-      if (!identical(resolved, entry.cell)) {
-        entries[key] =
-            ParadigmChartEntry(featureSet: entry.featureSet, cell: resolved);
-      }
-    }
-  }
-
   return ParadigmChart(entries);
 }
 
@@ -435,10 +344,6 @@ final typologySettingsProvider = StreamProvider<TypologySettings>((ref) {
       alignment: lookup(_kAlignmentKey),
       wordOrder: lookup(_kWordOrderKey),
       modality: lookup(_kModalityKey),
-      headDirection: lookup(_kHeadDirectionKey),
-      adpositionType: lookup(_kAdpositionTypeKey),
-      adjPlacement: lookup(_kAdjPlacementKey),
-      genPlacement: lookup(_kGenPlacementKey),
     );
   });
 });
@@ -520,29 +425,6 @@ final computedInflectedParadigmProvider =
     intrinsicLevelsJson: lexeme.intrinsicLevelsJson,
   );
 
-  // Phase 10.1: construction rules + closed-class words for analytic
-  // realization (D-04). Load construction rules scoped to this POS and the
-  // full closed-class word list (particles, auxiliaries, etc.).
-  final constructionRulesAsync =
-      ref.watch(constructionRulesForPosProvider(pos.id));
-  final constructionRules =
-      constructionRulesAsync.asData?.value ?? const <ConstructionRule>[];
-
-  final closedClassAsync = ref.watch(closedClassLexemeListProvider);
-  final closedClassWords =
-      closedClassAsync.asData?.value ?? const <Lexeme>[];
-
-  // Load slots for every construction referenced by an active rule.
-  final constructionSlotsByConstructionId = <int, List<ConstructionSlot>>{};
-  for (final rule in constructionRules) {
-    if (!constructionSlotsByConstructionId.containsKey(rule.constructionId)) {
-      final slotsAsync =
-          ref.watch(constructionSlotsProvider(rule.constructionId));
-      constructionSlotsByConstructionId[rule.constructionId] =
-          slotsAsync.asData?.value ?? const <ConstructionSlot>[];
-    }
-  }
-
   return generateParadigm(
     root: root,
     dimensions: dims,
@@ -554,8 +436,5 @@ final computedInflectedParadigmProvider =
         decodeSkippedDimensionIds(lexeme.skippedDimensionsJson),
     lexemeIntrinsicLevels: intrinsic.lexemeIntrinsicLevels,
     dimensionIntrinsicFlags: intrinsic.dimensionIntrinsicFlags,
-    constructionRules: constructionRules,
-    closedClassWords: closedClassWords,
-    constructionSlotsByConstructionId: constructionSlotsByConstructionId,
   );
 });

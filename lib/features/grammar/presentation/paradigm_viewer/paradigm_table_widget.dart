@@ -13,13 +13,11 @@ import '../../../phonology/data/phonotactic_providers.dart'
 import '../../../phonology/data/romanization_providers.dart';
 import '../../../phonology/domain/word_generator.dart';
 import '../../../project/data/project_providers.dart';
-import '../../data/construction_rule_providers.dart';
 import '../../data/grammar_providers.dart';
 import '../../data/intrinsic_levels_codec.dart';
 import '../../data/paradigm_cell_override_dao.dart';
 import '../../data/standard_form_validation_provider.dart';
 import '../../data/typology_providers.dart';
-import '../../domain/construction_rule.dart';
 import '../../domain/dimension_level.dart' show DimensionLevel, decodeLevelsJson, formatAbbrUpper;
 import '../../domain/paradigm_axes.dart';
 import '../../domain/paradigm_cell.dart';
@@ -693,9 +691,6 @@ class _ParadigmCellWidget extends ConsumerWidget {
           // D-103 (plan 04-18-05): ParadigmUnmarked cells open the dialog
           // in marker mode (markerId set) so the user edits the matching
           // marker rather than creating a new rule.
-          //
-          // Phase 10.1: ParadigmConstructionFilled cells look up the matching
-          // construction rule and open RuleEditorDialog in construction mode.
           final localCell = cell;
 
           if (localCell is ParadigmUnmarked) {
@@ -706,28 +701,6 @@ class _ParadigmCellWidget extends ConsumerWidget {
                 kind: RuleKind.inflectional,
                 markerId: localCell.source.id,
                 markerBindings: localCell.source.bindings,
-              ),
-            );
-            break;
-          }
-
-          if (localCell is ParadigmConstructionFilled) {
-            // Phase 10.1: look up the matching construction rule from the
-            // provider (Option B — avoids storing ConstructionRule in domain).
-            final constructionRules =
-                ref.read(constructionRulesForPosProvider(posId)).asData?.value ??
-                    const <ConstructionRule>[];
-            // WR-01: look up by id (unique) rather than name (not unique).
-            final matchingRule = constructionRules
-                .where((r) => r.id == localCell.ruleId)
-                .firstOrNull;
-            showDialog<void>(
-              context: context,
-              builder: (_) => RuleEditorDialog(
-                kind: RuleKind.construction,
-                existingConstructionRule: matchingRule,
-                preFilledBindings: matchingRule == null ? featureSet : null,
-                preFilledPosIds: matchingRule == null ? {posId} : null,
               ),
             );
             break;
@@ -768,20 +741,6 @@ class _ParadigmCellWidget extends ConsumerWidget {
       );
     }
 
-    // Phase 10.1: ParadigmUnresolvable cells are inert — no InkWell, no dialog.
-    final currentCell = cell;
-    if (currentCell is ParadigmUnresolvable) {
-      return Container(
-        width: 80,
-        height: 64,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          border: Border.all(color: cs.outlineVariant, width: 0.5),
-        ),
-        child: _UnresolvableCell(cyclePath: currentCell.cyclePath),
-      );
-    }
-
     return InkWell(
       onTap: openDialog,
       child: Container(
@@ -805,22 +764,6 @@ class _ParadigmCellWidget extends ConsumerWidget {
           // RuleEditorDialog; unmarked cells open a Marker tab there).
           ParadigmUnmarked(:final root) =>
             _UnmarkedCell(root: root, lexemeId: lexemeId),
-          // Phase 10.1: construction-realized cell — two-line layout + badge.
-          ParadigmConstructionFilled(
-            :final form,
-            :final phonemic,
-            :final constructionName
-          ) =>
-            _ConstructionFilledCell(
-              form: form,
-              phonemic: phonemic,
-              lexemeId: lexemeId,
-              constructionName: constructionName,
-            ),
-          // ParadigmUnresolvable is handled above (inert cell, no InkWell).
-          // This branch is unreachable but required for exhaustive switch.
-          ParadigmUnresolvable(:final cyclePath) =>
-            _UnresolvableCell(cyclePath: cyclePath),
         },
       ),
     );
@@ -1048,162 +991,6 @@ class _UnmarkedCell extends ConsumerWidget {
           ),
         ),
       ],
-    );
-  }
-}
-
-/// Phase 10.1 — analytically-realized cell via a phrase construction (D-10).
-///
-/// Renders two lines: romanization (top) + `[IPA]` (bottom), with a small
-/// construction badge (tree icon) in the top-right corner. Badge tooltip
-/// shows the construction name.
-///
-/// Mirrors [_FilledCell] layout — uses the same phonemic/form split
-/// (D-112 invariant) and the same ViolationText-based rom display.
-class _ConstructionFilledCell extends ConsumerWidget {
-  const _ConstructionFilledCell({
-    required this.form,
-    required this.phonemic,
-    required this.lexemeId,
-    required this.constructionName,
-  });
-
-  /// Phonetic surface form (post-rewrite). Used for `[bracket]` display.
-  final String form;
-
-  /// Raw morphological output (pre-rewrite). Used as input to `romanize()`.
-  final String phonemic;
-
-  final int lexemeId;
-
-  /// Name of the matched construction rule — displayed as badge tooltip.
-  final String constructionName;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
-    final cs = theme.colorScheme;
-
-    final romanize = ref.watch(romanizeProvider);
-    final romMappings = ref.watch(romanizationMappingsProvider).asData?.value;
-    final validate = ref.watch(phonotacticValidatorProvider);
-    final lexemeAsync = ref.watch(lexemeByIdProvider(lexemeId));
-    final lexeme = lexemeAsync.asData?.value;
-    final isException = lexeme?.isPhonologicalException ?? false;
-
-    // D-112: romanize the raw phonemic, not the post-rewrite phonetic.
-    final romText = romanize(phonemic);
-    final ValidationResult result =
-        isException ? const ValidationResult(violations: []) : validate(word: form);
-
-    final romMappingsConfigured = romMappings != null && romMappings.isNotEmpty;
-    final showRom = romText.isNotEmpty && (romMappingsConfigured || romText != phonemic);
-
-    return Stack(
-      children: [
-        // Main content: two-line layout (romanization + IPA), same as _FilledCell.
-        Padding(
-          padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 2),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              if (showRom) ...[
-                Text(
-                  romText,
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                ViolationText(
-                  text: '[$form]',
-                  violations: result.violations,
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: cs.onSurface.withValues(alpha: 0.6),
-                  ),
-                ),
-              ] else
-                ViolationText(
-                  text: '[$form]',
-                  violations: result.violations,
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: cs.onSurface.withValues(alpha: 0.6),
-                  ),
-                ),
-            ],
-          ),
-        ),
-        // Construction badge overlay (top-right) — tree icon on primaryContainer.
-        Positioned(
-          top: 2,
-          right: 2,
-          child: Tooltip(
-            message: 'Analytically realized via $constructionName',
-            waitDuration: const Duration(milliseconds: 500),
-            child: Container(
-              padding: const EdgeInsets.all(2),
-              decoration: BoxDecoration(
-                color: cs.primaryContainer,
-                borderRadius: BorderRadius.circular(4),
-              ),
-              child: Icon(
-                Icons.account_tree_outlined,
-                size: 10,
-                color: cs.onPrimaryContainer,
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-/// Phase 10.1 — cell dependency cycle detected (D-09).
-///
-/// Renders a warning icon + "Cycle detected" text. Wrapped in a [Tooltip]
-/// showing the full [cyclePath] on hover. The cell is intentionally inert
-/// (no click handler) — the parent [_ParadigmCellWidget] skips the [InkWell]
-/// for [ParadigmUnresolvable] cells.
-///
-/// Background: [ColorScheme.errorContainer] at 15% alpha with a thin error
-/// border — visually distinct from override cells (amber) without being
-/// alarming at a glance.
-class _UnresolvableCell extends StatelessWidget {
-  const _UnresolvableCell({required this.cyclePath});
-
-  final String cyclePath;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final cs = Theme.of(context).colorScheme;
-
-    return Tooltip(
-      message: 'Circular dependency: $cyclePath',
-      child: Container(
-        width: double.infinity,
-        height: double.infinity,
-        decoration: BoxDecoration(
-          color: cs.errorContainer.withValues(alpha: 0.15),
-          border: Border.all(
-            color: cs.error.withValues(alpha: 0.4),
-            width: 0.5,
-          ),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.sync_problem, size: 16, color: cs.error),
-            const SizedBox(width: 4),
-            Text(
-              'Cycle detected',
-              style: theme.textTheme.bodySmall?.copyWith(color: cs.error),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }
