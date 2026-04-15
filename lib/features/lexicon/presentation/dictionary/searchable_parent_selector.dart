@@ -53,12 +53,15 @@ class _SearchableParentSelectorState
     super.dispose();
   }
 
-  String _displayStringForOption(Lexeme lx) {
-    final label = lx.romanization?.isNotEmpty == true
-        ? lx.romanization!
-        : lx.ipa;
-    return lx.meaning != null ? '$label \u2014 ${lx.meaning}' : label;
+  /// Resolves the display label for a lexeme, using the promoted derived form
+  /// when the lexeme is a promoted derivation row (D-58 placeholder resolution).
+  String _labelForLexeme(Lexeme lx) {
+    final promoted = ref.read(promotedDerivedFormProvider(lx.id));
+    final forms = resolveDisplayForms(lx, promoted);
+    return lx.meaning != null ? '${forms.rom} \u2014 ${lx.meaning}' : forms.rom;
   }
+
+  String _displayStringForOption(Lexeme lx) => _labelForLexeme(lx);
 
   @override
   Widget build(BuildContext context) {
@@ -86,10 +89,14 @@ class _SearchableParentSelectorState
                 .where((lx) =>
                     lx.id != widget.excludeId &&
                     !widget.selectedIds.contains(lx.id))
-                .where((lx) =>
-                    lx.ipa.toLowerCase().contains(query) ||
-                    (lx.romanization?.toLowerCase().contains(query) ?? false) ||
-                    (lx.meaning?.toLowerCase().contains(query) ?? false))
+                .where((lx) {
+                  // Match against resolved display forms (handles promoted derivations)
+                  final promoted = ref.read(promotedDerivedFormProvider(lx.id));
+                  final forms = resolveDisplayForms(lx, promoted);
+                  return forms.rom.toLowerCase().contains(query) ||
+                      forms.ipa.toLowerCase().contains(query) ||
+                      (lx.meaning?.toLowerCase().contains(query) ?? false);
+                })
                 .take(20);
           },
           onSelected: (lx) {
@@ -124,17 +131,11 @@ class _SearchableParentSelectorState
                 Builder(
                   builder: (context) {
                     final lx = allLexemes.where((l) => l.id == id).firstOrNull;
-                    final label = lx == null
-                        ? 'Unknown (#$id)'
-                        : (lx.romanization?.isNotEmpty == true
-                                ? lx.romanization!
-                                : lx.ipa) +
-                            (lx.meaning != null ? ' \u2014 ${lx.meaning}' : '');
+                    final label = lx == null ? 'Unknown (#$id)' : _labelForLexeme(lx);
                     return InputChip(
                       label: Text(
                         label,
-                        style: theme.textTheme.labelSmall
-                            ?.copyWith(fontSize: 11),
+                        style: theme.textTheme.labelSmall?.copyWith(fontSize: 11),
                       ),
                       onDeleted: widget.enabled
                           ? () => widget.onChanged(
