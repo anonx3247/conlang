@@ -8316,6 +8316,371 @@ class ConstructionRulePOSCompanion
   }
 }
 
+class $ScratchpadPhrasesTable extends ScratchpadPhrases
+    with TableInfo<$ScratchpadPhrasesTable, ScratchpadPhrase> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $ScratchpadPhrasesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _originalTextMeta = const VerificationMeta(
+    'originalText',
+  );
+  @override
+  late final GeneratedColumn<String> originalText = GeneratedColumn<String>(
+    'original_text',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _freeTranslationMeta = const VerificationMeta(
+    'freeTranslation',
+  );
+  @override
+  late final GeneratedColumn<String> freeTranslation = GeneratedColumn<String>(
+    'free_translation',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    originalText,
+    freeTranslation,
+    createdAt,
+    updatedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'scratchpad_phrases';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<ScratchpadPhrase> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('original_text')) {
+      context.handle(
+        _originalTextMeta,
+        originalText.isAcceptableOrUnknown(
+          data['original_text']!,
+          _originalTextMeta,
+        ),
+      );
+    }
+    if (data.containsKey('free_translation')) {
+      context.handle(
+        _freeTranslationMeta,
+        freeTranslation.isAcceptableOrUnknown(
+          data['free_translation']!,
+          _freeTranslationMeta,
+        ),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_updatedAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  ScratchpadPhrase map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return ScratchpadPhrase(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      originalText: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}original_text'],
+      )!,
+      freeTranslation: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}free_translation'],
+      ),
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}updated_at'],
+      )!,
+    );
+  }
+
+  @override
+  $ScratchpadPhrasesTable createAlias(String alias) {
+    return $ScratchpadPhrasesTable(attachedDatabase, alias);
+  }
+}
+
+class ScratchpadPhrase extends DataClass
+    implements Insertable<ScratchpadPhrase> {
+  final int id;
+  final String originalText;
+  final String? freeTranslation;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+  const ScratchpadPhrase({
+    required this.id,
+    required this.originalText,
+    this.freeTranslation,
+    required this.createdAt,
+    required this.updatedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['original_text'] = Variable<String>(originalText);
+    if (!nullToAbsent || freeTranslation != null) {
+      map['free_translation'] = Variable<String>(freeTranslation);
+    }
+    map['created_at'] = Variable<DateTime>(createdAt);
+    map['updated_at'] = Variable<DateTime>(updatedAt);
+    return map;
+  }
+
+  ScratchpadPhrasesCompanion toCompanion(bool nullToAbsent) {
+    return ScratchpadPhrasesCompanion(
+      id: Value(id),
+      originalText: Value(originalText),
+      freeTranslation: freeTranslation == null && nullToAbsent
+          ? const Value.absent()
+          : Value(freeTranslation),
+      createdAt: Value(createdAt),
+      updatedAt: Value(updatedAt),
+    );
+  }
+
+  factory ScratchpadPhrase.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return ScratchpadPhrase(
+      id: serializer.fromJson<int>(json['id']),
+      originalText: serializer.fromJson<String>(json['originalText']),
+      freeTranslation: serializer.fromJson<String?>(json['freeTranslation']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'originalText': serializer.toJson<String>(originalText),
+      'freeTranslation': serializer.toJson<String?>(freeTranslation),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+    };
+  }
+
+  ScratchpadPhrase copyWith({
+    int? id,
+    String? originalText,
+    Value<String?> freeTranslation = const Value.absent(),
+    DateTime? createdAt,
+    DateTime? updatedAt,
+  }) => ScratchpadPhrase(
+    id: id ?? this.id,
+    originalText: originalText ?? this.originalText,
+    freeTranslation: freeTranslation.present
+        ? freeTranslation.value
+        : this.freeTranslation,
+    createdAt: createdAt ?? this.createdAt,
+    updatedAt: updatedAt ?? this.updatedAt,
+  );
+  ScratchpadPhrase copyWithCompanion(ScratchpadPhrasesCompanion data) {
+    return ScratchpadPhrase(
+      id: data.id.present ? data.id.value : this.id,
+      originalText: data.originalText.present
+          ? data.originalText.value
+          : this.originalText,
+      freeTranslation: data.freeTranslation.present
+          ? data.freeTranslation.value
+          : this.freeTranslation,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ScratchpadPhrase(')
+          ..write('id: $id, ')
+          ..write('originalText: $originalText, ')
+          ..write('freeTranslation: $freeTranslation, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(id, originalText, freeTranslation, createdAt, updatedAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ScratchpadPhrase &&
+          other.id == this.id &&
+          other.originalText == this.originalText &&
+          other.freeTranslation == this.freeTranslation &&
+          other.createdAt == this.createdAt &&
+          other.updatedAt == this.updatedAt);
+}
+
+class ScratchpadPhrasesCompanion extends UpdateCompanion<ScratchpadPhrase> {
+  final Value<int> id;
+  final Value<String> originalText;
+  final Value<String?> freeTranslation;
+  final Value<DateTime> createdAt;
+  final Value<DateTime> updatedAt;
+  const ScratchpadPhrasesCompanion({
+    this.id = const Value.absent(),
+    this.originalText = const Value.absent(),
+    this.freeTranslation = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+  });
+  ScratchpadPhrasesCompanion.insert({
+    this.id = const Value.absent(),
+    this.originalText = const Value.absent(),
+    this.freeTranslation = const Value.absent(),
+    required DateTime createdAt,
+    required DateTime updatedAt,
+  }) : createdAt = Value(createdAt),
+       updatedAt = Value(updatedAt);
+  static Insertable<ScratchpadPhrase> custom({
+    Expression<int>? id,
+    Expression<String>? originalText,
+    Expression<String>? freeTranslation,
+    Expression<DateTime>? createdAt,
+    Expression<DateTime>? updatedAt,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (originalText != null) 'original_text': originalText,
+      if (freeTranslation != null) 'free_translation': freeTranslation,
+      if (createdAt != null) 'created_at': createdAt,
+      if (updatedAt != null) 'updated_at': updatedAt,
+    });
+  }
+
+  ScratchpadPhrasesCompanion copyWith({
+    Value<int>? id,
+    Value<String>? originalText,
+    Value<String?>? freeTranslation,
+    Value<DateTime>? createdAt,
+    Value<DateTime>? updatedAt,
+  }) {
+    return ScratchpadPhrasesCompanion(
+      id: id ?? this.id,
+      originalText: originalText ?? this.originalText,
+      freeTranslation: freeTranslation ?? this.freeTranslation,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (originalText.present) {
+      map['original_text'] = Variable<String>(originalText.value);
+    }
+    if (freeTranslation.present) {
+      map['free_translation'] = Variable<String>(freeTranslation.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ScratchpadPhrasesCompanion(')
+          ..write('id: $id, ')
+          ..write('originalText: $originalText, ')
+          ..write('freeTranslation: $freeTranslation, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -8354,6 +8719,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
       $ConstructionRulesTable(this);
   late final $ConstructionRulePOSTable constructionRulePOS =
       $ConstructionRulePOSTable(this);
+  late final $ScratchpadPhrasesTable scratchpadPhrases =
+      $ScratchpadPhrasesTable(this);
   late final PhonemeDao phonemeDao = PhonemeDao(this as AppDatabase);
   late final NaturalClassDao naturalClassDao = NaturalClassDao(
     this as AppDatabase,
@@ -8386,6 +8753,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final ConstructionRuleDao constructionRuleDao = ConstructionRuleDao(
     this as AppDatabase,
   );
+  late final ScratchpadDao scratchpadDao = ScratchpadDao(this as AppDatabase);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -8412,6 +8780,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     constructionSlots,
     constructionRules,
     constructionRulePOS,
+    scratchpadPhrases,
   ];
   @override
   StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules([
@@ -16343,6 +16712,217 @@ typedef $$ConstructionRulePOSTableProcessedTableManager =
       ConstructionRulePOSRow,
       PrefetchHooks Function({bool ruleId, bool posId})
     >;
+typedef $$ScratchpadPhrasesTableCreateCompanionBuilder =
+    ScratchpadPhrasesCompanion Function({
+      Value<int> id,
+      Value<String> originalText,
+      Value<String?> freeTranslation,
+      required DateTime createdAt,
+      required DateTime updatedAt,
+    });
+typedef $$ScratchpadPhrasesTableUpdateCompanionBuilder =
+    ScratchpadPhrasesCompanion Function({
+      Value<int> id,
+      Value<String> originalText,
+      Value<String?> freeTranslation,
+      Value<DateTime> createdAt,
+      Value<DateTime> updatedAt,
+    });
+
+class $$ScratchpadPhrasesTableFilterComposer
+    extends Composer<_$AppDatabase, $ScratchpadPhrasesTable> {
+  $$ScratchpadPhrasesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get originalText => $composableBuilder(
+    column: $table.originalText,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get freeTranslation => $composableBuilder(
+    column: $table.freeTranslation,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$ScratchpadPhrasesTableOrderingComposer
+    extends Composer<_$AppDatabase, $ScratchpadPhrasesTable> {
+  $$ScratchpadPhrasesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get originalText => $composableBuilder(
+    column: $table.originalText,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get freeTranslation => $composableBuilder(
+    column: $table.freeTranslation,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$ScratchpadPhrasesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $ScratchpadPhrasesTable> {
+  $$ScratchpadPhrasesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get originalText => $composableBuilder(
+    column: $table.originalText,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get freeTranslation => $composableBuilder(
+    column: $table.freeTranslation,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+}
+
+class $$ScratchpadPhrasesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $ScratchpadPhrasesTable,
+          ScratchpadPhrase,
+          $$ScratchpadPhrasesTableFilterComposer,
+          $$ScratchpadPhrasesTableOrderingComposer,
+          $$ScratchpadPhrasesTableAnnotationComposer,
+          $$ScratchpadPhrasesTableCreateCompanionBuilder,
+          $$ScratchpadPhrasesTableUpdateCompanionBuilder,
+          (
+            ScratchpadPhrase,
+            BaseReferences<
+              _$AppDatabase,
+              $ScratchpadPhrasesTable,
+              ScratchpadPhrase
+            >,
+          ),
+          ScratchpadPhrase,
+          PrefetchHooks Function()
+        > {
+  $$ScratchpadPhrasesTableTableManager(
+    _$AppDatabase db,
+    $ScratchpadPhrasesTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$ScratchpadPhrasesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$ScratchpadPhrasesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$ScratchpadPhrasesTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<String> originalText = const Value.absent(),
+                Value<String?> freeTranslation = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+              }) => ScratchpadPhrasesCompanion(
+                id: id,
+                originalText: originalText,
+                freeTranslation: freeTranslation,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<String> originalText = const Value.absent(),
+                Value<String?> freeTranslation = const Value.absent(),
+                required DateTime createdAt,
+                required DateTime updatedAt,
+              }) => ScratchpadPhrasesCompanion.insert(
+                id: id,
+                originalText: originalText,
+                freeTranslation: freeTranslation,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$ScratchpadPhrasesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $ScratchpadPhrasesTable,
+      ScratchpadPhrase,
+      $$ScratchpadPhrasesTableFilterComposer,
+      $$ScratchpadPhrasesTableOrderingComposer,
+      $$ScratchpadPhrasesTableAnnotationComposer,
+      $$ScratchpadPhrasesTableCreateCompanionBuilder,
+      $$ScratchpadPhrasesTableUpdateCompanionBuilder,
+      (
+        ScratchpadPhrase,
+        BaseReferences<
+          _$AppDatabase,
+          $ScratchpadPhrasesTable,
+          ScratchpadPhrase
+        >,
+      ),
+      ScratchpadPhrase,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -16396,4 +16976,6 @@ class $AppDatabaseManager {
       $$ConstructionRulesTableTableManager(_db, _db.constructionRules);
   $$ConstructionRulePOSTableTableManager get constructionRulePOS =>
       $$ConstructionRulePOSTableTableManager(_db, _db.constructionRulePOS);
+  $$ScratchpadPhrasesTableTableManager get scratchpadPhrases =>
+      $$ScratchpadPhrasesTableTableManager(_db, _db.scratchpadPhrases);
 }

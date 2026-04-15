@@ -6,6 +6,7 @@ import 'package:drift_flutter/drift_flutter.dart';
 import '../features/grammar/data/construction_dao.dart';
 import '../features/grammar/data/construction_rule_dao.dart';
 import '../features/grammar/data/grammar_dao.dart';
+import '../features/scratchpad/data/scratchpad_dao.dart';
 import '../features/grammar/data/inflectional_rule_pos_dao.dart';
 import '../features/grammar/data/lexeme_parents_dao.dart';
 import '../features/grammar/data/marker_dao.dart';
@@ -480,6 +481,18 @@ class ConstructionRulePOS extends Table {
   String get tableName => 'construction_rule_pos';
 }
 
+/// Phase 12 — persisted phrase entries for the Writing Scratchpad.
+///
+/// No [projectId] column — each project IS a separate SQLite file, so
+/// there is no cross-project contamination (per Phase 12 Pitfall 2).
+class ScratchpadPhrases extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  TextColumn get originalText => text().withDefault(const Constant(''))();
+  TextColumn get freeTranslation => text().nullable()();
+  DateTimeColumn get createdAt => dateTime()();
+  DateTimeColumn get updatedAt => dateTime()();
+}
+
 // ---------------------------------------------------------------------------
 // Database class
 // ---------------------------------------------------------------------------
@@ -507,6 +520,7 @@ class ConstructionRulePOS extends Table {
     ConstructionSlots, // v15 (Phase 10)
     ConstructionRules, // v16 (Phase 10.1)
     ConstructionRulePOS, // v16 (Phase 10.1)
+    ScratchpadPhrases, // v17 (Phase 12)
   ],
   daos: [
     PhonemeDao,
@@ -524,6 +538,7 @@ class ConstructionRulePOS extends Table {
     StandardFormPatternDao, // v10 (04-17)
     ConstructionDao, // v15 (Phase 10)
     ConstructionRuleDao, // v16 (Phase 10.1)
+    ScratchpadDao, // v17 (Phase 12)
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -534,7 +549,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase(super.e);
 
   @override
-  int get schemaVersion => 16;
+  int get schemaVersion => 17;
 
   @override
   MigrationStrategy get migration {
@@ -779,6 +794,10 @@ class AppDatabase extends _$AppDatabase {
             paradigmCellOverrides.suppressConstructionRuleId,
           );
         }
+        if (from < 17) {
+          // v17: Phase 12 — ScratchpadPhrases table for Writing Scratchpad.
+          await m.createTable(scratchpadPhrases);
+        }
       },
       beforeOpen: (details) async {
         // Enable foreign key enforcement for every connection.
@@ -1022,6 +1041,16 @@ class AppDatabase extends _$AppDatabase {
             '"suppress_construction_rule_id" INTEGER',
           );
         } catch (_) {}
+        // v17 safety net: ScratchpadPhrases table (Phase 12)
+        await customStatement(
+          'CREATE TABLE IF NOT EXISTS scratchpad_phrases ('
+          '"id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, '
+          '"original_text" TEXT NOT NULL DEFAULT \'\', '
+          '"free_translation" TEXT, '
+          '"created_at" INTEGER NOT NULL, '
+          '"updated_at" INTEGER NOT NULL'
+          ')',
+        );
       },
     );
   }
@@ -1031,6 +1060,9 @@ class AppDatabase extends _$AppDatabase {
 
   /// Returns the [ConstructionRuleDao] for this database.
   ConstructionRuleDao get constructionRuleDao => ConstructionRuleDao(this);
+
+  /// Returns the [ScratchpadDao] for this database.
+  ScratchpadDao get scratchpadDao => ScratchpadDao(this);
 
   /// Factory that opens a Drift database backed by a file at [absolutePath].
   ///
