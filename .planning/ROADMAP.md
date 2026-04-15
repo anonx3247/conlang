@@ -226,7 +226,7 @@ Plans:
 - [x] 11-01-PLAN.md — Ancestry chain data layer (AncestryNode, providers, multi-level derivation fix)
 - [x] 11-02-PLAN.md — SearchableParentSelector widget (autocomplete + InputChip pills)
 - [x] 11-03-PLAN.md — EtymologyChainSection widget (visual ancestry tree in detail panel)
-- [ ] 11-04-PLAN.md — Gap closure: wire derived forms into SearchableParentSelector display
+- [x] 11-04-PLAN.md — Gap closure: wire derived forms into SearchableParentSelector display
 
 ### Phase 12: Writing Scratchpad
 **Goal**: Users can compose phrases in their conlang and receive automatic interlinear glossing, IPA transcription, and error highlighting without leaving the app
@@ -301,7 +301,7 @@ v1.0 phases complete. v2.0 executes: 10 → 11 → 12 → 13 → 14 → 15 → 1
 | 8. Gemination Restrictions | v1.0 | TBD | Complete | 2026-04-13 |
 | 9. Platform Polish | v1.0 | 3/3 | Complete | 2026-04-13 |
 | 10. Analytic Grammar | v2.0 | 0/4 | Planned | - |
-| 11. Lexicon Etymology Chain | v2.0 | 3/4 | In Progress |  |
+| 11. Lexicon Etymology Chain | v2.0 | 4/4 | Complete   | 2026-04-15 |
 | 12. Writing Scratchpad | v2.0 | 0/? | Not started | - |
 | 13. Writing System | v2.0 | 0/? | Not started | - |
 | 14. AI / MCP Integration | v2.0 | 0/? | Not started | - |
