@@ -34,6 +34,7 @@ class _AppShellState extends ConsumerState<AppShell> {
     _TabItem(label: 'Phonology', icon: Icons.music_note, enabled: true, phase: null),
     _TabItem(label: 'Grammar', icon: Icons.account_tree, enabled: true, phase: null),
     _TabItem(label: 'Lexicon', icon: Icons.menu_book, enabled: true, phase: null),
+    _TabItem(label: 'Scratchpad', icon: Icons.edit_note, enabled: true, phase: null),
   ];
 
   @override
