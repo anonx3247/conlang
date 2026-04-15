@@ -532,20 +532,10 @@ AncestryNode? buildAncestryNode({
   final lexeme = lexemeById[lexemeId];
   if (lexeme == null) return null;
 
-  // Truncation at max 10 levels — return a sentinel node.
-  if (depth >= 10) {
-    return AncestryNode(
-      lexemeId: lexemeId,
-      lexeme: lexeme,
-      edgeLabel: '',
-      isRuleDerived: false,
-      isTruncated: true,
-    );
-  }
-
-  // Cycle detection — per-branch copy for DAG safety.
-  // A word is only a cycle if it appears in its own ancestor chain;
-  // shared ancestors via different branches in a DAG are NOT cycles.
+  // Cycle detection first — a cycle at depth 10 must be flagged as a cycle,
+  // not as a truncation. Per-branch copy for DAG safety: a word is only a
+  // cycle if it appears in its own ancestor chain; shared ancestors via
+  // different branches in a DAG are NOT cycles.
   if (visited.contains(lexemeId)) {
     return AncestryNode(
       lexemeId: lexemeId,
@@ -553,6 +543,17 @@ AncestryNode? buildAncestryNode({
       edgeLabel: '',
       isRuleDerived: false,
       isCycle: true,
+    );
+  }
+
+  // Truncation at max 10 levels — only reached when no cycle was detected.
+  if (depth >= 10) {
+    return AncestryNode(
+      lexemeId: lexemeId,
+      lexeme: lexeme,
+      edgeLabel: '',
+      isRuleDerived: false,
+      isTruncated: true,
     );
   }
 
