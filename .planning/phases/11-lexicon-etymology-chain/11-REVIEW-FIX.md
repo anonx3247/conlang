@@ -1,6 +1,7 @@
 ---
 phase: 11-lexicon-etymology-chain
-fixed_at: 2026-04-14T00:00:00Z
+fixed_at: 2026-04-15T00:00:00Z
+review_path: .planning/phases/11-lexicon-etymology-chain/11-REVIEW.md
 fix_scope: critical_warning
 findings_in_scope: 3
 fixed: 3
@@ -11,7 +12,7 @@ status: all_fixed
 
 # Phase 11: Code Review Fix Report
 
-**Fixed at:** 2026-04-14
+**Fixed at:** 2026-04-15
 **Source review:** `.planning/phases/11-lexicon-etymology-chain/11-REVIEW.md`
 **Iteration:** 1
 
@@ -20,32 +21,29 @@ status: all_fixed
 - Fixed: 3
 - Skipped: 0
 
-## Fixed
+## Fixed Issues
 
-### WR-01: Search field not cleared after selecting a parent
+### WR-01: `updateParent` silently overwrites existing data when optional parameters are omitted
 
-**Files modified:** `lib/features/lexicon/presentation/dictionary/searchable_parent_selector.dart`
-**Commit:** 17685d5 — `fix(11): WR-01 clear autocomplete field after parent selection`
-
-**Applied fix:** Removed `_searchController` (a disconnected parallel controller) and replaced it with a nullable `_autocompleteController` field. In `fieldViewBuilder`, the Autocomplete-owned `controller` argument is now captured into `_autocompleteController`. In `onSelected`, `_autocompleteController?.clear()` is called instead of the old `_searchController.clear()`. The owned controller is not disposed by the state (Autocomplete manages its own lifecycle).
-
----
-
-### WR-02: Children connector hardcodes `nodeCount: 1`
-
-**Files modified:** `lib/features/lexicon/presentation/dictionary/etymology_chain_section.dart`
-**Commit:** 42ddea4 — `fix(11): WR-02 use actual child count for children connector nodeCount`
-
-**Applied fix:** Replaced the hardcoded `nodeCount: 1` in the children `_connector` call with `nodeCount: ruleDerivedChildren.length + manualChildren.length`. This allows `_ConnectorPainter` to draw a proper fan shape when a word has two or more children.
+**Files modified:** `lib/features/grammar/data/lexeme_parents_dao.dart`
+**Commit:** a02f04c
+**Applied fix:** Added `clearRelationship` and `clearNotes` boolean parameters (defaulting to `false`). The companion now uses `Value(x)` only when the caller explicitly passes a non-null value, `const Value(null)` when a clear flag is set, and `const Value.absent()` otherwise — so omitting an optional parameter no longer issues a `SET column = NULL` in the SQL update. Updated the doc comment to document the new semantics.
 
 ---
 
-### WR-03: Unawaited Futures from DAO mutations in `_buildAddParentSection`
+### WR-02: Truncation check fires before cycle detection — deep cycles misreported as truncations
 
-**Files modified:** `lib/features/lexicon/presentation/dictionary/etymology_chain_section.dart`
-**Commit:** c0aa6c9 — `fix(11): WR-03 await DAO mutations in etymology parent onChanged`
+**Files modified:** `lib/features/lexicon/data/lexeme_providers.dart`
+**Commit:** 0ec3b80
+**Applied fix:** Swapped the guard order in `buildAncestryNode` so the `visited.contains(lexemeId)` cycle check runs before the `depth >= 10` truncation check. A cyclic node encountered at depth 10 or deeper is now correctly reported as `isCycle: true` rather than `isTruncated: true`. Updated the comments on both guards to explain the priority.
 
-**Applied fix:** Extracted the DAO mutations into a new private async method `_updateManualParents(Set<int> oldIds, Set<int> newIds)` which awaits each `insertParent`/`deleteParent` call inside a `try/catch` that logs failures via `debugPrint`. The synchronous `onChanged` callback now delegates to this method via `(newIds) => _updateManualParents(manualParentIds, newIds)` — the fire-and-forget is now intentional and explicit, and errors are no longer silently swallowed. The argument order was also corrected so the diff direction matches the original logic (inserts for `newIds.difference(oldIds)`, deletes for `oldIds.difference(newIds)`).
+---
+
+### WR-03: `_save` in `WordCreationForm` has no `catch` — DB errors are unhandled
+
+**Files modified:** `lib/features/lexicon/presentation/dictionary/word_creation_form.dart`
+**Commit:** 5a9cc05
+**Applied fix:** Added a `catch (e)` block between the `try` body and the existing `finally` block. On any exception the catch checks `mounted` and shows a `SnackBar` with `'Failed to save word: $e'`. The existing `finally` block (`setState(() => _saving = false)`) is preserved unchanged.
 
 ---
 
@@ -55,6 +53,6 @@ None — all in-scope findings were fixed.
 
 ---
 
-_Fixed: 2026-04-14_
+_Fixed: 2026-04-15_
 _Fixer: Claude (gsd-code-fixer)_
 _Iteration: 1_
