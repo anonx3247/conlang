@@ -237,8 +237,12 @@ Plans:
   2. Unknown tokens display as "?" in the gloss line; words violating phonotactics or grammar rules are highlighted as errors — the scratchpad shows honest parsing gaps, not silent failures
   3. User can generate an IPA transcription line for any written phrase by applying the project's phonology rules
   4. User can enter a free translation beneath each glossed phrase and save it as part of the phrase record
-**Plans**: TBD
+**Plans**: 2 plans
 **UI hint**: yes
+
+Plans:
+- [ ] 12-01-PLAN.md — Schema v17 (ScratchpadPhrases table), ScratchpadDao, GlossMatch domain types, GlossIndex pre-computed provider, PhraseTokenizer
+- [ ] 12-02-PLAN.md — AppShell 4th tab, GoRouter branch, ScratchpadPage two-panel layout, PhraseEditorPanel with debounce, InterlinearBlock with Leipzig gloss + error highlighting + IPA toggle
 
 ### Phase 13: Writing System
 **Goal**: Users can define their conlang's orthography or custom script with grapheme-to-phoneme mapping, custom font rendering, and script preview in the scratchpad
@@ -302,7 +306,7 @@ v1.0 phases complete. v2.0 executes: 10 → 11 → 12 → 13 → 14 → 15 → 1
 | 9. Platform Polish | v1.0 | 3/3 | Complete | 2026-04-13 |
 | 10. Analytic Grammar | v2.0 | 4/4 | Complete | 2026-04-14 |
 | 11. Lexicon Etymology Chain | v2.0 | 4/4 | Complete   | 2026-04-15 |
-| 12. Writing Scratchpad | v2.0 | 0/? | Not started | - |
+| 12. Writing Scratchpad | v2.0 | 0/2 | Planned | - |
 | 13. Writing System | v2.0 | 0/? | Not started | - |
 | 14. AI / MCP Integration | v2.0 | 0/? | Not started | - |
 | 15. Language Evolution — Sound Changes | v2.0 | 0/? | Not started | - |
