@@ -1,3 +1,5 @@
+import 'dart:math' show max;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -8,17 +10,13 @@ import '../../data/lexeme_providers.dart';
 import '../../domain/ancestry_node.dart';
 import 'searchable_parent_selector.dart';
 
-/// Displays the full derivational ancestry chain of a [Lexeme] as an
-/// indented tree with connector lines (Phase 11 LEX-09).
+/// Visual etymology tree for a [Lexeme] (Phase 11 LEX-09).
 ///
-/// The section renders:
-/// - **Ancestry tree** — ancestors above the current word, indented by level
-/// - **Current word node** — highlighted with a primary left border
-/// - **Immediate children** — rule-derived and manual children one level below
-/// - **Inline parent management** — toggle to add/remove manual parent links
+/// Layout: ancestor levels render top-to-bottom with same-depth nodes in a
+/// single row, connected by thin lines. The current word is highlighted.
+/// Immediate children appear below the current word.
 ///
-/// Hidden entirely when the word has no parents, no children, and no
-/// derivedFromLexemeId (isolated root words do not need an etymology section).
+/// Hidden for isolated root words (no parents, no children, not derived).
 class EtymologyChainSection extends ConsumerStatefulWidget {
   const EtymologyChainSection({
     super.key,
@@ -27,8 +25,6 @@ class EtymologyChainSection extends ConsumerStatefulWidget {
   });
 
   final Lexeme lexeme;
-
-  /// Called when the user taps an ancestor or child node to navigate to it.
   final ValueChanged<int>? onNavigateToWord;
 
   @override
@@ -36,31 +32,67 @@ class EtymologyChainSection extends ConsumerStatefulWidget {
       _EtymologyChainSectionState();
 }
 
-class _EtymologyChainSectionState extends ConsumerState<EtymologyChainSection> {
+class _EtymologyChainSectionState
+    extends ConsumerState<EtymologyChainSection> {
   bool _addingParent = false;
+
+  // ---------------------------------------------------------------------------
+  // Tree flattening
+  // ---------------------------------------------------------------------------
+
+  /// Flattens the ancestry DAG into depth-ordered levels.
+  ///
+  /// Returns `[ [deepest ancestors], …, [direct parents] ]` so callers render
+  /// from index 0 (top) downward to the current word. Each lexeme appears at
+  /// most once (first-encounter depth wins for shared ancestors).
+  static List<List<AncestryNode>> _flattenAncestry(AncestryNode node) {
+    final Map<int, List<AncestryNode>> byDepth = {};
+    final seen = <int>{};
+    _traverse(node.parents, 1, byDepth, seen);
+    if (byDepth.isEmpty) return [];
+    final maxD = byDepth.keys.reduce(max);
+    return [for (int d = maxD; d >= 1; d--) byDepth[d] ?? []];
+  }
+
+  static void _traverse(
+    List<AncestryNode> nodes,
+    int depth,
+    Map<int, List<AncestryNode>> out,
+    Set<int> seen,
+  ) {
+    for (final n in nodes) {
+      if (seen.contains(n.lexemeId)) continue;
+      seen.add(n.lexemeId);
+      out.putIfAbsent(depth, () => []).add(n);
+      if (n.parents.isNotEmpty) {
+        _traverse(n.parents, depth + 1, out, seen);
+      }
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Build
+  // ---------------------------------------------------------------------------
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    final ancestryNode =
-        ref.watch(ancestryChainProvider(widget.lexeme.id));
+    final ancestryNode = ref.watch(ancestryChainProvider(widget.lexeme.id));
 
-    // Manual children (this lexeme is listed as a parent in LexemeParents).
-    final manualChildrenAsync =
-        ref.watch(childrenForLexemeProvider(widget.lexeme.id));
     final manualChildren =
-        manualChildrenAsync.asData?.value ?? const <LexemeParentRow>[];
+        ref.watch(childrenForLexemeProvider(widget.lexeme.id))
+                .asData
+                ?.value ??
+            const <LexemeParentRow>[];
 
-    // Rule-derived children: stored lexemes whose derivedFromLexemeId points
-    // here. Computed-only (non-stored) derivations are shown by DerivationTreeWidget.
     final allLexemes =
         ref.watch(allLexemeListProvider).asData?.value ?? const <Lexeme>[];
+
     final ruleDerivedChildren = allLexemes
         .where((lx) => lx.derivedFromLexemeId == widget.lexeme.id)
         .toList();
 
-    // Hide for isolated root words (no ancestry, no children, not derived).
     final hasAncestors =
         ancestryNode != null && ancestryNode.parents.isNotEmpty;
     final hasChildren =
@@ -71,12 +103,14 @@ class _EtymologyChainSectionState extends ConsumerState<EtymologyChainSection> {
       return const SizedBox.shrink();
     }
 
+    final ancestryLevels =
+        ancestryNode != null ? _flattenAncestry(ancestryNode) : <List<AncestryNode>>[];
+
     return Padding(
       padding: const EdgeInsets.only(top: 8, bottom: 12),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Section header
           Text(
             'Etymology Chain',
             style: theme.textTheme.bodyMedium?.copyWith(
@@ -84,26 +118,26 @@ class _EtymologyChainSectionState extends ConsumerState<EtymologyChainSection> {
               fontWeight: FontWeight.w600,
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 10),
 
-          // Ancestry tree (ancestors above current word)
-          if (hasAncestors)
-            for (final parent in ancestryNode.parents)
-              _buildAncestryRow(context, parent, 0),
+          // Ancestor levels — deepest first (top of tree)
+          for (final level in ancestryLevels) ...[
+            _levelRow(context, level),
+            _connector(context, nodeCount: level.length),
+          ],
 
-          // Current word node (highlighted)
-          _buildCurrentWordNode(context),
+          // Current word (highlighted)
+          _currentWordRow(context),
 
-          // Rule-derived children
-          for (final child in ruleDerivedChildren)
-            _buildRuleDerivedChildRow(context, child),
-
-          // Manual children
-          for (final row in manualChildren)
-            _buildManualChildRow(context, row, allLexemes),
+          // Children
+          if (hasChildren) ...[
+            _connector(context, nodeCount: 1, inverted: true),
+            _childrenRow(
+                context, ruleDerivedChildren, manualChildren, allLexemes),
+          ],
 
           // Inline parent management
-          const SizedBox(height: 8),
+          const SizedBox(height: 10),
           _buildAddParentSection(context),
         ],
       ),
@@ -111,75 +145,72 @@ class _EtymologyChainSectionState extends ConsumerState<EtymologyChainSection> {
   }
 
   // ---------------------------------------------------------------------------
-  // Ancestry tree rendering
+  // Level rows
   // ---------------------------------------------------------------------------
 
-  Widget _buildAncestryRow(
-      BuildContext context, AncestryNode node, int level) {
-    final theme = Theme.of(context);
-    final cs = theme.colorScheme;
-
-    // Truncation hint at the top of a branch that was cut short.
-    if (node.isTruncated) {
-      return Padding(
-        padding: EdgeInsets.only(left: level * 20.0, top: 2, bottom: 2),
-        child: Text(
-          '\u2191 more ancestors',
-          style: theme.textTheme.labelSmall?.copyWith(
-            fontSize: 11,
-            color: cs.onSurface.withValues(alpha: 0.55),
-          ),
-        ),
-      );
-    }
-
-    return Column(
+  Widget _levelRow(BuildContext context, List<AncestryNode> nodes) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Render this node's own parents first (tree grows upward).
-        for (final parent in node.parents)
-          _buildAncestryRow(context, parent, level + 1),
+        for (int i = 0; i < nodes.length; i++) ...[
+          if (i > 0) const SizedBox(width: 6),
+          _ancestorChip(context, nodes[i]),
+        ],
+      ],
+    );
+  }
 
-        // Then render this node itself.
-        Padding(
-          padding: EdgeInsets.only(left: level * 20.0, top: 2, bottom: 2),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (level > 0 || node.parents.isNotEmpty)
-                Container(
-                  width: 12,
-                  height: 1,
-                  color: cs.outlineVariant,
-                  margin: const EdgeInsets.only(right: 4, top: 10),
-                ),
-              Flexible(
-                child: _buildNodeChip(context, node, isAncestor: true),
-              ),
-            ],
-          ),
-        ),
+  Widget _childrenRow(
+    BuildContext context,
+    List<Lexeme> ruleDerived,
+    List<LexemeParentRow> manual,
+    List<Lexeme> allLexemes,
+  ) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final rulesAsync = ref.watch(morphologicalRuleListProvider);
+    final rules = rulesAsync.asData?.value ?? const [];
+
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        for (int i = 0; i < ruleDerived.length; i++) ...[
+          if (i > 0) const SizedBox(width: 6),
+          _childLexemeChip(context, ruleDerived[i], rules, cs),
+        ],
+        for (int i = 0; i < manual.length; i++) ...[
+          if (i > 0 || ruleDerived.isNotEmpty) const SizedBox(width: 6),
+          _childManualChip(context, manual[i], allLexemes, cs),
+        ],
       ],
     );
   }
 
   // ---------------------------------------------------------------------------
-  // Node chip (ancestor / child)
+  // Chips
   // ---------------------------------------------------------------------------
 
-  Widget _buildNodeChip(
-    BuildContext context,
-    AncestryNode node, {
-    required bool isAncestor,
-  }) {
+  Widget _ancestorChip(BuildContext context, AncestryNode node) {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
 
-    // Cycle sentinel — show a warning chip instead of recursing.
+    if (node.isTruncated) {
+      return Text(
+        '↑ more ancestors',
+        style: theme.textTheme.labelSmall?.copyWith(
+          fontSize: 11,
+          color: cs.onSurface.withValues(alpha: 0.5),
+        ),
+        textAlign: TextAlign.center,
+      );
+    }
+
     if (node.isCycle) {
       return Chip(
         backgroundColor: Colors.amber.shade100,
-        avatar: const Icon(Icons.warning_rounded, size: 14),
+        avatar: const Icon(Icons.warning_rounded, size: 12),
         label: const Text('cycle', style: TextStyle(fontSize: 11)),
         padding: EdgeInsets.zero,
         visualDensity: VisualDensity.compact,
@@ -195,270 +226,269 @@ class _EtymologyChainSectionState extends ConsumerState<EtymologyChainSection> {
       onTap: widget.onNavigateToWord != null
           ? () => widget.onNavigateToWord!(node.lexemeId)
           : null,
-      borderRadius: BorderRadius.circular(6),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-        decoration: BoxDecoration(
-          color: cs.surfaceContainerHigh,
-          borderRadius: BorderRadius.circular(6),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
+      borderRadius: BorderRadius.circular(14),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          _pill(
+            context,
+            cs: cs,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                Icon(
-                  isAncestor ? Icons.arrow_upward : Icons.arrow_downward,
-                  size: 14,
-                  color: cs.primary,
-                ),
-                const SizedBox(width: 4),
-                Flexible(
-                  child: Text(
-                    forms.rom,
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                    ),
+                Text(
+                  forms.rom,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
                   ),
+                  textAlign: TextAlign.center,
                 ),
+                if (node.lexeme?.meaning != null &&
+                    node.lexeme!.meaning!.isNotEmpty)
+                  Text(
+                    node.lexeme!.meaning!,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      fontSize: 10,
+                      color: cs.onSurface.withValues(alpha: 0.55),
+                    ),
+                    textAlign: TextAlign.center,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
               ],
             ),
-            if (node.lexeme?.meaning != null &&
-                node.lexeme!.meaning!.isNotEmpty)
-              Text(
-                node.lexeme!.meaning!,
-                style: theme.textTheme.bodySmall?.copyWith(
-                  fontSize: 12,
-                  color: cs.onSurface.withValues(alpha: 0.55),
-                ),
+          ),
+          if (node.edgeLabel.isNotEmpty) ...[
+            const SizedBox(height: 2),
+            Text(
+              node.edgeLabel,
+              style: theme.textTheme.labelSmall?.copyWith(
+                fontSize: 10,
+                color: cs.primary.withValues(alpha: 0.7),
               ),
-            if (node.edgeLabel.isNotEmpty)
-              Text(
-                node.edgeLabel,
-                style: theme.textTheme.labelSmall?.copyWith(
-                  fontSize: 11,
-                  color: cs.onSurface.withValues(alpha: 0.55),
-                  letterSpacing: 0.5,
-                ),
-              ),
+              textAlign: TextAlign.center,
+            ),
           ],
-        ),
+        ],
       ),
     );
   }
 
-  // ---------------------------------------------------------------------------
-  // Current word node (highlighted, non-tappable)
-  // ---------------------------------------------------------------------------
-
-  Widget _buildCurrentWordNode(BuildContext context) {
+  Widget _currentWordRow(BuildContext context) {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
     final promoted =
         ref.watch(promotedDerivedFormProvider(widget.lexeme.id));
     final forms = resolveDisplayForms(widget.lexeme, promoted);
 
-    return Container(
-      margin: const EdgeInsets.symmetric(vertical: 4),
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-      decoration: BoxDecoration(
-        color: cs.surfaceContainerHigh,
-        borderRadius: BorderRadius.circular(6),
-        border: Border(left: BorderSide(color: cs.primary, width: 2)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            forms.rom,
-            style: theme.textTheme.bodyMedium?.copyWith(
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-            ),
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Container(
+          padding:
+              const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          decoration: BoxDecoration(
+            color: cs.surfaceContainerHigh,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: cs.primary, width: 1.5),
           ),
-          if (widget.lexeme.meaning != null &&
-              widget.lexeme.meaning!.isNotEmpty)
-            Text(
-              widget.lexeme.meaning!,
-              style: theme.textTheme.bodySmall?.copyWith(
-                fontSize: 12,
-                color: cs.onSurface.withValues(alpha: 0.55),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Text(
+                forms.rom,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
+                textAlign: TextAlign.center,
               ),
-            ),
-        ],
-      ),
+              if (widget.lexeme.meaning != null &&
+                  widget.lexeme.meaning!.isNotEmpty)
+                Text(
+                  widget.lexeme.meaning!,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    fontSize: 10,
+                    color: cs.onSurface.withValues(alpha: 0.55),
+                  ),
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 
-  // ---------------------------------------------------------------------------
-  // Children rows
-  // ---------------------------------------------------------------------------
-
-  Widget _buildRuleDerivedChildRow(BuildContext context, Lexeme child) {
+  Widget _childLexemeChip(
+      BuildContext context,
+      Lexeme child,
+      List<MorphologicalRule> rules,
+      ColorScheme cs) {
     final theme = Theme.of(context);
-    final cs = theme.colorScheme;
     final promoted = ref.watch(promotedDerivedFormProvider(child.id));
     final forms = resolveDisplayForms(child, promoted);
+    final ruleId = child.derivedViaRuleId;
+    final rule = ruleId != null
+        ? rules.where((r) => r.id == ruleId).firstOrNull
+        : null;
+    final edgeLabel = rule != null ? 'via ${rule.name}' : 'rule-derived';
 
-    // Look up rule name for the edge label.
-    final rulesAsync = ref.watch(morphologicalRuleListProvider);
-    final rules = rulesAsync.asData?.value ?? const [];
-    final rule = rules
-        .where((r) => r.id == child.derivedViaRuleId)
-        .firstOrNull;
-    final edgeLabel =
-        rule != null ? 'via ${rule.name}' : 'rule-derived';
-
-    return Padding(
-      padding: const EdgeInsets.only(left: 20.0, top: 2, bottom: 2),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+    return InkWell(
+      onTap: widget.onNavigateToWord != null
+          ? () => widget.onNavigateToWord!(child.id)
+          : null,
+      borderRadius: BorderRadius.circular(14),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Container(
-            width: 12,
-            height: 1,
-            color: cs.outlineVariant,
-            margin: const EdgeInsets.only(right: 4, top: 10),
-          ),
-          Flexible(
-            child: InkWell(
-              onTap: widget.onNavigateToWord != null
-                  ? () => widget.onNavigateToWord!(child.id)
-                  : null,
-              borderRadius: BorderRadius.circular(6),
-              child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: cs.surfaceContainerHigh,
-                  borderRadius: BorderRadius.circular(6),
+          _pill(
+            context,
+            cs: cs,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Text(
+                  forms.rom,
+                  style: theme.textTheme.bodySmall
+                      ?.copyWith(fontSize: 12, fontWeight: FontWeight.w600),
+                  textAlign: TextAlign.center,
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Icon(Icons.arrow_downward,
-                            size: 14, color: cs.primary),
-                        const SizedBox(width: 4),
-                        Flexible(
-                          child: Text(
-                            forms.rom,
-                            style: theme.textTheme.bodyMedium?.copyWith(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                      ],
+                if (child.meaning != null && child.meaning!.isNotEmpty)
+                  Text(
+                    child.meaning!,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      fontSize: 10,
+                      color: cs.onSurface.withValues(alpha: 0.55),
                     ),
-                    if (child.meaning != null && child.meaning!.isNotEmpty)
-                      Text(
-                        child.meaning!,
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          fontSize: 12,
-                          color: cs.onSurface.withValues(alpha: 0.55),
-                        ),
-                      ),
-                    Text(
-                      edgeLabel,
-                      style: theme.textTheme.labelSmall?.copyWith(
-                        fontSize: 11,
-                        color: cs.onSurface.withValues(alpha: 0.55),
-                        letterSpacing: 0.5,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+                    textAlign: TextAlign.center,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+              ],
             ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            edgeLabel,
+            style: theme.textTheme.labelSmall?.copyWith(
+              fontSize: 10,
+              color: cs.primary.withValues(alpha: 0.7),
+            ),
+            textAlign: TextAlign.center,
           ),
         ],
       ),
     );
   }
 
-  Widget _buildManualChildRow(
-      BuildContext context, LexemeParentRow row, List<Lexeme> allLexemes) {
+  Widget _childManualChip(
+      BuildContext context,
+      LexemeParentRow row,
+      List<Lexeme> allLexemes,
+      ColorScheme cs) {
     final theme = Theme.of(context);
-    final cs = theme.colorScheme;
-
     final child =
         allLexemes.where((l) => l.id == row.childLexemeId).firstOrNull;
     if (child == null) return const SizedBox.shrink();
 
     final promoted = ref.watch(promotedDerivedFormProvider(child.id));
     final forms = resolveDisplayForms(child, promoted);
-    final edgeLabel = row.relationship?.isNotEmpty == true
-        ? row.relationship!
-        : 'parent';
+    final edgeLabel =
+        row.relationship?.isNotEmpty == true ? row.relationship! : 'parent';
 
-    return Padding(
-      padding: const EdgeInsets.only(left: 20.0, top: 2, bottom: 2),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+    return InkWell(
+      onTap: widget.onNavigateToWord != null
+          ? () => widget.onNavigateToWord!(child.id)
+          : null,
+      borderRadius: BorderRadius.circular(14),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Container(
-            width: 12,
-            height: 1,
-            color: cs.outlineVariant,
-            margin: const EdgeInsets.only(right: 4, top: 10),
-          ),
-          Flexible(
-            child: InkWell(
-              onTap: widget.onNavigateToWord != null
-                  ? () => widget.onNavigateToWord!(child.id)
-                  : null,
-              borderRadius: BorderRadius.circular(6),
-              child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: cs.surfaceContainerHigh,
-                  borderRadius: BorderRadius.circular(6),
+          _pill(
+            context,
+            cs: cs,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Text(
+                  forms.rom,
+                  style: theme.textTheme.bodySmall
+                      ?.copyWith(fontSize: 12, fontWeight: FontWeight.w600),
+                  textAlign: TextAlign.center,
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Icon(Icons.arrow_downward,
-                            size: 14, color: cs.primary),
-                        const SizedBox(width: 4),
-                        Flexible(
-                          child: Text(
-                            forms.rom,
-                            style: theme.textTheme.bodyMedium?.copyWith(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                      ],
+                if (child.meaning != null && child.meaning!.isNotEmpty)
+                  Text(
+                    child.meaning!,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      fontSize: 10,
+                      color: cs.onSurface.withValues(alpha: 0.55),
                     ),
-                    if (child.meaning != null && child.meaning!.isNotEmpty)
-                      Text(
-                        child.meaning!,
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          fontSize: 12,
-                          color: cs.onSurface.withValues(alpha: 0.55),
-                        ),
-                      ),
-                    Text(
-                      edgeLabel,
-                      style: theme.textTheme.labelSmall?.copyWith(
-                        fontSize: 11,
-                        color: cs.onSurface.withValues(alpha: 0.55),
-                        letterSpacing: 0.5,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+                    textAlign: TextAlign.center,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+              ],
             ),
           ),
+          const SizedBox(height: 2),
+          Text(
+            edgeLabel,
+            style: theme.textTheme.labelSmall?.copyWith(
+              fontSize: 10,
+              color: cs.primary.withValues(alpha: 0.7),
+            ),
+            textAlign: TextAlign.center,
+          ),
         ],
+      ),
+    );
+  }
+
+  // Shared pill wrapper
+  Widget _pill(BuildContext context,
+      {required ColorScheme cs, required Widget child}) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: cs.surfaceContainerHigh,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: child,
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // Connectors
+  // ---------------------------------------------------------------------------
+
+  /// Draws a connecting line between the row above (with [nodeCount] nodes)
+  /// and the row below (single node).
+  ///
+  /// [inverted] flips the fan direction so it works below the current word
+  /// when connecting down to children.
+  Widget _connector(BuildContext context,
+      {required int nodeCount, bool inverted = false}) {
+    final cs = Theme.of(context).colorScheme;
+    return SizedBox(
+      height: 18,
+      child: CustomPaint(
+        size: const Size(double.infinity, 18),
+        painter: _ConnectorPainter(
+          nodeCount: nodeCount,
+          color: cs.outlineVariant,
+          inverted: inverted,
+        ),
       ),
     );
   }
@@ -469,11 +499,17 @@ class _EtymologyChainSectionState extends ConsumerState<EtymologyChainSection> {
 
   Widget _buildAddParentSection(BuildContext context) {
     if (!_addingParent) {
-      return TextButton.icon(
-        onPressed: () => setState(() => _addingParent = true),
-        icon: const Icon(Icons.add, size: 16),
-        label:
-            const Text('Add parent', style: TextStyle(fontSize: 12)),
+      return Center(
+        child: TextButton.icon(
+          onPressed: () => setState(() => _addingParent = true),
+          icon: const Icon(Icons.add, size: 14),
+          label: const Text('Add parent', style: TextStyle(fontSize: 12)),
+          style: TextButton.styleFrom(
+            visualDensity: VisualDensity.compact,
+            padding:
+                const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          ),
+        ),
       );
     }
 
@@ -491,17 +527,13 @@ class _EtymologyChainSectionState extends ConsumerState<EtymologyChainSection> {
           onChanged: (newIds) {
             final dao = ref.read(lexemeParentsDaoProvider);
             if (dao == null) return;
-            // Add new parents
             for (final id in newIds.difference(manualParentIds)) {
               dao.insertParent(
-                  childLexemeId: widget.lexeme.id,
-                  parentLexemeId: id);
+                  childLexemeId: widget.lexeme.id, parentLexemeId: id);
             }
-            // Remove deleted parents
             for (final id in manualParentIds.difference(newIds)) {
               dao.deleteParent(
-                  childLexemeId: widget.lexeme.id,
-                  parentLexemeId: id);
+                  childLexemeId: widget.lexeme.id, parentLexemeId: id);
             }
           },
           excludeId: widget.lexeme.id,
@@ -513,4 +545,81 @@ class _EtymologyChainSectionState extends ConsumerState<EtymologyChainSection> {
       ],
     );
   }
+}
+
+// ---------------------------------------------------------------------------
+// Connector painter
+// ---------------------------------------------------------------------------
+
+/// Paints a vertical tree connector between two rows.
+///
+/// - [nodeCount] = 1 → straight vertical line through the center.
+/// - [nodeCount] > 1 → a "fan" shape: vertical lines rise from the top corners
+///   of the connector to a horizontal bar, which drops a single line to the
+///   center bottom. This represents multiple nodes above connecting to one
+///   node below.
+/// - [inverted] flips the fan so it fans OUT going downward (one node above →
+///   multiple nodes below).
+class _ConnectorPainter extends CustomPainter {
+  const _ConnectorPainter({
+    required this.nodeCount,
+    required this.color,
+    this.inverted = false,
+  });
+
+  final int nodeCount;
+  final Color color;
+  final bool inverted;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = 1.0
+      ..style = PaintingStyle.stroke;
+
+    final cx = size.width / 2;
+    final h = size.height;
+
+    if (nodeCount <= 1) {
+      canvas.drawLine(Offset(cx, 0), Offset(cx, h), paint);
+      return;
+    }
+
+    // Fan: spread percentage depends on count
+    final spread = (nodeCount == 2 ? 0.30 : 0.45).clamp(0.0, 0.48);
+    final leftX = size.width * (0.5 - spread);
+    final rightX = size.width * (0.5 + spread);
+
+    final barY = inverted ? h * 0.6 : h * 0.4;
+
+    if (!inverted) {
+      // Multiple nodes above, single node below
+      // ─ Vertical lines from top to bar
+      canvas.drawLine(Offset(leftX, 0), Offset(leftX, barY), paint);
+      canvas.drawLine(Offset(rightX, 0), Offset(rightX, barY), paint);
+      if (nodeCount >= 3) {
+        canvas.drawLine(Offset(cx, 0), Offset(cx, barY), paint);
+      }
+      // ─ Horizontal bar
+      canvas.drawLine(Offset(leftX, barY), Offset(rightX, barY), paint);
+      // ─ Single drop to bottom
+      canvas.drawLine(Offset(cx, barY), Offset(cx, h), paint);
+    } else {
+      // Single node above, multiple nodes below
+      canvas.drawLine(Offset(cx, 0), Offset(cx, barY), paint);
+      canvas.drawLine(Offset(leftX, barY), Offset(rightX, barY), paint);
+      canvas.drawLine(Offset(leftX, barY), Offset(leftX, h), paint);
+      canvas.drawLine(Offset(rightX, barY), Offset(rightX, h), paint);
+      if (nodeCount >= 3) {
+        canvas.drawLine(Offset(cx, barY), Offset(cx, h), paint);
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(_ConnectorPainter old) =>
+      old.nodeCount != nodeCount ||
+      old.color != color ||
+      old.inverted != inverted;
 }
