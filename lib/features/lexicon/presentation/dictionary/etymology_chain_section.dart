@@ -499,6 +499,26 @@ class _EtymologyChainSectionState
   // Inline parent management
   // ---------------------------------------------------------------------------
 
+  /// Applies the diff between [oldIds] and [newIds] to the DAO, awaiting each
+  /// mutation so errors are surfaced rather than silently swallowed.
+  Future<void> _updateManualParents(
+      Set<int> oldIds, Set<int> newIds) async {
+    final dao = ref.read(lexemeParentsDaoProvider);
+    if (dao == null) return;
+    try {
+      for (final id in newIds.difference(oldIds)) {
+        await dao.insertParent(
+            childLexemeId: widget.lexeme.id, parentLexemeId: id);
+      }
+      for (final id in oldIds.difference(newIds)) {
+        await dao.deleteParent(
+            childLexemeId: widget.lexeme.id, parentLexemeId: id);
+      }
+    } catch (e, st) {
+      debugPrint('Etymology parent update failed: $e\n$st');
+    }
+  }
+
   Widget _buildAddParentSection(BuildContext context) {
     if (!_addingParent) {
       return Center(
@@ -526,18 +546,11 @@ class _EtymologyChainSectionState
       children: [
         SearchableParentSelector(
           selectedIds: manualParentIds,
-          onChanged: (newIds) {
-            final dao = ref.read(lexemeParentsDaoProvider);
-            if (dao == null) return;
-            for (final id in newIds.difference(manualParentIds)) {
-              dao.insertParent(
-                  childLexemeId: widget.lexeme.id, parentLexemeId: id);
-            }
-            for (final id in manualParentIds.difference(newIds)) {
-              dao.deleteParent(
-                  childLexemeId: widget.lexeme.id, parentLexemeId: id);
-            }
-          },
+          // onChanged is ValueChanged<Set<int>> (synchronous). We delegate to
+          // _updateManualParents which is async with try/catch, making the
+          // fire-and-forget intentional and errors observable via debugPrint.
+          onChanged: (newIds) =>
+              _updateManualParents(manualParentIds, newIds),
           excludeId: widget.lexeme.id,
         ),
         TextButton(
