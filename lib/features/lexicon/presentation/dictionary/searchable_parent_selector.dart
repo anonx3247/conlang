@@ -43,11 +43,13 @@ class SearchableParentSelector extends ConsumerStatefulWidget {
 
 class _SearchableParentSelectorState
     extends ConsumerState<SearchableParentSelector> {
-  final TextEditingController _searchController = TextEditingController();
+  /// Controller captured from [Autocomplete]'s `fieldViewBuilder` so we can
+  /// call `clear()` after a selection without maintaining a parallel controller.
+  TextEditingController? _autocompleteController;
 
   @override
   void dispose() {
-    _searchController.dispose();
+    // _autocompleteController is owned by Autocomplete — do not dispose it here.
     super.dispose();
   }
 
@@ -92,12 +94,11 @@ class _SearchableParentSelectorState
           },
           onSelected: (lx) {
             widget.onChanged({...widget.selectedIds, lx.id});
-            _searchController.clear();
+            _autocompleteController?.clear();
           },
           fieldViewBuilder: (context, controller, focusNode, onSubmitted) {
-            // Keep _searchController in sync so we can clear it on selection.
-            // We assign the autocomplete-provided controller to our internal
-            // reference so clear() reaches the rendered field.
+            // Capture the Autocomplete-owned controller so onSelected can clear it.
+            _autocompleteController = controller;
             return TextField(
               controller: controller,
               focusNode: focusNode,
