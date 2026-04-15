@@ -295,7 +295,7 @@ v1.0 phases complete. v2.0 executes: 10 → 11 → 12 → 13 → 14 → 15 → 1
 | 8. Gemination Restrictions | v1.0 | TBD | Complete | 2026-04-13 |
 | 9. Platform Polish | v1.0 | 3/3 | Complete | 2026-04-13 |
 | 10. Analytic Grammar | v2.0 | 0/4 | Planned | - |
-| 11. Lexicon Etymology Chain | v2.0 | 0/? | Not started | - |
+| 11. Lexicon Etymology Chain | v2.0 | 2/3 | In Progress|  |
 | 12. Writing Scratchpad | v2.0 | 0/? | Not started | - |
 | 13. Writing System | v2.0 | 0/? | Not started | - |
 | 14. AI / MCP Integration | v2.0 | 0/? | Not started | - |
