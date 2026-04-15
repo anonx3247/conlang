@@ -1,5 +1,5 @@
 ---
-status: complete
+status: diagnosed
 phase: 11-lexicon-etymology-chain
 source:
   - 11-01-SUMMARY.md
@@ -53,7 +53,12 @@ blocked: 0
   reason: "User reported: works however it shows the non-derived forms instead of the full forms of words"
   severity: major
   test: 1
-  root_cause: ""
-  artifacts: []
-  missing: []
-  debug_session: ""
+  root_cause: "SearchableParentSelector reads lx.romanization and lx.ipa directly from the raw Lexeme Drift row. Promoted-derivation rows store ipa = parent.ipa as a placeholder (per design D-58) and romanization = null. So the dropdown shows the parent's form instead of the computed derived form. promotedDerivedFormProvider and resolveDisplayForms() already exist in lexeme_providers.dart but SearchableParentSelector was never wired to use them."
+  artifacts:
+    - path: "lib/features/lexicon/presentation/dictionary/searchable_parent_selector.dart"
+      issue: "_displayStringForOption and optionsBuilder both read raw Lexeme fields (lx.romanization ?? lx.ipa) with no awareness of promoted derivations"
+  missing:
+    - "Watch promotedDerivedFormProvider(lx.id) for each candidate lexeme in SearchableParentSelector"
+    - "Use resolveDisplayForms(lx, promotedForm) for display strings in both _displayStringForOption and optionsBuilder search predicate"
+    - "Apply same fix to selected-pill labels in the Wrap section"
+  debug_session: ".planning/debug/autocomplete-base-form.md"
