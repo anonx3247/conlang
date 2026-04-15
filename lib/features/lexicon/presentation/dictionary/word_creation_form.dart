@@ -241,6 +241,12 @@ class _WordCreationFormState extends ConsumerState<WordCreationForm> {
       // words immediately get their derived forms created.
       await ref.read(derivationPromotionServiceProvider).reconcile();
       widget.onSaved();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to save word: $e')),
+        );
+      }
     } finally {
       if (mounted) setState(() => _saving = false);
     }
