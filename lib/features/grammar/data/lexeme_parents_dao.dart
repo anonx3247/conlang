@@ -77,6 +77,11 @@ class LexemeParentsDao extends DatabaseAccessor<AppDatabase>
 
   /// Updates the [relationship] and [notes] on an existing link.
   ///
+  /// Only columns explicitly provided are written; omitted parameters leave
+  /// the existing column value unchanged (`Value.absent()`). Pass
+  /// [clearRelationship] or [clearNotes] as `true` to explicitly set a
+  /// column to NULL rather than leaving it untouched.
+  ///
   /// Silently does nothing when no row matches — callers should
   /// combine with [insertParent] (upsert) if they want to guarantee a
   /// row exists afterwards.
@@ -85,14 +90,20 @@ class LexemeParentsDao extends DatabaseAccessor<AppDatabase>
     required int parentLexemeId,
     String? relationship,
     String? notes,
+    bool clearRelationship = false,
+    bool clearNotes = false,
   }) {
     return (update(lexemeParents)
           ..where((t) =>
               t.childLexemeId.equals(childLexemeId) &
               t.parentLexemeId.equals(parentLexemeId)))
         .write(LexemeParentsCompanion(
-      relationship: Value(relationship),
-      notes: Value(notes),
+      relationship: relationship != null
+          ? Value(relationship)
+          : (clearRelationship ? const Value(null) : const Value.absent()),
+      notes: notes != null
+          ? Value(notes)
+          : (clearNotes ? const Value(null) : const Value.absent()),
     ));
   }
 
