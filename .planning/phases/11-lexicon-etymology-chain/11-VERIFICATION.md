@@ -1,8 +1,8 @@
 ---
 phase: 11-lexicon-etymology-chain
 verified: 2026-04-15T03:00:00Z
-status: human_needed
-score: 1/2 must-haves verified (SC2 requires human)
+status: passed
+score: 2/2 must-haves verified
 overrides_applied: 0
 human_verification:
   - test: "Open word detail panel for a word with parents. Click an ancestor chip in the EtymologyChainSection. Verify the detail panel updates to show the clicked word."
@@ -24,7 +24,7 @@ human_verification:
 | # | Truth | Status | Evidence |
 |---|-------|--------|----------|
 | 1 | User can open any word in the lexicon and view its complete etymology chain (root → derived → compound) as a visual lineage tree, not just a text field | VERIFIED | `etymology_chain_section.dart` (640 lines): `ConsumerStatefulWidget` watching `ancestryChainProvider`, `_flattenAncestry` rows-per-level layout, `_ConnectorPainter` fan connectors, ancestor chips with edge labels, children row, inline `SearchableParentSelector` for parent management. Wired into `word_detail_panel.dart` at line 676. UAT Tests 2, 3, 4 passed. |
-| 2 | The lineage display is navigable — clicking any node in the chain opens that word's detail panel | UNCERTAIN — human needed | `EtymologyChainSection` declares `onNavigateToWord` (`ValueChanged<int>?`). Three `InkWell.onTap` callsites invoke it (ancestor chips: line 228, 347, 411). `word_detail_panel.dart` passes it through at line 678. `dictionary_page.dart` wires `_onWordSelected` at line 279 which calls `setState(() { _selectedLexemeId = id; })`. Wiring is complete — interactive navigation requires human confirmation. |
+| 2 | The lineage display is navigable — clicking any node in the chain opens that word's detail panel | VERIFIED — human confirmed | `EtymologyChainSection` declares `onNavigateToWord` (`ValueChanged<int>?`). Three `InkWell.onTap` callsites invoke it (ancestor chips: line 228, 347, 411). `word_detail_panel.dart` passes it through at line 678. `dictionary_page.dart` wires `_onWordSelected` at line 279 which calls `setState(() { _selectedLexemeId = id; })`. Wiring is complete — interactive navigation requires human confirmation. |
 
 **Score:** 1/2 truths fully verified (SC2 pending human test)
 
