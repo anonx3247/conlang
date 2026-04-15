@@ -207,10 +207,10 @@ Plans:
 **UI hint**: yes
 
 Plans:
-- [ ] 10-01-PLAN.md — Schema v15 migration (isClosedClass + glossTag + PhraseConstructions + ConstructionSlots), Grammar sidebar 5 items, GoRouter branches, placeholder pages
-- [ ] 10-02-PLAN.md — Particles page: POS-grouped closed-class word list, add/edit/delete dialogs, Leipzig gloss tag autocomplete
-- [ ] 10-03-PLAN.md — Constructions page: master-detail layout, visual slot editor with drag-and-drop, live preview with real words
-- [ ] 10-04-PLAN.md — Typology page extension: Word Order section with head-directionality, adposition type, adjective/genitive placement dropdowns
+- [x] 10-01-PLAN.md — Schema v15 migration (isClosedClass + glossTag + PhraseConstructions + ConstructionSlots), Grammar sidebar 5 items, GoRouter branches, placeholder pages
+- [x] 10-02-PLAN.md — Particles page: POS-grouped closed-class word list, add/edit/delete dialogs, Leipzig gloss tag autocomplete
+- [x] 10-03-PLAN.md — Constructions page: master-detail layout, visual slot editor with drag-and-drop, live preview with real words
+- [x] 10-04-PLAN.md — Typology page extension: Word Order section with head-directionality, adposition type, adjective/genitive placement dropdowns
 
 ### Phase 11: Lexicon Etymology Chain
 **Goal**: Users can see the full derivational history of any word as a visual lineage display tracing root through derived forms to compounds
@@ -300,7 +300,7 @@ v1.0 phases complete. v2.0 executes: 10 → 11 → 12 → 13 → 14 → 15 → 1
 | 7. Polish & Refactor | v1.0 | 6/6 | Complete | 2026-04-13 |
 | 8. Gemination Restrictions | v1.0 | TBD | Complete | 2026-04-13 |
 | 9. Platform Polish | v1.0 | 3/3 | Complete | 2026-04-13 |
-| 10. Analytic Grammar | v2.0 | 0/4 | Planned | - |
+| 10. Analytic Grammar | v2.0 | 4/4 | Complete | 2026-04-14 |
 | 11. Lexicon Etymology Chain | v2.0 | 4/4 | Complete   | 2026-04-15 |
 | 12. Writing Scratchpad | v2.0 | 0/? | Not started | - |
 | 13. Writing System | v2.0 | 0/? | Not started | - |
