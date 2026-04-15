@@ -131,7 +131,9 @@ class _EtymologyChainSectionState
 
           // Children
           if (hasChildren) ...[
-            _connector(context, nodeCount: 1, inverted: true),
+            _connector(context,
+                nodeCount: ruleDerivedChildren.length + manualChildren.length,
+                inverted: true),
             _childrenRow(
                 context, ruleDerivedChildren, manualChildren, allLexemes),
           ],
