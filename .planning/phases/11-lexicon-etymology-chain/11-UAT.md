@@ -1,12 +1,13 @@
 ---
-status: diagnosed
+status: complete
 phase: 11-lexicon-etymology-chain
 source:
   - 11-01-SUMMARY.md
   - 11-02-SUMMARY.md
   - 11-03-SUMMARY.md
+  - 11-04-SUMMARY.md
 started: 2026-04-14T21:00:00Z
-updated: 2026-04-15T00:10:00Z
+updated: 2026-04-15T02:00:00Z
 ---
 
 ## Current Test
@@ -20,6 +21,8 @@ expected: Open the "New Word" / word creation form. The parent lexeme field shou
 result: issue
 reported: "works however it shows the non-derived forms instead of the full forms of words"
 severity: major
+resolved: true
+resolved_by: "11-04 — wired promotedDerivedFormProvider + resolveDisplayForms into SearchableParentSelector (commit 17231af)"
 
 ### 2. Etymology Chain Section — Word With Parents
 expected: Open the detail panel for a word that has at least one parent. The panel should show an etymology/ancestry tree section with compact pill chips for each ancestor. Ancestors at the same depth appear in a single horizontal row. A connecting line runs from each ancestor chip to the current word. The current word's chip has a primary-colored border. Edge labels (e.g. "via Actor") appear below parent chips when set.
