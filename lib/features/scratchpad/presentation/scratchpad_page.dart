@@ -21,6 +21,7 @@ class _ScratchpadPageState extends ConsumerState<ScratchpadPage> {
     final dao = ref.read(scratchpadDaoProvider);
     if (dao == null) return;
     final id = await dao.createPhrase();
+    if (!mounted) return;
     setState(() => _selectedPhraseId = id);
   }
 
@@ -28,6 +29,7 @@ class _ScratchpadPageState extends ConsumerState<ScratchpadPage> {
     final dao = ref.read(scratchpadDaoProvider);
     if (dao == null) return;
     await dao.deletePhrase(id);
+    if (!mounted) return;
     if (_selectedPhraseId == id) {
       setState(() => _selectedPhraseId = null);
     }
