@@ -780,23 +780,27 @@ class AppDatabase extends _$AppDatabase {
         }
         if (from < 15) {
           // v15: Phase 10 — closed-class columns + construction tables.
-          await m.addColumn(lexemes, lexemes.isClosedClass);
-          await m.addColumn(lexemes, lexemes.glossTag);
-          await m.createTable(phraseConstructions);
-          await m.createTable(constructionSlots);
+          // Wrapped in try/catch: safety-net may have already created these on
+          // databases where a prior migration run was interrupted mid-flight.
+          try { await m.addColumn(lexemes, lexemes.isClosedClass); } catch (_) {}
+          try { await m.addColumn(lexemes, lexemes.glossTag); } catch (_) {}
+          try { await m.createTable(phraseConstructions); } catch (_) {}
+          try { await m.createTable(constructionSlots); } catch (_) {}
         }
         if (from < 16) {
           // v16: Phase 10.1 — construction rules + POS junction + per-word suppression.
-          await m.createTable(constructionRules);
-          await m.createTable(constructionRulePOS);
-          await m.addColumn(
-            paradigmCellOverrides,
-            paradigmCellOverrides.suppressConstructionRuleId,
-          );
+          try { await m.createTable(constructionRules); } catch (_) {}
+          try { await m.createTable(constructionRulePOS); } catch (_) {}
+          try {
+            await m.addColumn(
+              paradigmCellOverrides,
+              paradigmCellOverrides.suppressConstructionRuleId,
+            );
+          } catch (_) {}
         }
         if (from < 17) {
           // v17: Phase 12 — ScratchpadPhrases table for Writing Scratchpad.
-          await m.createTable(scratchpadPhrases);
+          try { await m.createTable(scratchpadPhrases); } catch (_) {}
         }
       },
       beforeOpen: (details) async {
