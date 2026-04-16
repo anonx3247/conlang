@@ -33,9 +33,10 @@ List<PhraseToken> tokenizePhrase({
   required Map<String, GlossMatch> glossIndex,
   required bool Function({required String word}) validateWord,
 }) {
-  if (input.trim().isEmpty) return const [];
+  final trimmed = input.trim();
+  if (trimmed.isEmpty) return const [];
 
-  final words = input.split(RegExp(r'\s+'));
+  final words = trimmed.split(RegExp(r'\s+'));
   return words.map((word) {
     final match = glossIndex[word] ?? UnknownToken(text: word);
     // Phonotactic check uses the IPA form from the match.
