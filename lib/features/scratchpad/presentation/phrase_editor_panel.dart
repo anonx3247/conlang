@@ -7,6 +7,7 @@ import '../../lexicon/data/phonotactic_validation_provider.dart';
 import '../../phonology/data/phonotactic_providers.dart';
 import '../data/gloss_index_provider.dart';
 import '../data/scratchpad_providers.dart';
+import '../domain/gloss_match.dart';
 import '../domain/phrase_tokenizer.dart';
 import 'interlinear_block.dart';
 
@@ -38,6 +39,10 @@ class _PhraseEditorPanelState extends ConsumerState<PhraseEditorPanel> {
   List<PhraseToken> _tokens = const [];
   bool _showIpa = false;
   bool _loaded = false;
+
+  // Cached from the latest build() watch — used by the debounce timer.
+  Map<String, GlossMatch> _glossIndex = const {};
+  bool Function({required String word})? _validateWord;
 
   @override
   void initState() {
@@ -79,12 +84,12 @@ class _PhraseEditorPanelState extends ConsumerState<PhraseEditorPanel> {
   }
 
   void _triggerParse() {
-    final glossIndex = ref.read(glossIndexProvider);
-    final validate = ref.read(phonotacticValidatorProvider);
+    final validate = _validateWord;
+    if (validate == null) return;
     final tokens = tokenizePhrase(
       input: _textController.text,
-      glossIndex: glossIndex,
-      validateWord: ({required String word}) => validate(word: word).isValid,
+      glossIndex: _glossIndex,
+      validateWord: validate,
     );
     if (mounted) setState(() => _tokens = tokens);
   }
@@ -123,6 +128,11 @@ class _PhraseEditorPanelState extends ConsumerState<PhraseEditorPanel> {
 
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+
+    // Watch providers so _triggerParse always uses the latest reactive values.
+    _glossIndex = ref.watch(glossIndexProvider);
+    final validate = ref.watch(phonotacticValidatorProvider);
+    _validateWord = ({required String word}) => validate(word: word).isValid;
 
     // Watch the rewrite pipeline for IPA transcription
     final applyRewrite = ref.watch(applyRewritePipelineProvider);
