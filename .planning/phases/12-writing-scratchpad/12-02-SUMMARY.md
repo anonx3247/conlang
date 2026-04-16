@@ -45,7 +45,7 @@ decisions:
 metrics:
   duration: "~20 minutes"
   completed_date: "2026-04-15"
-  tasks_completed: 2
+  tasks_completed: 3
   tasks_total: 3
   files_created: 4
   files_modified: 2
@@ -87,9 +87,9 @@ None — plan executed exactly as written. All code from the plan's `<action>` b
 
 None — all data flows are fully wired. The scratchpad reads from live Riverpod providers (glossIndexProvider, scratchpadPhrasesProvider) and writes to the real Drift DAO.
 
-## Checkpoint: Task 3 Pending
+## Task 3: Human Verification — PASSED
 
-Plan 02 paused at Task 3 (`checkpoint:human-verify`). The two automated implementation tasks are complete and committed. Human verification of the running app is required before this plan can be marked complete.
+Human verified the complete Writing Scratchpad feature on 2026-04-15. All 15 verification steps approved. User opened an existing project, confirmed the 4th Scratchpad tab, phrase CRUD, live interlinear glossing, unknown token amber highlighting, phonotactic violation red wavy underline, IPA toggle, free translation persistence, and auto-save all work as specified.
 
 ## Threat Flags
 
