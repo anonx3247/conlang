@@ -800,6 +800,11 @@ class AppDatabase extends _$AppDatabase {
         }
       },
       beforeOpen: (details) async {
+        // WAL mode: concurrent readers don't block writers (and vice versa),
+        // which prevents glossIndexProvider's per-lexeme queries from
+        // starving Phonology/Lexicon data loads.
+        await customStatement('PRAGMA journal_mode=WAL');
+        await customStatement('PRAGMA synchronous=NORMAL');
         // Enable foreign key enforcement for every connection.
         await customStatement('PRAGMA foreign_keys = ON');
 
