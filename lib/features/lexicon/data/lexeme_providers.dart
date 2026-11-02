@@ -1,4 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+// ProviderFamily is not exported from flutter_riverpod; import from riverpod
+// directly so we can annotate promotedDerivedFormProvider's explicit type and
+// break Dart's circularity-in-type-inference error (the provider body watches
+// itself recursively for multi-level derivation chains).
+import 'package:riverpod/misc.dart' show ProviderFamily;
 
 // `MorphologicalRule` is also defined by the Drift-generated row class in
 // app_database.dart; hide that one so unqualified `MorphologicalRule`
@@ -6,6 +11,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 // which is what the MorphologyEngine API expects. The Drift row was never
 // used in this file anyway — only `MorphologicalRuleException` is.
 import '../../../db/app_database.dart' hide MorphologicalRule;
+import '../../grammar/data/grammar_providers.dart';
 import '../../grammar/domain/pos_resolver.dart';
 import '../../grammar/domain/rule_kind.dart';
 import '../../morphology/data/morphology_providers.dart';
@@ -17,6 +23,7 @@ import 'phonotactic_validation_provider.dart';
 import '../../phonology/domain/word_generator.dart';
 import '../../project/data/project_providers.dart';
 import 'lexeme_dao.dart';
+import '../domain/ancestry_node.dart';
 
 // ---------------------------------------------------------------------------
 // DAO provider
@@ -382,7 +389,7 @@ class PromotedDerivedForm {
 /// Returns `null` when the lexeme is NOT a promoted derivation (either
 /// [Lexeme.derivedFromLexemeId] or [Lexeme.derivedViaRuleId] is null) OR
 /// when the computation fails (rule missing, DSL invalid, engine no-match).
-final promotedDerivedFormProvider =
+final ProviderFamily<PromotedDerivedForm?, int> promotedDerivedFormProvider =
     Provider.family<PromotedDerivedForm?, int>((ref, lexemeId) {
   final lexemeAsync = ref.watch(lexemeByIdProvider(lexemeId));
   final lexeme = lexemeAsync.asData?.value;
@@ -412,9 +419,27 @@ final promotedDerivedFormProvider =
   final parsed = parseMorphDsl(dbRule.source, id: dbRule.id, name: dbRule.name);
   if (!parsed.isValid || parsed.rule == null) return null;
 
+  // Always watch parent's promoted form unconditionally — avoids
+  // riverpod_lint hook-ordering warnings about conditional ref.watch.
+  // The result is null when the parent is not itself a promoted derivation.
+  final parentPromoted = ref.watch(promotedDerivedFormProvider(parent.id));
+
+  // Resolve the IPA to use as input for our rule:
+  // - If the parent is a promoted derivation, use its computed IPA (not the
+  //   stored placeholder which equals the grandparent's IPA).
+  // - Otherwise, the parent's stored IPA is authoritative (it is a root or
+  //   a manually-edited detached row).
+  final String parentIpa;
+  if (parent.derivedFromLexemeId != null && parent.derivedViaRuleId != null) {
+    if (parentPromoted == null) return null; // parent chain is broken
+    parentIpa = parentPromoted.ipa;
+  } else {
+    parentIpa = parent.ipa;
+  }
+
   final inventory = ref.watch(phonemeInventoryProvider);
   const engine = MorphologyEngine();
-  final result = engine.applyRule(parsed.rule!, parent.ipa, inventory);
+  final result = engine.applyRule(parsed.rule!, parentIpa, inventory);
   if (result case MorphSuccess(:final form)) {
     final romanize = ref.watch(romanizeProvider);
     final romText = romanize(form);
@@ -422,6 +447,179 @@ final promotedDerivedFormProvider =
   }
   return null;
 });
+
+// ---------------------------------------------------------------------------
+// Ancestry chain provider (LEX-09)
+// ---------------------------------------------------------------------------
+
+/// Streams ALL manual parent links for indexing by [ancestryChainProvider].
+///
+/// Emits an empty list when no project is open.
+final allParentLinksProvider =
+    StreamProvider<List<LexemeParentRow>>((ref) {
+  final dao = ref.watch(lexemeParentsDaoProvider);
+  if (dao == null) return Stream.value(const []);
+  return dao.watchAllParentLinks();
+});
+
+/// Builds the full ancestry tree for [lexemeId] by traversing both
+/// rule-derived parents ([Lexeme.derivedFromLexemeId]) and manual parents
+/// ([LexemeParents] table) upward recursively.
+///
+/// Returns null when the lexeme doesn't exist or data hasn't loaded yet.
+///
+/// Max depth: 10 levels. Cycle detection uses a per-branch visited set
+/// (DAG-safe — shared ancestors across different branches are NOT marked
+/// as cycles, only words that appear in their own direct ancestor chain).
+final ancestryChainProvider =
+    Provider.family<AncestryNode?, int>((ref, lexemeId) {
+  final allLexemes = ref.watch(allLexemeListProvider).asData?.value;
+  if (allLexemes == null) return null;
+  final lexemeById = <int, Lexeme>{for (final lx in allLexemes) lx.id: lx};
+
+  // Watch all manual parent links (Option A from RESEARCH.md) — one
+  // stream for the entire table, indexed by childLexemeId for O(1) lookup.
+  final allParentLinks =
+      ref.watch(allParentLinksProvider).asData?.value ?? const <LexemeParentRow>[];
+  final parentsByChild = <int, List<LexemeParentRow>>{};
+  for (final row in allParentLinks) {
+    parentsByChild.putIfAbsent(row.childLexemeId, () => []).add(row);
+  }
+
+  final rules =
+      ref.watch(morphologicalRuleListProvider).asData?.value ?? const [];
+  // Pre-map to rule names only — avoids needing the Drift row type here
+  // (MorphologicalRule is hidden in this file's imports to resolve conflict
+  // with the DSL type of the same name; only the name string is needed).
+  final ruleNameById = <int, String>{
+    for (final r in rules) r.id: r.name,
+  };
+
+  return buildAncestryNode(
+    lexemeId: lexemeId,
+    lexemeById: lexemeById,
+    parentsByChild: parentsByChild,
+    ruleNameById: ruleNameById,
+    visited: {},
+    depth: 0,
+  );
+});
+
+/// Builds an [AncestryNode] tree by recursively traversing the ancestry of
+/// [lexemeId] upward via both rule-derived links and manual parent links.
+///
+/// This is a package-visible top-level function (no underscore) so that
+/// unit tests can call it directly with in-memory data without needing a
+/// [ProviderContainer].
+///
+/// Parameters:
+/// - [lexemeById]: full lexeme index built from [allLexemeListProvider].
+/// - [parentsByChild]: manual parent links indexed by child lexeme id.
+/// - [ruleNameById]: map of rule id → rule name for edge label lookup.
+///   Build from `morphologicalRuleListProvider` via `{r.id: r.name}`.
+/// - [visited]: per-branch set of visited lexeme ids for cycle detection.
+///   Pass an empty set at depth 0; the function creates immutable copies
+///   per branch so sibling branches don't contaminate each other.
+/// - [depth]: current recursion depth; traversal truncates at 10.
+AncestryNode? buildAncestryNode({
+  required int lexemeId,
+  required Map<int, Lexeme> lexemeById,
+  required Map<int, List<LexemeParentRow>> parentsByChild,
+  required Map<int, String> ruleNameById,
+  required Set<int> visited,
+  required int depth,
+}) {
+  final lexeme = lexemeById[lexemeId];
+  if (lexeme == null) return null;
+
+  // Cycle detection first — a cycle at depth 10 must be flagged as a cycle,
+  // not as a truncation. Per-branch copy for DAG safety: a word is only a
+  // cycle if it appears in its own ancestor chain; shared ancestors via
+  // different branches in a DAG are NOT cycles.
+  if (visited.contains(lexemeId)) {
+    return AncestryNode(
+      lexemeId: lexemeId,
+      lexeme: lexeme,
+      edgeLabel: '',
+      isRuleDerived: false,
+      isCycle: true,
+    );
+  }
+
+  // Truncation at max 10 levels — only reached when no cycle was detected.
+  if (depth >= 10) {
+    return AncestryNode(
+      lexemeId: lexemeId,
+      lexeme: lexeme,
+      edgeLabel: '',
+      isRuleDerived: false,
+      isTruncated: true,
+    );
+  }
+
+  // Create a new visited set with this node added — immutable spread copy
+  // ensures sibling branches each get a fresh copy.
+  final newVisited = {...visited, lexemeId};
+  final parentNodes = <AncestryNode>[];
+
+  // 1. Rule-derived parent (Lexeme.derivedFromLexemeId + derivedViaRuleId).
+  if (lexeme.derivedFromLexemeId != null) {
+    final ruleName = lexeme.derivedViaRuleId != null
+        ? ruleNameById[lexeme.derivedViaRuleId!]
+        : null;
+    final parentResult = buildAncestryNode(
+      lexemeId: lexeme.derivedFromLexemeId!,
+      lexemeById: lexemeById,
+      parentsByChild: parentsByChild,
+      ruleNameById: ruleNameById,
+      visited: newVisited,
+      depth: depth + 1,
+    );
+    if (parentResult != null) {
+      parentNodes.add(AncestryNode(
+        lexemeId: parentResult.lexemeId,
+        lexeme: parentResult.lexeme,
+        edgeLabel: ruleName != null ? 'via $ruleName' : 'via rule',
+        isRuleDerived: true,
+        parents: parentResult.parents,
+        isCycle: parentResult.isCycle,
+        isTruncated: parentResult.isTruncated,
+      ));
+    }
+  }
+
+  // 2. Manual parents (LexemeParents table rows for this child).
+  final manualRows = parentsByChild[lexemeId] ?? const [];
+  for (final row in manualRows) {
+    final parentResult = buildAncestryNode(
+      lexemeId: row.parentLexemeId,
+      lexemeById: lexemeById,
+      parentsByChild: parentsByChild,
+      ruleNameById: ruleNameById,
+      visited: newVisited,
+      depth: depth + 1,
+    );
+    if (parentResult != null) {
+      parentNodes.add(AncestryNode(
+        lexemeId: parentResult.lexemeId,
+        lexeme: parentResult.lexeme,
+        edgeLabel: row.relationship ?? 'parent',
+        isRuleDerived: false,
+        parents: parentResult.parents,
+        isCycle: parentResult.isCycle,
+        isTruncated: parentResult.isTruncated,
+      ));
+    }
+  }
+
+  return AncestryNode(
+    lexemeId: lexemeId,
+    lexeme: lexeme,
+    edgeLabel: '', // edge label is set by the child that points to this node
+    isRuleDerived: false,
+    parents: parentNodes,
+  );
+}
 
 // ---------------------------------------------------------------------------
 // Batch phonotactic violation provider (PHON-05)

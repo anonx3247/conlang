@@ -207,10 +207,10 @@ Plans:
 **UI hint**: yes
 
 Plans:
-- [ ] 10-01-PLAN.md — Schema v15 migration (isClosedClass + glossTag + PhraseConstructions + ConstructionSlots), Grammar sidebar 5 items, GoRouter branches, placeholder pages
-- [ ] 10-02-PLAN.md — Particles page: POS-grouped closed-class word list, add/edit/delete dialogs, Leipzig gloss tag autocomplete
-- [ ] 10-03-PLAN.md — Constructions page: master-detail layout, visual slot editor with drag-and-drop, live preview with real words
-- [ ] 10-04-PLAN.md — Typology page extension: Word Order section with head-directionality, adposition type, adjective/genitive placement dropdowns
+- [x] 10-01-PLAN.md — Schema v15 migration (isClosedClass + glossTag + PhraseConstructions + ConstructionSlots), Grammar sidebar 5 items, GoRouter branches, placeholder pages
+- [x] 10-02-PLAN.md — Particles page: POS-grouped closed-class word list, add/edit/delete dialogs, Leipzig gloss tag autocomplete
+- [x] 10-03-PLAN.md — Constructions page: master-detail layout, visual slot editor with drag-and-drop, live preview with real words
+- [x] 10-04-PLAN.md — Typology page extension: Word Order section with head-directionality, adposition type, adjective/genitive placement dropdowns
 
 ### Phase 11: Lexicon Etymology Chain
 **Goal**: Users can see the full derivational history of any word as a visual lineage display tracing root through derived forms to compounds
@@ -219,8 +219,14 @@ Plans:
 **Success Criteria** (what must be TRUE):
   1. User can open any word in the lexicon and view its complete etymology chain (root → derived → compound) as a visual lineage tree, not just a text field
   2. The lineage display is navigable — clicking any node in the chain opens that word's detail panel
-**Plans**: TBD
+**Plans**: 4 plans
 **UI hint**: yes
+
+Plans:
+- [x] 11-01-PLAN.md — Ancestry chain data layer (AncestryNode, providers, multi-level derivation fix)
+- [x] 11-02-PLAN.md — SearchableParentSelector widget (autocomplete + InputChip pills)
+- [x] 11-03-PLAN.md — EtymologyChainSection widget (visual ancestry tree in detail panel)
+- [x] 11-04-PLAN.md — Gap closure: wire derived forms into SearchableParentSelector display
 
 ### Phase 12: Writing Scratchpad
 **Goal**: Users can compose phrases in their conlang and receive automatic interlinear glossing, IPA transcription, and error highlighting without leaving the app
@@ -231,8 +237,12 @@ Plans:
   2. Unknown tokens display as "?" in the gloss line; words violating phonotactics or grammar rules are highlighted as errors — the scratchpad shows honest parsing gaps, not silent failures
   3. User can generate an IPA transcription line for any written phrase by applying the project's phonology rules
   4. User can enter a free translation beneath each glossed phrase and save it as part of the phrase record
-**Plans**: TBD
+**Plans**: 2 plans
 **UI hint**: yes
+
+Plans:
+- [x] 12-01-PLAN.md — Schema v17 (ScratchpadPhrases table), ScratchpadDao, GlossMatch domain types, GlossIndex pre-computed provider, PhraseTokenizer
+- [x] 12-02-PLAN.md — AppShell 4th tab, GoRouter branch, ScratchpadPage two-panel layout, PhraseEditorPanel with debounce, InterlinearBlock with Leipzig gloss + error highlighting + IPA toggle
 
 ### Phase 13: Writing System
 **Goal**: Users can define their conlang's orthography or custom script with grapheme-to-phoneme mapping, custom font rendering, and script preview in the scratchpad
@@ -294,9 +304,9 @@ v1.0 phases complete. v2.0 executes: 10 → 11 → 12 → 13 → 14 → 15 → 1
 | 7. Polish & Refactor | v1.0 | 6/6 | Complete | 2026-04-13 |
 | 8. Gemination Restrictions | v1.0 | TBD | Complete | 2026-04-13 |
 | 9. Platform Polish | v1.0 | 3/3 | Complete | 2026-04-13 |
-| 10. Analytic Grammar | v2.0 | 0/4 | Planned | - |
-| 11. Lexicon Etymology Chain | v2.0 | 0/? | Not started | - |
-| 12. Writing Scratchpad | v2.0 | 0/? | Not started | - |
+| 10. Analytic Grammar | v2.0 | 4/4 | Complete | 2026-04-14 |
+| 11. Lexicon Etymology Chain | v2.0 | 4/4 | Complete   | 2026-04-15 |
+| 12. Writing Scratchpad | v2.0 | 2/2 | Complete   | 2026-04-16 |
 | 13. Writing System | v2.0 | 0/? | Not started | - |
 | 14. AI / MCP Integration | v2.0 | 0/? | Not started | - |
 | 15. Language Evolution — Sound Changes | v2.0 | 0/? | Not started | - |

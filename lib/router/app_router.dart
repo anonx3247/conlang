@@ -17,6 +17,7 @@ import '../features/phonology/presentation/inventory/inventory_page.dart';
 import '../features/phonology/presentation/inventory/natural_classes_page.dart';
 import '../features/phonology/presentation/phonology_shell.dart';
 import '../features/phonology/presentation/sound_rules/sound_rules_page.dart';
+import '../features/scratchpad/presentation/scratchpad_page.dart';
 import '../shared/widgets/app_shell.dart';
 
 part 'app_router.g.dart';
@@ -215,6 +216,16 @@ GoRouter appRouter(Ref ref) {
                     ],
                   ),
                 ],
+              ),
+            ],
+          ),
+
+          // Branch 3: Scratchpad (Phase 12)
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/scratchpad',
+                builder: (_, __) => const ScratchpadPage(),
               ),
             ],
           ),

@@ -20,6 +20,7 @@ import '../../../phonology/domain/word_generator.dart' show ValidationResult;
 import '../../../phonology/presentation/shared/ipa_keyboard/ipa_text_field.dart';
 import '../../data/lexeme_providers.dart';
 import 'derivation_tree_widget.dart';
+import 'etymology_chain_section.dart';
 
 /// Detail panel shown on the right side of the Dictionary master-detail layout.
 ///
@@ -671,8 +672,8 @@ class _WordDetailPanelState extends ConsumerState<WordDetailPanel> {
 
           const Divider(height: 24),
 
-          // ---- Plan 04-14 D-62: Parents / Etymology --------------------
-          WordDetailParentsSection(
+          // ---- Phase 11 LEX-09: Etymology Chain --------------------
+          EtymologyChainSection(
             lexeme: lexeme,
             onNavigateToWord: widget.onNavigateToWord,
           ),
@@ -1200,6 +1201,7 @@ class WordDetailSuggestionsSection extends ConsumerWidget {
 /// "Parents" header polluting the detail panel).
 ///
 /// Extracted as a public widget so widget tests can pump it in isolation.
+@Deprecated('Replaced by EtymologyChainSection in Phase 11')
 class WordDetailParentsSection extends ConsumerWidget {
   const WordDetailParentsSection({
     super.key,

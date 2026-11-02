@@ -17,10 +17,35 @@ class LexemeDao extends DatabaseAccessor<AppDatabase> with _$LexemeDaoMixin {
   // ---------------------------------------------------------------------------
 
   /// Watches all root lexemes (where [rootId] IS NULL), ordered by [ipa] ASC.
+  ///
+  /// Phase 10 D-02: excludes closed-class words (particles, auxiliaries, etc.)
+  /// so that only open-class lexemes appear in the main Dictionary.
   Stream<List<Lexeme>> watchRoots() =>
+      (select(lexemes)
+            ..where((t) => t.rootId.isNull() & t.isClosedClass.equals(false))
+            ..orderBy([(t) => OrderingTerm.asc(t.ipa)]))
+          .watch();
+
+  /// Watches all root lexemes (where [rootId] IS NULL), including closed-class
+  /// words, ordered by [ipa] ASC.
+  ///
+  /// SC4: used by [rootLexemeListProvider] so the Dictionary shows particles
+  /// alongside open-class words.
+  Stream<List<Lexeme>> watchAllRoots() =>
       (select(lexemes)
             ..where((t) => t.rootId.isNull())
             ..orderBy([(t) => OrderingTerm.asc(t.ipa)]))
+          .watch();
+
+  /// Phase 10 D-02: watches all closed-class (particle) lexemes,
+  /// ordered by [partOfSpeech] then [ipa].
+  Stream<List<Lexeme>> watchClosedClassWords() =>
+      (select(lexemes)
+            ..where((t) => t.isClosedClass.equals(true))
+            ..orderBy([
+              (t) => OrderingTerm.asc(t.partOfSpeech),
+              (t) => OrderingTerm.asc(t.ipa),
+            ]))
           .watch();
 
   /// Watches all lexemes (roots + derived) — used for derived-word search.
