@@ -1,6 +1,6 @@
 # Conlang Workbench (web)
 
-A TypeScript web version of the Flutter desktop app in this repo, with the same screens and abilities. Everything stays on your computer: there is no server and no account, and the deployed site's security policy blocks network requests to anywhere else.
+The TypeScript web app. Everything stays on your computer: there is no server and no account, and the deployed site's security policy blocks network requests to anywhere else.
 
 ```bash
 cd web
@@ -20,7 +20,7 @@ Each language is one readable JSON file, `Name.conlang.json`.
 - **Chrome and Edge:** you choose where the file lives, and the app saves to it as you work. A copy is also kept in the browser's local database.
 - **Firefox and Safari:** browsers can't keep a live link to a file, so the project lives in the browser's local database. Use File → Download a Copy to back it up. Clearing site data for the app deletes these projects.
 
-**Older projects:** File → Open accepts `.conlang` files from the desktop app and converts them. The original file is not changed. From the command line: `npm run import-legacy -- old.conlang new.conlang.json`.
+**Older projects:** File → Open accepts `.conlang` files from the earlier Flutter desktop app and converts them. The original file is not changed. From the command line: `npm run import-legacy -- old.conlang new.conlang.json`.
 
 ## How derivation works
 

@@ -1,87 +1,53 @@
 # Conlang Workbench
 
-![Conlang Workbench Logo](assets/logo.png)
+![Conlang Workbench Logo](web/public/logo.png)
 
-A professional conlang workbench for phonology, lexicon, grammar, and culture design.
-
----
-
-## Overview
-
-Conlang Workbench is a Flutter desktop application for creating constructed languages. It provides an integrated environment covering the full language-design workflow: phoneme inventories, phonotactics, a morphology pattern engine, lexicon management, grammar systems, and more. Each constructed language lives in its own `.conlang` project file (backed by SQLite), keeping your work self-contained and portable.
+A workbench for designing constructed languages, from sounds to grammar to vocabulary. It runs in the browser with no server and no account, and each language is one readable JSON file on your computer.
 
 ## Features
 
 ### Phonology
-- Phoneme inventory editor with IPA chart and audio playback for every symbol
-- Phonotactic DSL: define syllable shapes and legal consonant clusters
-- Phonological rewrite rules: context-sensitive transformations
-- Word generator: produce random native-looking words from your phonotactics
-
-### Lexicon
-- Root and derived-word dictionaries with full definition support
-- Morphological pattern mini-language supporting agglutinative, fusional, Semitic root-and-pattern, and analytic strategies
-- Swadesh 207-item list and Conlanger's Thesaurus integration for concept lookup
-- Anki flashcard export for vocabulary drilling
+- Phoneme inventory with an IPA chart and audio for each symbol
+- Natural classes, including built-in `[geminate]` and `[long vowel]`
+- Phonotactic constraints and sound rules, built with structured controls
+- Word generator based on your phonotactics
 
 ### Grammar
-- Parts of speech with customizable categories
-- Declension and conjugation systems with slot-based paradigm tables
-- Flexible modality: mix morphological and analytic (particle/auxiliary) strategies per grammatical feature
-- Paradigm chart generation and export
+- Parts of speech with their own dimensions, such as number or tense
+- Inflections with paradigm tables, built from prefixes, suffixes, infixes, replacements, root templates, reduplication, elongation and irregular forms
+- Constructions, such as `have` [`PERF`] + Verb (Past Participle), which the Scratchpad recognizes and glosses
+- Typology settings, such as word order and alignment
 
-### Glossary
-- Built-in searchable linguistics glossary covering terminology used throughout the app
+### Lexicon
+- Dictionary of roots, derived words and particles
+- Derivations that follow their parent word and rule, so changing either updates every descendant
+- Swadesh list and Conlanger's Thesaurus for finding gaps
+- Anki export
 
-### Multi-project
-- Each language lives in its own `.conlang` project file — open multiple, switch freely
+### Also included
+- Scratchpad for analyzing and glossing phrases
+- Searchable linguistics glossary
+- MCP tools that let an AI assistant read and edit a language file on your computer
 
-## Installation
+## Getting started
 
-### macOS (pre-built)
-
-1. Download the latest `Conlang-Workbench-*-macos.zip` from [GitHub Releases](../../releases).
-2. Unzip and drag `Conlang Workbench.app` to your `Applications` folder.
-3. On first launch, right-click the app icon and choose **Open** to bypass Gatekeeper (the app is unsigned).
-
-### Build from source
-
-**Requirements:** Flutter SDK 3.10 or later, macOS with Xcode command-line tools installed.
+Requires Node.js 20 or later.
 
 ```bash
-git clone https://github.com/neosapien/conlang.git
-cd conlang
-flutter pub get
-dart run build_runner build --delete-conflicting-outputs
-flutter build macos --release
+git clone https://github.com/anonx3247/conlang.git
+cd conlang/web
+npm install
+npm run dev          # http://localhost:5173
 ```
 
-The built app is at `build/macos/Build/Products/Release/Conlang Workbench.app`.
+File → Open also accepts `.conlang` projects from the Flutter desktop app and converts them, leaving the original unchanged.
 
-Alternatively, use the provided build script to produce a distributable zip:
-
-```bash
-bash scripts/build-release-macos.sh
-```
-
-## Development
-
-```bash
-# Run in debug mode
-flutter run -d macos
-
-# Regenerate code (Drift database, Riverpod providers)
-dart run build_runner build --delete-conflicting-outputs
-```
-
-## Web version
-
-A TypeScript web version with the same features, local-only storage and MCP tools lives in [`web/`](web/README.md).
-
-## Tech Stack
-
-Flutter, Drift (SQLite ORM), Riverpod (state management), PetitParser (DSL parsing), just_audio (IPA audio playback).
+See [`web/README.md`](web/README.md) for testing, deployment, how derivation works, and the MCP setup.
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+MIT, see [LICENSE](LICENSE). IPA audio credits are in [`web/public/AUDIO_CREDITS.md`](web/public/AUDIO_CREDITS.md).
+
+---
+
+**Note:** this is a TypeScript rewrite of the original Conlang Workbench, which was made in Flutter. The Flutter code is still available in the git history, at commit [`8924827`](https://github.com/anonx3247/conlang/tree/8924827).
