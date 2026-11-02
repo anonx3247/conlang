@@ -1,0 +1,912 @@
+{
+"pulmonic": [
+{
+"symbol": "p",
+"name": "voiceless bilabial plosive",
+"manner": "plosive",
+"place": "bilabial",
+"voiced": false,
+"audio": "voiceless_bilabial_plosive.ogg"
+},
+{
+"symbol": "b",
+"name": "voiced bilabial plosive",
+"manner": "plosive",
+"place": "bilabial",
+"voiced": true,
+"audio": "voiced_bilabial_plosive.ogg"
+},
+{
+"symbol": "t",
+"name": "voiceless alveolar plosive",
+"manner": "plosive",
+"place": "alveolar",
+"voiced": false,
+"audio": "voiceless_alveolar_plosive.ogg"
+},
+{
+"symbol": "d",
+"name": "voiced alveolar plosive",
+"manner": "plosive",
+"place": "alveolar",
+"voiced": true,
+"audio": "voiced_alveolar_plosive.ogg"
+},
+{
+"symbol": "ʈ",
+"name": "voiceless retroflex plosive",
+"manner": "plosive",
+"place": "retroflex",
+"voiced": false,
+"audio": null
+},
+{
+"symbol": "ɖ",
+"name": "voiced retroflex plosive",
+"manner": "plosive",
+"place": "retroflex",
+"voiced": true,
+"audio": "voiced_retroflex_plosive.ogg"
+},
+{
+"symbol": "c",
+"name": "voiceless palatal plosive",
+"manner": "plosive",
+"place": "palatal",
+"voiced": false,
+"audio": "voiceless_palatal_plosive.ogg"
+},
+{
+"symbol": "ɟ",
+"name": "voiced palatal plosive",
+"manner": "plosive",
+"place": "palatal",
+"voiced": true,
+"audio": "voiced_palatal_plosive.ogg"
+},
+{
+"symbol": "k",
+"name": "voiceless velar plosive",
+"manner": "plosive",
+"place": "velar",
+"voiced": false,
+"audio": "voiceless_velar_plosive.ogg"
+},
+{
+"symbol": "ɡ",
+"name": "voiced velar plosive",
+"manner": "plosive",
+"place": "velar",
+"voiced": true,
+"audio": "voiced_velar_plosive.ogg"
+},
+{
+"symbol": "q",
+"name": "voiceless uvular plosive",
+"manner": "plosive",
+"place": "uvular",
+"voiced": false,
+"audio": "voiceless_uvular_plosive.ogg"
+},
+{
+"symbol": "ɢ",
+"name": "voiced uvular plosive",
+"manner": "plosive",
+"place": "uvular",
+"voiced": true,
+"audio": "voiced_uvular_plosive.ogg"
+},
+{
+"symbol": "ʔ",
+"name": "voiceless glottal plosive",
+"manner": "plosive",
+"place": "glottal",
+"voiced": false,
+"audio": "voiceless_glottal_plosive.ogg"
+},
+{
+"symbol": "m",
+"name": "voiced bilabial nasal",
+"manner": "nasal",
+"place": "bilabial",
+"voiced": true,
+"audio": "voiced_bilabial_nasal.ogg"
+},
+{
+"symbol": "ɱ",
+"name": "voiced labiodental nasal",
+"manner": "nasal",
+"place": "labiodental",
+"voiced": true,
+"audio": "voiced_labiodental_nasal.ogg"
+},
+{
+"symbol": "n",
+"name": "voiced alveolar nasal",
+"manner": "nasal",
+"place": "alveolar",
+"voiced": true,
+"audio": "voiced_alveolar_nasal.ogg"
+},
+{
+"symbol": "ɳ",
+"name": "voiced retroflex nasal",
+"manner": "nasal",
+"place": "retroflex",
+"voiced": true,
+"audio": "voiced_retroflex_nasal.ogg"
+},
+{
+"symbol": "ɲ",
+"name": "voiced palatal nasal",
+"manner": "nasal",
+"place": "palatal",
+"voiced": true,
+"audio": "voiced_palatal_nasal.ogg"
+},
+{
+"symbol": "ŋ",
+"name": "voiced velar nasal",
+"manner": "nasal",
+"place": "velar",
+"voiced": true,
+"audio": "voiced_velar_nasal.ogg"
+},
+{
+"symbol": "ɴ",
+"name": "voiced uvular nasal",
+"manner": "nasal",
+"place": "uvular",
+"voiced": true,
+"audio": "voiced_uvular_nasal.ogg"
+},
+{
+"symbol": "ʙ",
+"name": "voiced bilabial trill",
+"manner": "trill",
+"place": "bilabial",
+"voiced": true,
+"audio": "voiced_bilabial_trill.ogg"
+},
+{
+"symbol": "r",
+"name": "voiced alveolar trill",
+"manner": "trill",
+"place": "alveolar",
+"voiced": true,
+"audio": "voiced_alveolar_trill.ogg"
+},
+{
+"symbol": "ʀ",
+"name": "voiced uvular trill",
+"manner": "trill",
+"place": "uvular",
+"voiced": true,
+"audio": "voiced_uvular_trill.ogg"
+},
+{
+"symbol": "ɾ",
+"name": "voiced alveolar tap",
+"manner": "tap/flap",
+"place": "alveolar",
+"voiced": true,
+"audio": "voiced_alveolar_tap.ogg"
+},
+{
+"symbol": "ɽ",
+"name": "voiced retroflex tap",
+"manner": "tap/flap",
+"place": "retroflex",
+"voiced": true,
+"audio": "voiced_retroflex_tap.ogg"
+},
+{
+"symbol": "ɸ",
+"name": "voiceless bilabial fricative",
+"manner": "fricative",
+"place": "bilabial",
+"voiced": false,
+"audio": "voiceless_bilabial_fricative.ogg"
+},
+{
+"symbol": "β",
+"name": "voiced bilabial fricative",
+"manner": "fricative",
+"place": "bilabial",
+"voiced": true,
+"audio": "voiced_bilabial_fricative.ogg"
+},
+{
+"symbol": "f",
+"name": "voiceless labiodental fricative",
+"manner": "fricative",
+"place": "labiodental",
+"voiced": false,
+"audio": "voiceless_labiodental_fricative.ogg"
+},
+{
+"symbol": "v",
+"name": "voiced labiodental fricative",
+"manner": "fricative",
+"place": "labiodental",
+"voiced": true,
+"audio": "voiced_labiodental_fricative.ogg"
+},
+{
+"symbol": "θ",
+"name": "voiceless dental fricative",
+"manner": "fricative",
+"place": "dental",
+"voiced": false,
+"audio": "voiceless_dental_fricative.ogg"
+},
+{
+"symbol": "ð",
+"name": "voiced dental fricative",
+"manner": "fricative",
+"place": "dental",
+"voiced": true,
+"audio": "voiced_dental_fricative.ogg"
+},
+{
+"symbol": "s",
+"name": "voiceless alveolar fricative",
+"manner": "fricative",
+"place": "alveolar",
+"voiced": false,
+"audio": "voiceless_alveolar_fricative.ogg"
+},
+{
+"symbol": "z",
+"name": "voiced alveolar fricative",
+"manner": "fricative",
+"place": "alveolar",
+"voiced": true,
+"audio": "voiced_alveolar_fricative.ogg"
+},
+{
+"symbol": "ʃ",
+"name": "voiceless postalveolar fricative",
+"manner": "fricative",
+"place": "postalveolar",
+"voiced": false,
+"audio": "voiceless_postalveolar_fricative.ogg"
+},
+{
+"symbol": "ʒ",
+"name": "voiced postalveolar fricative",
+"manner": "fricative",
+"place": "postalveolar",
+"voiced": true,
+"audio": "voiced_postalveolar_fricative.ogg"
+},
+{
+"symbol": "ʂ",
+"name": "voiceless retroflex fricative",
+"manner": "fricative",
+"place": "retroflex",
+"voiced": false,
+"audio": "voiceless_retroflex_fricative.ogg"
+},
+{
+"symbol": "ʐ",
+"name": "voiced retroflex fricative",
+"manner": "fricative",
+"place": "retroflex",
+"voiced": true,
+"audio": "voiced_retroflex_fricative.ogg"
+},
+{
+"symbol": "ç",
+"name": "voiceless palatal fricative",
+"manner": "fricative",
+"place": "palatal",
+"voiced": false,
+"audio": "voiceless_palatal_fricative.ogg"
+},
+{
+"symbol": "ʝ",
+"name": "voiced palatal fricative",
+"manner": "fricative",
+"place": "palatal",
+"voiced": true,
+"audio": "voiced_palatal_fricative.ogg"
+},
+{
+"symbol": "x",
+"name": "voiceless velar fricative",
+"manner": "fricative",
+"place": "velar",
+"voiced": false,
+"audio": "voiceless_velar_fricative.ogg"
+},
+{
+"symbol": "ɣ",
+"name": "voiced velar fricative",
+"manner": "fricative",
+"place": "velar",
+"voiced": true,
+"audio": "voiced_velar_fricative.ogg"
+},
+{
+"symbol": "χ",
+"name": "voiceless uvular fricative",
+"manner": "fricative",
+"place": "uvular",
+"voiced": false,
+"audio": "voiceless_uvular_fricative.ogg"
+},
+{
+"symbol": "ʁ",
+"name": "voiced uvular fricative",
+"manner": "fricative",
+"place": "uvular",
+"voiced": true,
+"audio": "voiced_uvular_fricative.ogg"
+},
+{
+"symbol": "ħ",
+"name": "voiceless pharyngeal fricative",
+"manner": "fricative",
+"place": "pharyngeal",
+"voiced": false,
+"audio": null
+},
+{
+"symbol": "ʕ",
+"name": "voiced pharyngeal fricative",
+"manner": "fricative",
+"place": "pharyngeal",
+"voiced": true,
+"audio": "voiced_pharyngeal_fricative.ogg"
+},
+{
+"symbol": "h",
+"name": "voiceless glottal fricative",
+"manner": "fricative",
+"place": "glottal",
+"voiced": false,
+"audio": "voiceless_glottal_fricative.ogg"
+},
+{
+"symbol": "ɦ",
+"name": "voiced glottal fricative",
+"manner": "fricative",
+"place": "glottal",
+"voiced": true,
+"audio": "voiced_glottal_fricative.ogg"
+},
+{
+"symbol": "ɬ",
+"name": "voiceless alveolar lateral fricative",
+"manner": "lateral fricative",
+"place": "alveolar",
+"voiced": false,
+"audio": "voiceless_alveolar_lateral_fricative.ogg"
+},
+{
+"symbol": "ɮ",
+"name": "voiced alveolar lateral fricative",
+"manner": "lateral fricative",
+"place": "alveolar",
+"voiced": true,
+"audio": "voiced_alveolar_lateral_fricative.ogg"
+},
+{
+"symbol": "ʋ",
+"name": "voiced labiodental approximant",
+"manner": "approximant",
+"place": "labiodental",
+"voiced": true,
+"audio": "voiced_labiodental_approximant.ogg"
+},
+{
+"symbol": "ɹ",
+"name": "voiced alveolar approximant",
+"manner": "approximant",
+"place": "alveolar",
+"voiced": true,
+"audio": "voiced_alveolar_approximant.ogg"
+},
+{
+"symbol": "ɻ",
+"name": "voiced retroflex approximant",
+"manner": "approximant",
+"place": "retroflex",
+"voiced": true,
+"audio": null
+},
+{
+"symbol": "j",
+"name": "voiced palatal approximant",
+"manner": "approximant",
+"place": "palatal",
+"voiced": true,
+"audio": "voiced_palatal_approximant.ogg"
+},
+{
+"symbol": "ɰ",
+"name": "voiced velar approximant",
+"manner": "approximant",
+"place": "velar",
+"voiced": true,
+"audio": "voiced_velar_approximant.ogg"
+},
+{
+"symbol": "t͡s",
+"name": "voiceless alveolar affricate",
+"manner": "affricate",
+"place": "alveolar",
+"voiced": false,
+"audio": "voiceless_alveolar_affricate.ogg"
+},
+{
+"symbol": "d͡z",
+"name": "voiced alveolar affricate",
+"manner": "affricate",
+"place": "alveolar",
+"voiced": true,
+"audio": "voiced_alveolar_affricate.ogg"
+},
+{
+"symbol": "t͡ʃ",
+"name": "voiceless postalveolar affricate",
+"manner": "affricate",
+"place": "postalveolar",
+"voiced": false,
+"audio": "voiceless_palato-alveolar_affricate.ogg"
+},
+{
+"symbol": "d͡ʒ",
+"name": "voiced postalveolar affricate",
+"manner": "affricate",
+"place": "postalveolar",
+"voiced": true,
+"audio": "voiced_palato-alveolar_affricate.ogg"
+},
+{
+"symbol": "t͡ɕ",
+"name": "voiceless alveolo-palatal affricate",
+"manner": "affricate",
+"place": "palatal",
+"voiced": false,
+"audio": null
+},
+{
+"symbol": "d͡ʑ",
+"name": "voiced alveolo-palatal affricate",
+"manner": "affricate",
+"place": "palatal",
+"voiced": true,
+"audio": null
+},
+{
+"symbol": "p͡f",
+"name": "voiceless labiodental affricate",
+"manner": "affricate",
+"place": "labiodental",
+"voiced": false,
+"audio": null
+},
+{
+"symbol": "b͡v",
+"name": "voiced labiodental affricate",
+"manner": "affricate",
+"place": "labiodental",
+"voiced": true,
+"audio": null
+},
+{
+"symbol": "w",
+"name": "voiced labial-velar approximant",
+"manner": "approximant",
+"place": "labial-velar",
+"voiced": true,
+"audio": "voiced_labial-velar_approximant.ogg"
+},
+{
+"symbol": "ʍ",
+"name": "voiceless labial-velar fricative",
+"manner": "fricative",
+"place": "labial-velar",
+"voiced": false,
+"audio": null
+},
+{
+"symbol": "ɥ",
+"name": "voiced labial-palatal approximant",
+"manner": "approximant",
+"place": "labial-palatal",
+"voiced": true,
+"audio": "voiced_labial-palatal_approximant.ogg"
+},
+{
+"symbol": "l",
+"name": "voiced alveolar lateral approximant",
+"manner": "lateral approximant",
+"place": "alveolar",
+"voiced": true,
+"audio": "voiced_alveolar_lateral_approximant.ogg"
+},
+{
+"symbol": "ɭ",
+"name": "voiced retroflex lateral approximant",
+"manner": "lateral approximant",
+"place": "retroflex",
+"voiced": true,
+"audio": "voiced_retroflex_lateral_approximant.ogg"
+},
+{
+"symbol": "ʎ",
+"name": "voiced palatal lateral approximant",
+"manner": "lateral approximant",
+"place": "palatal",
+"voiced": true,
+"audio": "voiced_palatal_lateral_approximant.ogg"
+},
+{
+"symbol": "ʟ",
+"name": "voiced velar lateral approximant",
+"manner": "lateral approximant",
+"place": "velar",
+"voiced": true,
+"audio": "voiced_velar_lateral_approximant.ogg"
+}
+],
+"vowels": [
+{
+"symbol": "i",
+"name": "close front unrounded vowel",
+"height": "close",
+"backness": "front",
+"rounded": false,
+"audio": "close_front_unrounded_vowel.ogg"
+},
+{
+"symbol": "y",
+"name": "close front rounded vowel",
+"height": "close",
+"backness": "front",
+"rounded": true,
+"audio": "close_front_rounded_vowel.ogg"
+},
+{
+"symbol": "ɨ",
+"name": "close central unrounded vowel",
+"height": "close",
+"backness": "central",
+"rounded": false,
+"audio": "close_central_unrounded_vowel.ogg"
+},
+{
+"symbol": "ʉ",
+"name": "close central rounded vowel",
+"height": "close",
+"backness": "central",
+"rounded": true,
+"audio": "close_central_rounded_vowel.ogg"
+},
+{
+"symbol": "ɯ",
+"name": "close back unrounded vowel",
+"height": "close",
+"backness": "back",
+"rounded": false,
+"audio": "close_back_unrounded_vowel.ogg"
+},
+{
+"symbol": "u",
+"name": "close back rounded vowel",
+"height": "close",
+"backness": "back",
+"rounded": true,
+"audio": "close_back_rounded_vowel.ogg"
+},
+{
+"symbol": "ɪ",
+"name": "near-close near-front unrounded vowel",
+"height": "near-close",
+"backness": "near-front",
+"rounded": false,
+"audio": "near_close_near_front_unrounded_vowel.ogg"
+},
+{
+"symbol": "ʏ",
+"name": "near-close near-front rounded vowel",
+"height": "near-close",
+"backness": "near-front",
+"rounded": true,
+"audio": "near_close_near_front_rounded_vowel.ogg"
+},
+{
+"symbol": "ʊ",
+"name": "near-close near-back rounded vowel",
+"height": "near-close",
+"backness": "near-back",
+"rounded": true,
+"audio": "near_close_near_back_rounded_vowel.ogg"
+},
+{
+"symbol": "e",
+"name": "close-mid front unrounded vowel",
+"height": "close-mid",
+"backness": "front",
+"rounded": false,
+"audio": "close_mid_front_unrounded_vowel.ogg"
+},
+{
+"symbol": "ø",
+"name": "close-mid front rounded vowel",
+"height": "close-mid",
+"backness": "front",
+"rounded": true,
+"audio": "close_mid_front_rounded_vowel.ogg"
+},
+{
+"symbol": "ɘ",
+"name": "close-mid central unrounded vowel",
+"height": "close-mid",
+"backness": "central",
+"rounded": false,
+"audio": null
+},
+{
+"symbol": "ɵ",
+"name": "close-mid central rounded vowel",
+"height": "close-mid",
+"backness": "central",
+"rounded": true,
+"audio": "close_mid_central_rounded_vowel.ogg"
+},
+{
+"symbol": "ɤ",
+"name": "close-mid back unrounded vowel",
+"height": "close-mid",
+"backness": "back",
+"rounded": false,
+"audio": "close_mid_back_unrounded_vowel.ogg"
+},
+{
+"symbol": "o",
+"name": "close-mid back rounded vowel",
+"height": "close-mid",
+"backness": "back",
+"rounded": true,
+"audio": "close_mid_back_rounded_vowel.ogg"
+},
+{
+"symbol": "e̞",
+"name": "mid front unrounded vowel",
+"height": "mid",
+"backness": "front",
+"rounded": false,
+"audio": null
+},
+{
+"symbol": "ə",
+"name": "mid central vowel (schwa)",
+"height": "mid",
+"backness": "central",
+"rounded": false,
+"audio": "mid_central_vowel.ogg"
+},
+{
+"symbol": "ɛ",
+"name": "open-mid front unrounded vowel",
+"height": "open-mid",
+"backness": "front",
+"rounded": false,
+"audio": "open_mid_front_unrounded_vowel.ogg"
+},
+{
+"symbol": "œ",
+"name": "open-mid front rounded vowel",
+"height": "open-mid",
+"backness": "front",
+"rounded": true,
+"audio": "open_mid_front_rounded_vowel.ogg"
+},
+{
+"symbol": "ɜ",
+"name": "open-mid central unrounded vowel",
+"height": "open-mid",
+"backness": "central",
+"rounded": false,
+"audio": "open_mid_central_unrounded_vowel.ogg"
+},
+{
+"symbol": "ɞ",
+"name": "open-mid central rounded vowel",
+"height": "open-mid",
+"backness": "central",
+"rounded": true,
+"audio": null
+},
+{
+"symbol": "ʌ",
+"name": "open-mid back unrounded vowel",
+"height": "open-mid",
+"backness": "back",
+"rounded": false,
+"audio": "open_mid_back_unrounded_vowel.ogg"
+},
+{
+"symbol": "ɔ",
+"name": "open-mid back rounded vowel",
+"height": "open-mid",
+"backness": "back",
+"rounded": true,
+"audio": "open_mid_back_rounded_vowel.ogg"
+},
+{
+"symbol": "æ",
+"name": "near-open front unrounded vowel",
+"height": "near-open",
+"backness": "front",
+"rounded": false,
+"audio": "near_open_front_unrounded_vowel.ogg"
+},
+{
+"symbol": "ɐ",
+"name": "near-open central vowel",
+"height": "near-open",
+"backness": "central",
+"rounded": false,
+"audio": "near_open_central_vowel.ogg"
+},
+{
+"symbol": "a",
+"name": "open front unrounded vowel",
+"height": "open",
+"backness": "front",
+"rounded": false,
+"audio": "open_front_unrounded_vowel.ogg"
+},
+{
+"symbol": "ɶ",
+"name": "open front rounded vowel",
+"height": "open",
+"backness": "front",
+"rounded": true,
+"audio": null
+},
+{
+"symbol": "ä",
+"name": "open central unrounded vowel",
+"height": "open",
+"backness": "central",
+"rounded": false,
+"audio": null
+},
+{
+"symbol": "ɑ",
+"name": "open back unrounded vowel",
+"height": "open",
+"backness": "back",
+"rounded": false,
+"audio": "open_back_unrounded_vowel.ogg"
+},
+{
+"symbol": "ɒ",
+"name": "open back rounded vowel",
+"height": "open",
+"backness": "back",
+"rounded": true,
+"audio": "open_back_rounded_vowel.ogg"
+}
+],
+"nonPulmonic": [
+{
+"symbol": "ʘ",
+"name": "bilabial click",
+"manner": "click",
+"place": "bilabial",
+"voiced": false,
+"audio": "bilabial_click.ogg"
+},
+{
+"symbol": "ǀ",
+"name": "dental click",
+"manner": "click",
+"place": "dental",
+"voiced": false,
+"audio": "dental_click.ogg"
+},
+{
+"symbol": "ǃ",
+"name": "alveolar click",
+"manner": "click",
+"place": "alveolar",
+"voiced": false,
+"audio": "alveolar_click.ogg"
+},
+{
+"symbol": "ǂ",
+"name": "palatoalveolar click",
+"manner": "click",
+"place": "postalveolar",
+"voiced": false,
+"audio": "palatoalveolar_click.ogg"
+},
+{
+"symbol": "ǁ",
+"name": "alveolar lateral click",
+"manner": "click",
+"place": "alveolar",
+"voiced": false,
+"audio": "alveolar_lateral_click.ogg"
+},
+{
+"symbol": "ɓ",
+"name": "voiced bilabial implosive",
+"manner": "implosive",
+"place": "bilabial",
+"voiced": true,
+"audio": "voiced_bilabial_implosive.ogg"
+},
+{
+"symbol": "ɗ",
+"name": "voiced alveolar implosive",
+"manner": "implosive",
+"place": "alveolar",
+"voiced": true,
+"audio": "voiced_alveolar_implosive.ogg"
+},
+{
+"symbol": "ʄ",
+"name": "voiced palatal implosive",
+"manner": "implosive",
+"place": "palatal",
+"voiced": true,
+"audio": "voiced_palatal_implosive.ogg"
+},
+{
+"symbol": "ɠ",
+"name": "voiced velar implosive",
+"manner": "implosive",
+"place": "velar",
+"voiced": true,
+"audio": "voiced_velar_implosive.ogg"
+},
+{
+"symbol": "ʛ",
+"name": "voiced uvular implosive",
+"manner": "implosive",
+"place": "uvular",
+"voiced": true,
+"audio": null
+},
+{
+"symbol": "pʼ",
+"name": "bilabial ejective",
+"manner": "ejective",
+"place": "bilabial",
+"voiced": false,
+"audio": null
+},
+{
+"symbol": "tʼ",
+"name": "alveolar ejective",
+"manner": "ejective",
+"place": "alveolar",
+"voiced": false,
+"audio": null
+},
+{
+"symbol": "kʼ",
+"name": "velar ejective",
+"manner": "ejective",
+"place": "velar",
+"voiced": false,
+"audio": null
+},
+{
+"symbol": "sʼ",
+"name": "alveolar ejective fricative",
+"manner": "ejective",
+"place": "alveolar",
+"voiced": false,
+"audio": null
+}
+]
+}

@@ -74,6 +74,10 @@ flutter run -d macos
 dart run build_runner build --delete-conflicting-outputs
 ```
 
+## Web version
+
+A TypeScript web version with the same features, local-only storage and MCP tools lives in [`web/`](web/README.md).
+
 ## Tech Stack
 
 Flutter, Drift (SQLite ORM), Riverpod (state management), PetitParser (DSL parsing), just_audio (IPA audio playback).

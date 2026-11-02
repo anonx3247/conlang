@@ -1,0 +1,428 @@
+{
+  "categories": [
+    {
+      "name": "The Physical World",
+      "subcategories": [
+        {
+          "name": "Cosmology",
+          "concepts": ["sky", "sun", "moon", "star", "planet", "comet", "eclipse", "dawn", "dusk", "twilight", "zenith", "horizon"]
+        },
+        {
+          "name": "Weather and Atmosphere",
+          "concepts": ["cloud", "rain", "snow", "hail", "sleet", "fog", "mist", "wind", "storm", "thunder", "lightning", "rainbow", "frost", "ice", "dew", "drought", "flood"]
+        },
+        {
+          "name": "Terrain and Landforms",
+          "concepts": ["mountain", "hill", "valley", "plain", "plateau", "cliff", "cave", "canyon", "desert", "forest", "jungle", "swamp", "marsh", "meadow", "field", "slope", "peak"]
+        },
+        {
+          "name": "Water Features",
+          "concepts": ["ocean", "sea", "lake", "river", "stream", "brook", "waterfall", "spring", "pond", "bay", "gulf", "island", "peninsula", "shore", "bank", "current", "tide", "wave"]
+        },
+        {
+          "name": "Earth and Minerals",
+          "concepts": ["rock", "stone", "sand", "dust", "mud", "clay", "soil", "gravel", "pebble", "crystal", "gem", "gold", "silver", "iron", "copper", "salt", "coal", "ore"]
+        },
+        {
+          "name": "Fire and Light",
+          "concepts": ["fire", "flame", "spark", "ember", "ash", "smoke", "heat", "light", "shadow", "darkness", "glow", "burn", "torch"]
+        }
+      ]
+    },
+    {
+      "name": "Plants and Vegetation",
+      "subcategories": [
+        {
+          "name": "Trees and Shrubs",
+          "concepts": ["tree", "trunk", "branch", "twig", "bark", "root", "stump", "shrub", "bush", "sapling", "log", "wood", "timber"]
+        },
+        {
+          "name": "Plant Parts",
+          "concepts": ["leaf", "flower", "petal", "stem", "seed", "fruit", "nut", "berry", "pod", "thorn", "vine", "moss", "lichen", "reed", "reed"]
+        },
+        {
+          "name": "Crops and Food Plants",
+          "concepts": ["grain", "wheat", "barley", "rice", "corn", "millet", "bean", "pea", "lentil", "herb", "spice", "vegetable", "root vegetable", "tuber"]
+        },
+        {
+          "name": "Fungi",
+          "concepts": ["mushroom", "fungus", "mold", "yeast", "spore"]
+        }
+      ]
+    },
+    {
+      "name": "Animals",
+      "subcategories": [
+        {
+          "name": "Mammals",
+          "concepts": ["dog", "cat", "horse", "cow", "bull", "sheep", "goat", "pig", "deer", "bear", "wolf", "fox", "rabbit", "hare", "rat", "mouse", "bat", "seal", "whale", "dolphin"]
+        },
+        {
+          "name": "Birds",
+          "concepts": ["eagle", "hawk", "owl", "crow", "raven", "sparrow", "pigeon", "duck", "goose", "swan", "heron", "parrot", "rooster", "hen", "peacock"]
+        },
+        {
+          "name": "Reptiles and Amphibians",
+          "concepts": ["snake", "lizard", "turtle", "crocodile", "frog", "toad", "salamander", "gecko"]
+        },
+        {
+          "name": "Fish and Aquatic",
+          "concepts": ["fish", "salmon", "trout", "eel", "shark", "crab", "lobster", "shrimp", "squid", "octopus", "oyster", "clam", "snail"]
+        },
+        {
+          "name": "Insects and Invertebrates",
+          "concepts": ["bee", "wasp", "ant", "fly", "mosquito", "butterfly", "moth", "beetle", "spider", "worm", "louse", "flea", "tick", "centipede"]
+        },
+        {
+          "name": "Animal Features",
+          "concepts": ["wing", "claw", "fang", "horn", "hoof", "scale", "feather", "fur", "hide", "shell", "beak", "paw", "tail", "mane"]
+        },
+        {
+          "name": "Animal Behavior",
+          "concepts": ["nest", "burrow", "den", "herd", "flock", "pack", "swarm", "hunt", "prey", "predator", "migration", "hibernation", "mating", "spawn"]
+        }
+      ]
+    },
+    {
+      "name": "The Human Body",
+      "subcategories": [
+        {
+          "name": "Head and Face",
+          "concepts": ["head", "skull", "face", "forehead", "temple", "cheek", "jaw", "chin", "hair", "eye", "eyelid", "eyelash", "eyebrow", "ear", "nose", "nostril", "mouth", "lip", "tooth", "tongue", "throat"]
+        },
+        {
+          "name": "Torso",
+          "concepts": ["neck", "shoulder", "chest", "breast", "rib", "belly", "navel", "back", "spine", "hip", "waist", "buttock", "groin"]
+        },
+        {
+          "name": "Arms and Hands",
+          "concepts": ["arm", "elbow", "wrist", "hand", "palm", "finger", "thumb", "fingernail", "fist", "knuckle"]
+        },
+        {
+          "name": "Legs and Feet",
+          "concepts": ["leg", "thigh", "knee", "calf", "shin", "ankle", "foot", "heel", "toe", "toenail", "sole"]
+        },
+        {
+          "name": "Internal Organs",
+          "concepts": ["heart", "lung", "liver", "kidney", "stomach", "intestine", "brain", "bone", "muscle", "nerve", "vein", "artery", "blood", "fat", "skin"]
+        },
+        {
+          "name": "Bodily Functions and Processes",
+          "concepts": ["breath", "heartbeat", "hunger", "thirst", "pain", "sweat", "tears", "sleep", "birth", "death", "aging", "growth", "digestion", "excretion"]
+        }
+      ]
+    },
+    {
+      "name": "Kinship and Social Relations",
+      "subcategories": [
+        {
+          "name": "Core Family",
+          "concepts": ["mother", "father", "parent", "child", "son", "daughter", "sibling", "brother", "sister", "baby", "infant"]
+        },
+        {
+          "name": "Extended Family",
+          "concepts": ["grandparent", "grandfather", "grandmother", "grandchild", "grandson", "granddaughter", "uncle", "aunt", "nephew", "niece", "cousin"]
+        },
+        {
+          "name": "Marriage and Partnership",
+          "concepts": ["husband", "wife", "spouse", "partner", "bride", "groom", "marriage", "wedding", "divorce", "widow", "widower"]
+        },
+        {
+          "name": "Social Roles",
+          "concepts": ["man", "woman", "person", "people", "elder", "youth", "adult", "chief", "leader", "servant", "slave", "stranger", "guest", "friend", "enemy", "neighbor"]
+        }
+      ]
+    },
+    {
+      "name": "Food and Drink",
+      "subcategories": [
+        {
+          "name": "Food Types",
+          "concepts": ["meat", "fish", "bread", "grain", "vegetable", "fruit", "egg", "milk", "cheese", "butter", "fat", "oil", "honey", "sugar", "salt", "spice", "herb"]
+        },
+        {
+          "name": "Drinks",
+          "concepts": ["water", "milk", "juice", "wine", "beer", "ale", "mead", "tea", "broth", "soup"]
+        },
+        {
+          "name": "Cooking and Preparation",
+          "concepts": ["cook", "boil", "roast", "bake", "fry", "grind", "cut", "chop", "stir", "ferment", "dry", "smoke", "salt", "preserve", "recipe"]
+        },
+        {
+          "name": "Meals and Eating",
+          "concepts": ["meal", "breakfast", "lunch", "dinner", "feast", "famine", "hunger", "thirst", "appetite", "taste", "bite", "chew", "swallow"]
+        }
+      ]
+    },
+    {
+      "name": "Clothing and Adornment",
+      "subcategories": [
+        {
+          "name": "Garments",
+          "concepts": ["clothing", "garment", "shirt", "tunic", "robe", "dress", "skirt", "trousers", "coat", "cloak", "hood", "veil", "wrap", "belt", "sash"]
+        },
+        {
+          "name": "Footwear and Headwear",
+          "concepts": ["shoe", "boot", "sandal", "hat", "cap", "helmet", "crown", "veil", "scarf"]
+        },
+        {
+          "name": "Adornment and Jewelry",
+          "concepts": ["ring", "bracelet", "necklace", "earring", "amulet", "tattoo", "paint", "dye", "cosmetic", "perfume", "feather", "ornament"]
+        },
+        {
+          "name": "Textiles",
+          "concepts": ["cloth", "fabric", "wool", "cotton", "linen", "silk", "leather", "fur", "thread", "needle", "weave", "spin", "sew", "stitch", "pattern"]
+        }
+      ]
+    },
+    {
+      "name": "The House and Dwelling",
+      "subcategories": [
+        {
+          "name": "Structures",
+          "concepts": ["house", "hut", "tent", "cave", "building", "tower", "wall", "roof", "floor", "door", "window", "gate", "fence", "bridge", "road", "path"]
+        },
+        {
+          "name": "Rooms and Spaces",
+          "concepts": ["room", "hall", "bedroom", "kitchen", "hearth", "cellar", "attic", "courtyard", "garden", "field"]
+        },
+        {
+          "name": "Furniture and Objects",
+          "concepts": ["bed", "chair", "table", "bench", "chest", "box", "basket", "pot", "jar", "bowl", "cup", "plate", "knife", "spoon", "lamp", "candle"]
+        },
+        {
+          "name": "Construction",
+          "concepts": ["stone", "wood", "brick", "clay", "mud", "thatch", "build", "construct", "dig", "lay", "hang", "fix", "repair"]
+        }
+      ]
+    },
+    {
+      "name": "Tools and Technology",
+      "subcategories": [
+        {
+          "name": "Cutting and Striking Tools",
+          "concepts": ["knife", "axe", "sword", "spear", "arrow", "bow", "blade", "edge", "point", "chisel", "saw", "hammer"]
+        },
+        {
+          "name": "Agricultural Tools",
+          "concepts": ["plow", "hoe", "rake", "scythe", "sickle", "shovel", "yoke", "millstone", "mortar", "pestle"]
+        },
+        {
+          "name": "Containers and Carrying",
+          "concepts": ["bag", "sack", "basket", "jar", "pot", "vessel", "barrel", "net", "rope", "chain", "strap", "hook"]
+        },
+        {
+          "name": "Fire and Light Tools",
+          "concepts": ["torch", "lamp", "candle", "wick", "flint", "tinder", "bellows", "kiln", "forge"]
+        }
+      ]
+    },
+    {
+      "name": "Agriculture and Economy",
+      "subcategories": [
+        {
+          "name": "Farming",
+          "concepts": ["farm", "field", "garden", "plow", "sow", "harvest", "crop", "yield", "irrigation", "drought", "pest", "fertilize"]
+        },
+        {
+          "name": "Livestock",
+          "concepts": ["herd", "flock", "pasture", "graze", "milk", "shear", "slaughter", "breed", "tame", "wild"]
+        },
+        {
+          "name": "Trade and Commerce",
+          "concepts": ["trade", "barter", "buy", "sell", "price", "value", "debt", "gift", "market", "merchant", "goods", "wealth", "poverty"]
+        },
+        {
+          "name": "Crafts and Industry",
+          "concepts": ["smith", "potter", "weaver", "carpenter", "builder", "hunter", "fisher", "farmer", "craft", "skill", "work", "labor"]
+        }
+      ]
+    },
+    {
+      "name": "Travel and Transportation",
+      "subcategories": [
+        {
+          "name": "Movement",
+          "concepts": ["walk", "run", "ride", "climb", "swim", "fly", "sail", "carry", "lead", "follow", "return", "arrive", "depart", "journey", "wander", "migrate"]
+        },
+        {
+          "name": "Vehicles and Vessels",
+          "concepts": ["boat", "ship", "raft", "canoe", "cart", "wagon", "sled", "saddle", "oar", "rudder", "sail", "wheel", "axle"]
+        },
+        {
+          "name": "Paths and Directions",
+          "concepts": ["road", "path", "trail", "bridge", "ford", "gate", "border", "north", "south", "east", "west", "up", "down", "near", "far", "toward", "away"]
+        }
+      ]
+    },
+    {
+      "name": "Social and Political Life",
+      "subcategories": [
+        {
+          "name": "Groups and Communities",
+          "concepts": ["tribe", "clan", "family", "village", "town", "city", "nation", "people", "crowd", "army", "band", "group", "community", "society"]
+        },
+        {
+          "name": "Leadership and Authority",
+          "concepts": ["chief", "king", "queen", "ruler", "lord", "master", "leader", "elder", "council", "judge", "priest", "power", "authority", "command", "rule", "govern"]
+        },
+        {
+          "name": "Social Status",
+          "concepts": ["noble", "commoner", "slave", "servant", "warrior", "merchant", "peasant", "rank", "honor", "shame", "status", "role", "duty", "right"]
+        },
+        {
+          "name": "Law and Justice",
+          "concepts": ["law", "rule", "custom", "tradition", "judge", "punish", "reward", "crime", "guilt", "innocence", "oath", "agreement", "treaty", "dispute", "revenge"]
+        }
+      ]
+    },
+    {
+      "name": "Warfare and Conflict",
+      "subcategories": [
+        {
+          "name": "Combat",
+          "concepts": ["war", "battle", "fight", "attack", "defend", "siege", "raid", "ambush", "retreat", "victory", "defeat", "surrender", "kill", "wound", "capture"]
+        },
+        {
+          "name": "Weapons and Armor",
+          "concepts": ["sword", "spear", "shield", "bow", "arrow", "knife", "axe", "armor", "helmet", "fortress", "wall", "gate", "tower"]
+        },
+        {
+          "name": "Military Organization",
+          "concepts": ["army", "warrior", "soldier", "guard", "spy", "scout", "commander", "ally", "enemy", "captive", "hostage", "tribute", "conquest"]
+        }
+      ]
+    },
+    {
+      "name": "Religion and Belief",
+      "subcategories": [
+        {
+          "name": "Supernatural Beings",
+          "concepts": ["god", "goddess", "spirit", "demon", "ghost", "ancestor", "hero", "monster", "dragon", "angel", "trickster", "creator", "destroyer"]
+        },
+        {
+          "name": "Sacred Practices",
+          "concepts": ["pray", "sacrifice", "ritual", "ceremony", "festival", "taboo", "blessing", "curse", "divination", "prophecy", "initiation", "pilgrimage", "offering"]
+        },
+        {
+          "name": "Sacred Places and Objects",
+          "concepts": ["temple", "shrine", "altar", "idol", "relic", "sacred", "holy", "forbidden", "magic", "amulet", "totem", "fire", "water", "mountain"]
+        },
+        {
+          "name": "Cosmology and Afterlife",
+          "concepts": ["heaven", "underworld", "afterlife", "soul", "spirit", "rebirth", "fate", "destiny", "omen", "dream", "vision", "creation myth", "flood myth"]
+        }
+      ]
+    },
+    {
+      "name": "Emotions and Mental States",
+      "subcategories": [
+        {
+          "name": "Positive Emotions",
+          "concepts": ["joy", "happiness", "love", "affection", "desire", "hope", "pride", "gratitude", "pleasure", "excitement", "contentment", "wonder", "awe", "courage", "confidence"]
+        },
+        {
+          "name": "Negative Emotions",
+          "concepts": ["sadness", "grief", "sorrow", "fear", "anger", "rage", "hate", "envy", "jealousy", "shame", "guilt", "disgust", "despair", "loneliness", "pain", "suffering"]
+        },
+        {
+          "name": "Social Emotions",
+          "concepts": ["trust", "loyalty", "betrayal", "friendship", "rivalry", "compassion", "mercy", "cruelty", "generosity", "greed", "respect", "contempt"]
+        },
+        {
+          "name": "Mental States",
+          "concepts": ["thought", "memory", "dream", "imagination", "belief", "doubt", "confusion", "clarity", "wisdom", "foolishness", "madness", "consciousness", "attention", "will"]
+        }
+      ]
+    },
+    {
+      "name": "Communication and Speech",
+      "subcategories": [
+        {
+          "name": "Speech Acts",
+          "concepts": ["say", "speak", "ask", "answer", "call", "shout", "whisper", "sing", "tell", "lie", "promise", "warn", "command", "beg", "greet", "name", "curse", "praise"]
+        },
+        {
+          "name": "Language and Writing",
+          "concepts": ["word", "name", "language", "tongue", "speech", "story", "song", "poem", "riddle", "writing", "letter", "mark", "sign", "symbol", "meaning", "translate"]
+        },
+        {
+          "name": "Knowledge and Learning",
+          "concepts": ["know", "learn", "teach", "understand", "remember", "forget", "study", "wisdom", "ignorance", "truth", "lie", "secret", "news", "rumor", "question", "answer"]
+        }
+      ]
+    },
+    {
+      "name": "Time",
+      "subcategories": [
+        {
+          "name": "Divisions of Time",
+          "concepts": ["moment", "second", "minute", "hour", "day", "night", "morning", "evening", "noon", "midnight", "week", "month", "season", "year", "century", "age", "era"]
+        },
+        {
+          "name": "Temporal Relations",
+          "concepts": ["before", "after", "during", "now", "then", "soon", "later", "already", "still", "never", "always", "often", "sometimes", "past", "present", "future"]
+        },
+        {
+          "name": "Seasons and Cycles",
+          "concepts": ["spring", "summer", "autumn", "winter", "solstice", "equinox", "harvest", "planting", "dry season", "wet season", "new moon", "full moon"]
+        }
+      ]
+    },
+    {
+      "name": "Space and Spatial Relations",
+      "subcategories": [
+        {
+          "name": "Position and Direction",
+          "concepts": ["here", "there", "near", "far", "above", "below", "in front of", "behind", "beside", "between", "inside", "outside", "up", "down", "left", "right", "north", "south", "east", "west"]
+        },
+        {
+          "name": "Shape and Size",
+          "concepts": ["big", "small", "long", "short", "wide", "narrow", "tall", "low", "deep", "shallow", "round", "flat", "straight", "curved", "pointed", "hollow", "solid"]
+        },
+        {
+          "name": "Motion and Change of Place",
+          "concepts": ["come", "go", "move", "stay", "pass", "cross", "enter", "leave", "arrive", "depart", "approach", "flee", "follow", "lead", "carry", "fall", "rise"]
+        }
+      ]
+    },
+    {
+      "name": "Quantity and Number",
+      "subcategories": [
+        {
+          "name": "Cardinal Numbers",
+          "concepts": ["one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "hundred", "thousand", "million"]
+        },
+        {
+          "name": "Quantity Concepts",
+          "concepts": ["none", "few", "some", "many", "all", "half", "whole", "part", "enough", "too much", "too little", "more", "less", "equal", "first", "last", "middle"]
+        },
+        {
+          "name": "Measurement",
+          "concepts": ["count", "measure", "weigh", "length", "height", "width", "depth", "weight", "distance", "area", "volume", "speed", "degree", "amount"]
+        }
+      ]
+    },
+    {
+      "name": "Properties and Qualities",
+      "subcategories": [
+        {
+          "name": "Physical Properties",
+          "concepts": ["hard", "soft", "sharp", "dull", "smooth", "rough", "heavy", "light", "wet", "dry", "hot", "cold", "warm", "cool", "clean", "dirty", "full", "empty", "open", "closed"]
+        },
+        {
+          "name": "Colors",
+          "concepts": ["red", "orange", "yellow", "green", "blue", "purple", "white", "black", "gray", "brown", "pink", "gold", "silver", "dark", "bright", "pale", "vivid"]
+        },
+        {
+          "name": "Value Judgments",
+          "concepts": ["good", "bad", "right", "wrong", "true", "false", "beautiful", "ugly", "strong", "weak", "brave", "cowardly", "wise", "foolish", "kind", "cruel", "honest", "deceitful"]
+        },
+        {
+          "name": "Sensory Qualities",
+          "concepts": ["loud", "quiet", "sweet", "sour", "bitter", "salty", "savory", "fragrant", "foul", "bright", "dark", "visible", "hidden", "near", "distant"]
+        }
+      ]
+    }
+  ]
+}
