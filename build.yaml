@@ -1,9 +1,0 @@
-targets:
-  $default:
-    builders:
-      # Ensure drift_dev runs before riverpod_generator so Drift-generated
-      # types are available during Riverpod provider analysis.
-      drift_dev:
-        enabled: true
-      riverpod_generator:
-        enabled: true

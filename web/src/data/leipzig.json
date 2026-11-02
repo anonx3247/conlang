@@ -1,0 +1,202 @@
+[
+{
+"abbreviation": "DEF",
+"meaning": "Definite",
+"category": "Determination"
+},
+{
+"abbreviation": "INDF",
+"meaning": "Indefinite",
+"category": "Determination"
+},
+{
+"abbreviation": "DET",
+"meaning": "Determiner",
+"category": "Determination"
+},
+{
+"abbreviation": "QUANT",
+"meaning": "Quantifier",
+"category": "Determination"
+},
+{
+"abbreviation": "NEG",
+"meaning": "Negation",
+"category": "Polarity"
+},
+{
+"abbreviation": "PROG",
+"meaning": "Progressive",
+"category": "Aspect"
+},
+{
+"abbreviation": "PERF",
+"meaning": "Perfective",
+"category": "Aspect"
+},
+{
+"abbreviation": "IPFV",
+"meaning": "Imperfective",
+"category": "Aspect"
+},
+{
+"abbreviation": "PRFV",
+"meaning": "Perfect",
+"category": "Aspect"
+},
+{
+"abbreviation": "PST",
+"meaning": "Past",
+"category": "Tense"
+},
+{
+"abbreviation": "PRS",
+"meaning": "Present",
+"category": "Tense"
+},
+{
+"abbreviation": "FUT",
+"meaning": "Future",
+"category": "Tense"
+},
+{
+"abbreviation": "AUX",
+"meaning": "Auxiliary",
+"category": "Modality/TAM"
+},
+{
+"abbreviation": "MOD",
+"meaning": "Modal",
+"category": "Modality/TAM"
+},
+{
+"abbreviation": "CERT",
+"meaning": "Certitude",
+"category": "Modality/TAM"
+},
+{
+"abbreviation": "CAUS",
+"meaning": "Causative",
+"category": "Voice/Valence"
+},
+{
+"abbreviation": "PASS",
+"meaning": "Passive",
+"category": "Voice/Valence"
+},
+{
+"abbreviation": "REFL",
+"meaning": "Reflexive",
+"category": "Voice/Valence"
+},
+{
+"abbreviation": "RECIP",
+"meaning": "Reciprocal",
+"category": "Voice/Valence"
+},
+{
+"abbreviation": "COP",
+"meaning": "Copula",
+"category": "Voice/Valence"
+},
+{
+"abbreviation": "EXIST",
+"meaning": "Existential",
+"category": "Voice/Valence"
+},
+{
+"abbreviation": "TOP",
+"meaning": "Topic",
+"category": "Information"
+},
+{
+"abbreviation": "FOC",
+"meaning": "Focus",
+"category": "Information"
+},
+{
+"abbreviation": "EMPH",
+"meaning": "Emphatic",
+"category": "Information"
+},
+{
+"abbreviation": "Q",
+"meaning": "Question",
+"category": "Pragmatics"
+},
+{
+"abbreviation": "INTJ",
+"meaning": "Interjection",
+"category": "Pragmatics"
+},
+{
+"abbreviation": "PTCL",
+"meaning": "Particle",
+"category": "Pragmatics"
+},
+{
+"abbreviation": "CONJ",
+"meaning": "Conjunction",
+"category": "Coordination"
+},
+{
+"abbreviation": "DISJ",
+"meaning": "Disjunction",
+"category": "Coordination"
+},
+{
+"abbreviation": "PREP",
+"meaning": "Preposition",
+"category": "Adposition"
+},
+{
+"abbreviation": "POST",
+"meaning": "Postposition",
+"category": "Adposition"
+},
+{
+"abbreviation": "GEN",
+"meaning": "Genitive",
+"category": "Case function"
+},
+{
+"abbreviation": "ACC",
+"meaning": "Accusative",
+"category": "Case function"
+},
+{
+"abbreviation": "DAT",
+"meaning": "Dative",
+"category": "Case function"
+},
+{
+"abbreviation": "LOC",
+"meaning": "Locative",
+"category": "Case function"
+},
+{
+"abbreviation": "COMP",
+"meaning": "Complementizer",
+"category": "Subordination"
+},
+{
+"abbreviation": "REL",
+"meaning": "Relativizer",
+"category": "Subordination"
+},
+{
+"abbreviation": "SUB",
+"meaning": "Subordinator",
+"category": "Subordination"
+},
+{
+"abbreviation": "EV",
+"meaning": "Evidential",
+"category": "Evidentiality"
+},
+{
+"abbreviation": "QUOT",
+"meaning": "Quotative",
+"category": "Evidentiality"
+}
+]
